@@ -4,3 +4,8 @@ examples/repl
 examples/repl.dSYM/
 examples/ape
 .vscode/settings.json
+*.o
+*.obj
+*.exe
+*.stackdump
+*.out
