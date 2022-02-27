@@ -9,12 +9,12 @@
 #define PROMPT ">> "
 
 // INTERNAL
-static void print_errors(ape_t *ape)
+static void print_errors(ApeContext_t *ape)
 {
     int i;
     int count;
     char *err_str;
-    const ape_error_t *err;
+    const error_t *err;
     count = ape_errors_count(ape);
     for (i = 0; i < count; i++)
     {
@@ -25,7 +25,7 @@ static void print_errors(ape_t *ape)
     }
 }
 
-static ape_object_t exit_repl(ape_t *ape, void *data, int argc, ape_object_t *args)
+static ape_object_t exit_repl(ApeContext_t *ape, void *data, int argc, ape_object_t *args)
 {
     bool *exit_repl = (bool*)data;
     *exit_repl = true;
@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     int i;
     char *line;
     char *object_str;
-    ape_t *ape;
+    ApeContext_t *ape;
     ape_object_t res;
     ape_object_t args_array;
     ape = ape_make();
