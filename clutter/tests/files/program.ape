@@ -1,0 +1,344 @@
+const squared = square_array(1, 2, 3)
+assert(squared[0] == 1)
+assert(squared[1] == 4)
+assert(squared[2] == 9)
+
+import "module_a"
+
+assert(module_a::add(2, 2) == 4)
+
+import "module_b"
+assert(module_a::inc() == 1)
+assert(module_a::inc() == 2)
+assert(module_b::inc() == 3)
+assert(module_b::inc() == 4)
+
+const trailing_comma_array = [
+    1,
+    2,
+    3,
+]
+
+assert(len(trailing_comma_array) == 3)
+
+const trailing_comma_dict = {
+    a: 1,
+    b: 2,
+    c: 3,
+}
+
+assert(len(trailing_comma_dict) == 3)
+
+// tests a case where sp is incremented over already freed objects
+// and gc tries to mark them
+fn test_gc_fail(a, b, c) { const x = []; const y = []; const z = []; }
+test_gc_fail(1, 2, 3)
+test_gc_fail(1, 2, 3)
+
+const test_dict_count = 10
+const test_dict = make_test_dict(test_dict_count)
+for (i in range(test_dict_count)) {
+    assert(test_dict[to_str(i)] == i)
+}
+
+fn fun() {
+    const arr = [1, 2, 3]
+    const dict = {"a": 1, "b": 2}
+    const str = "lorem ipsum"
+    dict["a"] = 1
+// comment 1 dict["a"] // test
+// comment 2
+    const res = fn(a, b, c) {
+        const res_str = to_str(a) + to_str(b) + to_str(c)
+        return res_str; // comment
+    }
+    return res(1, 2, 3)
+}
+
+println(fun())
+
+fn make_person(name) {
+    return {
+        name: name,
+        hello: fn() {
+            println(`hello ${this.name}`)
+        },
+        make_hello: fn() {
+            return `hello ${this.name}`
+        }
+    }
+}
+
+const person = make_person("Krzysztof")
+person.hello()
+
+external_fn_test()
+assert(test == 42)
+
+assert(keys({"a": 1, "b": 2})[1] == "b")
+assert(to_str(1) == "1")
+
+const popular_names = ["Krzysztof", "Zbigniew", "Grzegorz"]
+for (name in popular_names) {
+    println(name)
+    if (name == "Zbigniew") {
+        break
+    }
+}
+
+{
+    test_check_args(1, [1, 2, 3], {"a": 1}, "lorem", true, fn() {}, println)
+    if (true) {}
+    if (false) {}
+    var i = 0
+    var j = 0
+    while ((i+=1) < 10) { break; }
+    while ((j+=1) < 10) { }
+}
+
+const val = 123
+
+assert("abc"[0] == "a")
+assert("abc"[0] != "b")
+
+const person1 = make_person("Krzysztof")
+const person2 = deep_copy(person1)
+person2.name = "Mati"
+assert(person1.make_hello() == "hello Krzysztof")
+assert(person2.make_hello() == "hello Mati")
+
+fn contains_item(to_find, items) {
+    for (item in items) {
+        if (item == to_find) {
+            return true
+        }
+    }
+    return false
+}
+
+const cities = ["Kraków", "Warsaw", "Gdańsk"]
+if (contains_item("Kraków", cities)) {
+    println("found!")
+}
+
+fn block_test() {
+    var x = 0
+    {
+        x = 1
+    }
+    return x
+}
+
+assert(block_test() == 1)
+
+const big_array = array(1000)
+assert(len(big_array) == 1000)
+
+fn return_no_semicolon() { return }
+
+// operator overloading test
+fn vec2(x, y) {
+    return {
+        x: x,
+        y: y,
+        __operator_add__: vec2_add,
+        __operator_sub__: vec2_sub,
+        __operator_minus__: fn(a) { return vec2(-a.x, -a.y) },
+        __operator_mul__: fn(a, b) {
+            if (is_number(a)) {
+                return vec2(b.x * a, b.y * a)
+            } else if (is_number(b)) {
+                return vec2(a.x * b, a.y * b)
+            } else {
+                return vec2(a.x * b.x, a.y * b.y)
+            }
+        },
+    }
+}
+
+const va = vec2(1, 2)
+const vb = vec2(3, 4)
+
+var v = va + vb
+assert(v.x == 4)
+assert(v.y == 6)
+
+v = va * 2
+assert(v.x == 2)
+assert(v.y == 4)
+
+v = -va
+assert(v.x == -1)
+assert(v.y == -2)
+
+assert((1|2) == 3)
+assert((1&2) == 0)
+assert((1^3) == 2)
+assert(( 1 << 16) == 65536)
+assert((-1 << 2) == -4)
+assert(( 8 >> 1) == 4)
+assert((-8 >> 1) == -4)
+
+fn recover_test_1() {
+    recover (e) {
+        return 1
+    }
+    return 2
+}
+
+assert(recover_test_1() == 2)
+
+fn recover_test_2() {
+    recover (e) {
+        return 1
+    }
+    return crash()
+}
+
+assert(recover_test_2() == 1)
+
+fn recover_test_3() {
+    recover (e) {
+        return 1
+    }
+
+    recover (e) {
+        return 2
+    }
+
+    fn recover_inner() {
+        return crash()
+    }
+
+    return recover_inner()
+}
+
+assert(recover_test_3() == 2)
+
+fn recover_test_4() {
+    recover (e) {
+        return 2
+    }
+    
+    fn recover_test_inner() {
+        recover (e) {
+            return crash()
+        }
+
+        return crash()
+    }
+    return recover_test_inner()
+}
+
+assert(recover_test_4() == 2)
+
+var this_test = {
+    inner: {
+        name: "lorem",
+        get_name: fn() {
+            return this.name
+        }
+    },
+    get_inner_name: fn() {
+        return this.inner.get_name()
+    }
+}
+
+assert(this_test.get_inner_name() == "lorem")
+
+fn add(x, y) { return x + y }
+var templ_var = 3
+assert(`foo${templ_var}bar` == "foo3bar")
+assert(`lorem${add(`${add(`x`, "y")}`, `z`)}ipsum` == "loremxyzipsum")
+assert(`${4 * 2}` == "8")
+assert(`${{}}` == "{}")
+assert(`foo\${x}bar` == "foo${x}bar")
+assert(`${1} ${2}` == "1 2")
+
+fn test_ternary(x) {
+    var res = x == 1 ? 1 : 2;
+    return res;
+}
+assert(test_ternary(1) == 1)
+assert(test_ternary(3) == 2)
+assert((true ? true ? 1 : 2 : 3) == 1)
+assert((true ? false ? 1 : 2 : 3) == 2)
+assert(add(true ? 1 : 2, true ? 3 : 5) == 4)
+assert(add(true ? 1 : 2, 3) == 4)
+assert(add(1, true ? 2 : 3) == 3)
+
+var test_obj = {
+    fun: fn() { return 2}
+}
+
+assert(test_obj.fun() == 2)
+assert(test_obj["fun"] != 2)
+assert(test_obj["fun"]() == 2)
+
+fn get_test_arr() {
+    var test_arr = [
+        fn() { return 0 },
+        fn() { return 1 },
+        fn() { return 2 },
+    ]
+    return test_arr
+}
+
+var fun_i = 0
+assert(get_test_arr()[fun_i++]() == 0)
+assert(get_test_arr()[fun_i++]() == 1)
+assert(get_test_arr()[fun_i++]() == 2)
+
+assert(get_test_arr()[--fun_i]() == 2)
+assert(get_test_arr()[--fun_i]() == 1)
+assert(get_test_arr()[--fun_i]() == 0)
+
+{
+    var a = 10
+    var b = a++ + ++a + ++a +a
+    assert(b == 48)
+}
+
+{
+    var a = 0
+    var b = 0
+    assert((a-- - --b) == 1)
+}
+
+{
+    var obj = { foo: 1 }
+    obj.foo++
+    assert(obj.foo == 2)
+    assert(obj.foo++ == 2)
+    assert(obj.foo == 3)
+    assert(--obj.foo == 2)
+    assert(obj.foo-- == 2)
+    assert(obj.foo == 1)
+}
+
+assert(1 == 1)
+assert(1 != "1")
+assert(1 != {})
+assert("a" + "b" == "ab")
+
+{
+    var n = 256
+    var str = ""
+    for (var i = 0; i < n; i++) {
+        str += "x"
+    }
+    assert(len(str) == n)
+    for (var i = 0; i < n; i++) {
+        assert(str[i] == "x")
+    }
+}
+
+assert(reverse("abc") == "cba")
+assert(reverse("abcd") == "dcba")
+
+assert(slice("abc", 1) == "bc")
+assert(slice("abc", -1) == "c")
+
+assert(concat("abc", "def") == "abcdef")
+
+assert(test_str == "lorem ipsum")

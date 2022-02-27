@@ -1,0 +1,280 @@
+commit d4a0c5cd2496d2e27feb4d8b6adfc9887cc36c36
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Wed Sep 8 14:39:52 2021 +0200
+
+    0.14.0: String optimisations, new benchmark.
+
+commit bdca6d9ef56ab08a8a1292ffb1930e8727881894
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Sun Aug 29 23:06:40 2021 +0200
+
+    0.13.1: Crash when using < or > on numbers and non-numeric types, "to_num" builtin.
+
+commit 85f60bd755723aaebab9cc2ac25fff60acfa31ab
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Fri Aug 27 17:32:33 2021 +0200
+
+    0.13.0: Ternary expressions (a ? b : c), prefix and postfix ++/-- expressions, runtime bugfix.
+
+commit 37cee883e263f0bd51d10e4c2c54ec4e79807657
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Tue Aug 24 14:30:50 2021 +0200
+
+    0.12.1: Template strings bugfix.
+
+commit 0fc6f4c75b9cf561783a44777d3245916c46fc8a
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Tue Aug 24 13:31:23 2021 +0200
+
+    0.12.0: Template strings (e.g. `${foo}`)
+
+commit 20cf05a807dc98bec349fa9a868313df138a9ad0
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Mon Aug 9 14:16:23 2021 +0200
+
+    Updates readme and vsc extension.
+
+commit 940711c3bc4592329eff517eb93c1234b5efbff1
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Mon Aug 9 13:57:15 2021 +0200
+
+    1.11.0: Change extension from .bn to .ape (issue #8)
+
+commit 71005e021696cd958f9376fb2d146e4fa0b14d11
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Mon Jun 28 21:30:01 2021 +0200
+
+    0.10.0: Handling of allocation fails, ape globals are now visible in modules, ape_clear_errors function
+
+commit df4b7d4220a72eedac8e9d57942422da82b8baf4
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Wed Apr 14 22:59:15 2021 +0200
+
+    0.9.0: Per-ape custom allocators.
+
+commit bf6db3552f400589af919847eb52fbb95bf199c6
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Sat Mar 27 19:23:23 2021 +0100
+
+    0.8.1: Windows compilation fixes
+
+commit f07e3e56d8a44b985f0a9c501ec25c40ab6a1f84
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Sat Mar 27 12:54:01 2021 +0100
+
+    0.8.0: Adds ape_set_max_execution_time function.
+
+commit 94b7d2161a049fccfd7176efab72d5f01e6a7708
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Tue Mar 23 20:47:33 2021 +0100
+
+    0.7.5: Bugfix in parser (using uninitialised ident)
+
+commit 4bea4756c2eddbdb81fa88c02dbb121f4919bd0d
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Sat Mar 20 15:35:19 2021 +0100
+
+    Adds link to Ape Playground to readme.md
+
+commit efa3d9296dcf974316637f250068d85022536a56
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Wed Mar 17 10:14:38 2021 +0100
+
+    Examples compilation fix.
+
+commit 1225032b480a4a9ff65142ae21eb4e101ae18813
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Wed Mar 17 10:09:20 2021 +0100
+
+    0.7.4: Bugfixes in AST code.
+
+commit f39d982f85e1450a1c71593bf7fb3bac47799d21
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Thu Mar 11 22:21:25 2021 +0100
+
+    0.7.3: Adds missing break statement, tests compilation fix.
+
+commit 40099306822957efaf76a305962b65fb2fd8df59
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Thu Mar 11 22:05:27 2021 +0100
+
+    0.7.2: Fixes trailing comma in fcalls bug, tests should now pass on GNU/Linux and use more warning options.
+
+commit 81e4462a0078533c3de9443513f0274132a3a3f5
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Thu Mar 11 09:56:53 2021 +0100
+
+    0.7.1: Optimises removal of 1st element in arrays.
+
+commit 37d72c3f765fcc2ba94ae7991d6d4b12d8a3b390
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Wed Mar 10 21:50:34 2021 +0100
+
+    0.7.0: Changes GC strategy, adds new benchmark, map and array memory pools.
+    
+    Mark and sweep GC used to be invoked every n VM ticks. Currently it's invoked every n object allocations.
+
+commit d23850940d94f6c37126dc27d02e756acbfc4094
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Mon Feb 22 22:29:46 2021 +0100
+
+    0.6.0: Constant folding and removal of redundant jumps.
+
+commit 015c80d005ce8c002771c89c9a59df00acb12919
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Sun Dec 6 13:42:04 2020 +0100
+
+    0.5.1: Issue #5 fixes (use after free and string concatenation).
+    
+    Also makes args visible in ape code in examples/ape.c.
+
+commit bb79c83ac8f4b4b1f0d2a5d70765f427522c0d8d
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Sat May 30 15:11:24 2020 +0200
+
+    0.5.0: builtins are now called native functions
+
+commit d1c441a643311f73c12578522a06d45ef7286627
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Wed May 27 21:32:47 2020 +0200
+
+    0.4.0: "this" context during map creation.
+
+commit 6ab38343e3b59d0a9fa29a2fa5838d992f7c4341
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Tue May 26 18:48:24 2020 +0200
+
+    0.3.1: Optimisations and bugfixes.
+    
+    - Memory pool in GC
+    - Small strings (<32 characters) are kept in place without extra allocations
+    - Bugfix in collections_equals_fn function pointer (using correct bool return type)
+
+commit 9b5bedfa4d04ff42f9cc6a210f954905c27ae6b5
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Sun May 17 16:55:42 2020 +0200
+
+    VS Code extension bugfix
+
+commit 51f1f780631eb68d5a3bce068b7552332fbbfced
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Sun May 17 16:43:33 2020 +0200
+
+    Visual Studio Code extension
+
+commit 5a50668de3466d97ed193eaec5b67c0adcf5a444
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Sun May 17 13:50:11 2020 +0200
+
+    0.3.0: Error handling with "recover", bitwise operations, more operator overloads
+    
+    - Runtime errors can be handled with recover statement
+    - Bitwise operations (^ & | << >>)
+    - All operators can be now overloaded
+    - Redeclaring variables in global scope outside repl mode
+    - Function arguments are mutable
+    - Not generating runtime error on divide by 0
+    - crash() function
+    - Bugfixes and optimizations
+
+commit cc5c5c4a76a4ad0c0fc3e4528905c43aff767579
+Merge: 836d96c 4225893
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Mon May 11 20:17:17 2020 +0200
+
+    Merge pull request #4 from m0nt3-q/documentation
+    
+    Adds documentation for builtin functions.
+
+commit 42258933afb9bfa9fa1c648d39cba09ea5271c39
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Mon May 11 20:13:41 2020 +0200
+
+    Update documentation.md
+
+commit c384e9245092de249de1480b4b8cdf855b2215ba
+Author: Ahlrimante Yates <>
+Date:   Mon May 11 07:17:38 2020 -0700
+
+    Fixed typo in 'range', added spacing
+
+commit 5155ac87bfe25a9f90cd1ff5a036f7b18a080493
+Author: Ahlrimante Yates <ayates@studionaito.com>
+Date:   Mon May 11 06:47:56 2020 -0700
+
+    Added documentation for builtin functions
+
+commit 836d96c2834102bde05ef2ae672270c3427745b2
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Fri May 1 10:45:26 2020 +0200
+
+    0.2.0: Operator overloading, module paths, bugfixes.
+    
+    - It's possible to overload operators using maps containing "__operator_OP" keys
+    - Modules can be imported with relative or absolute paths
+    - Object copy/deep copy functions
+    - external_fn is now builtin in the api
+    - Function to disable/enable GC on objects
+    - Various bugfixes
+
+commit b598ad4acd1ced794a7c92a5d6ed539012652310
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Sun Apr 5 15:20:57 2020 +0200
+
+    1.1.2: All symbols without ape_ prefix are now static.
+
+commit 50f1ffbef3c89e7457cbd47a721d6020753605c5
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Wed Apr 1 08:57:49 2020 +0200
+
+    Adds missing break statements.
+    
+    Issue #3
+
+commit 27c4e0ea1457651ba226a4b13d2a2172a7468c28
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Tue Mar 31 11:37:14 2020 +0200
+
+    Adds "my other projects" section to readme
+
+commit 017d33409612e11b06a64472f4f3352d4a892fd6
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Tue Mar 31 09:03:22 2020 +0200
+
+    Typo fix in readme
+
+commit d508101aff600a4195967b314cbcea38b46ae85c
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Tue Mar 31 09:00:53 2020 +0200
+
+    Adds missing modulus operator to readme
+
+commit 7caa629fc514ca8c8766567e30a3ad622e8db312
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Tue Mar 31 00:15:31 2020 +0200
+
+    Typo fix.
+
+commit 7fbc204a7ff0d5653aa17c9a9bfa7e12c5664083
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Fri Mar 27 22:29:53 2020 +0100
+
+    New example and readme.md change.
+
+commit b6d76e59eca6a1a1bb7b6e09980765318092b91c
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Fri Mar 27 21:55:43 2020 +0100
+
+    Removes unused compiler tests
+
+commit 57d95911ad42a2d625a1b2111d336905111a3432
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Fri Mar 27 21:42:07 2020 +0100
+
+    Adds .gitignore
+
+commit af92208ce1329d151e7a4104e75b0d506527fb6d
+Author: Krzysztof Gabis <kgabis@gmail.com>
+Date:   Fri Mar 27 09:54:13 2020 +0100
+
+    Initial commit.
