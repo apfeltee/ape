@@ -425,8 +425,6 @@ enum precedence_t
     PRECEDENCE_HIGHEST
 };
 
-typedef uint8_t opcode_t;
-
 typedef enum error_type_t error_type_t;
 typedef enum token_type_t token_type_t;
 typedef enum statement_type_t statement_type_t;
@@ -440,69 +438,15 @@ typedef enum ApeObjectType_t ApeObjectType_t;
 typedef enum ApeErrorType_t ApeErrorType_t;
 typedef struct ApeContext_t ApeContext_t;
 typedef struct ApeProgram_t ApeProgram_t;
+
+
 typedef struct ApeVM_t ApeVM_t;
 typedef struct ape_config_t ape_config_t;
+typedef struct compilation_result compilation_result_t;
 typedef struct src_pos_t src_pos_t;
 typedef struct ape_config_t ape_config_t;
 typedef struct ape_timer_t ape_timer_t;
-typedef struct allocator_t allocator_t;
-typedef struct error_t error_t;
-typedef struct errors_t errors_t;
-typedef struct token_t token_t;
-typedef struct compiled_file_t compiled_file_t;
-typedef struct lexer_t lexer_t;
-typedef struct code_block_t code_block_t;
-typedef struct map_literal_t map_literal_t;
-typedef struct prefix_expression_t prefix_expression_t;
-typedef struct infix_expression_t infix_expression_t;
-typedef struct if_case_t if_case_t;
-typedef struct fn_literal_t fn_literal_t;
-typedef struct call_expression_t call_expression_t;
-typedef struct index_expression_t index_expression_t;
-typedef struct assign_expression_t assign_expression_t;
-typedef struct logical_expression_t logical_expression_t;
-typedef struct ternary_expression_t ternary_expression_t;
-typedef struct ident_t ident_t;
-typedef struct expression_t expression_t;
-typedef struct define_statement_t define_statement_t;
-typedef struct if_statement_t if_statement_t;
-typedef struct while_loop_statement_t while_loop_statement_t;
-typedef struct foreach_statement_t foreach_statement_t;
-typedef struct for_loop_statement_t for_loop_statement_t;
-typedef struct import_statement_t import_statement_t;
-typedef struct recover_statement_t recover_statement_t;
-typedef struct statement_t statement_t;
-typedef struct parser_t parser_t;
-typedef struct object_t object_t;
-typedef struct function_t function_t;
-typedef struct native_function_t native_function_t;
-typedef struct external_data_t external_data_t;
-typedef struct object_error_t object_error_t;
-typedef struct object_string_t object_string_t;
-typedef struct object_data_t object_data_t;
-typedef struct symbol_t symbol_t;
-typedef struct block_scope_t block_scope_t;
-typedef struct symbol_table_t symbol_table_t;
-typedef struct opcode_definition_t opcode_definition_t;
-typedef struct compilation_result_t compilation_result_t;
-typedef struct compilation_scope_t compilation_scope_t;
-typedef struct object_data_pool_t object_data_pool_t;
-typedef struct gcmem_t gcmem_t;
-typedef struct traceback_item_t traceback_item_t;
-typedef struct traceback_t traceback_t;
-typedef struct frame_t frame_t;
-typedef struct valdict_t_ valdict_t_;
-typedef struct dict_t_ dict_t_;
-typedef struct array_t_ array_t_;
-typedef struct ptrdict_t_ ptrdict_t_;
-typedef struct ptrarray_t_ ptrarray_t_;
-typedef struct strbuf_t strbuf_t;
-typedef struct global_store_t global_store_t;
-typedef struct module_t module_t;
-typedef struct file_scope_t file_scope_t;
-typedef struct compiler_t compiler_t;
-typedef struct native_fn_wrapper_t native_fn_wrapper_t;
-typedef struct ape_object_t ape_object_t;
+
 
 typedef ape_object_t (*ape_native_fn)(ApeContext_t* ape, void* data, int argc, ape_object_t* args);
 typedef void* (*ape_malloc_fn)(void* ctx, size_t size);
@@ -521,19 +465,6 @@ typedef void* (*dict_item_copy_fn)(void* item);
 typedef void (*array_item_deinit_fn)(void* item);
 typedef void (*ptrarray_item_destroy_fn)(void* item);
 typedef void* (*ptrarray_item_copy_fn)(void* item);
-
-typedef expression_t* (*right_assoc_parse_fn)(parser_t* p);
-typedef expression_t* (*left_assoc_parse_fn)(parser_t* p, expression_t* expr);
-
-typedef object_t (*native_fn)(ApeVM_t* vm, void* data, int argc, object_t* args);
-typedef void (*external_data_destroy_fn)(void* data);
-typedef void* (*external_data_copy_fn)(void* data);
-
-
-
-
-
-
 
 struct ape_object_t
 {
@@ -591,6 +522,7 @@ struct ape_timer_t
 
 
 
+typedef struct allocator_t allocator_t;
 struct allocator_t
 {
     allocator_malloc_fn malloc;
@@ -600,6 +532,7 @@ struct allocator_t
 
 
 
+typedef struct error_t error_t;
 struct error_t
 {
     error_type_t type;
@@ -608,6 +541,7 @@ struct error_t
     traceback_t* traceback;
 };
 
+typedef struct errors_t errors_t;
 struct errors_t
 {
     error_t errors[ERRORS_MAX_COUNT];
@@ -616,6 +550,7 @@ struct errors_t
 
 
 
+typedef struct token_t token_t;
 struct token_t
 {
     token_type_t type;
@@ -625,6 +560,7 @@ struct token_t
 };
 
 
+typedef struct compiled_file_t compiled_file_t;
 struct compiled_file_t
 {
     allocator_t* alloc;
@@ -634,6 +570,7 @@ struct compiled_file_t
 };
 
 
+typedef struct lexer_t lexer_t;
 struct lexer_t
 {
     allocator_t* alloc;
@@ -662,6 +599,7 @@ struct lexer_t
 };
 
 
+typedef struct code_block_t code_block_t;
 struct code_block_t
 {
     allocator_t* alloc;
@@ -669,6 +607,7 @@ struct code_block_t
 };
 
 
+typedef struct map_literal_t map_literal_t;
 struct map_literal_t
 {
     ptrarray(expression_t) * keys;
@@ -676,12 +615,14 @@ struct map_literal_t
 };
 
 
+typedef struct prefix_expression_t prefix_expression_t;
 struct prefix_expression_t
 {
     operator_t op;
     expression_t* right;
 };
 
+typedef struct infix_expression_t infix_expression_t;
 struct infix_expression_t
 {
     operator_t op;
@@ -689,6 +630,7 @@ struct infix_expression_t
     expression_t* right;
 };
 
+typedef struct if_case_t if_case_t;
 struct if_case_t
 {
     allocator_t* alloc;
@@ -696,6 +638,7 @@ struct if_case_t
     code_block_t* consequence;
 };
 
+typedef struct fn_literal_t fn_literal_t;
 struct fn_literal_t
 {
     char* name;
@@ -703,18 +646,21 @@ struct fn_literal_t
     code_block_t* body;
 };
 
+typedef struct call_expression_t call_expression_t;
 struct call_expression_t
 {
     expression_t* function;
     ptrarray(expression_t) * args;
 };
 
+typedef struct index_expression_t index_expression_t;
 struct index_expression_t
 {
     expression_t* left;
     expression_t* index;
 };
 
+typedef struct assign_expression_t assign_expression_t;
 struct assign_expression_t
 {
     expression_t* dest;
@@ -722,6 +668,7 @@ struct assign_expression_t
     bool is_postfix;
 };
 
+typedef struct logical_expression_t logical_expression_t;
 struct logical_expression_t
 {
     operator_t op;
@@ -729,6 +676,7 @@ struct logical_expression_t
     expression_t* right;
 };
 
+typedef struct ternary_expression_t ternary_expression_t;
 struct ternary_expression_t
 {
     expression_t* test;
@@ -738,6 +686,7 @@ struct ternary_expression_t
 
 
 
+typedef struct ident_t ident_t;
 struct ident_t
 {
     allocator_t* alloc;
@@ -745,6 +694,7 @@ struct ident_t
     src_pos_t pos;
 };
 
+typedef struct expression_t expression_t;
 struct expression_t
 {
     allocator_t* alloc;
@@ -769,6 +719,7 @@ struct expression_t
     src_pos_t pos;
 };
 
+typedef struct define_statement_t define_statement_t;
 struct define_statement_t
 {
     ident_t* name;
@@ -776,18 +727,21 @@ struct define_statement_t
     bool assignable;
 };
 
+typedef struct if_statement_t if_statement_t;
 struct if_statement_t
 {
     ptrarray(if_case_t) * cases;
     code_block_t* alternative;
 };
 
+typedef struct while_loop_statement_t while_loop_statement_t;
 struct while_loop_statement_t
 {
     expression_t* test;
     code_block_t* body;
 };
 
+typedef struct foreach_statement_t foreach_statement_t;
 struct foreach_statement_t
 {
     ident_t* iterator;
@@ -795,6 +749,7 @@ struct foreach_statement_t
     code_block_t* body;
 };
 
+typedef struct for_loop_statement_t for_loop_statement_t;
 struct for_loop_statement_t
 {
     statement_t* init;
@@ -803,17 +758,20 @@ struct for_loop_statement_t
     code_block_t* body;
 };
 
+typedef struct import_statement_t import_statement_t;
 struct import_statement_t
 {
     char* path;
 };
 
+typedef struct recover_statement_t recover_statement_t;
 struct recover_statement_t
 {
     ident_t* error_ident;
     code_block_t* body;
 };
 
+typedef struct statement_t statement_t;
 struct statement_t
 {
     allocator_t* alloc;
@@ -834,7 +792,10 @@ struct statement_t
     src_pos_t pos;
 };
 
+typedef expression_t* (*right_assoc_parse_fn)(parser_t* p);
+typedef expression_t* (*left_assoc_parse_fn)(parser_t* p, expression_t* expr);
 
+typedef struct parser_t parser_t;
 struct parser_t
 {
     allocator_t* alloc;
@@ -848,7 +809,7 @@ struct parser_t
     int depth;
 };
 
-struct object_t
+typedef struct object_t object_t;
 {
     union
     {
@@ -857,6 +818,7 @@ struct object_t
     };
 };
 
+typedef struct function_t function_t;
 struct function_t
 {
     union
@@ -876,7 +838,9 @@ struct function_t
     bool owns_data;
 };
 
+typedef object_t (*native_fn)(ApeVM_t* vm, void* data, int argc, object_t* args);
 
+typedef struct native_function_t native_function_t;
 struct native_function_t
 {
     char* name;
@@ -885,7 +849,10 @@ struct native_function_t
     int data_len;
 };
 
+typedef void (*external_data_destroy_fn)(void* data);
+typedef void* (*external_data_copy_fn)(void* data);
 
+typedef struct external_data_t external_data_t;
 struct external_data_t
 {
     void* data;
@@ -893,12 +860,14 @@ struct external_data_t
     external_data_copy_fn data_copy_fn;
 };
 
+typedef struct object_error_t object_error_t
 struct object_error_t
 {
     char* message;
     traceback_t* traceback;
 };
 
+typedef struct object_string_t object_string_t;
 struct object_string_t
 {
     union
@@ -912,6 +881,7 @@ struct object_string_t
     int length;
 };
 
+typedef struct object_data_t object_data_t;
 struct object_data_t
 {
     gcmem_t* mem;
@@ -929,6 +899,7 @@ struct object_data_t
     object_type_t type;
 };
 
+typedef struct symbol_t symbol_t;
 struct symbol_t
 {
     allocator_t* alloc;
@@ -938,6 +909,7 @@ struct symbol_t
     bool assignable;
 };
 
+typedef struct block_scope_t block_scope_t;
 struct block_scope_t
 {
     allocator_t* alloc;
@@ -946,10 +918,11 @@ struct block_scope_t
     int num_definitions;
 };
 
+typedef struct symbol_table_t symbol_table_t;
 struct symbol_table_t
 {
     allocator_t* alloc;
-    symbol_table_t* outer;
+    struct symbol_table* outer;
     global_store_t* global_store;
     ptrarray(block_scope_t) * block_scopes;
     ptrarray(symbol_t) * free_symbols;
@@ -958,7 +931,9 @@ struct symbol_table_t
     int module_global_offset;
 };
 
+typedef uint8_t opcode_t;
 
+typedef struct opcode_definition_t opcode_definition_t;
 struct opcode_definition_t
 {
     const char* name;
@@ -967,6 +942,7 @@ struct opcode_definition_t
 };
 
 
+typedef struct compilation_result_t compilation_result_t;
 struct compilation_result_t
 {
     allocator_t* alloc;
@@ -975,6 +951,7 @@ struct compilation_result_t
     int count;
 };
 
+typedef struct compilation_scope_t compilation_scope_t;
 struct compilation_scope_t
 {
     allocator_t* alloc;
@@ -986,12 +963,14 @@ struct compilation_scope_t
     opcode_t last_opcode;
 };
 
+typedef struct object_data_pool_t object_data_pool_t;
 struct object_data_pool_t
 {
     object_data_t* data[GCMEM_POOL_SIZE];
     int count;
 };
 
+typedef struct gcmem_t gcmem_t;
 struct gcmem_t
 {
     allocator_t* alloc;
@@ -1006,18 +985,21 @@ struct gcmem_t
     object_data_pool_t pools[GCMEM_POOLS_NUM];
 };
 
+typedef struct traceback_item_t traceback_item_t;
 struct traceback_item_t
 {
     char* function_name;
     src_pos_t pos;
 };
 
+typedef struct traceback_t traceback_t;
 struct traceback_t
 {
     allocator_t* alloc;
     array(traceback_item_t) * items;
 };
 
+typedef struct frame_t frame_t;
 struct frame_t
 {
     object_t function;
@@ -1054,6 +1036,7 @@ struct ApeVM_t
     object_t operator_oveload_keys[OPCODE_MAX];
 };
 
+typedef struct valdict_t_ valdict_t_;
 struct valdict_t_
 {
     allocator_t* alloc;
@@ -1072,6 +1055,7 @@ struct valdict_t_
 };
 
 
+typedef struct dict_t_ dict_t_;
 struct dict_t_
 {
     allocator_t* alloc;
@@ -1088,6 +1072,7 @@ struct dict_t_
 };
 
 
+typedef struct array_t_ array_t_;
 struct array_t_
 {
     allocator_t* alloc;
@@ -1099,6 +1084,7 @@ struct array_t_
     bool lock_capacity;
 };
 
+typedef struct ptrdict_t_ ptrdict_t_;
 struct ptrdict_t_
 {
     allocator_t* alloc;
@@ -1106,12 +1092,14 @@ struct ptrdict_t_
 };
 
 
+typedef struct ptrarray_t_ ptrarray_t_;
 struct ptrarray_t_
 {
     allocator_t* alloc;
     array_t_ arr;
 };
 
+typedef struct strbuf_t strbuf_t;
 struct strbuf_t
 {
     allocator_t* alloc;
@@ -1121,6 +1109,7 @@ struct strbuf_t
     size_t len;
 };
 
+typedef struct global_store_t global_store_t;
 struct global_store_t
 {
     allocator_t* alloc;
@@ -1128,6 +1117,7 @@ struct global_store_t
     array(object_t) * objects;
 };
 
+typedef struct module_t module_t;
 struct module_t
 {
     allocator_t* alloc;
@@ -1135,6 +1125,7 @@ struct module_t
     ptrarray(symbol_t) * symbols;
 };
 
+typedef struct file_scope_t file_scope_t;
 struct file_scope_t
 {
     allocator_t* alloc;
@@ -1144,6 +1135,7 @@ struct file_scope_t
     ptrarray(char) * loaded_module_names;
 };
 
+typedef struct compiler_t compiler_t;
 struct compiler_t
 {
     allocator_t* alloc;
@@ -1161,6 +1153,7 @@ struct compiler_t
 };
 
 
+typedef struct native_fn_wrapper_t native_fn_wrapper_t;
 struct native_fn_wrapper_t
 {
     ape_native_fn fn;
@@ -1751,7 +1744,7 @@ bool ape_object_get_bool(ape_object_t obj);
 const char* ape_object_get_string(ape_object_t obj);
 
 const char* ape_object_get_error_message(ape_object_t obj);
-const traceback_t* ape_object_get_error_traceback(ape_object_t obj);
+const ape_traceback_t* ape_object_get_error_traceback(ape_object_t obj);
 
 bool ape_object_set_external_destroy_function(ape_object_t object, ape_data_destroy_fn destroy_fn);
 bool ape_object_set_external_copy_function(ape_object_t object, ape_data_copy_fn copy_fn);
@@ -1804,14 +1797,14 @@ ApeErrorType_t ape_error_get_type(const error_t* error);
 const char* ape_error_get_type_string(const error_t* error);
 const char* ape_error_type_to_string(ApeErrorType_t type);
 char* ape_error_serialize(ApeContext_t* ape, const error_t* error);
-const traceback_t* ape_error_get_traceback(const error_t* error);
+const ape_traceback_t* ape_error_get_traceback(const error_t* error);
 
 // Ape traceback
-int ape_traceback_get_depth(const traceback_t* traceback);
-const char* ape_traceback_get_filepath(const traceback_t* traceback, int depth);
-const char* ape_traceback_get_line(const traceback_t* traceback, int depth);
-int ape_traceback_get_line_number(const traceback_t* traceback, int depth);
-int ape_traceback_get_column_number(const traceback_t* traceback, int depth);
-const char* ape_traceback_get_function_name(const traceback_t* traceback, int depth);
+int ape_traceback_get_depth(const ape_traceback_t* traceback);
+const char* ape_traceback_get_filepath(const ape_traceback_t* traceback, int depth);
+const char* ape_traceback_get_line(const ape_traceback_t* traceback, int depth);
+int ape_traceback_get_line_number(const ape_traceback_t* traceback, int depth);
+int ape_traceback_get_column_number(const ape_traceback_t* traceback, int depth);
+const char* ape_traceback_get_function_name(const ape_traceback_t* traceback, int depth);
 
 

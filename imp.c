@@ -14311,10 +14311,10 @@ const char* ape_object_get_error_message(ape_object_t obj)
     return object_get_error_message(ape_object_to_object(obj));
 }
 
-const ape_traceback_t* ape_object_get_error_traceback(ape_object_t ape_obj)
+const traceback_t* ape_object_get_error_traceback(ape_object_t ape_obj)
 {
     object_t obj = ape_object_to_object(ape_obj);
-    return (const ape_traceback_t*)object_get_error_traceback(obj);
+    return (const traceback_t*)object_get_error_traceback(obj);
 }
 
 bool ape_object_set_external_destroy_function(ape_object_t object, ape_data_destroy_fn destroy_fn)
@@ -14695,7 +14695,7 @@ char* ape_error_serialize(ApeContext_t* ape, const error_t* err)
         }
     }
     strbuf_appendf(buf, "%s ERROR in \"%s\" on %d:%d: %s\n", type_str, filename, line_num, col_num, ape_error_get_message(err));
-    const ape_traceback_t* traceback = ape_error_get_traceback(err);
+    const traceback_t* traceback = ape_error_get_traceback(err);
     if(traceback)
     {
         strbuf_appendf(buf, "Traceback:\n");
@@ -14709,23 +14709,23 @@ char* ape_error_serialize(ApeContext_t* ape, const error_t* err)
     return strbuf_get_string_and_destroy(buf);
 }
 
-const ape_traceback_t* ape_error_get_traceback(const error_t* ae)
+const traceback_t* ape_error_get_traceback(const error_t* ae)
 {
     const error_t* error = (const error_t*)ae;
-    return (const ape_traceback_t*)error->traceback;
+    return (const traceback_t*)error->traceback;
 }
 
 //-----------------------------------------------------------------------------
 // Ape traceback
 //-----------------------------------------------------------------------------
 
-int ape_traceback_get_depth(const ape_traceback_t* ape_traceback)
+int ape_traceback_get_depth(const traceback_t* ape_traceback)
 {
     const traceback_t* traceback = (const traceback_t*)ape_traceback;
     return array_count(traceback->items);
 }
 
-const char* ape_traceback_get_filepath(const ape_traceback_t* ape_traceback, int depth)
+const char* ape_traceback_get_filepath(const traceback_t* ape_traceback, int depth)
 {
     const traceback_t* traceback = (const traceback_t*)ape_traceback;
     traceback_item_t* item = array_get(traceback->items, depth);
@@ -14736,7 +14736,7 @@ const char* ape_traceback_get_filepath(const ape_traceback_t* ape_traceback, int
     return traceback_item_get_filepath(item);
 }
 
-const char* ape_traceback_get_line(const ape_traceback_t* ape_traceback, int depth)
+const char* ape_traceback_get_line(const traceback_t* ape_traceback, int depth)
 {
     const traceback_t* traceback = (const traceback_t*)ape_traceback;
     traceback_item_t* item = array_get(traceback->items, depth);
@@ -14747,7 +14747,7 @@ const char* ape_traceback_get_line(const ape_traceback_t* ape_traceback, int dep
     return traceback_item_get_line(item);
 }
 
-int ape_traceback_get_line_number(const ape_traceback_t* ape_traceback, int depth)
+int ape_traceback_get_line_number(const traceback_t* ape_traceback, int depth)
 {
     const traceback_t* traceback = (const traceback_t*)ape_traceback;
     traceback_item_t* item = array_get(traceback->items, depth);
@@ -14758,7 +14758,7 @@ int ape_traceback_get_line_number(const ape_traceback_t* ape_traceback, int dept
     return item->pos.line;
 }
 
-int ape_traceback_get_column_number(const ape_traceback_t* ape_traceback, int depth)
+int ape_traceback_get_column_number(const traceback_t* ape_traceback, int depth)
 {
     const traceback_t* traceback = (const traceback_t*)ape_traceback;
     traceback_item_t* item = array_get(traceback->items, depth);
@@ -14769,7 +14769,7 @@ int ape_traceback_get_column_number(const ape_traceback_t* ape_traceback, int de
     return item->pos.column;
 }
 
-const char* ape_traceback_get_function_name(const ape_traceback_t* ape_traceback, int depth)
+const char* ape_traceback_get_function_name(const traceback_t* ape_traceback, int depth)
 {
     const traceback_t* traceback = (const traceback_t*)ape_traceback;
     traceback_item_t* item = array_get(traceback->items, depth);
