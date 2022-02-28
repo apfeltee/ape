@@ -25,7 +25,7 @@ static void print_errors(ApeContext_t *ape)
     }
 }
 
-static ape_object_t exit_repl(ApeContext_t *ape, void *data, int argc, ape_object_t *args)
+static ApeObject_t exit_repl(ApeContext_t *ape, void *data, int argc, ApeObject_t *args)
 {
     bool *exit_repl = (bool*)data;
     *exit_repl = true;
@@ -38,8 +38,8 @@ int main(int argc, char *argv[])
     char *line;
     char *object_str;
     ApeContext_t *ape;
-    ape_object_t res;
-    ape_object_t args_array;
+    ApeObject_t res;
+    ApeObject_t args_array;
     ape = ape_make();
     ape_set_native_function(ape, "exit", exit_repl, &exit);
     if(argc > 1)

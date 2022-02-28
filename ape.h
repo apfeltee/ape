@@ -80,36 +80,36 @@ THE SOFTWARE.
 
 
 #define APE_CALL(ape, function_name, ...) \
-    ape_call((ape), (function_name), sizeof((ape_object_t[]){ __VA_ARGS__ }) / sizeof(ape_object_t), (ape_object_t[]){ __VA_ARGS__ })
+    ape_call((ape), (function_name), sizeof((ApeObject_t[]){ __VA_ARGS__ }) / sizeof(ApeObject_t), (ApeObject_t[]){ __VA_ARGS__ })
 
 #define APE_CHECK_ARGS(ape, generate_error, argc, args, ...) \
     ape_check_args((ape), (generate_error), (argc), (args), sizeof((int[]){ __VA_ARGS__ }) / sizeof(int), (int[]){ __VA_ARGS__ })
 
 
-#define dict(TYPE) dict_t_
+#define dict(TYPE) dictionary_t
 
 #define dict_make(alloc, copy_fn, destroy_fn) \
-    dict_make_(alloc, (dict_item_copy_fn)(copy_fn), (dict_item_destroy_fn)(destroy_fn))
+    dict_make_(alloc, (ApeDictItemCopyFNCallback_t)(copy_fn), (ApeDictItemDestroyFNCallback_t)(destroy_fn))
 
-#define valdict(KEY_TYPE, VALUE_TYPE) valdict_t_
+#define valdict(KEY_TYPE, VALUE_TYPE) valdict_t
 
 #define valdict_make(allocator, key_type, val_type) valdict_make_(allocator, sizeof(key_type), sizeof(val_type))
 
-#define ptrdict(KEY_TYPE, VALUE_TYPE) ptrdict_t_
+#define ptrdict(KEY_TYPE, VALUE_TYPE) ptrdictionary_t
 
-#define array(TYPE) array_t_
+#define array(TYPE) array_t
 
 #define array_make(allocator, type) array_make_(allocator, sizeof(type))
-#define array_destroy_with_items(arr, fn) array_destroy_with_items_(arr, (array_item_deinit_fn)(fn))
-#define array_clear_and_deinit_items(arr, fn) array_clear_and_deinit_items_(arr, (array_item_deinit_fn)(fn))
+#define array_destroy_with_items(arr, fn) array_destroy_with_items_(arr, (ApeArrayItemDeinitFNCallback_t)(fn))
+#define array_clear_and_deinit_items(arr, fn) array_clear_and_deinit_items_(arr, (ApeArrayItemDeinitFNCallback_t)(fn))
 
-#define ptrarray(TYPE) ptrarray_t_
+#define ptrarray(TYPE) ptrarray_t
 
-#define ptrarray_destroy_with_items(arr, fn) ptrarray_destroy_with_items_(arr, (ptrarray_item_destroy_fn)(fn))
-#define ptrarray_clear_and_destroy_items(arr, fn) ptrarray_clear_and_destroy_items_(arr, (ptrarray_item_destroy_fn)(fn))
+#define ptrarray_destroy_with_items(arr, fn) ptrarray_destroy_with_items_(arr, (ApePtrArrayItemDestroyFNCallback_t)(fn))
+#define ptrarray_clear_and_destroy_items(arr, fn) ptrarray_clear_and_destroy_items_(arr, (ApePtrArrayItemDestroyFNCallback_t)(fn))
 
 #define ptrarray_copy_with_items(arr, copy_fn, destroy_fn) \
-    ptrarray_copy_with_items_(arr, (ptrarray_item_copy_fn)(copy_fn), (ptrarray_item_destroy_fn)(destroy_fn))
+    ptrarray_copy_with_items_(arr, (ApePtrArrayItemCopyFNCallback_t)(copy_fn), (ApePtrArrayItemDestroyFNCallback_t)(destroy_fn))
 
 
 #define APE_STREQ(a, b) (strcmp((a), (b)) == 0)
@@ -473,7 +473,7 @@ typedef struct import_statement_t import_statement_t;
 typedef struct recover_statement_t recover_statement_t;
 typedef struct statement_t statement_t;
 typedef struct parser_t parser_t;
-typedef struct object_t object_t;
+typedef struct ApeObject_t ApeObject_t;
 typedef struct function_t function_t;
 typedef struct native_function_t native_function_t;
 typedef struct external_data_t external_data_t;
@@ -491,54 +491,45 @@ typedef struct gcmem_t gcmem_t;
 typedef struct traceback_item_t traceback_item_t;
 typedef struct traceback_t traceback_t;
 typedef struct frame_t frame_t;
-typedef struct valdict_t_ valdict_t_;
-typedef struct dict_t_ dict_t_;
-typedef struct array_t_ array_t_;
-typedef struct ptrdict_t_ ptrdict_t_;
-typedef struct ptrarray_t_ ptrarray_t_;
+typedef struct valdict_t valdict_t;
+typedef struct dictionary_t dictionary_t;
+typedef struct array_t array_t;
+typedef struct ptrdictionary_t ptrdictionary_t;
+typedef struct ptrarray_t ptrarray_t;
 typedef struct strbuf_t strbuf_t;
 typedef struct global_store_t global_store_t;
 typedef struct module_t module_t;
 typedef struct file_scope_t file_scope_t;
 typedef struct compiler_t compiler_t;
 typedef struct native_fn_wrapper_t native_fn_wrapper_t;
-typedef struct ape_object_t ape_object_t;
+typedef struct ApeObject_t ApeObject_t;
 
-typedef ape_object_t (*ape_native_fn)(ApeContext_t* ape, void* data, int argc, ape_object_t* args);
-typedef void* (*ape_malloc_fn)(void* ctx, size_t size);
-typedef void (*ape_free_fn)(void* ctx, void* ptr);
-typedef void (*ape_data_destroy_fn)(void* data);
-typedef void* (*ape_data_copy_fn)(void* data);
-typedef size_t (*ape_stdout_write_fn)(void* context, const void* data, size_t data_size);
-typedef char* (*ape_read_file_fn)(void* context, const char* path);
-typedef size_t (*ape_write_file_fn)(void* context, const char* path, const char* string, size_t string_size);
-typedef unsigned long (*collections_hash_fn)(const void* val);
-typedef bool (*collections_equals_fn)(const void* a, const void* b);
-typedef void* (*allocator_malloc_fn)(void* ctx, size_t size);
-typedef void (*allocator_free_fn)(void* ctx, void* ptr);
-typedef void (*dict_item_destroy_fn)(void* item);
-typedef void* (*dict_item_copy_fn)(void* item);
-typedef void (*array_item_deinit_fn)(void* item);
-typedef void (*ptrarray_item_destroy_fn)(void* item);
-typedef void* (*ptrarray_item_copy_fn)(void* item);
+//typedef ApeObject_t (*ape_native_fn)(ApeContext_t* ape, void* data, int argc, ApeObject_t* args);
+typedef ApeObject_t (*ApeUserFNCallback_t)(ApeContext_t* ape, void* data, int argc, ApeObject_t* args);
+typedef ApeObject_t     (*ApeNativeFNCallback_t)            (ApeVM_t* vm, void* data, int argc, ApeObject_t* args);
 
-typedef expression_t* (*right_assoc_parse_fn)(parser_t* p);
-typedef expression_t* (*left_assoc_parse_fn)(parser_t* p, expression_t* expr);
+typedef void* (*ApeMallocFNCallback_t)(void* ctx, size_t size);
+typedef void (*ApeFreeFNCallback_t)(void* ctx, void* ptr);
+typedef void (*ApeDataDestroyFNCallback_t)(void* data);
+typedef void* (*ApeDataCopyFNCallback_t)(void* data);
+typedef size_t (*ApeStdoutWriteFNCallback_t)(void* context, const void* data, size_t data_size);
+typedef char* (*ApeReadFileFNCallback_t)(void* context, const char* path);
+typedef size_t (*ApeWriteFileFNCallback_t)(void* context, const char* path, const char* string, size_t string_size);
+typedef unsigned long (*ApeCollectionsHashFNCallback_t)(const void* val);
+typedef bool (*ApeCollectionsEqualsFNCallback_t)(const void* a, const void* b);
+typedef void* (*ApeAllocatorMallocFNCallback_t)(void* ctx, size_t size);
+typedef void (*ApeAllocatorFreeFNCallback_t)(void* ctx, void* ptr);
+typedef void (*ApeDictItemDestroyFNCallback_t)(void* item);
+typedef void* (*ApeDictItemCopyFNCallback_t)(void* item);
+typedef void (*ApeArrayItemDeinitFNCallback_t)(void* item);
+typedef void (*ApePtrArrayItemDestroyFNCallback_t)(void* item);
+typedef void* (*ApePtrArrayItemCopyFNCallback_t)(void* item);
+typedef expression_t* (*ApeRightAssocParseFNCallback_t)(parser_t* p);
+typedef expression_t* (*ApeLeftAssocParseFNCallback_t)(parser_t* p, expression_t* expr);
 
-typedef object_t (*native_fn)(ApeVM_t* vm, void* data, int argc, object_t* args);
-typedef void (*external_data_destroy_fn)(void* data);
-typedef void* (*external_data_copy_fn)(void* data);
+typedef void (*ApeExternalDataDestroyFNCallback_t)(void* data);
+typedef void* (*ApeExternalDataCopyFNCallback_t)(void* data);
 
-
-
-
-
-
-
-struct ape_object_t
-{
-    uint64_t _internal;
-};
 
 struct src_pos_t
 {
@@ -553,7 +544,7 @@ struct ape_config_t
     {
         struct
         {
-            ape_stdout_write_fn write;
+            ApeStdoutWriteFNCallback_t write;
             void* context;
         } write;
     } stdio;
@@ -562,13 +553,13 @@ struct ape_config_t
     {
         struct
         {
-            ape_read_file_fn read_file;
+            ApeReadFileFNCallback_t read_file;
             void* context;
         } read_file;
 
         struct
         {
-            ape_write_file_fn write_file;
+            ApeWriteFileFNCallback_t write_file;
             void* context;
         } write_file;
     } fileio;
@@ -589,16 +580,12 @@ struct ape_timer_t
     double start_time_ms;
 };
 
-
-
 struct allocator_t
 {
-    allocator_malloc_fn malloc;
-    allocator_free_fn free;
+    ApeAllocatorMallocFNCallback_t malloc;
+    ApeAllocatorFreeFNCallback_t free;
     void* ctx;
 };
-
-
 
 struct error_t
 {
@@ -614,8 +601,6 @@ struct errors_t
     int count;
 };
 
-
-
 struct token_t
 {
     token_type_t type;
@@ -624,7 +609,6 @@ struct token_t
     src_pos_t pos;
 };
 
-
 struct compiled_file_t
 {
     allocator_t* alloc;
@@ -632,7 +616,6 @@ struct compiled_file_t
     char* path;
     ptrarray(char*) * lines;
 };
-
 
 struct lexer_t
 {
@@ -661,13 +644,11 @@ struct lexer_t
     token_t peek_token;
 };
 
-
 struct code_block_t
 {
     allocator_t* alloc;
     ptrarray(statement_t) * statements;
 };
-
 
 struct map_literal_t
 {
@@ -735,8 +716,6 @@ struct ternary_expression_t
     expression_t* if_true;
     expression_t* if_false;
 };
-
-
 
 struct ident_t
 {
@@ -834,7 +813,6 @@ struct statement_t
     src_pos_t pos;
 };
 
-
 struct parser_t
 {
     allocator_t* alloc;
@@ -842,14 +820,15 @@ struct parser_t
     lexer_t lexer;
     errors_t* errors;
 
-    right_assoc_parse_fn right_assoc_parse_fns[TOKEN_TYPE_MAX];
-    left_assoc_parse_fn left_assoc_parse_fns[TOKEN_TYPE_MAX];
+    ApeRightAssocParseFNCallback_t right_assoc_parse_fns[TOKEN_TYPE_MAX];
+    ApeLeftAssocParseFNCallback_t left_assoc_parse_fns[TOKEN_TYPE_MAX];
 
     int depth;
 };
 
-struct object_t
+struct ApeObject_t
 {
+    uint64_t _internal;
     union
     {
         uint64_t handle;
@@ -857,12 +836,13 @@ struct object_t
     };
 };
 
+
 struct function_t
 {
     union
     {
-        object_t* free_vals_allocated;
-        object_t free_vals_buf[2];
+        ApeObject_t* free_vals_allocated;
+        ApeObject_t free_vals_buf[2];
     };
     union
     {
@@ -876,21 +856,19 @@ struct function_t
     bool owns_data;
 };
 
-
 struct native_function_t
 {
     char* name;
-    native_fn fn;
+    ApeNativeFNCallback_t fn;
     uint8_t data[NATIVE_FN_MAX_DATA_LEN];
     int data_len;
 };
 
-
 struct external_data_t
 {
     void* data;
-    external_data_destroy_fn data_destroy_fn;
-    external_data_copy_fn data_copy_fn;
+    ApeExternalDataDestroyFNCallback_t data_destroy_fn;
+    ApeExternalDataCopyFNCallback_t data_copy_fn;
 };
 
 struct object_error_t
@@ -919,8 +897,8 @@ struct object_data_t
     {
         object_string_t string;
         object_error_t error;
-        array(object_t) * array;
-        valdict(object_t, object_t) * map;
+        array(ApeObject_t) * array;
+        valdict(ApeObject_t, ApeObject_t) * map;
         function_t function;
         native_function_t native_function;
         external_data_t external;
@@ -958,14 +936,12 @@ struct symbol_table_t
     int module_global_offset;
 };
 
-
 struct opcode_definition_t
 {
     const char* name;
     int num_operands;
     int operand_widths[2];
 };
-
 
 struct compilation_result_t
 {
@@ -996,12 +972,9 @@ struct gcmem_t
 {
     allocator_t* alloc;
     int allocations_since_sweep;
-
     ptrarray(object_data_t) * objects;
     ptrarray(object_data_t) * objects_back;
-
-    array(object_t) * objects_not_gced;
-
+    array(ApeObject_t) * objects_not_gced;
     object_data_pool_t data_only_pool;
     object_data_pool_t pools[GCMEM_POOLS_NUM];
 };
@@ -1020,7 +993,7 @@ struct traceback_t
 
 struct frame_t
 {
-    object_t function;
+    ApeObject_t function;
     int ip;
     int base_pointer;
     const src_pos_t* src_positions;
@@ -1031,8 +1004,6 @@ struct frame_t
     bool is_recovering;
 };
 
-
-
 struct ApeVM_t
 {
     allocator_t* alloc;
@@ -1040,21 +1011,21 @@ struct ApeVM_t
     gcmem_t* mem;
     errors_t* errors;
     global_store_t* global_store;
-    object_t globals[VM_MAX_GLOBALS];
+    ApeObject_t globals[VM_MAX_GLOBALS];
     int globals_count;
-    object_t stack[VM_STACK_SIZE];
+    ApeObject_t stack[VM_STACK_SIZE];
     int sp;
-    object_t this_stack[VM_THIS_STACK_SIZE];
+    ApeObject_t this_stack[VM_THIS_STACK_SIZE];
     int this_sp;
     frame_t frames[VM_MAX_FRAMES];
     int frames_count;
-    object_t last_popped;
+    ApeObject_t last_popped;
     frame_t* current_frame;
     bool running;
-    object_t operator_oveload_keys[OPCODE_MAX];
+    ApeObject_t operator_oveload_keys[OPCODE_MAX];
 };
 
-struct valdict_t_
+struct valdict_t
 {
     allocator_t* alloc;
     size_t key_size;
@@ -1067,12 +1038,11 @@ struct valdict_t_
     unsigned int count;
     unsigned int item_capacity;
     unsigned int cell_capacity;
-    collections_hash_fn _hash_key;
-    collections_equals_fn _keys_equals;
+    ApeCollectionsHashFNCallback_t _hash_key;
+    ApeCollectionsEqualsFNCallback_t _keys_equals;
 };
 
-
-struct dict_t_
+struct dictionary_t
 {
     allocator_t* alloc;
     unsigned int* cells;
@@ -1083,12 +1053,11 @@ struct dict_t_
     unsigned int count;
     unsigned int item_capacity;
     unsigned int cell_capacity;
-    dict_item_copy_fn copy_fn;
-    dict_item_destroy_fn destroy_fn;
+    ApeDictItemCopyFNCallback_t copy_fn;
+    ApeDictItemDestroyFNCallback_t destroy_fn;
 };
 
-
-struct array_t_
+struct array_t
 {
     allocator_t* alloc;
     unsigned char* data;
@@ -1099,17 +1068,16 @@ struct array_t_
     bool lock_capacity;
 };
 
-struct ptrdict_t_
+struct ptrdictionary_t
 {
     allocator_t* alloc;
-    valdict_t_ vd;
+    valdict_t vd;
 };
 
-
-struct ptrarray_t_
+struct ptrarray_t
 {
     allocator_t* alloc;
-    array_t_ arr;
+    array_t arr;
 };
 
 struct strbuf_t
@@ -1125,7 +1093,7 @@ struct global_store_t
 {
     allocator_t* alloc;
     dict(symbol_t) * symbols;
-    array(object_t) * objects;
+    array(ApeObject_t) * objects;
 };
 
 struct module_t
@@ -1152,7 +1120,7 @@ struct compiler_t
     errors_t* errors;
     ptrarray(compiled_file_t) * files;
     global_store_t* global_store;
-    array(object_t) * constants;
+    array(ApeObject_t) * constants;
     compilation_scope_t* compilation_scope;
     ptrarray(file_scope_t) * file_scopes;
     array(src_pos_t) * src_positions_stack;
@@ -1160,10 +1128,9 @@ struct compiler_t
     dict(int) * string_constants_positions;
 };
 
-
 struct native_fn_wrapper_t
 {
-    ape_native_fn fn;
+    ApeUserFNCallback_t fn;
     ApeContext_t* ape;
     void* data;
 };
@@ -1187,12 +1154,8 @@ struct ApeContext_t
     allocator_t custom_allocator;
 };
 
-
 static const src_pos_t src_pos_invalid = { NULL, -1, -1 };
 static const src_pos_t src_pos_zero = { NULL, 0, 0 };
-
-
-
 
 src_pos_t src_pos_make(const compiled_file_t* file, int line, int column);
 char* ape_stringf(allocator_t* alloc, const char* format, ...);
@@ -1217,7 +1180,7 @@ double ape_timer_get_elapsed_ms(const ape_timer_t* timer);
 //-----------------------------------------------------------------------------
 
 
-allocator_t allocator_make(allocator_malloc_fn malloc_fn, allocator_free_fn free_fn, void* ctx);
+allocator_t allocator_make(ApeAllocatorMallocFNCallback_t malloc_fn, ApeAllocatorFreeFNCallback_t free_fn, void* ctx);
 void* allocator_malloc(allocator_t* allocator, size_t size);
 void allocator_free(allocator_t* allocator, void* ptr);
 
@@ -1226,118 +1189,118 @@ void allocator_free(allocator_t* allocator, void* ptr);
 //-----------------------------------------------------------------------------
 
 
-dict_t_* dict_make_(allocator_t* alloc, dict_item_copy_fn copy_fn, dict_item_destroy_fn destroy_fn);
-void dict_destroy(dict_t_* dict);
-void dict_destroy_with_items(dict_t_* dict);
-dict_t_* dict_copy_with_items(dict_t_* dict);
-bool dict_set(dict_t_* dict, const char* key, void* value);
-void* dict_get(const dict_t_* dict, const char* key);
-void* dict_get_value_at(const dict_t_* dict, unsigned int ix);
-const char* dict_get_key_at(const dict_t_* dict, unsigned int ix);
-int dict_count(const dict_t_* dict);
-bool dict_remove(dict_t_* dict, const char* key);
+dictionary_t* dict_make_(allocator_t* alloc, ApeDictItemCopyFNCallback_t copy_fn, ApeDictItemDestroyFNCallback_t destroy_fn);
+void dict_destroy(dictionary_t* dict);
+void dict_destroy_with_items(dictionary_t* dict);
+dictionary_t* dict_copy_with_items(dictionary_t* dict);
+bool dict_set(dictionary_t* dict, const char* key, void* value);
+void* dict_get(const dictionary_t* dict, const char* key);
+void* dict_get_value_at(const dictionary_t* dict, unsigned int ix);
+const char* dict_get_key_at(const dictionary_t* dict, unsigned int ix);
+int dict_count(const dictionary_t* dict);
+bool dict_remove(dictionary_t* dict, const char* key);
 
 //-----------------------------------------------------------------------------
 // Value dictionary
 //-----------------------------------------------------------------------------
 
 
-valdict_t_* valdict_make_(allocator_t* alloc, size_t key_size, size_t val_size);
-valdict_t_* valdict_make_with_capacity(allocator_t* alloc, unsigned int min_capacity, size_t key_size, size_t val_size);
-void valdict_destroy(valdict_t_* dict);
-void valdict_set_hash_function(valdict_t_* dict, collections_hash_fn hash_fn);
-void valdict_set_equals_function(valdict_t_* dict, collections_equals_fn equals_fn);
-bool valdict_set(valdict_t_* dict, void* key, void* value);
-void* valdict_get(const valdict_t_* dict, const void* key);
-void* valdict_get_key_at(const valdict_t_* dict, unsigned int ix);
-void* valdict_get_value_at(const valdict_t_* dict, unsigned int ix);
-unsigned int valdict_get_capacity(const valdict_t_* dict);
-bool valdict_set_value_at(const valdict_t_* dict, unsigned int ix, const void* value);
-int valdict_count(const valdict_t_* dict);
-bool valdict_remove(valdict_t_* dict, void* key);
-void valdict_clear(valdict_t_* dict);
+valdict_t* valdict_make_(allocator_t* alloc, size_t key_size, size_t val_size);
+valdict_t* valdict_make_with_capacity(allocator_t* alloc, unsigned int min_capacity, size_t key_size, size_t val_size);
+void valdict_destroy(valdict_t* dict);
+void valdict_set_hash_function(valdict_t* dict, ApeCollectionsHashFNCallback_t hash_fn);
+void valdict_set_equals_function(valdict_t* dict, ApeCollectionsEqualsFNCallback_t equals_fn);
+bool valdict_set(valdict_t* dict, void* key, void* value);
+void* valdict_get(const valdict_t* dict, const void* key);
+void* valdict_get_key_at(const valdict_t* dict, unsigned int ix);
+void* valdict_get_value_at(const valdict_t* dict, unsigned int ix);
+unsigned int valdict_get_capacity(const valdict_t* dict);
+bool valdict_set_value_at(const valdict_t* dict, unsigned int ix, const void* value);
+int valdict_count(const valdict_t* dict);
+bool valdict_remove(valdict_t* dict, void* key);
+void valdict_clear(valdict_t* dict);
 
 //-----------------------------------------------------------------------------
 // Pointer dictionary
 //-----------------------------------------------------------------------------
 
 
-ptrdict_t_* ptrdict_make(allocator_t* alloc);
-void ptrdict_destroy(ptrdict_t_* dict);
-void ptrdict_set_hash_function(ptrdict_t_* dict, collections_hash_fn hash_fn);
-void ptrdict_set_equals_function(ptrdict_t_* dict, collections_equals_fn equals_fn);
-bool ptrdict_set(ptrdict_t_* dict, void* key, void* value);
-void* ptrdict_get(const ptrdict_t_* dict, const void* key);
-void* ptrdict_get_value_at(const ptrdict_t_* dict, unsigned int ix);
-void* ptrdict_get_key_at(const ptrdict_t_* dict, unsigned int ix);
-int ptrdict_count(const ptrdict_t_* dict);
-bool ptrdict_remove(ptrdict_t_* dict, void* key);
+ptrdictionary_t* ptrdict_make(allocator_t* alloc);
+void ptrdict_destroy(ptrdictionary_t* dict);
+void ptrdict_set_hash_function(ptrdictionary_t* dict, ApeCollectionsHashFNCallback_t hash_fn);
+void ptrdict_set_equals_function(ptrdictionary_t* dict, ApeCollectionsEqualsFNCallback_t equals_fn);
+bool ptrdict_set(ptrdictionary_t* dict, void* key, void* value);
+void* ptrdict_get(const ptrdictionary_t* dict, const void* key);
+void* ptrdict_get_value_at(const ptrdictionary_t* dict, unsigned int ix);
+void* ptrdict_get_key_at(const ptrdictionary_t* dict, unsigned int ix);
+int ptrdict_count(const ptrdictionary_t* dict);
+bool ptrdict_remove(ptrdictionary_t* dict, void* key);
 
 //-----------------------------------------------------------------------------
 // Array
 //-----------------------------------------------------------------------------
 
 
-array_t_* array_make_(allocator_t* alloc, size_t element_size);
-array_t_* array_make_with_capacity(allocator_t* alloc, unsigned int capacity, size_t element_size);
-void array_destroy(array_t_* arr);
-void array_destroy_with_items_(array_t_* arr, array_item_deinit_fn deinit_fn);
-array_t_* array_copy(const array_t_* arr);
-bool array_add(array_t_* arr, const void* value);
-bool array_addn(array_t_* arr, const void* values, int n);
-bool array_add_array(array_t_* dest, array_t_* source);
-bool array_push(array_t_* arr, const void* value);
-bool array_pop(array_t_* arr, void* out_value);
-void* array_top(array_t_* arr);
-bool array_set(array_t_* arr, unsigned int ix, void* value);
-bool array_setn(array_t_* arr, unsigned int ix, void* values, int n);
-void* array_get(array_t_* arr, unsigned int ix);
-const void* array_get_const(const array_t_* arr, unsigned int ix);
-void* array_get_last(array_t_* arr);
-int array_count(const array_t_* arr);
-unsigned int array_get_capacity(const array_t_* arr);
-bool array_remove_at(array_t_* arr, unsigned int ix);
-bool array_remove_item(array_t_* arr, void* ptr);
-void array_clear(array_t_* arr);
-void array_clear_and_deinit_items_(array_t_* arr, array_item_deinit_fn deinit_fn);
-void array_lock_capacity(array_t_* arr);
-int array_get_index(const array_t_* arr, void* ptr);
-bool array_contains(const array_t_* arr, void* ptr);
-void* array_data(array_t_* arr);// might become invalidated by remove/add operations
-const void* array_const_data(const array_t_* arr);
-void array_orphan_data(array_t_* arr);
-bool array_reverse(array_t_* arr);
+array_t* array_make_(allocator_t* alloc, size_t element_size);
+array_t* array_make_with_capacity(allocator_t* alloc, unsigned int capacity, size_t element_size);
+void array_destroy(array_t* arr);
+void array_destroy_with_items_(array_t* arr, ApeArrayItemDeinitFNCallback_t deinit_fn);
+array_t* array_copy(const array_t* arr);
+bool array_add(array_t* arr, const void* value);
+bool array_addn(array_t* arr, const void* values, int n);
+bool array_add_array(array_t* dest, array_t* source);
+bool array_push(array_t* arr, const void* value);
+bool array_pop(array_t* arr, void* out_value);
+void* array_top(array_t* arr);
+bool array_set(array_t* arr, unsigned int ix, void* value);
+bool array_setn(array_t* arr, unsigned int ix, void* values, int n);
+void* array_get(array_t* arr, unsigned int ix);
+const void* array_get_const(const array_t* arr, unsigned int ix);
+void* array_get_last(array_t* arr);
+int array_count(const array_t* arr);
+unsigned int array_get_capacity(const array_t* arr);
+bool array_remove_at(array_t* arr, unsigned int ix);
+bool array_remove_item(array_t* arr, void* ptr);
+void array_clear(array_t* arr);
+void array_clear_and_deinit_items_(array_t* arr, ApeArrayItemDeinitFNCallback_t deinit_fn);
+void array_lock_capacity(array_t* arr);
+int array_get_index(const array_t* arr, void* ptr);
+bool array_contains(const array_t* arr, void* ptr);
+void* array_data(array_t* arr);// might become invalidated by remove/add operations
+const void* array_const_data(const array_t* arr);
+void array_orphan_data(array_t* arr);
+bool array_reverse(array_t* arr);
 
 //-----------------------------------------------------------------------------
 // Pointer Array
 //-----------------------------------------------------------------------------
 
 
-ptrarray_t_* ptrarray_make(allocator_t* alloc);
-ptrarray_t_* ptrarray_make_with_capacity(allocator_t* alloc, unsigned int capacity);
-void ptrarray_destroy(ptrarray_t_* arr);
-void ptrarray_destroy_with_items_(ptrarray_t_* arr, ptrarray_item_destroy_fn destroy_fn);
-ptrarray_t_* ptrarray_copy(ptrarray_t_* arr);
-ptrarray_t_* ptrarray_copy_with_items_(ptrarray_t_* arr, ptrarray_item_copy_fn copy_fn, ptrarray_item_destroy_fn destroy_fn);
-bool ptrarray_add(ptrarray_t_* arr, void* ptr);
-bool ptrarray_set(ptrarray_t_* arr, unsigned int ix, void* ptr);
-bool ptrarray_add_array(ptrarray_t_* dest, ptrarray_t_* source);
-void* ptrarray_get(ptrarray_t_* arr, unsigned int ix);
-const void* ptrarray_get_const(const ptrarray_t_* arr, unsigned int ix);
-bool ptrarray_push(ptrarray_t_* arr, void* ptr);
-void* ptrarray_pop(ptrarray_t_* arr);
-void* ptrarray_top(ptrarray_t_* arr);
-int ptrarray_count(const ptrarray_t_* arr);
-bool ptrarray_remove_at(ptrarray_t_* arr, unsigned int ix);
-bool ptrarray_remove_item(ptrarray_t_* arr, void* item);
-void ptrarray_clear(ptrarray_t_* arr);
-void ptrarray_clear_and_destroy_items_(ptrarray_t_* arr, ptrarray_item_destroy_fn destroy_fn);
-void ptrarray_lock_capacity(ptrarray_t_* arr);
-int ptrarray_get_index(ptrarray_t_* arr, void* ptr);
-bool ptrarray_contains(ptrarray_t_* arr, void* ptr);
-void* ptrarray_get_addr(ptrarray_t_* arr, unsigned int ix);
-void* ptrarray_data(ptrarray_t_* arr);// might become invalidated by remove/add operations
-void ptrarray_reverse(ptrarray_t_* arr);
+ptrarray_t* ptrarray_make(allocator_t* alloc);
+ptrarray_t* ptrarray_make_with_capacity(allocator_t* alloc, unsigned int capacity);
+void ptrarray_destroy(ptrarray_t* arr);
+void ptrarray_destroy_with_items_(ptrarray_t* arr, ApePtrArrayItemDestroyFNCallback_t destroy_fn);
+ptrarray_t* ptrarray_copy(ptrarray_t* arr);
+ptrarray_t* ptrarray_copy_with_items_(ptrarray_t* arr, ApePtrArrayItemCopyFNCallback_t copy_fn, ApePtrArrayItemDestroyFNCallback_t destroy_fn);
+bool ptrarray_add(ptrarray_t* arr, void* ptr);
+bool ptrarray_set(ptrarray_t* arr, unsigned int ix, void* ptr);
+bool ptrarray_add_array(ptrarray_t* dest, ptrarray_t* source);
+void* ptrarray_get(ptrarray_t* arr, unsigned int ix);
+const void* ptrarray_get_const(const ptrarray_t* arr, unsigned int ix);
+bool ptrarray_push(ptrarray_t* arr, void* ptr);
+void* ptrarray_pop(ptrarray_t* arr);
+void* ptrarray_top(ptrarray_t* arr);
+int ptrarray_count(const ptrarray_t* arr);
+bool ptrarray_remove_at(ptrarray_t* arr, unsigned int ix);
+bool ptrarray_remove_item(ptrarray_t* arr, void* item);
+void ptrarray_clear(ptrarray_t* arr);
+void ptrarray_clear_and_destroy_items_(ptrarray_t* arr, ApePtrArrayItemDestroyFNCallback_t destroy_fn);
+void ptrarray_lock_capacity(ptrarray_t* arr);
+int ptrarray_get_index(ptrarray_t* arr, void* ptr);
+bool ptrarray_contains(ptrarray_t* arr, void* ptr);
+void* ptrarray_get_addr(ptrarray_t* arr, unsigned int ix);
+void* ptrarray_data(ptrarray_t* arr);// might become invalidated by remove/add operations
+void ptrarray_reverse(ptrarray_t* arr);
 
 //-----------------------------------------------------------------------------
 // String buffer
@@ -1468,96 +1431,96 @@ void parser_destroy(parser_t* parser);
 ptrarray(statement_t) * parser_parse_all(parser_t* parser, const char* input, compiled_file_t* file);
 
 
-object_t object_make_from_data(object_type_t type, object_data_t* data);
-object_t object_make_number(double val);
-object_t object_make_bool(bool val);
-object_t object_make_null(void);
-object_t object_make_string(gcmem_t* mem, const char* string);
-object_t object_make_string_with_capacity(gcmem_t* mem, int capacity);
-object_t object_make_native_function(gcmem_t* mem, const char* name, native_fn fn, void* data, int data_len);
-object_t object_make_array(gcmem_t* mem);
-object_t object_make_array_with_capacity(gcmem_t* mem, unsigned capacity);
-object_t object_make_map(gcmem_t* mem);
-object_t object_make_map_with_capacity(gcmem_t* mem, unsigned capacity);
-object_t object_make_error(gcmem_t* mem, const char* message);
-object_t object_make_error_no_copy(gcmem_t* mem, char* message);
-object_t object_make_errorf(gcmem_t* mem, const char* fmt, ...);
-object_t
+ApeObject_t object_make_from_data(object_type_t type, object_data_t* data);
+ApeObject_t object_make_number(double val);
+ApeObject_t object_make_bool(bool val);
+ApeObject_t object_make_null(void);
+ApeObject_t object_make_string(gcmem_t* mem, const char* string);
+ApeObject_t object_make_string_with_capacity(gcmem_t* mem, int capacity);
+ApeObject_t object_make_native_function(gcmem_t* mem, const char* name, ApeNativeFNCallback_t fn, void* data, int data_len);
+ApeObject_t object_make_array(gcmem_t* mem);
+ApeObject_t object_make_array_with_capacity(gcmem_t* mem, unsigned capacity);
+ApeObject_t object_make_map(gcmem_t* mem);
+ApeObject_t object_make_map_with_capacity(gcmem_t* mem, unsigned capacity);
+ApeObject_t object_make_error(gcmem_t* mem, const char* message);
+ApeObject_t object_make_error_no_copy(gcmem_t* mem, char* message);
+ApeObject_t object_make_errorf(gcmem_t* mem, const char* fmt, ...);
+ApeObject_t
 object_make_function(gcmem_t* mem, const char* name, compilation_result_t* comp_res, bool owns_data, int num_locals, int num_args, int free_vals_count);
-object_t object_make_external(gcmem_t* mem, void* data);
+ApeObject_t object_make_external(gcmem_t* mem, void* data);
 
-void object_deinit(object_t obj);
+void object_deinit(ApeObject_t obj);
 void object_data_deinit(object_data_t* obj);
 
-bool object_is_allocated(object_t obj);
-gcmem_t* object_get_mem(object_t obj);
-bool object_is_hashable(object_t obj);
-void object_to_string(object_t obj, strbuf_t* buf, bool quote_str);
+bool object_is_allocated(ApeObject_t obj);
+gcmem_t* object_get_mem(ApeObject_t obj);
+bool object_is_hashable(ApeObject_t obj);
+void object_to_string(ApeObject_t obj, strbuf_t* buf, bool quote_str);
 const char* object_get_type_name(const object_type_t type);
 char* object_get_type_union_name(allocator_t* alloc, const object_type_t type);
-char* object_serialize(allocator_t* alloc, object_t object);
-object_t object_deep_copy(gcmem_t* mem, object_t object);
-object_t object_copy(gcmem_t* mem, object_t obj);
-double object_compare(object_t a, object_t b, bool* out_ok);
-bool object_equals(object_t a, object_t b);
+char* object_serialize(allocator_t* alloc, ApeObject_t object);
+ApeObject_t object_deep_copy(gcmem_t* mem, ApeObject_t object);
+ApeObject_t object_copy(gcmem_t* mem, ApeObject_t obj);
+double object_compare(ApeObject_t a, ApeObject_t b, bool* out_ok);
+bool object_equals(ApeObject_t a, ApeObject_t b);
 
-object_data_t* object_get_allocated_data(object_t object);
+object_data_t* object_get_allocated_data(ApeObject_t object);
 
-bool object_get_bool(object_t obj);
-double object_get_number(object_t obj);
-function_t* object_get_function(object_t obj);
-const char* object_get_string(object_t obj);
-int object_get_string_length(object_t obj);
-void object_set_string_length(object_t obj, int len);
-int object_get_string_capacity(object_t obj);
-char* object_get_mutable_string(object_t obj);
-bool object_string_append(object_t obj, const char* src, int len);
-unsigned long object_get_string_hash(object_t obj);
-native_function_t* object_get_native_function(object_t obj);
-object_type_t object_get_type(object_t obj);
+bool object_get_bool(ApeObject_t obj);
+double object_get_number(ApeObject_t obj);
+function_t* object_get_function(ApeObject_t obj);
+const char* object_get_string(ApeObject_t obj);
+int object_get_string_length(ApeObject_t obj);
+void object_set_string_length(ApeObject_t obj, int len);
+int object_get_string_capacity(ApeObject_t obj);
+char* object_get_mutable_string(ApeObject_t obj);
+bool object_string_append(ApeObject_t obj, const char* src, int len);
+unsigned long object_get_string_hash(ApeObject_t obj);
+native_function_t* object_get_native_function(ApeObject_t obj);
+object_type_t object_get_type(ApeObject_t obj);
 
-bool object_is_numeric(object_t obj);
-bool object_is_null(object_t obj);
-bool object_is_callable(object_t obj);
+bool object_is_numeric(ApeObject_t obj);
+bool object_is_null(ApeObject_t obj);
+bool object_is_callable(ApeObject_t obj);
 
-const char* object_get_function_name(object_t obj);
-object_t object_get_function_free_val(object_t obj, int ix);
-void object_set_function_free_val(object_t obj, int ix, object_t val);
-object_t* object_get_function_free_vals(object_t obj);
+const char* object_get_function_name(ApeObject_t obj);
+ApeObject_t object_get_function_free_val(ApeObject_t obj, int ix);
+void object_set_function_free_val(ApeObject_t obj, int ix, ApeObject_t val);
+ApeObject_t* object_get_function_free_vals(ApeObject_t obj);
 
-const char* object_get_error_message(object_t obj);
-void object_set_error_traceback(object_t obj, traceback_t* traceback);
-traceback_t* object_get_error_traceback(object_t obj);
+const char* object_get_error_message(ApeObject_t obj);
+void object_set_error_traceback(ApeObject_t obj, traceback_t* traceback);
+traceback_t* object_get_error_traceback(ApeObject_t obj);
 
-external_data_t* object_get_external_data(object_t object);
-bool object_set_external_destroy_function(object_t object, external_data_destroy_fn destroy_fn);
-bool object_set_external_data(object_t object, void* data);
-bool object_set_external_copy_function(object_t object, external_data_copy_fn copy_fn);
+external_data_t* object_get_external_data(ApeObject_t object);
+bool object_set_external_destroy_function(ApeObject_t object, ApeExternalDataDestroyFNCallback_t destroy_fn);
+bool object_set_external_data(ApeObject_t object, void* data);
+bool object_set_external_copy_function(ApeObject_t object, ApeExternalDataCopyFNCallback_t copy_fn);
 
-object_t object_get_array_value_at(object_t array, int ix);
-bool object_set_array_value_at(object_t obj, int ix, object_t val);
-bool object_add_array_value(object_t array, object_t val);
-int object_get_array_length(object_t array);
-bool object_remove_array_value_at(object_t array, int ix);
+ApeObject_t object_get_array_value_at(ApeObject_t array, int ix);
+bool object_set_array_value_at(ApeObject_t obj, int ix, ApeObject_t val);
+bool object_add_array_value(ApeObject_t array, ApeObject_t val);
+int object_get_array_length(ApeObject_t array);
+bool object_remove_array_value_at(ApeObject_t array, int ix);
 
-int object_get_map_length(object_t obj);
-object_t object_get_map_key_at(object_t obj, int ix);
-object_t object_get_map_value_at(object_t obj, int ix);
-bool object_set_map_value_at(object_t obj, int ix, object_t val);
-object_t object_get_kv_pair_at(gcmem_t* mem, object_t obj, int ix);
-bool object_set_map_value(object_t obj, object_t key, object_t val);
-object_t object_get_map_value(object_t obj, object_t key);
-bool object_map_has_key(object_t obj, object_t key);
+int object_get_map_length(ApeObject_t obj);
+ApeObject_t object_get_map_key_at(ApeObject_t obj, int ix);
+ApeObject_t object_get_map_value_at(ApeObject_t obj, int ix);
+bool object_set_map_value_at(ApeObject_t obj, int ix, ApeObject_t val);
+ApeObject_t object_get_kv_pair_at(gcmem_t* mem, ApeObject_t obj, int ix);
+bool object_set_map_value(ApeObject_t obj, ApeObject_t key, ApeObject_t val);
+ApeObject_t object_get_map_value(ApeObject_t obj, ApeObject_t key);
+bool object_map_has_key(ApeObject_t obj, ApeObject_t key);
 
 
 global_store_t* global_store_make(allocator_t* alloc, gcmem_t* mem);
 void global_store_destroy(global_store_t* store);
 const symbol_t* global_store_get_symbol(global_store_t* store, const char* name);
-object_t global_store_get_object(global_store_t* store, const char* name);
-bool global_store_set(global_store_t* store, const char* name, object_t object);
-object_t global_store_get_object_at(global_store_t* store, int ix, bool* out_ok);
-bool global_store_set_object_at(global_store_t* store, int ix, object_t object);
-object_t* global_store_get_object_data(global_store_t* store);
+ApeObject_t global_store_get_object(global_store_t* store, const char* name);
+bool global_store_set(global_store_t* store, const char* name, ApeObject_t object);
+ApeObject_t global_store_get_object_at(global_store_t* store, int ix, bool* out_ok);
+bool global_store_set_object_at(global_store_t* store, int ix, ApeObject_t object);
+ApeObject_t* global_store_get_object_data(global_store_t* store);
 int global_store_get_object_count(global_store_t* store);
 
 
@@ -1616,7 +1579,7 @@ compilation_result_t* compiler_compile(compiler_t* comp, const char* code);
 compilation_result_t* compiler_compile_file(compiler_t* comp, const char* path);
 symbol_table_t* compiler_get_symbol_table(compiler_t* comp);
 void compiler_set_symbol_table(compiler_t* comp, symbol_table_t* table);
-array(object_t) * compiler_get_constants(const compiler_t* comp);
+array(ApeObject_t) * compiler_get_constants(const compiler_t* comp);
 
 
 gcmem_t* gcmem_make(allocator_t* alloc);
@@ -1626,18 +1589,18 @@ object_data_t* gcmem_alloc_object_data(gcmem_t* mem, object_type_t type);
 object_data_t* gcmem_get_object_data_from_pool(gcmem_t* mem, object_type_t type);
 
 void gc_unmark_all(gcmem_t* mem);
-void gc_mark_objects(object_t* objects, int count);
-void gc_mark_object(object_t object);
+void gc_mark_objects(ApeObject_t* objects, int count);
+void gc_mark_object(ApeObject_t object);
 void gc_sweep(gcmem_t* mem);
 
-bool gc_disable_on_object(object_t obj);
-void gc_enable_on_object(object_t obj);
+bool gc_disable_on_object(ApeObject_t obj);
+void gc_enable_on_object(ApeObject_t obj);
 
 int gc_should_sweep(gcmem_t* mem);
 
 
 int builtins_count(void);
-native_fn builtins_get_fn(int ix);
+ApeNativeFNCallback_t builtins_get_fn(int ix);
 const char* builtins_get_name(int ix);
 
 
@@ -1650,7 +1613,7 @@ const char* traceback_item_get_line(traceback_item_t* item);
 const char* traceback_item_get_filepath(traceback_item_t* item);
 
 
-bool frame_init(frame_t* frame, object_t function, int base_pointer);
+bool frame_init(frame_t* frame, ApeObject_t function, int base_pointer);
 
 opcode_val_t frame_read_opcode(frame_t* frame);
 uint64_t frame_read_uint64(frame_t* frame);
@@ -1664,19 +1627,19 @@ void vm_destroy(ApeVM_t* vm);
 
 void vm_reset(ApeVM_t* vm);
 
-bool vm_run(ApeVM_t* vm, compilation_result_t* comp_res, array(object_t) * constants);
-object_t vm_call(ApeVM_t* vm, array(object_t) * constants, object_t callee, int argc, object_t* args);
-bool vm_execute_function(ApeVM_t* vm, object_t function, array(object_t) * constants);
+bool vm_run(ApeVM_t* vm, compilation_result_t* comp_res, array(ApeObject_t) * constants);
+ApeObject_t vm_call(ApeVM_t* vm, array(ApeObject_t) * constants, ApeObject_t callee, int argc, ApeObject_t* args);
+bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) * constants);
 
-object_t vm_get_last_popped(ApeVM_t* vm);
+ApeObject_t vm_get_last_popped(ApeVM_t* vm);
 bool vm_has_errors(ApeVM_t* vm);
 
-bool vm_set_global(ApeVM_t* vm, int ix, object_t val);
-object_t vm_get_global(ApeVM_t* vm, int ix);
+bool vm_set_global(ApeVM_t* vm, int ix, ApeObject_t val);
+ApeObject_t vm_get_global(ApeVM_t* vm, int ix);
 
 
 ApeContext_t* ape_make(void);
-ApeContext_t* ape_make_ex(ape_malloc_fn malloc_fn, ape_free_fn free_fn, void* ctx);
+ApeContext_t* ape_make_ex(ApeMallocFNCallback_t malloc_fn, ApeFreeFNCallback_t free_fn, void* ctx);
 void ape_destroy(ApeContext_t* ape);
 
 void ape_free_allocated(ApeContext_t* ape, void* ptr);
@@ -1689,19 +1652,19 @@ void ape_set_repl_mode(ApeContext_t* ape, bool enabled);
 // but expect it to be submilisecond.
 bool ape_set_timeout(ApeContext_t* ape, double max_execution_time_ms);
 
-void ape_set_stdout_write_function(ApeContext_t* ape, ape_stdout_write_fn stdout_write, void* context);
-void ape_set_file_write_function(ApeContext_t* ape, ape_write_file_fn file_write, void* context);
-void ape_set_file_read_function(ApeContext_t* ape, ape_read_file_fn file_read, void* context);
+void ape_set_stdout_write_function(ApeContext_t* ape, ApeStdoutWriteFNCallback_t stdout_write, void* context);
+void ape_set_file_write_function(ApeContext_t* ape, ApeWriteFileFNCallback_t file_write, void* context);
+void ape_set_file_read_function(ApeContext_t* ape, ApeReadFileFNCallback_t file_read, void* context);
 
 ApeProgram_t* ape_compile(ApeContext_t* ape, const char* code);
 ApeProgram_t* ape_compile_file(ApeContext_t* ape, const char* path);
-ape_object_t ape_execute_program(ApeContext_t* ape, const ApeProgram_t* program);
+ApeObject_t ape_execute_program(ApeContext_t* ape, const ApeProgram_t* program);
 void ape_program_destroy(ApeProgram_t* program);
 
-ape_object_t ape_execute(ApeContext_t* ape, const char* code);
-ape_object_t ape_execute_file(ApeContext_t* ape, const char* path);
+ApeObject_t ape_execute(ApeContext_t* ape, const char* code);
+ApeObject_t ape_execute_file(ApeContext_t* ape, const char* path);
 
-ape_object_t ape_call(ApeContext_t* ape, const char* function_name, int argc, ape_object_t* args);
+ApeObject_t ape_call(ApeContext_t* ape, const char* function_name, int argc, ApeObject_t* args);
 
 
 void ape_set_runtime_error(ApeContext_t* ape, const char* message);
@@ -1711,88 +1674,88 @@ int ape_errors_count(const ApeContext_t* ape);
 void ape_clear_errors(ApeContext_t* ape);
 const error_t* ape_get_error(const ApeContext_t* ape, int index);
 
-bool ape_set_native_function(ApeContext_t* ape, const char* name, ape_native_fn fn, void* data);
-bool ape_set_global_constant(ApeContext_t* ape, const char* name, ape_object_t obj);
-ape_object_t ape_get_object(ApeContext_t* ape, const char* name);
+bool ape_set_native_function(ApeContext_t* ape, const char* name, ApeUserFNCallback_t fn, void* data);
+bool ape_set_global_constant(ApeContext_t* ape, const char* name, ApeObject_t obj);
+ApeObject_t ape_get_object(ApeContext_t* ape, const char* name);
 
-bool ape_check_args(ApeContext_t* ape, bool generate_error, int argc, ape_object_t* args, int expected_argc, int* expected_types);
+bool ape_check_args(ApeContext_t* ape, bool generate_error, int argc, ApeObject_t* args, int expected_argc, int* expected_types);
 
 // Ape object
-ape_object_t ape_object_make_number(double val);
-ape_object_t ape_object_make_bool(bool val);
-ape_object_t ape_object_make_null(void);
-ape_object_t ape_object_make_string(ApeContext_t* ape, const char* str);
-ape_object_t ape_object_make_stringf(ApeContext_t* ape, const char* format, ...);
-ape_object_t ape_object_make_array(ApeContext_t* ape);
-ape_object_t ape_object_make_map(ApeContext_t* ape);
-ape_object_t ape_object_make_native_function(ApeContext_t* ape, ape_native_fn fn, void* data);
-ape_object_t ape_object_make_error(ApeContext_t* ape, const char* message);
-ape_object_t ape_object_make_errorf(ApeContext_t* ape, const char* format, ...);
-ape_object_t ape_object_make_external(ApeContext_t* ape, void* data);
+ApeObject_t ape_object_make_number(double val);
+ApeObject_t ape_object_make_bool(bool val);
+ApeObject_t ape_object_make_null(void);
+ApeObject_t ape_object_make_string(ApeContext_t* ape, const char* str);
+ApeObject_t ape_object_make_stringf(ApeContext_t* ape, const char* format, ...);
+ApeObject_t ape_object_make_array(ApeContext_t* ape);
+ApeObject_t ape_object_make_map(ApeContext_t* ape);
+ApeObject_t ape_object_make_native_function(ApeContext_t* ape, ApeUserFNCallback_t fn, void* data);
+ApeObject_t ape_object_make_error(ApeContext_t* ape, const char* message);
+ApeObject_t ape_object_make_errorf(ApeContext_t* ape, const char* format, ...);
+ApeObject_t ape_object_make_external(ApeContext_t* ape, void* data);
 
-char* ape_object_serialize(ApeContext_t* ape, ape_object_t obj);
+char* ape_object_serialize(ApeContext_t* ape, ApeObject_t obj);
 
-bool ape_object_disable_gc(ape_object_t obj);
-void ape_object_enable_gc(ape_object_t obj);
+bool ape_object_disable_gc(ApeObject_t obj);
+void ape_object_enable_gc(ApeObject_t obj);
 
-bool ape_object_equals(ape_object_t a, ape_object_t b);
+bool ape_object_equals(ApeObject_t a, ApeObject_t b);
 
-bool ape_object_is_null(ape_object_t obj);
+bool ape_object_is_null(ApeObject_t obj);
 
-ape_object_t ape_object_copy(ape_object_t obj);
-ape_object_t ape_object_deep_copy(ape_object_t obj);
+ApeObject_t ape_object_copy(ApeObject_t obj);
+ApeObject_t ape_object_deep_copy(ApeObject_t obj);
 
-ApeObjectType_t ape_object_get_type(ape_object_t obj);
-const char* ape_object_get_type_string(ape_object_t obj);
+ApeObjectType_t ape_object_get_type(ApeObject_t obj);
+const char* ape_object_get_type_string(ApeObject_t obj);
 const char* ape_object_get_type_name(ApeObjectType_t type);
 
-double ape_object_get_number(ape_object_t obj);
-bool ape_object_get_bool(ape_object_t obj);
-const char* ape_object_get_string(ape_object_t obj);
+double ape_object_get_number(ApeObject_t obj);
+bool ape_object_get_bool(ApeObject_t obj);
+const char* ape_object_get_string(ApeObject_t obj);
 
-const char* ape_object_get_error_message(ape_object_t obj);
-const traceback_t* ape_object_get_error_traceback(ape_object_t obj);
+const char* ape_object_get_error_message(ApeObject_t obj);
+const traceback_t* ape_object_get_error_traceback(ApeObject_t obj);
 
-bool ape_object_set_external_destroy_function(ape_object_t object, ape_data_destroy_fn destroy_fn);
-bool ape_object_set_external_copy_function(ape_object_t object, ape_data_copy_fn copy_fn);
+bool ape_object_set_external_destroy_function(ApeObject_t object, ApeDataDestroyFNCallback_t destroy_fn);
+bool ape_object_set_external_copy_function(ApeObject_t object, ApeDataCopyFNCallback_t copy_fn);
 
 // Ape object array
-int ape_object_get_array_length(ape_object_t obj);
+int ape_object_get_array_length(ApeObject_t obj);
 
-ape_object_t ape_object_get_array_value(ape_object_t object, int ix);
-const char* ape_object_get_array_string(ape_object_t object, int ix);
-double ape_object_get_array_number(ape_object_t object, int ix);
-bool ape_object_get_array_bool(ape_object_t object, int ix);
+ApeObject_t ape_object_get_array_value(ApeObject_t object, int ix);
+const char* ape_object_get_array_string(ApeObject_t object, int ix);
+double ape_object_get_array_number(ApeObject_t object, int ix);
+bool ape_object_get_array_bool(ApeObject_t object, int ix);
 
-bool ape_object_set_array_value(ape_object_t object, int ix, ape_object_t value);
-bool ape_object_set_array_string(ape_object_t object, int ix, const char* string);
-bool ape_object_set_array_number(ape_object_t object, int ix, double number);
-bool ape_object_set_array_bool(ape_object_t object, int ix, bool value);
+bool ape_object_set_array_value(ApeObject_t object, int ix, ApeObject_t value);
+bool ape_object_set_array_string(ApeObject_t object, int ix, const char* string);
+bool ape_object_set_array_number(ApeObject_t object, int ix, double number);
+bool ape_object_set_array_bool(ApeObject_t object, int ix, bool value);
 
-bool ape_object_add_array_value(ape_object_t object, ape_object_t value);
-bool ape_object_add_array_string(ape_object_t object, const char* string);
-bool ape_object_add_array_number(ape_object_t object, double number);
-bool ape_object_add_array_bool(ape_object_t object, bool value);
+bool ape_object_add_array_value(ApeObject_t object, ApeObject_t value);
+bool ape_object_add_array_string(ApeObject_t object, const char* string);
+bool ape_object_add_array_number(ApeObject_t object, double number);
+bool ape_object_add_array_bool(ApeObject_t object, bool value);
 
 // Ape object map
-int ape_object_get_map_length(ape_object_t obj);
-ape_object_t ape_object_get_map_key_at(ape_object_t object, int ix);
-ape_object_t ape_object_get_map_value_at(ape_object_t object, int ix);
-bool ape_object_set_map_value_at(ape_object_t object, int ix, ape_object_t val);
+int ape_object_get_map_length(ApeObject_t obj);
+ApeObject_t ape_object_get_map_key_at(ApeObject_t object, int ix);
+ApeObject_t ape_object_get_map_value_at(ApeObject_t object, int ix);
+bool ape_object_set_map_value_at(ApeObject_t object, int ix, ApeObject_t val);
 
-bool ape_object_set_map_value_with_value_key(ape_object_t object, ape_object_t key, ape_object_t value);
-bool ape_object_set_map_value(ape_object_t object, const char* key, ape_object_t value);
-bool ape_object_set_map_string(ape_object_t object, const char* key, const char* string);
-bool ape_object_set_map_number(ape_object_t object, const char* key, double number);
-bool ape_object_set_map_bool(ape_object_t object, const char* key, bool value);
+bool ape_object_set_map_value_with_value_key(ApeObject_t object, ApeObject_t key, ApeObject_t value);
+bool ape_object_set_map_value(ApeObject_t object, const char* key, ApeObject_t value);
+bool ape_object_set_map_string(ApeObject_t object, const char* key, const char* string);
+bool ape_object_set_map_number(ApeObject_t object, const char* key, double number);
+bool ape_object_set_map_bool(ApeObject_t object, const char* key, bool value);
 
-ape_object_t ape_object_get_map_value_with_value_key(ape_object_t object, ape_object_t key);
-ape_object_t ape_object_get_map_value(ape_object_t object, const char* key);
-const char* ape_object_get_map_string(ape_object_t object, const char* key);
-double ape_object_get_map_number(ape_object_t object, const char* key);
-bool ape_object_get_map_bool(ape_object_t object, const char* key);
+ApeObject_t ape_object_get_map_value_with_value_key(ApeObject_t object, ApeObject_t key);
+ApeObject_t ape_object_get_map_value(ApeObject_t object, const char* key);
+const char* ape_object_get_map_string(ApeObject_t object, const char* key);
+double ape_object_get_map_number(ApeObject_t object, const char* key);
+bool ape_object_get_map_bool(ApeObject_t object, const char* key);
 
-bool ape_object_map_has_key(ape_object_t object, const char* key);
+bool ape_object_map_has_key(ApeObject_t object, const char* key);
 
 // Ape error
 const char* ape_error_get_message(const error_t* error);
