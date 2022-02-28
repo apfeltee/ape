@@ -47,7 +47,7 @@ THE SOFTWARE.
 #endif
 
 #if defined(APE_POSIX)
-
+    #include <sys/time.h>
 #elif defined(APE_WINDOWS)
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
@@ -2222,7 +2222,7 @@ void errors_deinit(errors_t* errors)
     errors_clear(errors);
 }
 
-void errors_add_error(errors_t* errors, error_type_t type, src_pos_t pos, const char* message)
+void errors_add_error(errors_t* errors, ApeErrorType_t type, src_pos_t pos, const char* message)
 {
     if(errors->count >= ERRORS_MAX_COUNT)
     {
@@ -2233,9 +2233,9 @@ void errors_add_error(errors_t* errors, error_type_t type, src_pos_t pos, const 
     err.type = type;
     int len = (int)strlen(message);
     int to_copy = len;
-    if(to_copy >= (ERROR_MESSAGE_MAX_LENGTH - 1))
+    if(to_copy >= (APE_ERROR_MESSAGE_MAX_LENGTH - 1))
     {
-        to_copy = ERROR_MESSAGE_MAX_LENGTH - 1;
+        to_copy = APE_ERROR_MESSAGE_MAX_LENGTH - 1;
     }
     memcpy(err.message, message, to_copy);
     err.message[to_copy] = '\0';
@@ -2245,7 +2245,7 @@ void errors_add_error(errors_t* errors, error_type_t type, src_pos_t pos, const 
     errors->count++;
 }
 
-void errors_add_errorf(errors_t* errors, error_type_t type, src_pos_t pos, const char* format, ...)
+void errors_add_errorf(errors_t* errors, ApeErrorType_t type, src_pos_t pos, const char* format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -2253,8 +2253,8 @@ void errors_add_errorf(errors_t* errors, error_type_t type, src_pos_t pos, const
     (void)to_write;
     va_end(args);
     va_start(args, format);
-    char res[ERROR_MESSAGE_MAX_LENGTH];
-    int written = vsnprintf(res, ERROR_MESSAGE_MAX_LENGTH, format, args);
+    char res[APE_ERROR_MESSAGE_MAX_LENGTH];
+    int written = vsnprintf(res, APE_ERROR_MESSAGE_MAX_LENGTH, format, args);
     (void)written;
     APE_ASSERT(to_write == written);
     va_end(args);
@@ -2297,21 +2297,21 @@ const error_t* errors_getc(const errors_t* errors, int ix)
     return &errors->errors[ix];
 }
 
-const char* error_type_to_string(error_type_t type)
+const char* error_type_to_string(ApeErrorType_t type)
 {
     switch(type)
     {
-        case ERROR_PARSING:
+        case APE_ERROR_PARSING:
             return "PARSING";
-        case ERROR_COMPILATION:
+        case APE_ERROR_COMPILATION:
             return "COMPILATION";
-        case ERROR_RUNTIME:
+        case APE_ERROR_RUNTIME:
             return "RUNTIME";
-        case ERROR_TIMEOUT:
+        case APE_ERROR_TIMEOUT:
             return "TIMEOUT";
-        case ERROR_ALLOCATION:
+        case APE_ERROR_ALLOCATION:
             return "ALLOCATION";
-        case ERROR_USER:
+        case APE_ERROR_USER:
             return "USER";
         default:
             return "INVALID";
@@ -5169,14 +5169,14 @@ compilation_result_t* compiler_compile_file(compiler_t* comp, const char* path)
 
     if(!comp->config->fileio.read_file.read_file)
     {// todo: read code function
-        errors_add_error(comp->errors, ERROR_COMPILATION, src_pos_invalid, "File read function not configured");
+        errors_add_error(comp->errors, APE_ERROR_COMPILATION, src_pos_invalid, "File read function not configured");
         goto err;
     }
 
     code = comp->config->fileio.read_file.read_file(comp->config->fileio.read_file.context, path);
     if(!code)
     {
-        errors_add_errorf(comp->errors, ERROR_COMPILATION, src_pos_invalid, "Reading file \"%s\" failed", path);
+        errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, src_pos_invalid, "Reading file \"%s\" failed", path);
         goto err;
     }
 
@@ -5567,7 +5567,7 @@ static bool import_module(compiler_t* comp, const statement_t* import_stmt)
         const char* loaded_name = ptrarray_get(file_scope->loaded_module_names, i);
         if(kg_streq(loaded_name, module_name))
         {
-            errors_add_errorf(comp->errors, ERROR_COMPILATION, import_stmt->pos, "Module \"%s\" was already imported", module_name);
+            errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos, "Module \"%s\" was already imported", module_name);
             result = false;
             goto end;
         }
@@ -5607,7 +5607,7 @@ static bool import_module(compiler_t* comp, const statement_t* import_stmt)
     symbol_table_t* symbol_table = compiler_get_symbol_table(comp);
     if(symbol_table->outer != NULL || ptrarray_count(symbol_table->block_scopes) > 1)
     {
-        errors_add_error(comp->errors, ERROR_COMPILATION, import_stmt->pos, "Modules can only be imported in global scope");
+        errors_add_error(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos, "Modules can only be imported in global scope");
         result = false;
         goto end;
     }
@@ -5617,7 +5617,7 @@ static bool import_module(compiler_t* comp, const statement_t* import_stmt)
         file_scope_t* fs = ptrarray_get(comp->file_scopes, i);
         if(APE_STREQ(fs->file->path, filepath))
         {
-            errors_add_errorf(comp->errors, ERROR_COMPILATION, import_stmt->pos, "Cyclic reference of file \"%s\"", filepath);
+            errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos, "Cyclic reference of file \"%s\"", filepath);
             result = false;
             goto end;
         }
@@ -5628,7 +5628,7 @@ static bool import_module(compiler_t* comp, const statement_t* import_stmt)
     {// todo: create new module function
         if(!comp->config->fileio.read_file.read_file)
         {
-            errors_add_errorf(comp->errors, ERROR_COMPILATION, import_stmt->pos,
+            errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos,
                               "Cannot import module \"%s\", file read function not configured", filepath);
             result = false;
             goto end;
@@ -5637,7 +5637,7 @@ static bool import_module(compiler_t* comp, const statement_t* import_stmt)
         code = comp->config->fileio.read_file.read_file(comp->config->fileio.read_file.context, filepath);
         if(!code)
         {
-            errors_add_errorf(comp->errors, ERROR_COMPILATION, import_stmt->pos, "Reading module file \"%s\" failed", filepath);
+            errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos, "Reading module file \"%s\" failed", filepath);
             result = false;
             goto end;
         }
@@ -5840,7 +5840,7 @@ static bool compile_statement(compiler_t* comp, const statement_t* stmt)
         {
             if(compilation_scope->outer == NULL)
             {
-                errors_add_errorf(comp->errors, ERROR_COMPILATION, stmt->pos, "Nothing to return from");
+                errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "Nothing to return from");
                 return false;
             }
             ip = -1;
@@ -5925,7 +5925,7 @@ static bool compile_statement(compiler_t* comp, const statement_t* stmt)
             int break_ip = get_break_ip(comp);
             if(break_ip < 0)
             {
-                errors_add_errorf(comp->errors, ERROR_COMPILATION, stmt->pos, "Nothing to break from.");
+                errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "Nothing to break from.");
                 return false;
             }
             ip = emit(comp, OPCODE_JUMP, 1, (uint64_t[]){ break_ip });
@@ -5940,7 +5940,7 @@ static bool compile_statement(compiler_t* comp, const statement_t* stmt)
             int continue_ip = get_continue_ip(comp);
             if(continue_ip < 0)
             {
-                errors_add_errorf(comp->errors, ERROR_COMPILATION, stmt->pos, "Nothing to continue from.");
+                errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "Nothing to continue from.");
                 return false;
             }
             ip = emit(comp, OPCODE_JUMP, 1, (uint64_t[]){ continue_ip });
@@ -5984,7 +5984,7 @@ static bool compile_statement(compiler_t* comp, const statement_t* stmt)
                 source_symbol = symbol_table_resolve(symbol_table, foreach->source->ident->value);
                 if(!source_symbol)
                 {
-                    errors_add_errorf(comp->errors, ERROR_COMPILATION, foreach->source->pos,
+                    errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, foreach->source->pos,
                                       "Symbol \"%s\" could not be resolved", foreach->source->ident->value);
                     return false;
                 }
@@ -6295,13 +6295,13 @@ static bool compile_statement(compiler_t* comp, const statement_t* stmt)
 
             if(symbol_table_is_module_global_scope(symbol_table))
             {
-                errors_add_error(comp->errors, ERROR_COMPILATION, stmt->pos, "Recover statement cannot be defined in global scope");
+                errors_add_error(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "Recover statement cannot be defined in global scope");
                 return false;
             }
 
             if(!symbol_table_is_top_block_scope(symbol_table))
             {
-                errors_add_error(comp->errors, ERROR_COMPILATION, stmt->pos,
+                errors_add_error(comp->errors, APE_ERROR_COMPILATION, stmt->pos,
                                  "Recover statement cannot be defined within other statements");
                 return false;
             }
@@ -6348,7 +6348,7 @@ static bool compile_statement(compiler_t* comp, const statement_t* stmt)
 
             if(!last_opcode_is(comp, OPCODE_RETURN) && !last_opcode_is(comp, OPCODE_RETURN_VALUE))
             {
-                errors_add_error(comp->errors, ERROR_COMPILATION, stmt->pos, "Recover body must end with a return statement");
+                errors_add_error(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "Recover body must end with a return statement");
                 return false;
             }
 
@@ -6452,7 +6452,7 @@ static bool compile_expression(compiler_t* comp, expression_t* expr)
                     break;
                 default:
                 {
-                    errors_add_errorf(comp->errors, ERROR_COMPILATION, expr->pos, "Unknown infix operator");
+                    errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, expr->pos, "Unknown infix operator");
                     goto error;
                 }
             }
@@ -6654,7 +6654,7 @@ static bool compile_expression(compiler_t* comp, expression_t* expr)
                     break;
                 default:
                 {
-                    errors_add_errorf(comp->errors, ERROR_COMPILATION, expr->pos, "Unknown prefix operator.");
+                    errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, expr->pos, "Unknown prefix operator.");
                     goto error;
                 }
             }
@@ -6672,7 +6672,7 @@ static bool compile_expression(compiler_t* comp, expression_t* expr)
             const symbol_t* symbol = symbol_table_resolve(symbol_table, ident->value);
             if(!symbol)
             {
-                errors_add_errorf(comp->errors, ERROR_COMPILATION, ident->pos, "Symbol \"%s\" could not be resolved",
+                errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, ident->pos, "Symbol \"%s\" could not be resolved",
                                   ident->value);
                 goto error;
             }
@@ -6729,7 +6729,7 @@ static bool compile_expression(compiler_t* comp, expression_t* expr)
                 const symbol_t* fn_symbol = symbol_table_define_function_name(symbol_table, fn->name, false);
                 if(!fn_symbol)
                 {
-                    errors_add_errorf(comp->errors, ERROR_COMPILATION, expr->pos, "Cannot define symbol \"%s\"", fn->name);
+                    errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, expr->pos, "Cannot define symbol \"%s\"", fn->name);
                     goto error;
                 }
             }
@@ -6737,7 +6737,7 @@ static bool compile_expression(compiler_t* comp, expression_t* expr)
             const symbol_t* this_symbol = symbol_table_define_this(symbol_table);
             if(!this_symbol)
             {
-                errors_add_error(comp->errors, ERROR_COMPILATION, expr->pos, "Cannot define \"this\" symbol");
+                errors_add_error(comp->errors, APE_ERROR_COMPILATION, expr->pos, "Cannot define \"this\" symbol");
                 goto error;
             }
 
@@ -6851,7 +6851,7 @@ static bool compile_expression(compiler_t* comp, expression_t* expr)
             const assign_expression_t* assign = &expr->assign;
             if(assign->dest->type != EXPRESSION_IDENT && assign->dest->type != EXPRESSION_INDEX)
             {
-                errors_add_errorf(comp->errors, ERROR_COMPILATION, assign->dest->pos, "Expression is not assignable.");
+                errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos, "Expression is not assignable.");
                 goto error;
             }
 
@@ -6888,13 +6888,14 @@ static bool compile_expression(compiler_t* comp, expression_t* expr)
                 const symbol_t* symbol = symbol_table_resolve(symbol_table, ident->value);
                 if(!symbol)
                 {
-                    errors_add_errorf(comp->errors, ERROR_COMPILATION, assign->dest->pos,
-                                      "Symbol \"%s\" could not be resolved", ident->value);
-                    goto error;
+                    //errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos, "Symbol \"%s\" could not be resolved", ident->value);
+                    //goto error;
+                    //symbol_table_define(symbol_table_t* table, const char* name, bool assignable)
+                    symbol = symbol_table_define(symbol_table, ident->value, true);
                 }
                 if(!symbol->assignable)
                 {
-                    errors_add_errorf(comp->errors, ERROR_COMPILATION, assign->dest->pos,
+                    errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos,
                                       "Symbol \"%s\" is not assignable", ident->value);
                     goto error;
                 }
@@ -7472,7 +7473,7 @@ static const symbol_t* define_symbol(compiler_t* comp, src_pos_t pos, const char
         const symbol_t* current_symbol = symbol_table_resolve(symbol_table, name);
         if(current_symbol)
         {
-            errors_add_errorf(comp->errors, ERROR_COMPILATION, pos, "Symbol \"%s\" is already defined", name);
+            errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, pos, "Symbol \"%s\" is already defined", name);
             return NULL;
         }
     }
@@ -7480,7 +7481,7 @@ static const symbol_t* define_symbol(compiler_t* comp, src_pos_t pos, const char
     const symbol_t* symbol = symbol_table_define(symbol_table, name, assignable);
     if(!symbol)
     {
-        errors_add_errorf(comp->errors, ERROR_COMPILATION, pos, "Cannot define symbol \"%s\"", name);
+        errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, pos, "Cannot define symbol \"%s\"", name);
         return false;
     }
 
@@ -8055,15 +8056,23 @@ char* object_get_type_union_name(allocator_t* alloc, const object_type_t type)
     return strbuf_get_string_and_destroy(res);
 }
 
-char* object_serialize(allocator_t* alloc, ApeObject_t object)
+char* object_serialize(allocator_t* alloc, ApeObject_t object, size_t* lendest)
 {
-    strbuf_t* buf = strbuf_make(alloc);
+    size_t l;
+    char* string;
+    strbuf_t* buf;
+    buf = strbuf_make(alloc);
     if(!buf)
     {
         return NULL;
     }
     object_to_string(object, buf, true);
-    char* string = strbuf_get_string_and_destroy(buf);
+    l = buf->len;
+    string = strbuf_get_string_and_destroy(buf);
+    if(lendest != NULL)
+    {
+        *lendest = l;
+    }
     return string;
 }
 
@@ -9711,7 +9720,7 @@ ApeObject_t vm_call(ApeVM_t* vm, array(ApeObject_t) * constants, ApeObject_t cal
     }
     else
     {
-        errors_add_error(vm->errors, ERROR_USER, src_pos_invalid, "Object is not callable");
+        errors_add_error(vm->errors, APE_ERROR_USER, src_pos_invalid, "Object is not callable");
         return object_make_null();
     }
 }
@@ -9720,7 +9729,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
 {
     if(vm->running)
     {
-        errors_add_error(vm->errors, ERROR_USER, src_pos_invalid, "VM is already executing code");
+        errors_add_error(vm->errors, APE_ERROR_USER, src_pos_invalid, "VM is already executing code");
         return false;
     }
 
@@ -9735,7 +9744,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
     ok = push_frame(vm, new_frame);
     if(!ok)
     {
-        errors_add_error(vm->errors, ERROR_USER, src_pos_invalid, "Pushing frame failed");
+        errors_add_error(vm->errors, APE_ERROR_USER, src_pos_invalid, "Pushing frame failed");
         return false;
     }
 
@@ -9769,7 +9778,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
                 ApeObject_t* constant = array_get(constants, constant_ix);
                 if(!constant)
                 {
-                    errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                    errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
                                       "Constant at %d not found", constant_ix);
                     goto err;
                 }
@@ -9889,7 +9898,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
                         const char* opcode_name = opcode_get_name(opcode);
                         const char* left_type_name = object_get_type_name(left_type);
                         const char* right_type_name = object_get_type_name(right_type);
-                        errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
                                           "Invalid operand types for %s, got %s and %s", opcode_name, left_type_name,
                                           right_type_name);
                         goto err;
@@ -9935,7 +9944,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
                     {
                         const char* right_type_string = object_get_type_name(object_get_type(right));
                         const char* left_type_string = object_get_type_name(object_get_type(left));
-                        errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
                                           "Cannot compare %s and %s", left_type_string, right_type_string);
                         goto err;
                     }
@@ -9995,7 +10004,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
                     if(!overload_found)
                     {
                         const char* operand_type_string = object_get_type_name(operand_type);
-                        errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
                                           "Invalid operand type for MINUS, got %s", operand_type_string);
                         goto err;
                     }
@@ -10135,7 +10144,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
                     {
                         object_type_t key_type = object_get_type(key);
                         const char* key_type_name = object_get_type_name(key_type);
-                        errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
                                           "Key of type %s is not hashable", key_type_name);
                         goto err;
                     }
@@ -10167,7 +10176,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
 
                 if(left_type != OBJECT_ARRAY && left_type != OBJECT_MAP && left_type != OBJECT_STRING)
                 {
-                    errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                    errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
                                       "Type %s is not indexable", left_type_name);
                     goto err;
                 }
@@ -10178,7 +10187,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
                 {
                     if(index_type != OBJECT_NUMBER)
                     {
-                        errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
                                           "Cannot index %s with %s", left_type_name, index_type_name);
                         goto err;
                     }
@@ -10221,7 +10230,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
 
                 if(left_type != OBJECT_ARRAY && left_type != OBJECT_MAP && left_type != OBJECT_STRING)
                 {
-                    errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                    errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
                                       "Type %s is not indexable", left_type_name);
                     goto err;
                 }
@@ -10229,7 +10238,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
                 ApeObject_t res = object_make_null();
                 if(index_type != OBJECT_NUMBER)
                 {
-                    errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                    errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
                                       "Cannot index %s with %s", left_type_name, index_type_name);
                     goto err;
                 }
@@ -10322,7 +10331,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
                 ApeObject_t val = global_store_get_object_at(vm->global_store, ix, &ok);
                 if(!ok)
                 {
-                    errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                    errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
                                       "Global value %d not found", ix);
                     goto err;
                 }
@@ -10336,7 +10345,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
                 ApeObject_t* constant = array_get(constants, constant_ix);
                 if(!constant)
                 {
-                    errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                    errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
                                       "Constant %d not found", constant_ix);
                     goto err;
                 }
@@ -10344,7 +10353,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
                 if(constant_type != OBJECT_FUNCTION)
                 {
                     const char* type_name = object_get_type_name(constant_type);
-                    errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                    errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
                                       "%s is not a function", type_name);
                     goto err;
                 }
@@ -10398,7 +10407,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
 
                 if(left_type != OBJECT_ARRAY && left_type != OBJECT_MAP)
                 {
-                    errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                    errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
                                       "Type %s is not indexable", left_type_name);
                     goto err;
                 }
@@ -10407,7 +10416,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
                 {
                     if(index_type != OBJECT_NUMBER)
                     {
-                        errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
                                           "Cannot index %s with %s", left_type_name, index_type_name);
                         goto err;
                     }
@@ -10415,7 +10424,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
                     ok = object_set_array_value_at(left, ix, new_value);
                     if(!ok)
                     {
-                        errors_add_error(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
                                          "Setting array item failed (out of bounds?)");
                         goto err;
                     }
@@ -10461,7 +10470,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
                 else
                 {
                     const char* type_name = object_get_type_name(type);
-                    errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                    errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
                                       "Cannot get length of %s", type_name);
                     goto err;
                 }
@@ -10485,7 +10494,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
             default:
             {
                 APE_ASSERT(false);
-                errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame), "Unknown opcode: 0x%x", opcode);
+                errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Unknown opcode: 0x%x", opcode);
                 goto err;
             }
         }
@@ -10498,7 +10507,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
                 int elapsed_ms = (int)ape_timer_get_elapsed_ms(&timer);
                 if(elapsed_ms > max_exec_time_ms)
                 {
-                    errors_add_errorf(vm->errors, ERROR_TIMEOUT, frame_src_position(vm->current_frame),
+                    errors_add_errorf(vm->errors, APE_ERROR_TIMEOUT, frame_src_position(vm->current_frame),
                                       "Execution took more than %1.17g ms", max_exec_time_ms);
                     goto err;
                 }
@@ -10509,7 +10518,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
         if(errors_get_count(vm->errors) > 0)
         {
             error_t* err = errors_get_last_error(vm->errors);
-            if(err->type == ERROR_RUNTIME && errors_get_count(vm->errors) == 1)
+            if(err->type == APE_ERROR_RUNTIME && errors_get_count(vm->errors) == 1)
             {
                 int recover_frame_ix = -1;
                 for(int i = vm->frames_count - 1; i >= 0; i--)
@@ -10597,7 +10606,7 @@ bool vm_set_global(ApeVM_t* vm, int ix, ApeObject_t val)
     if(ix >= VM_MAX_GLOBALS)
     {
         APE_ASSERT(false);
-        errors_add_error(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame), "Global write out of range");
+        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Global write out of range");
         return false;
     }
     vm->globals[ix] = val;
@@ -10613,7 +10622,7 @@ ApeObject_t vm_get_global(ApeVM_t* vm, int ix)
     if(ix >= VM_MAX_GLOBALS)
     {
         APE_ASSERT(false);
-        errors_add_error(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame), "Global read out of range");
+        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Global read out of range");
         return object_make_null();
     }
     return vm->globals[ix];
@@ -10637,7 +10646,7 @@ static void stack_push(ApeVM_t* vm, ApeObject_t obj)
     if(vm->sp >= VM_STACK_SIZE)
     {
         APE_ASSERT(false);
-        errors_add_error(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame), "Stack overflow");
+        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Stack overflow");
         return;
     }
     if(vm->current_frame)
@@ -10657,7 +10666,7 @@ static ApeObject_t stack_pop(ApeVM_t* vm)
 #ifdef APE_DEBUG
     if(vm->sp == 0)
     {
-        errors_add_error(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame), "Stack underflow");
+        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Stack underflow");
         APE_ASSERT(false);
         return object_make_null();
     }
@@ -10681,7 +10690,7 @@ static ApeObject_t stack_get(ApeVM_t* vm, int nth_item)
 #ifdef APE_DEBUG
     if(ix < 0 || ix >= VM_STACK_SIZE)
     {
-        errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame), "Invalid stack index: %d", nth_item);
+        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Invalid stack index: %d", nth_item);
         APE_ASSERT(false);
         return object_make_null();
     }
@@ -10695,7 +10704,7 @@ static void this_stack_push(ApeVM_t* vm, ApeObject_t obj)
     if(vm->this_sp >= VM_THIS_STACK_SIZE)
     {
         APE_ASSERT(false);
-        errors_add_error(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame), "this stack overflow");
+        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "this stack overflow");
         return;
     }
 #endif
@@ -10708,7 +10717,7 @@ static ApeObject_t this_stack_pop(ApeVM_t* vm)
 #ifdef APE_DEBUG
     if(vm->this_sp == 0)
     {
-        errors_add_error(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame), "this stack underflow");
+        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "this stack underflow");
         APE_ASSERT(false);
         return object_make_null();
     }
@@ -10723,7 +10732,7 @@ static ApeObject_t this_stack_get(ApeVM_t* vm, int nth_item)
 #ifdef APE_DEBUG
     if(ix < 0 || ix >= VM_THIS_STACK_SIZE)
     {
-        errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame), "Invalid this stack index: %d", nth_item);
+        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Invalid this stack index: %d", nth_item);
         APE_ASSERT(false);
         return object_make_null();
     }
@@ -10791,7 +10800,7 @@ static bool call_object(ApeVM_t* vm, ApeObject_t callee, int num_args)
         function_t* callee_function = object_get_function(callee);
         if(num_args != callee_function->num_args)
         {
-            errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame),
+            errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
                               "Invalid number of arguments to \"%s\", expected %d, got %d",
                               object_get_function_name(callee), callee_function->num_args, num_args);
             return false;
@@ -10800,13 +10809,13 @@ static bool call_object(ApeVM_t* vm, ApeObject_t callee, int num_args)
         bool ok = frame_init(&callee_frame, callee, vm->sp - num_args);
         if(!ok)
         {
-            errors_add_error(vm->errors, ERROR_RUNTIME, src_pos_invalid, "Frame init failed in call_object");
+            errors_add_error(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "Frame init failed in call_object");
             return false;
         }
         ok = push_frame(vm, callee_frame);
         if(!ok)
         {
-            errors_add_error(vm->errors, ERROR_RUNTIME, src_pos_invalid, "Pushing frame failed in call_object");
+            errors_add_error(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "Pushing frame failed in call_object");
             return false;
         }
     }
@@ -10824,7 +10833,7 @@ static bool call_object(ApeVM_t* vm, ApeObject_t callee, int num_args)
     else
     {
         const char* callee_type_name = object_get_type_name(callee_type);
-        errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame), "%s object is not callable", callee_type_name);
+        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "%s object is not callable", callee_type_name);
         return false;
     }
     return true;
@@ -10873,9 +10882,11 @@ static bool check_assign(ApeVM_t* vm, ApeObject_t old_value, ApeObject_t new_val
     }
     if(old_value_type != new_value_type)
     {
-        errors_add_errorf(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame), "Trying to assign variable of type %s to %s",
+        /*
+        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Trying to assign variable of type %s to %s",
                           object_get_type_name(new_value_type), object_get_type_name(old_value_type));
         return false;
+        */
     }
     return true;
 }
@@ -11127,7 +11138,7 @@ ApeObject_t ape_execute_program(ApeContext_t* ape, const ApeProgram_t* program)
 
     if(ape != program->ape)
     {
-        errors_add_error(&ape->errors, ERROR_USER, src_pos_invalid, "ape program was compiled with a different ape instance");
+        errors_add_error(&ape->errors, APE_ERROR_USER, src_pos_invalid, "ape program was compiled with a different ape instance");
         return ape_object_make_null();
     }
 
@@ -11286,7 +11297,7 @@ ApeObject_t ape_get_object(ApeContext_t* ape, const char* name)
     const symbol_t* symbol = symbol_table_resolve(st, name);
     if(!symbol)
     {
-        errors_add_errorf(&ape->errors, ERROR_USER, src_pos_invalid, "Symbol \"%s\" is not defined", name);
+        errors_add_errorf(&ape->errors, APE_ERROR_USER, src_pos_invalid, "Symbol \"%s\" is not defined", name);
         return ape_object_make_null();
     }
     ApeObject_t res = object_make_null();
@@ -11300,13 +11311,13 @@ ApeObject_t ape_get_object(ApeContext_t* ape, const char* name)
         res = global_store_get_object_at(ape->global_store, symbol->index, &ok);
         if(!ok)
         {
-            errors_add_errorf(&ape->errors, ERROR_USER, src_pos_invalid, "Failed to get global object at %d", symbol->index);
+            errors_add_errorf(&ape->errors, APE_ERROR_USER, src_pos_invalid, "Failed to get global object at %d", symbol->index);
             return ape_object_make_null();
         }
     }
     else
     {
-        errors_add_errorf(&ape->errors, ERROR_USER, src_pos_invalid, "Value associated with symbol \"%s\" could not be loaded", name);
+        errors_add_errorf(&ape->errors, APE_ERROR_USER, src_pos_invalid, "Value associated with symbol \"%s\" could not be loaded", name);
         return ape_object_make_null();
     }
     return object_to_ape_object(res);
@@ -11432,9 +11443,9 @@ ApeObject_t ape_object_make_external(ApeContext_t* ape, void* data)
     return object_to_ape_object(res);
 }
 
-char* ape_object_serialize(ApeContext_t* ape, ApeObject_t obj)
+char* ape_object_serialize(ApeContext_t* ape, ApeObject_t obj, size_t* lendest)
 {
-    return object_serialize(&ape->alloc, ape_object_to_object(obj));
+    return object_serialize(&ape->alloc, ape_object_to_object(obj), lendest);
 }
 
 bool ape_object_disable_gc(ApeObject_t ape_obj)
@@ -11479,7 +11490,7 @@ ApeObject_t ape_object_deep_copy(ApeObject_t ape_obj)
 
 void ape_set_runtime_error(ApeContext_t* ape, const char* message)
 {
-    errors_add_error(&ape->errors, ERROR_RUNTIME, src_pos_invalid, message);
+    errors_add_error(&ape->errors, APE_ERROR_RUNTIME, src_pos_invalid, message);
 }
 
 void ape_set_runtime_errorf(ApeContext_t* ape, const char* fmt, ...)
@@ -11490,12 +11501,12 @@ void ape_set_runtime_errorf(ApeContext_t* ape, const char* fmt, ...)
     (void)to_write;
     va_end(args);
     va_start(args, fmt);
-    char res[ERROR_MESSAGE_MAX_LENGTH];
-    int written = vsnprintf(res, ERROR_MESSAGE_MAX_LENGTH, fmt, args);
+    char res[APE_ERROR_MESSAGE_MAX_LENGTH];
+    int written = vsnprintf(res, APE_ERROR_MESSAGE_MAX_LENGTH, fmt, args);
     (void)written;
     APE_ASSERT(to_write == written);
     va_end(args);
-    errors_add_error(&ape->errors, ERROR_RUNTIME, src_pos_invalid, res);
+    errors_add_error(&ape->errors, APE_ERROR_RUNTIME, src_pos_invalid, res);
 }
 
 ApeObjectType_t ape_object_get_type(ApeObject_t ape_obj)
@@ -11907,19 +11918,19 @@ ApeErrorType_t ape_error_get_type(const error_t* ae)
     const error_t* error = (const error_t*)ae;
     switch(error->type)
     {
-        case ERROR_NONE:
+        case APE_ERROR_NONE:
             return APE_ERROR_NONE;
-        case ERROR_PARSING:
+        case APE_ERROR_PARSING:
             return APE_ERROR_PARSING;
-        case ERROR_COMPILATION:
+        case APE_ERROR_COMPILATION:
             return APE_ERROR_COMPILATION;
-        case ERROR_RUNTIME:
+        case APE_ERROR_RUNTIME:
             return APE_ERROR_RUNTIME;
-        case ERROR_TIMEOUT:
+        case APE_ERROR_TIMEOUT:
             return APE_ERROR_TIMEOUT;
-        case ERROR_ALLOCATION:
+        case APE_ERROR_ALLOCATION:
             return APE_ERROR_ALLOCATION;
-        case ERROR_USER:
+        case APE_ERROR_USER:
             return APE_ERROR_USER;
         default:
             return APE_ERROR_NONE;
@@ -12195,7 +12206,7 @@ static void* ape_malloc(void* ctx, size_t size)
     void* res = allocator_malloc(&ape->custom_allocator, size);
     if(!res)
     {
-        errors_add_error(&ape->errors, ERROR_ALLOCATION, src_pos_invalid, "Allocation failed");
+        errors_add_error(&ape->errors, APE_ERROR_ALLOCATION, src_pos_invalid, "Allocation failed");
     }
     return res;
 }

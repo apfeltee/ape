@@ -3,7 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#if __has_include(<readline/readline.h>)
 #include <readline/readline.h>
+#include <readline/history.h>
+#else
+    #define NO_READLINE
+#endif
 #include "ape.h"
 
 #define PROMPT ">> "
@@ -32,13 +37,56 @@ static ApeObject_t exit_repl(ApeContext_t *ape, void *data, int argc, ApeObject_
     return ape_object_make_null();
 }
 
+#if !defined(NO_READLINE)
+static bool notjustspace(const char* line)
+{
+    int c;
+    size_t i;
+    for(i=0; (c = line[i]) != 0; i++)
+    {
+        if(!isspace(c))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+void do_repl(ApeContext_t* ape)
+{
+    size_t len;
+    char *line;
+    char *object_str;
+    ApeObject_t res;
+    ape_set_repl_mode(ape, true);
+    ape_set_timeout(ape, 100.0);
+    while(true)
+    {
+        line = readline(">> ");
+        if(!line || !notjustspace(line))
+        {
+            continue;
+        }
+        res = ape_execute(ape, line);
+        if (ape_has_errors(ape))
+        {
+            print_errors(ape);
+            free(line);
+        }
+        else
+        {
+            add_history(line);
+            object_str = ape_object_serialize(ape, res, &len);
+            printf("%.*s\n", (int)len, object_str);
+            free(object_str);
+        }
+    }
+}
+#endif
 int main(int argc, char *argv[])
 {
     int i;
-    char *line;
-    char *object_str;
     ApeContext_t *ape;
-    ApeObject_t res;
     ApeObject_t args_array;
     ape = ape_make();
     ape_set_native_function(ape, "exit", exit_repl, &exit);
@@ -58,26 +106,11 @@ int main(int argc, char *argv[])
     }
     else
     {
-        ape_set_repl_mode(ape, true);
-        ape_set_timeout(ape, 100.0);
-        while(true)
-        {
-            line = readline(">> ");
-            if (!line)
-            {
-                continue;
-            }
-            res = ape_execute(ape, line);
-            if (ape_has_errors(ape))
-            {
-                print_errors(ape);
-                free(line);
-                continue;
-            }
-            object_str = ape_object_serialize(ape, res);
-            puts(object_str);
-            free(object_str);
-        }
+        #if !defined(NO_READLINE)
+            do_repl(ape);
+        #else
+            fprintf(stderr, "no repl support compiled in\n");
+        #endif
     }
     ape_destroy(ape);
     return 0;

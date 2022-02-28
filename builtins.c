@@ -388,7 +388,7 @@ static ApeObject_t to_num_fn(ApeVM_t* vm, void* data, int argc, ApeObject_t* arg
     }
     return object_make_number(result);
 err:
-    errors_add_errorf(vm->errors, ERROR_RUNTIME, src_pos_invalid, "Cannot convert \"%s\" to number", string);
+    errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "Cannot convert \"%s\" to number", string);
     return object_make_null();
 }
 
@@ -417,7 +417,7 @@ static ApeObject_t range_fn(ApeVM_t* vm, void* data, int argc, ApeObject_t* args
         {
             const char* type_str = object_get_type_name(type);
             const char* expected_str = object_get_type_name(OBJECT_NUMBER);
-            errors_add_errorf(vm->errors, ERROR_RUNTIME, src_pos_invalid,
+            errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid,
                               "Invalid argument %d passed to range, got %s instead of %s", i, type_str, expected_str);
             return object_make_null();
         }
@@ -444,13 +444,13 @@ static ApeObject_t range_fn(ApeVM_t* vm, void* data, int argc, ApeObject_t* args
     }
     else
     {
-        errors_add_errorf(vm->errors, ERROR_RUNTIME, src_pos_invalid, "Invalid number of arguments passed to range, got %d", argc);
+        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "Invalid number of arguments passed to range, got %d", argc);
         return object_make_null();
     }
 
     if(step == 0)
     {
-        errors_add_error(vm->errors, ERROR_RUNTIME, src_pos_invalid, "range step cannot be 0");
+        errors_add_error(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "range step cannot be 0");
         return object_make_null();
     }
 
@@ -557,7 +557,7 @@ static ApeObject_t concat_fn(ApeVM_t* vm, void* data, int argc, ApeObject_t* arg
         if(item_type != OBJECT_ARRAY)
         {
             const char* item_type_str = object_get_type_name(item_type);
-            errors_add_errorf(vm->errors, ERROR_RUNTIME, src_pos_invalid, "Invalid argument 2 passed to concat, got %s", item_type_str);
+            errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "Invalid argument 2 passed to concat, got %s", item_type_str);
             return object_make_null();
         }
         for(int i = 0; i < object_get_array_length(args[1]); i++)
@@ -678,11 +678,11 @@ static ApeObject_t crash_fn(ApeVM_t* vm, void* data, int argc, ApeObject_t* args
     (void)data;
     if(argc == 1 && object_get_type(args[0]) == OBJECT_STRING)
     {
-        errors_add_error(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame), object_get_string(args[0]));
+        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), object_get_string(args[0]));
     }
     else
     {
-        errors_add_error(vm->errors, ERROR_RUNTIME, frame_src_position(vm->current_frame), "");
+        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "");
     }
     return object_make_null();
 }
@@ -697,7 +697,7 @@ static ApeObject_t assert_fn(ApeVM_t* vm, void* data, int argc, ApeObject_t* arg
 
     if(!object_get_bool(args[0]))
     {
-        errors_add_error(vm->errors, ERROR_RUNTIME, src_pos_invalid, "assertion failed");
+        errors_add_error(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "assertion failed");
         return object_make_null();
     }
 
@@ -734,7 +734,7 @@ static ApeObject_t random_fn(ApeVM_t* vm, void* data, int argc, ApeObject_t* arg
         double max = object_get_number(args[1]);
         if(min >= max)
         {
-            errors_add_error(vm->errors, ERROR_RUNTIME, src_pos_invalid, "max is bigger than min");
+            errors_add_error(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "max is bigger than min");
             return object_make_null();
         }
         double range = max - min;
@@ -743,7 +743,7 @@ static ApeObject_t random_fn(ApeVM_t* vm, void* data, int argc, ApeObject_t* arg
     }
     else
     {
-        errors_add_error(vm->errors, ERROR_RUNTIME, src_pos_invalid, "Invalid number or arguments");
+        errors_add_error(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "Invalid number or arguments");
         return object_make_null();
     }
 }
@@ -820,7 +820,7 @@ static ApeObject_t slice_fn(ApeVM_t* vm, void* data, int argc, ApeObject_t* args
     else
     {
         const char* type_str = object_get_type_name(arg_type);
-        errors_add_errorf(vm->errors, ERROR_RUNTIME, src_pos_invalid, "Invalid argument 0 passed to slice, got %s instead", type_str);
+        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "Invalid argument 0 passed to slice, got %s instead", type_str);
         return object_make_null();
     }
 }
@@ -1048,7 +1048,7 @@ static bool check_args(ApeVM_t* vm, bool generate_error, int argc, ApeObject_t* 
     {
         if(generate_error)
         {
-            errors_add_errorf(vm->errors, ERROR_RUNTIME, src_pos_invalid,
+            errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid,
                               "Invalid number or arguments, got %d instead of %d", argc, expected_argc);
         }
         return false;
@@ -1069,7 +1069,7 @@ static bool check_args(ApeVM_t* vm, bool generate_error, int argc, ApeObject_t* 
                 {
                     return false;
                 }
-                errors_add_errorf(vm->errors, ERROR_RUNTIME, src_pos_invalid,
+                errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid,
                                   "Invalid argument %d type, got %s, expected %s", i, type_str, expected_type_str);
                 allocator_free(vm->alloc, expected_type_str);
             }

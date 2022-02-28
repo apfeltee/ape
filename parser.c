@@ -488,7 +488,7 @@ static statement_t* parse_expression_statement(parser_t* p)
     {
         if(expr->type != EXPRESSION_ASSIGN && expr->type != EXPRESSION_CALL)
         {
-            errors_add_errorf(p->errors, ERROR_PARSING, expr->pos, "Only assignments and function calls can be expression statements");
+            errors_add_errorf(p->errors, APE_ERROR_PARSING, expr->pos, "Only assignments and function calls can be expression statements");
             expression_destroy(expr);
             return NULL;
         }
@@ -588,7 +588,7 @@ static statement_t* parse_import_statement(parser_t* p)
     char* processed_name = process_and_copy_string(p->alloc, p->lexer.cur_token.literal, p->lexer.cur_token.len);
     if(!processed_name)
     {
-        errors_add_error(p->errors, ERROR_PARSING, p->lexer.cur_token.pos, "Error when parsing module name");
+        errors_add_error(p->errors, APE_ERROR_PARSING, p->lexer.cur_token.pos, "Error when parsing module name");
         return NULL;
     }
     lexer_next_token(&p->lexer);
@@ -742,7 +742,7 @@ static statement_t* parse_classic_for_loop(parser_t* p)
         }
         if(init->type != STATEMENT_DEFINE && init->type != STATEMENT_EXPRESSION)
         {
-            errors_add_errorf(p->errors, ERROR_PARSING, init->pos, "for loop's init clause should be a define statement or an expression");
+            errors_add_errorf(p->errors, APE_ERROR_PARSING, init->pos, "for loop's init clause should be a define statement or an expression");
             goto err;
         }
         if(!lexer_expect_current(&p->lexer, TOKEN_SEMICOLON))
@@ -873,7 +873,7 @@ static code_block_t* parse_code_block(parser_t* p)
     {
         if(lexer_cur_token_is(&p->lexer, TOKEN_EOF))
         {
-            errors_add_error(p->errors, ERROR_PARSING, p->lexer.cur_token.pos, "Unexpected EOF");
+            errors_add_error(p->errors, APE_ERROR_PARSING, p->lexer.cur_token.pos, "Unexpected EOF");
             goto err;
         }
         if(lexer_cur_token_is(&p->lexer, TOKEN_SEMICOLON))
@@ -917,7 +917,7 @@ static expression_t* parse_expression(parser_t* p, precedence_t prec)
 
     if(p->lexer.cur_token.type == TOKEN_INVALID)
     {
-        errors_add_error(p->errors, ERROR_PARSING, p->lexer.cur_token.pos, "Illegal token");
+        errors_add_error(p->errors, APE_ERROR_PARSING, p->lexer.cur_token.pos, "Illegal token");
         return NULL;
     }
 
@@ -925,7 +925,7 @@ static expression_t* parse_expression(parser_t* p, precedence_t prec)
     if(!parse_right_assoc)
     {
         char* literal = token_duplicate_literal(p->alloc, &p->lexer.cur_token);
-        errors_add_errorf(p->errors, ERROR_PARSING, p->lexer.cur_token.pos, "No prefix parse function for \"%s\" found", literal);
+        errors_add_errorf(p->errors, APE_ERROR_PARSING, p->lexer.cur_token.pos, "No prefix parse function for \"%s\" found", literal);
         allocator_free(p->alloc, literal);
         return NULL;
     }
@@ -985,7 +985,7 @@ static expression_t* parse_number_literal(parser_t* p)
     if(errno || parsed_len != p->lexer.cur_token.len)
     {
         char* literal = token_duplicate_literal(p->alloc, &p->lexer.cur_token);
-        errors_add_errorf(p->errors, ERROR_PARSING, p->lexer.cur_token.pos, "Parsing number literal \"%s\" failed", literal);
+        errors_add_errorf(p->errors, APE_ERROR_PARSING, p->lexer.cur_token.pos, "Parsing number literal \"%s\" failed", literal);
         allocator_free(p->alloc, literal);
         return NULL;
     }
@@ -1005,7 +1005,7 @@ static expression_t* parse_string_literal(parser_t* p)
     char* processed_literal = process_and_copy_string(p->alloc, p->lexer.cur_token.literal, p->lexer.cur_token.len);
     if(!processed_literal)
     {
-        errors_add_error(p->errors, ERROR_PARSING, p->lexer.cur_token.pos, "Error when parsing string literal");
+        errors_add_error(p->errors, APE_ERROR_PARSING, p->lexer.cur_token.pos, "Error when parsing string literal");
         return NULL;
     }
     lexer_next_token(&p->lexer);
@@ -1031,7 +1031,7 @@ static expression_t* parse_template_string_literal(parser_t* p)
     processed_literal = process_and_copy_string(p->alloc, p->lexer.cur_token.literal, p->lexer.cur_token.len);
     if(!processed_literal)
     {
-        errors_add_error(p->errors, ERROR_PARSING, p->lexer.cur_token.pos, "Error when parsing string literal");
+        errors_add_error(p->errors, APE_ERROR_PARSING, p->lexer.cur_token.pos, "Error when parsing string literal");
         return NULL;
     }
     lexer_next_token(&p->lexer);
@@ -1180,7 +1180,7 @@ static expression_t* parse_map_literal(parser_t* p)
                 }
                 default:
                 {
-                    errors_add_errorf(p->errors, ERROR_PARSING, key->pos, "Invalid map literal key type");
+                    errors_add_errorf(p->errors, APE_ERROR_PARSING, key->pos, "Invalid map literal key type");
                     expression_destroy(key);
                     goto err;
                 }

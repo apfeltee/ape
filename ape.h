@@ -43,7 +43,8 @@ THE SOFTWARE.
 #include <limits.h>
 #include <assert.h>
 #include <errno.h>
-#include <sys/time.h>
+
+//#include <sys/time.h>
 
 #define APE_VERSION_MAJOR 0
 #define APE_VERSION_MINOR 14
@@ -72,7 +73,7 @@ THE SOFTWARE.
 #define OBJECT_STRING_BUF_SIZE 24
 
 #define ERRORS_MAX_COUNT 16
-#define ERROR_MESSAGE_MAX_LENGTH 255
+#define APE_ERROR_MESSAGE_MAX_LENGTH 255
 
 #define CHECK_ARGS(vm, generate_error, argc, args, ...) \
     check_args((vm), (generate_error), (argc), (args),  \
@@ -154,18 +155,6 @@ enum ApeObjectType_t
     APE_OBJECT_EXTERNAL = 1 << 9,
     APE_OBJECT_FREED = 1 << 10,
     APE_OBJECT_ANY = 0xffff,// for checking types with &
-};
-
-
-enum error_type_t
-{
-    ERROR_NONE = 0,
-    ERROR_PARSING,
-    ERROR_COMPILATION,
-    ERROR_RUNTIME,
-    ERROR_TIMEOUT,
-    ERROR_ALLOCATION,
-    ERROR_USER,
 };
 
 enum token_type_t
@@ -427,7 +416,7 @@ enum precedence_t
 
 typedef uint8_t opcode_t;
 
-typedef enum error_type_t error_type_t;
+
 typedef enum token_type_t token_type_t;
 typedef enum statement_type_t statement_type_t;
 typedef enum operator_t operator_t;
@@ -589,8 +578,8 @@ struct allocator_t
 
 struct error_t
 {
-    error_type_t type;
-    char message[ERROR_MESSAGE_MAX_LENGTH];
+    ApeErrorType_t type;
+    char message[APE_ERROR_MESSAGE_MAX_LENGTH];
     src_pos_t pos;
     traceback_t* traceback;
 };
@@ -1332,13 +1321,13 @@ bool kg_streq(const char* a, const char* b);
 void errors_init(errors_t* errors);
 void errors_deinit(errors_t* errors);
 
-void errors_add_error(errors_t* errors, error_type_t type, src_pos_t pos, const char* message);
-void errors_add_errorf(errors_t* errors, error_type_t type, src_pos_t pos, const char* format, ...);
+void errors_add_error(errors_t* errors, ApeErrorType_t type, src_pos_t pos, const char* message);
+void errors_add_errorf(errors_t* errors, ApeErrorType_t type, src_pos_t pos, const char* format, ...);
 void errors_clear(errors_t* errors);
 int errors_get_count(const errors_t* errors);
 error_t* errors_get(errors_t* errors, int ix);
 const error_t* errors_getc(const errors_t* errors, int ix);
-const char* error_type_to_string(error_type_t type);
+const char* error_type_to_string(ApeErrorType_t type);
 error_t* errors_get_last_error(errors_t* errors);
 bool errors_has_errors(const errors_t* errors);
 
@@ -1458,7 +1447,7 @@ bool object_is_hashable(ApeObject_t obj);
 void object_to_string(ApeObject_t obj, strbuf_t* buf, bool quote_str);
 const char* object_get_type_name(const object_type_t type);
 char* object_get_type_union_name(allocator_t* alloc, const object_type_t type);
-char* object_serialize(allocator_t* alloc, ApeObject_t object);
+char* object_serialize(allocator_t* alloc, ApeObject_t object, size_t* lendest);
 ApeObject_t object_deep_copy(gcmem_t* mem, ApeObject_t object);
 ApeObject_t object_copy(gcmem_t* mem, ApeObject_t obj);
 double object_compare(ApeObject_t a, ApeObject_t b, bool* out_ok);
@@ -1693,7 +1682,7 @@ ApeObject_t ape_object_make_error(ApeContext_t* ape, const char* message);
 ApeObject_t ape_object_make_errorf(ApeContext_t* ape, const char* format, ...);
 ApeObject_t ape_object_make_external(ApeContext_t* ape, void* data);
 
-char* ape_object_serialize(ApeContext_t* ape, ApeObject_t obj);
+char* ape_object_serialize(ApeContext_t* ape, ApeObject_t obj, size_t* lendest);
 
 bool ape_object_disable_gc(ApeObject_t obj);
 void ape_object_enable_gc(ApeObject_t obj);

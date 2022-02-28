@@ -477,7 +477,7 @@ bool lexer_expect_current(lexer_t* lex, token_type_t type)
     {
         const char* expected_type_str = token_type_to_string(type);
         const char* actual_type_str = token_type_to_string(lex->cur_token.type);
-        errors_add_errorf(lex->errors, ERROR_PARSING, lex->cur_token.pos,
+        errors_add_errorf(lex->errors, APE_ERROR_PARSING, lex->cur_token.pos,
                           "Expected current token to be \"%s\", got \"%s\" instead", expected_type_str, actual_type_str);
         return false;
     }
