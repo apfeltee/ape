@@ -11,9 +11,103 @@
 #endif
 #include "ape.h"
 
-#define PROMPT ">> "
+enum
+{
+    MAX_RESTARGS = 1024,
+    MAX_OPTS = 1024,
+};
 
-// INTERNAL
+typedef struct Flag_t Flag_t;
+typedef struct FlagContext_t FlagContext_t;
+
+struct Flag_t
+{
+    char flag;
+    char* value;
+};
+
+struct FlagContext_t
+{
+    int nargc;
+    int fcnt;
+    int poscnt;
+    char* positional[MAX_RESTARGS + 1];
+    Flag_t flags[MAX_OPTS + 1];
+};
+
+typedef struct Options_t Options_t;
+
+struct Options_t
+{
+    const char* package;
+    const char* filename;
+    bool debug;
+    int n_paths;
+    const char** paths;
+    const char* codeline;
+};
+
+
+bool populate_flags(int argc, int begin, char** argv, const char* expectvalue, FlagContext_t* fx)
+{
+    int i;
+    int nextch;
+    int psidx;
+    int flidx;
+    char* arg;
+    char* nextarg;
+    psidx = 0;
+    flidx = 0;
+    fx->fcnt = 0;
+    fx->poscnt = 0;
+    for(i=begin; i<argc; i++)
+    {
+        arg = argv[i];
+        nextarg = NULL;
+        if((i+1) < argc)
+        {
+            nextarg = argv[i+1];
+        }
+        if(arg[0] == '-')
+        {
+            fx->flags[flidx].flag = arg[1];
+            fx->flags[flidx].value = NULL;
+            if(strchr(expectvalue, arg[1]) != NULL)
+            {
+                nextch = arg[2];
+                /* -e "somecode(...)" */
+                /* -e is followed by text: -e"somecode(...)" */
+                if(nextch != 0)
+                {
+                    fx->flags[flidx].value = arg + 2;
+                }
+                else if(nextarg != NULL)
+                {
+                    if(nextarg[0] != '-')
+                    {
+                        fx->flags[flidx].value = nextarg;
+                        i++;
+                    }
+                }
+                else
+                {
+                    fx->flags[flidx].value = NULL;
+                }
+            }
+            flidx++;
+        }
+        else
+        {
+            fx->positional[psidx] = arg;
+            psidx++;
+        }
+    }
+    fx->fcnt = flidx;
+    fx->poscnt = psidx;
+    fx->nargc = i;
+    return true;
+}
+
 static void print_errors(ApeContext_t *ape)
 {
     int i;
@@ -83,22 +177,100 @@ void do_repl(ApeContext_t* ape)
     }
 }
 #endif
+
+void show_usage()
+{
+    printf("known options:\n");
+    printf(
+        "  -h          this help.\n"
+        "  -e <code>   evaluate <code> and exit.\n"
+        "  -p <name>   load package <name>\n"
+        "\n"
+    );
+}
+
+bool parse_options(Options_t* opts, Flag_t* flags, int fcnt)
+{
+    int i;
+    opts->codeline = NULL;
+    opts->package = NULL;
+    opts->filename = NULL;
+    opts->debug = false;
+    for(i=0; i<fcnt; i++)
+    {
+        switch(flags[i].flag)
+        {
+            case 'h':
+                {
+                    show_usage();
+                }
+                break;
+            case 'e':
+                {
+                    if(flags[i].value == NULL)
+                    {
+                        fprintf(stderr, "flag '-e' expects a value.\n");
+                        return false;
+                    }
+                    opts->codeline = flags[i].value;
+                }
+                break;
+            case 'd':
+                {
+                    opts->debug = true;
+                }
+                break;
+            case 'p':
+                {
+                    if(flags[i].value == NULL)
+                    {
+                        fprintf(stderr, "flag '-p' expects a value.\n");
+                        return false;
+                    }
+                    opts->package = flags[i].value;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+    return true;
+}
+
 int main(int argc, char *argv[])
 {
     int i;
+    const char* filename;
+    FlagContext_t fx;
+    Options_t opts;
     ApeContext_t *ape;
     ApeObject_t args_array;
+
+    populate_flags(argc, 1, argv, "epI", &fx);
     ape = ape_make();
+    if(!parse_options(&opts, fx.flags, fx.fcnt))
+    {
+        fprintf(stderr, "failed to process command line flags.\n");
+        return 1;
+    }
     ape_set_native_function(ape, "exit", exit_repl, &exit);
-    if(argc > 1)
+    if((fx.poscnt > 0) || (opts.codeline != NULL))
     {
         args_array = ape_object_make_array(ape);
-        for (i = 1; i < argc; i++)
+        for(i=0; i<fx.poscnt; i++)
         {
-            ape_object_add_array_string(args_array, argv[i]);
+            ape_object_add_array_string(args_array, fx.positional[i]);
         }
         ape_set_global_constant(ape, "args", args_array);
-        ape_execute_file(ape, argv[1]);
+        if(opts.codeline)
+        {
+            ape_execute(ape, opts.codeline);
+        }
+        else
+        {
+            filename = fx.positional[0];
+            ape_execute_file(ape, filename);
+        }
         if(ape_has_errors(ape))
         {
             print_errors(ape);
