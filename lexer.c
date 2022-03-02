@@ -13,7 +13,7 @@ static token_type_t lookup_identifier(const char* ident, int len);
 static void skip_whitespace(lexer_t* lex);
 static bool add_line(lexer_t* lex, int offset);
 
-bool lexer_init(lexer_t* lex, allocator_t* alloc, errors_t* errs, const char* input, compiled_file_t* file)
+bool lexer_init(lexer_t* lex, ApeAllocator_t* alloc, errors_t* errs, const char* input, compiled_file_t* file)
 {
     lex->alloc = alloc;
     lex->errors = errs;

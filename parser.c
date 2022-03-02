@@ -20,41 +20,41 @@ static statement_t* parse_recover_statement(parser_t* p);
 
 static code_block_t* parse_code_block(parser_t* p);
 
-static expression_t* parse_expression(parser_t* p, precedence_t prec);
-static expression_t* parse_identifier(parser_t* p);
-static expression_t* parse_number_literal(parser_t* p);
-static expression_t* parse_bool_literal(parser_t* p);
-static expression_t* parse_string_literal(parser_t* p);
-static expression_t* parse_template_string_literal(parser_t* p);
-static expression_t* parse_null_literal(parser_t* p);
-static expression_t* parse_array_literal(parser_t* p);
-static expression_t* parse_map_literal(parser_t* p);
-static expression_t* parse_prefix_expression(parser_t* p);
-static expression_t* parse_infix_expression(parser_t* p, expression_t* left);
-static expression_t* parse_grouped_expression(parser_t* p);
-static expression_t* parse_function_literal(parser_t* p);
+static ApeExpression_t* parse_expression(parser_t* p, precedence_t prec);
+static ApeExpression_t* parse_identifier(parser_t* p);
+static ApeExpression_t* parse_number_literal(parser_t* p);
+static ApeExpression_t* parse_bool_literal(parser_t* p);
+static ApeExpression_t* parse_string_literal(parser_t* p);
+static ApeExpression_t* parse_template_string_literal(parser_t* p);
+static ApeExpression_t* parse_null_literal(parser_t* p);
+static ApeExpression_t* parse_array_literal(parser_t* p);
+static ApeExpression_t* parse_map_literal(parser_t* p);
+static ApeExpression_t* parse_prefix_expression(parser_t* p);
+static ApeExpression_t* parse_infix_expression(parser_t* p, ApeExpression_t* left);
+static ApeExpression_t* parse_grouped_expression(parser_t* p);
+static ApeExpression_t* parse_function_literal(parser_t* p);
 static bool parse_function_parameters(parser_t* p, ptrarray(ident_t) * out_params);
-static expression_t* parse_call_expression(parser_t* p, expression_t* left);
-static ptrarray(expression_t)
+static ApeExpression_t* parse_call_expression(parser_t* p, ApeExpression_t* left);
+static ptrarray(ApeExpression_t)
 * parse_expression_list(parser_t* p, token_type_t start_token, token_type_t end_token, bool trailing_comma_allowed);
-static expression_t* parse_index_expression(parser_t* p, expression_t* left);
-static expression_t* parse_dot_expression(parser_t* p, expression_t* left);
-static expression_t* parse_assign_expression(parser_t* p, expression_t* left);
-static expression_t* parse_logical_expression(parser_t* p, expression_t* left);
-static expression_t* parse_ternary_expression(parser_t* p, expression_t* left);
-static expression_t* parse_incdec_prefix_expression(parser_t* p);
-static expression_t* parse_incdec_postfix_expression(parser_t* p, expression_t* left);
+static ApeExpression_t* parse_index_expression(parser_t* p, ApeExpression_t* left);
+static ApeExpression_t* parse_dot_expression(parser_t* p, ApeExpression_t* left);
+static ApeExpression_t* parse_assign_expression(parser_t* p, ApeExpression_t* left);
+static ApeExpression_t* parse_logical_expression(parser_t* p, ApeExpression_t* left);
+static ApeExpression_t* parse_ternary_expression(parser_t* p, ApeExpression_t* left);
+static ApeExpression_t* parse_incdec_prefix_expression(parser_t* p);
+static ApeExpression_t* parse_incdec_postfix_expression(parser_t* p, ApeExpression_t* left);
 
 static precedence_t get_precedence(token_type_t tk);
 static operator_t token_to_operator(token_type_t tk);
 
 static char escape_char(const char c);
-static char* process_and_copy_string(allocator_t* alloc, const char* input, size_t len);
-static expression_t* wrap_expression_in_function_call(allocator_t* alloc, expression_t* expr, const char* function_name);
+static char* process_and_copy_string(ApeAllocator_t* alloc, const char* input, size_t len);
+static ApeExpression_t* wrap_expression_in_function_call(ApeAllocator_t* alloc, ApeExpression_t* expr, const char* function_name);
 
 
 
-parser_t* parser_make(allocator_t* alloc, const ape_config_t* config, errors_t* errors)
+parser_t* parser_make(ApeAllocator_t* alloc, const ape_config_t* config, errors_t* errors)
 {
     parser_t* parser = allocator_malloc(alloc, sizeof(parser_t));
     if(!parser)
@@ -277,7 +277,7 @@ static statement_t* parse_statement(parser_t* p)
 static statement_t* parse_define_statement(parser_t* p)
 {
     ident_t* name_ident = NULL;
-    expression_t* value = NULL;
+    ApeExpression_t* value = NULL;
 
     bool assignable = lexer_cur_token_is(&p->lexer, TOKEN_VAR);
 
@@ -453,7 +453,7 @@ err:
 
 static statement_t* parse_return_statement(parser_t* p)
 {
-    expression_t* expr = NULL;
+    ApeExpression_t* expr = NULL;
 
     lexer_next_token(&p->lexer);
 
@@ -478,7 +478,7 @@ static statement_t* parse_return_statement(parser_t* p)
 
 static statement_t* parse_expression_statement(parser_t* p)
 {
-    expression_t* expr = parse_expression(p, PRECEDENCE_LOWEST);
+    ApeExpression_t* expr = parse_expression(p, PRECEDENCE_LOWEST);
     if(!expr)
     {
         return NULL;
@@ -505,7 +505,7 @@ static statement_t* parse_expression_statement(parser_t* p)
 
 static statement_t* parse_while_loop_statement(parser_t* p)
 {
-    expression_t* test = NULL;
+    ApeExpression_t* test = NULL;
     code_block_t* body = NULL;
 
     lexer_next_token(&p->lexer);
@@ -675,7 +675,7 @@ static statement_t* parse_for_loop_statement(parser_t* p)
 
 static statement_t* parse_foreach(parser_t* p)
 {
-    expression_t* source = NULL;
+    ApeExpression_t* source = NULL;
     code_block_t* body = NULL;
     ident_t* iterator_ident = NULL;
 
@@ -729,8 +729,8 @@ err:
 static statement_t* parse_classic_for_loop(parser_t* p)
 {
     statement_t* init = NULL;
-    expression_t* test = NULL;
-    expression_t* update = NULL;
+    ApeExpression_t* test = NULL;
+    ApeExpression_t* update = NULL;
     code_block_t* body = NULL;
 
     if(!lexer_cur_token_is(&p->lexer, TOKEN_SEMICOLON))
@@ -807,7 +807,7 @@ err:
 static statement_t* parse_function_statement(parser_t* p)
 {
     ident_t* name_ident = NULL;
-    expression_t* value = NULL;
+    ApeExpression_t* value = NULL;
 
     src_pos_t pos = p->lexer.cur_token.pos;
 
@@ -911,7 +911,7 @@ err:
     return NULL;
 }
 
-static expression_t* parse_expression(parser_t* p, precedence_t prec)
+static ApeExpression_t* parse_expression(parser_t* p, precedence_t prec)
 {
     src_pos_t pos = p->lexer.cur_token.pos;
 
@@ -930,7 +930,7 @@ static expression_t* parse_expression(parser_t* p, precedence_t prec)
         return NULL;
     }
 
-    expression_t* left_expr = parse_right_assoc(p);
+    ApeExpression_t* left_expr = parse_right_assoc(p);
     if(!left_expr)
     {
         return NULL;
@@ -945,7 +945,7 @@ static expression_t* parse_expression(parser_t* p, precedence_t prec)
             return left_expr;
         }
         pos = p->lexer.cur_token.pos;
-        expression_t* new_left_expr = parse_left_assoc(p, left_expr);
+        ApeExpression_t* new_left_expr = parse_left_assoc(p, left_expr);
         if(!new_left_expr)
         {
             expression_destroy(left_expr);
@@ -958,14 +958,14 @@ static expression_t* parse_expression(parser_t* p, precedence_t prec)
     return left_expr;
 }
 
-static expression_t* parse_identifier(parser_t* p)
+static ApeExpression_t* parse_identifier(parser_t* p)
 {
     ident_t* ident = ident_make(p->alloc, p->lexer.cur_token);
     if(!ident)
     {
         return NULL;
     }
-    expression_t* res = expression_make_ident(p->alloc, ident);
+    ApeExpression_t* res = expression_make_ident(p->alloc, ident);
     if(!res)
     {
         ident_destroy(ident);
@@ -975,7 +975,7 @@ static expression_t* parse_identifier(parser_t* p)
     return res;
 }
 
-static expression_t* parse_number_literal(parser_t* p)
+static ApeExpression_t* parse_number_literal(parser_t* p)
 {
     char* end;
     double number = 0;
@@ -993,14 +993,14 @@ static expression_t* parse_number_literal(parser_t* p)
     return expression_make_number_literal(p->alloc, number);
 }
 
-static expression_t* parse_bool_literal(parser_t* p)
+static ApeExpression_t* parse_bool_literal(parser_t* p)
 {
-    expression_t* res = expression_make_bool_literal(p->alloc, p->lexer.cur_token.type == TOKEN_TRUE);
+    ApeExpression_t* res = expression_make_bool_literal(p->alloc, p->lexer.cur_token.type == TOKEN_TRUE);
     lexer_next_token(&p->lexer);
     return res;
 }
 
-static expression_t* parse_string_literal(parser_t* p)
+static ApeExpression_t* parse_string_literal(parser_t* p)
 {
     char* processed_literal = process_and_copy_string(p->alloc, p->lexer.cur_token.literal, p->lexer.cur_token.len);
     if(!processed_literal)
@@ -1009,7 +1009,7 @@ static expression_t* parse_string_literal(parser_t* p)
         return NULL;
     }
     lexer_next_token(&p->lexer);
-    expression_t* res = expression_make_string_literal(p->alloc, processed_literal);
+    ApeExpression_t* res = expression_make_string_literal(p->alloc, processed_literal);
     if(!res)
     {
         allocator_free(p->alloc, processed_literal);
@@ -1018,15 +1018,15 @@ static expression_t* parse_string_literal(parser_t* p)
     return res;
 }
 
-static expression_t* parse_template_string_literal(parser_t* p)
+static ApeExpression_t* parse_template_string_literal(parser_t* p)
 {
     char* processed_literal = NULL;
-    expression_t* left_string_expr = NULL;
-    expression_t* template_expr = NULL;
-    expression_t* to_str_call_expr = NULL;
-    expression_t* left_add_expr = NULL;
-    expression_t* right_expr = NULL;
-    expression_t* right_add_expr = NULL;
+    ApeExpression_t* left_string_expr = NULL;
+    ApeExpression_t* template_expr = NULL;
+    ApeExpression_t* to_str_call_expr = NULL;
+    ApeExpression_t* left_add_expr = NULL;
+    ApeExpression_t* right_expr = NULL;
+    ApeExpression_t* right_add_expr = NULL;
 
     processed_literal = process_and_copy_string(p->alloc, p->lexer.cur_token.literal, p->lexer.cur_token.len);
     if(!processed_literal)
@@ -1114,20 +1114,20 @@ err:
     return NULL;
 }
 
-static expression_t* parse_null_literal(parser_t* p)
+static ApeExpression_t* parse_null_literal(parser_t* p)
 {
     lexer_next_token(&p->lexer);
     return expression_make_null_literal(p->alloc);
 }
 
-static expression_t* parse_array_literal(parser_t* p)
+static ApeExpression_t* parse_array_literal(parser_t* p)
 {
-    ptrarray(expression_t)* array = parse_expression_list(p, TOKEN_LBRACKET, TOKEN_RBRACKET, true);
+    ptrarray(ApeExpression_t)* array = parse_expression_list(p, TOKEN_LBRACKET, TOKEN_RBRACKET, true);
     if(!array)
     {
         return NULL;
     }
-    expression_t* res = expression_make_array_literal(p->alloc, array);
+    ApeExpression_t* res = expression_make_array_literal(p->alloc, array);
     if(!res)
     {
         ptrarray_destroy_with_items(array, expression_destroy);
@@ -1136,10 +1136,10 @@ static expression_t* parse_array_literal(parser_t* p)
     return res;
 }
 
-static expression_t* parse_map_literal(parser_t* p)
+static ApeExpression_t* parse_map_literal(parser_t* p)
 {
-    ptrarray(expression_t)* keys = ptrarray_make(p->alloc);
-    ptrarray(expression_t)* values = ptrarray_make(p->alloc);
+    ptrarray(ApeExpression_t)* keys = ptrarray_make(p->alloc);
+    ptrarray(ApeExpression_t)* values = ptrarray_make(p->alloc);
 
     if(!keys || !values)
     {
@@ -1150,7 +1150,7 @@ static expression_t* parse_map_literal(parser_t* p)
 
     while(!lexer_cur_token_is(&p->lexer, TOKEN_RBRACE))
     {
-        expression_t* key = NULL;
+        ApeExpression_t* key = NULL;
         if(lexer_cur_token_is(&p->lexer, TOKEN_IDENT))
         {
             char* str = token_duplicate_literal(p->alloc, &p->lexer.cur_token);
@@ -1201,7 +1201,7 @@ static expression_t* parse_map_literal(parser_t* p)
 
         lexer_next_token(&p->lexer);
 
-        expression_t* value = parse_expression(p, PRECEDENCE_LOWEST);
+        ApeExpression_t* value = parse_expression(p, PRECEDENCE_LOWEST);
         if(!value)
         {
             goto err;
@@ -1228,7 +1228,7 @@ static expression_t* parse_map_literal(parser_t* p)
 
     lexer_next_token(&p->lexer);
 
-    expression_t* res = expression_make_map_literal(p->alloc, keys, values);
+    ApeExpression_t* res = expression_make_map_literal(p->alloc, keys, values);
     if(!res)
     {
         goto err;
@@ -1240,16 +1240,16 @@ err:
     return NULL;
 }
 
-static expression_t* parse_prefix_expression(parser_t* p)
+static ApeExpression_t* parse_prefix_expression(parser_t* p)
 {
     operator_t op = token_to_operator(p->lexer.cur_token.type);
     lexer_next_token(&p->lexer);
-    expression_t* right = parse_expression(p, PRECEDENCE_PREFIX);
+    ApeExpression_t* right = parse_expression(p, PRECEDENCE_PREFIX);
     if(!right)
     {
         return NULL;
     }
-    expression_t* res = expression_make_prefix(p->alloc, op, right);
+    ApeExpression_t* res = expression_make_prefix(p->alloc, op, right);
     if(!res)
     {
         expression_destroy(right);
@@ -1258,17 +1258,17 @@ static expression_t* parse_prefix_expression(parser_t* p)
     return res;
 }
 
-static expression_t* parse_infix_expression(parser_t* p, expression_t* left)
+static ApeExpression_t* parse_infix_expression(parser_t* p, ApeExpression_t* left)
 {
     operator_t op = token_to_operator(p->lexer.cur_token.type);
     precedence_t prec = get_precedence(p->lexer.cur_token.type);
     lexer_next_token(&p->lexer);
-    expression_t* right = parse_expression(p, prec);
+    ApeExpression_t* right = parse_expression(p, prec);
     if(!right)
     {
         return NULL;
     }
-    expression_t* res = expression_make_infix(p->alloc, op, left, right);
+    ApeExpression_t* res = expression_make_infix(p->alloc, op, left, right);
     if(!res)
     {
         expression_destroy(right);
@@ -1277,10 +1277,10 @@ static expression_t* parse_infix_expression(parser_t* p, expression_t* left)
     return res;
 }
 
-static expression_t* parse_grouped_expression(parser_t* p)
+static ApeExpression_t* parse_grouped_expression(parser_t* p)
 {
     lexer_next_token(&p->lexer);
-    expression_t* expr = parse_expression(p, PRECEDENCE_LOWEST);
+    ApeExpression_t* expr = parse_expression(p, PRECEDENCE_LOWEST);
     if(!expr || !lexer_expect_current(&p->lexer, TOKEN_RPAREN))
     {
         expression_destroy(expr);
@@ -1290,7 +1290,7 @@ static expression_t* parse_grouped_expression(parser_t* p)
     return expr;
 }
 
-static expression_t* parse_function_literal(parser_t* p)
+static ApeExpression_t* parse_function_literal(parser_t* p)
 {
     p->depth++;
     ptrarray(ident)* params = NULL;
@@ -1316,7 +1316,7 @@ static expression_t* parse_function_literal(parser_t* p)
         goto err;
     }
 
-    expression_t* res = expression_make_fn_literal(p->alloc, params, body);
+    ApeExpression_t* res = expression_make_fn_literal(p->alloc, params, body);
     if(!res)
     {
         goto err;
@@ -1401,15 +1401,15 @@ static bool parse_function_parameters(parser_t* p, ptrarray(ident_t) * out_param
     return true;
 }
 
-static expression_t* parse_call_expression(parser_t* p, expression_t* left)
+static ApeExpression_t* parse_call_expression(parser_t* p, ApeExpression_t* left)
 {
-    expression_t* function = left;
-    ptrarray(expression_t)* args = parse_expression_list(p, TOKEN_LPAREN, TOKEN_RPAREN, false);
+    ApeExpression_t* function = left;
+    ptrarray(ApeExpression_t)* args = parse_expression_list(p, TOKEN_LPAREN, TOKEN_RPAREN, false);
     if(!args)
     {
         return NULL;
     }
-    expression_t* res = expression_make_call(p->alloc, function, args);
+    ApeExpression_t* res = expression_make_call(p->alloc, function, args);
     if(!res)
     {
         ptrarray_destroy_with_items(args, expression_destroy);
@@ -1418,7 +1418,7 @@ static expression_t* parse_call_expression(parser_t* p, expression_t* left)
     return res;
 }
 
-static ptrarray(expression_t)
+static ptrarray(ApeExpression_t)
 * parse_expression_list(parser_t* p, token_type_t start_token, token_type_t end_token, bool trailing_comma_allowed)
 {
     if(!lexer_expect_current(&p->lexer, start_token))
@@ -1428,7 +1428,7 @@ static ptrarray(expression_t)
 
     lexer_next_token(&p->lexer);
 
-    ptrarray(expression_t)* res = ptrarray_make(p->alloc);
+    ptrarray(ApeExpression_t)* res = ptrarray_make(p->alloc);
 
     if(lexer_cur_token_is(&p->lexer, end_token))
     {
@@ -1436,7 +1436,7 @@ static ptrarray(expression_t)
         return res;
     }
 
-    expression_t* arg_expr = parse_expression(p, PRECEDENCE_LOWEST);
+    ApeExpression_t* arg_expr = parse_expression(p, PRECEDENCE_LOWEST);
     if(!arg_expr)
     {
         goto err;
@@ -1484,11 +1484,11 @@ err:
     return NULL;
 }
 
-static expression_t* parse_index_expression(parser_t* p, expression_t* left)
+static ApeExpression_t* parse_index_expression(parser_t* p, ApeExpression_t* left)
 {
     lexer_next_token(&p->lexer);
 
-    expression_t* index = parse_expression(p, PRECEDENCE_LOWEST);
+    ApeExpression_t* index = parse_expression(p, PRECEDENCE_LOWEST);
     if(!index)
     {
         return NULL;
@@ -1502,7 +1502,7 @@ static expression_t* parse_index_expression(parser_t* p, expression_t* left)
 
     lexer_next_token(&p->lexer);
 
-    expression_t* res = expression_make_index(p->alloc, left, index);
+    ApeExpression_t* res = expression_make_index(p->alloc, left, index);
     if(!res)
     {
         expression_destroy(index);
@@ -1512,9 +1512,9 @@ static expression_t* parse_index_expression(parser_t* p, expression_t* left)
     return res;
 }
 
-static expression_t* parse_assign_expression(parser_t* p, expression_t* left)
+static ApeExpression_t* parse_assign_expression(parser_t* p, ApeExpression_t* left)
 {
-    expression_t* source = NULL;
+    ApeExpression_t* source = NULL;
     token_type_t assign_type = p->lexer.cur_token.type;
 
     lexer_next_token(&p->lexer);
@@ -1539,13 +1539,13 @@ static expression_t* parse_assign_expression(parser_t* p, expression_t* left)
         case TOKEN_RSHIFT_ASSIGN:
         {
             operator_t op = token_to_operator(assign_type);
-            expression_t* left_copy = expression_copy(left);
+            ApeExpression_t* left_copy = expression_copy(left);
             if(!left_copy)
             {
                 goto err;
             }
             src_pos_t pos = source->pos;
-            expression_t* new_source = expression_make_infix(p->alloc, op, left_copy, source);
+            ApeExpression_t* new_source = expression_make_infix(p->alloc, op, left_copy, source);
             if(!new_source)
             {
                 expression_destroy(left_copy);
@@ -1562,7 +1562,7 @@ static expression_t* parse_assign_expression(parser_t* p, expression_t* left)
             break;
     }
 
-    expression_t* res = expression_make_assign(p->alloc, left, source, false);
+    ApeExpression_t* res = expression_make_assign(p->alloc, left, source, false);
     if(!res)
     {
         goto err;
@@ -1573,17 +1573,17 @@ err:
     return NULL;
 }
 
-static expression_t* parse_logical_expression(parser_t* p, expression_t* left)
+static ApeExpression_t* parse_logical_expression(parser_t* p, ApeExpression_t* left)
 {
     operator_t op = token_to_operator(p->lexer.cur_token.type);
     precedence_t prec = get_precedence(p->lexer.cur_token.type);
     lexer_next_token(&p->lexer);
-    expression_t* right = parse_expression(p, prec);
+    ApeExpression_t* right = parse_expression(p, prec);
     if(!right)
     {
         return NULL;
     }
-    expression_t* res = expression_make_logical(p->alloc, op, left, right);
+    ApeExpression_t* res = expression_make_logical(p->alloc, op, left, right);
     if(!res)
     {
         expression_destroy(right);
@@ -1592,11 +1592,11 @@ static expression_t* parse_logical_expression(parser_t* p, expression_t* left)
     return res;
 }
 
-static expression_t* parse_ternary_expression(parser_t* p, expression_t* left)
+static ApeExpression_t* parse_ternary_expression(parser_t* p, ApeExpression_t* left)
 {
     lexer_next_token(&p->lexer);
 
-    expression_t* if_true = parse_expression(p, PRECEDENCE_LOWEST);
+    ApeExpression_t* if_true = parse_expression(p, PRECEDENCE_LOWEST);
     if(!if_true)
     {
         return NULL;
@@ -1609,14 +1609,14 @@ static expression_t* parse_ternary_expression(parser_t* p, expression_t* left)
     }
     lexer_next_token(&p->lexer);
 
-    expression_t* if_false = parse_expression(p, PRECEDENCE_LOWEST);
+    ApeExpression_t* if_false = parse_expression(p, PRECEDENCE_LOWEST);
     if(!if_false)
     {
         expression_destroy(if_true);
         return NULL;
     }
 
-    expression_t* res = expression_make_ternary(p->alloc, left, if_true, if_false);
+    ApeExpression_t* res = expression_make_ternary(p->alloc, left, if_true, if_false);
     if(!res)
     {
         expression_destroy(if_true);
@@ -1627,9 +1627,9 @@ static expression_t* parse_ternary_expression(parser_t* p, expression_t* left)
     return res;
 }
 
-static expression_t* parse_incdec_prefix_expression(parser_t* p)
+static ApeExpression_t* parse_incdec_prefix_expression(parser_t* p)
 {
-    expression_t* source = NULL;
+    ApeExpression_t* source = NULL;
     token_type_t operation_type = p->lexer.cur_token.type;
     src_pos_t pos = p->lexer.cur_token.pos;
 
@@ -1637,13 +1637,13 @@ static expression_t* parse_incdec_prefix_expression(parser_t* p)
 
     operator_t op = token_to_operator(operation_type);
 
-    expression_t* dest = parse_expression(p, PRECEDENCE_PREFIX);
+    ApeExpression_t* dest = parse_expression(p, PRECEDENCE_PREFIX);
     if(!dest)
     {
         goto err;
     }
 
-    expression_t* one_literal = expression_make_number_literal(p->alloc, 1);
+    ApeExpression_t* one_literal = expression_make_number_literal(p->alloc, 1);
     if(!one_literal)
     {
         expression_destroy(dest);
@@ -1651,7 +1651,7 @@ static expression_t* parse_incdec_prefix_expression(parser_t* p)
     }
     one_literal->pos = pos;
 
-    expression_t* dest_copy = expression_copy(dest);
+    ApeExpression_t* dest_copy = expression_copy(dest);
     if(!dest_copy)
     {
         expression_destroy(one_literal);
@@ -1659,7 +1659,7 @@ static expression_t* parse_incdec_prefix_expression(parser_t* p)
         goto err;
     }
 
-    expression_t* operation = expression_make_infix(p->alloc, op, dest_copy, one_literal);
+    ApeExpression_t* operation = expression_make_infix(p->alloc, op, dest_copy, one_literal);
     if(!operation)
     {
         expression_destroy(dest_copy);
@@ -1669,7 +1669,7 @@ static expression_t* parse_incdec_prefix_expression(parser_t* p)
     }
     operation->pos = pos;
 
-    expression_t* res = expression_make_assign(p->alloc, dest, operation, false);
+    ApeExpression_t* res = expression_make_assign(p->alloc, dest, operation, false);
     if(!res)
     {
         expression_destroy(dest);
@@ -1682,22 +1682,22 @@ err:
     return NULL;
 }
 
-static expression_t* parse_incdec_postfix_expression(parser_t* p, expression_t* left)
+static ApeExpression_t* parse_incdec_postfix_expression(parser_t* p, ApeExpression_t* left)
 {
-    expression_t* source = NULL;
+    ApeExpression_t* source = NULL;
     token_type_t operation_type = p->lexer.cur_token.type;
     src_pos_t pos = p->lexer.cur_token.pos;
 
     lexer_next_token(&p->lexer);
 
     operator_t op = token_to_operator(operation_type);
-    expression_t* left_copy = expression_copy(left);
+    ApeExpression_t* left_copy = expression_copy(left);
     if(!left_copy)
     {
         goto err;
     }
 
-    expression_t* one_literal = expression_make_number_literal(p->alloc, 1);
+    ApeExpression_t* one_literal = expression_make_number_literal(p->alloc, 1);
     if(!one_literal)
     {
         expression_destroy(left_copy);
@@ -1705,7 +1705,7 @@ static expression_t* parse_incdec_postfix_expression(parser_t* p, expression_t* 
     }
     one_literal->pos = pos;
 
-    expression_t* operation = expression_make_infix(p->alloc, op, left_copy, one_literal);
+    ApeExpression_t* operation = expression_make_infix(p->alloc, op, left_copy, one_literal);
     if(!operation)
     {
         expression_destroy(one_literal);
@@ -1714,7 +1714,7 @@ static expression_t* parse_incdec_postfix_expression(parser_t* p, expression_t* 
     }
     operation->pos = pos;
 
-    expression_t* res = expression_make_assign(p->alloc, left, operation, true);
+    ApeExpression_t* res = expression_make_assign(p->alloc, left, operation, true);
     if(!res)
     {
         expression_destroy(operation);
@@ -1728,7 +1728,7 @@ err:
 }
 
 
-static expression_t* parse_dot_expression(parser_t* p, expression_t* left)
+static ApeExpression_t* parse_dot_expression(parser_t* p, ApeExpression_t* left)
 {
     lexer_next_token(&p->lexer);
 
@@ -1738,7 +1738,7 @@ static expression_t* parse_dot_expression(parser_t* p, expression_t* left)
     }
 
     char* str = token_duplicate_literal(p->alloc, &p->lexer.cur_token);
-    expression_t* index = expression_make_string_literal(p->alloc, str);
+    ApeExpression_t* index = expression_make_string_literal(p->alloc, str);
     if(!index)
     {
         allocator_free(p->alloc, str);
@@ -1748,7 +1748,7 @@ static expression_t* parse_dot_expression(parser_t* p, expression_t* left)
 
     lexer_next_token(&p->lexer);
 
-    expression_t* res = expression_make_index(p->alloc, left, index);
+    ApeExpression_t* res = expression_make_index(p->alloc, left, index);
     if(!res)
     {
         expression_destroy(index);
@@ -1939,17 +1939,18 @@ static char escape_char(const char c)
     }
 }
 
-static char* process_and_copy_string(allocator_t* alloc, const char* input, size_t len)
+static char* process_and_copy_string(ApeAllocator_t* alloc, const char* input, size_t len)
 {
-    char* output = allocator_malloc(alloc, len + 1);
+    size_t in_i;
+    size_t out_i;
+    char* output;
+    output = allocator_malloc(alloc, len + 1);
     if(!output)
     {
         return NULL;
     }
-
-    size_t in_i = 0;
-    size_t out_i = 0;
-
+    in_i = 0;
+    out_i = 0;
     while(input[in_i] != '\0' && in_i < len)
     {
         if(input[in_i] == '\\')
@@ -1975,7 +1976,7 @@ error:
     return NULL;
 }
 
-static expression_t* wrap_expression_in_function_call(allocator_t* alloc, expression_t* expr, const char* function_name)
+static ApeExpression_t* wrap_expression_in_function_call(ApeAllocator_t* alloc, ApeExpression_t* expr, const char* function_name)
 {
     token_t fn_token;
     token_init(&fn_token, TOKEN_IDENT, function_name, (int)strlen(function_name));
@@ -1988,7 +1989,7 @@ static expression_t* wrap_expression_in_function_call(allocator_t* alloc, expres
     }
     ident->pos = fn_token.pos;
 
-    expression_t* function_ident_expr = expression_make_ident(alloc, ident);
+    ApeExpression_t* function_ident_expr = expression_make_ident(alloc, ident);
     ;
     if(!function_ident_expr)
     {
@@ -1998,7 +1999,7 @@ static expression_t* wrap_expression_in_function_call(allocator_t* alloc, expres
     function_ident_expr->pos = expr->pos;
     ident = NULL;
 
-    ptrarray(expression_t)* args = ptrarray_make(alloc);
+    ptrarray(ApeExpression_t)* args = ptrarray_make(alloc);
     if(!args)
     {
         expression_destroy(function_ident_expr);
@@ -2013,7 +2014,7 @@ static expression_t* wrap_expression_in_function_call(allocator_t* alloc, expres
         return NULL;
     }
 
-    expression_t* call_expr = expression_make_call(alloc, function_ident_expr, args);
+    ApeExpression_t* call_expr = expression_make_call(alloc, function_ident_expr, args);
     if(!call_expr)
     {
         ptrarray_destroy(args);
