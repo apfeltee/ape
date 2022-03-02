@@ -77,7 +77,7 @@ THE SOFTWARE.
 
 #define CHECK_ARGS(vm, generate_error, argc, args, ...) \
     check_args((vm), (generate_error), (argc), (args),  \
-               sizeof((object_type_t[]){ __VA_ARGS__ }) / sizeof(object_type_t), (object_type_t[]){ __VA_ARGS__ })
+               sizeof((ApeObjectType_t[]){ __VA_ARGS__ }) / sizeof(ApeObjectType_t), (ApeObjectType_t[]){ __VA_ARGS__ })
 
 
 #define APE_CALL(ape, function_name, ...) \
@@ -87,24 +87,24 @@ THE SOFTWARE.
     ape_check_args((ape), (generate_error), (argc), (args), sizeof((int[]){ __VA_ARGS__ }) / sizeof(int), (int[]){ __VA_ARGS__ })
 
 
-#define dict(TYPE) dictionary_t
+#define dict(TYPE) ApeDictionary_t
 
 #define dict_make(alloc, copy_fn, destroy_fn) \
     dict_make_(alloc, (ApeDictItemCopyFNCallback_t)(copy_fn), (ApeDictItemDestroyFNCallback_t)(destroy_fn))
 
-#define valdict(KEY_TYPE, VALUE_TYPE) valdict_t
+#define valdict(KEY_TYPE, VALUE_TYPE) ApeValDictionary_t
 
 #define valdict_make(allocator, key_type, val_type) valdict_make_(allocator, sizeof(key_type), sizeof(val_type))
 
-#define ptrdict(KEY_TYPE, VALUE_TYPE) ptrdictionary_t
+#define ptrdict(KEY_TYPE, VALUE_TYPE) ApePtrDictionary_t
 
-#define array(TYPE) array_t
+#define array(TYPE) ApeArray_t
 
 #define array_make(allocator, type) array_make_(allocator, sizeof(type))
 #define array_destroy_with_items(arr, fn) array_destroy_with_items_(arr, (ApeArrayItemDeinitFNCallback_t)(fn))
 #define array_clear_and_deinit_items(arr, fn) array_clear_and_deinit_items_(arr, (ApeArrayItemDeinitFNCallback_t)(fn))
 
-#define ptrarray(TYPE) ptrarray_t
+#define ptrarray(TYPE) ApePtrArray_t
 
 #define ptrarray_destroy_with_items(arr, fn) ptrarray_destroy_with_items_(arr, (ApePtrArrayItemDestroyFNCallback_t)(fn))
 #define ptrarray_clear_and_destroy_items(arr, fn) ptrarray_clear_and_destroy_items_(arr, (ApePtrArrayItemDestroyFNCallback_t)(fn))
@@ -157,7 +157,8 @@ enum ApeObjectType_t
     APE_OBJECT_ANY = 0xffff,// for checking types with &
 };
 
-enum token_type_t
+
+enum ApeTokenType_t
 {
     TOKEN_INVALID = 0,
     TOKEN_EOF,
@@ -244,7 +245,7 @@ enum token_type_t
 };
 
 
-enum operator_t
+enum ApeOperator_t
 {
     OPERATOR_NONE,
     OPERATOR_ASSIGN,
@@ -269,7 +270,7 @@ enum operator_t
     OPERATOR_RSHIFT,
 };
 
-enum expression_type_t
+enum ApeExpr_type_t
 {
     EXPRESSION_NONE,
     EXPRESSION_IDENT,
@@ -290,7 +291,7 @@ enum expression_type_t
 };
 
 
-enum statement_type_t
+enum ApeStatementType_t
 {
     STATEMENT_NONE,
     STATEMENT_DEFINE,
@@ -307,24 +308,9 @@ enum statement_type_t
     STATEMENT_RECOVER,
 };
 
-enum object_type_t
-{
-    OBJECT_NONE = 0,
-    OBJECT_ERROR = 1 << 0,
-    OBJECT_NUMBER = 1 << 1,
-    OBJECT_BOOL = 1 << 2,
-    OBJECT_STRING = 1 << 3,
-    OBJECT_NULL = 1 << 4,
-    OBJECT_NATIVE_FUNCTION = 1 << 5,
-    OBJECT_ARRAY = 1 << 6,
-    OBJECT_MAP = 1 << 7,
-    OBJECT_FUNCTION = 1 << 8,
-    OBJECT_EXTERNAL = 1 << 9,
-    OBJECT_FREED = 1 << 10,
-    OBJECT_ANY = 0xffff,
-};
 
-enum symbol_type_t
+
+enum ApeSymbolType_t
 {
     SYMBOL_NONE = 0,
     SYMBOL_MODULE_GLOBAL,
@@ -336,7 +322,7 @@ enum symbol_type_t
 };
 
 
-enum opcode_val_t
+enum ApeOpcodeValue_t
 {
     OPCODE_NONE = 0,
     OPCODE_CONSTANT,
@@ -393,7 +379,7 @@ enum opcode_val_t
     OPCODE_MAX,
 };
 
-enum precedence_t
+enum ApePrecedence_t
 {
     PRECEDENCE_LOWEST = 0,
     PRECEDENCE_ASSIGN,// a = b
@@ -417,79 +403,79 @@ enum precedence_t
 typedef uint8_t opcode_t;
 
 
-typedef enum token_type_t token_type_t;
-typedef enum statement_type_t statement_type_t;
-typedef enum operator_t operator_t;
-typedef enum symbol_type_t symbol_type_t;
-typedef enum object_type_t object_type_t;
-typedef enum expression_type_t expression_type_t;
-typedef enum opcode_val_t opcode_val_t;
-typedef enum precedence_t precedence_t;
+typedef enum ApeTokenType_t ApeTokenType_t;
+typedef enum ApeStatementType_t ApeStatementType_t;
+typedef enum ApeOperator_t ApeOperator_t;
+typedef enum ApeSymbolType_t ApeSymbolType_t;
+typedef enum ApeObjectType_t ApeObjectType_t;
+typedef enum ApeExpr_type_t ApeExpr_type_t;
+typedef enum ApeOpcodeValue_t ApeOpcodeValue_t;
+typedef enum ApePrecedence_t ApePrecedence_t;
 typedef enum ApeObjectType_t ApeObjectType_t;
 typedef enum ApeErrorType_t ApeErrorType_t;
 typedef struct ApeContext_t ApeContext_t;
 typedef struct ApeProgram_t ApeProgram_t;
 typedef struct ApeVM_t ApeVM_t;
-typedef struct ape_config_t ape_config_t;
-typedef struct src_pos_t src_pos_t;
-typedef struct ape_timer_t ape_timer_t;
+typedef struct ApeConfig_t ApeConfig_t;
+typedef struct ApePosition_t ApePosition_t;
+typedef struct ApeTimer_t ApeTimer_t;
 typedef struct ApeAllocator_t ApeAllocator_t;
-typedef struct error_t error_t;
-typedef struct errors_t errors_t;
-typedef struct token_t token_t;
-typedef struct compiled_file_t compiled_file_t;
-typedef struct lexer_t lexer_t;
-typedef struct code_block_t code_block_t;
-typedef struct map_literal_t map_literal_t;
-typedef struct prefix_expression_t prefix_expression_t;
-typedef struct infix_expression_t infix_expression_t;
-typedef struct if_case_t if_case_t;
-typedef struct fn_literal_t fn_literal_t;
-typedef struct call_expression_t call_expression_t;
-typedef struct index_expression_t index_expression_t;
-typedef struct assign_expression_t assign_expression_t;
-typedef struct logical_expression_t logical_expression_t;
-typedef struct ternary_expression_t ternary_expression_t;
-typedef struct ident_t ident_t;
+typedef struct ApeError_t ApeError_t;
+typedef struct ApeErrorList_t ApeErrorList_t;
+typedef struct ApeToken_t ApeToken_t;
+typedef struct ApeCompiledFile_t ApeCompiledFile_t;
+typedef struct ApeLexer_t ApeLexer_t;
+typedef struct ApeCodeblock_t ApeCodeblock_t;
+typedef struct ApeMapLiteral_t ApeMapLiteral_t;
+typedef struct ApePrefixExpr_t ApePrefixExpr_t;
+typedef struct ApeInfixExpr_t ApeInfixExpr_t;
+typedef struct ApeIfCase_t ApeIfCase_t;
+typedef struct ApeFnLiteral_t ApeFnLiteral_t;
+typedef struct ApeCallExpr_t ApeCallExpr_t;
+typedef struct ApeIndexExpr_t ApeIndexExpr_t;
+typedef struct ApeAssignExpr_t ApeAssignExpr_t;
+typedef struct ApeLogicalExpr_t ApeLogicalExpr_t;
+typedef struct ApeTernaryExpr_t ApeTernaryExpr_t;
+typedef struct ApeIdent_t ApeIdent_t;
 typedef struct ApeExpression_t ApeExpression_t;
-typedef struct define_statement_t define_statement_t;
-typedef struct if_statement_t if_statement_t;
-typedef struct while_loop_statement_t while_loop_statement_t;
-typedef struct foreach_statement_t foreach_statement_t;
-typedef struct for_loop_statement_t for_loop_statement_t;
-typedef struct import_statement_t import_statement_t;
-typedef struct recover_statement_t recover_statement_t;
-typedef struct statement_t statement_t;
-typedef struct parser_t parser_t;
+typedef struct ApeDefineStmt_t ApeDefineStmt_t;
+typedef struct ApeIfStmt_t ApeIfStmt_t;
+typedef struct ApeWhileLoopStmt_t ApeWhileLoopStmt_t;
+typedef struct ApeForeachStmt_t ApeForeachStmt_t;
+typedef struct ApeForLoopStmt_t ApeForLoopStmt_t;
+typedef struct ApeImportStmt_t ApeImportStmt_t;
+typedef struct ApeRecoverStmt_t ApeRecoverStmt_t;
+typedef struct ApeStatement_t ApeStatement_t;
+typedef struct ApeParser_t ApeParser_t;
 typedef struct ApeObject_t ApeObject_t;
-typedef struct function_t function_t;
-typedef struct native_function_t native_function_t;
-typedef struct external_data_t external_data_t;
-typedef struct object_error_t object_error_t;
-typedef struct object_string_t object_string_t;
-typedef struct object_data_t object_data_t;
-typedef struct symbol_t symbol_t;
-typedef struct block_scope_t block_scope_t;
-typedef struct symbol_table_t symbol_table_t;
-typedef struct opcode_definition_t opcode_definition_t;
-typedef struct compilation_result_t compilation_result_t;
-typedef struct compilation_scope_t compilation_scope_t;
-typedef struct object_data_pool_t object_data_pool_t;
-typedef struct gcmem_t gcmem_t;
-typedef struct traceback_item_t traceback_item_t;
-typedef struct traceback_t traceback_t;
-typedef struct frame_t frame_t;
-typedef struct valdict_t valdict_t;
-typedef struct dictionary_t dictionary_t;
-typedef struct array_t array_t;
-typedef struct ptrdictionary_t ptrdictionary_t;
-typedef struct ptrarray_t ptrarray_t;
-typedef struct strbuf_t strbuf_t;
-typedef struct global_store_t global_store_t;
-typedef struct module_t module_t;
-typedef struct file_scope_t file_scope_t;
-typedef struct compiler_t compiler_t;
-typedef struct native_fn_wrapper_t native_fn_wrapper_t;
+typedef struct ApeFunction_t ApeFunction_t;
+typedef struct ApeNativeFunction_t ApeNativeFunction_t;
+typedef struct ApeExternalData_t ApeExternalData_t;
+typedef struct ApeObjectError_t ApeObjectError_t;
+typedef struct ApeObjectString_t ApeObjectString_t;
+typedef struct ApeObjectData_t ApeObjectData_t;
+typedef struct ApeSymbol_t ApeSymbol_t;
+typedef struct ApeBlockScope_t ApeBlockScope_t;
+typedef struct ApeSymbol_table_t ApeSymbol_table_t;
+typedef struct ApeOpcodeDefinition_t ApeOpcodeDefinition_t;
+typedef struct ApeCompilationResult_t ApeCompilationResult_t;
+typedef struct ApeCompilationScope_t ApeCompilationScope_t;
+typedef struct ApeObjectDataPool_t ApeObjectDataPool_t;
+typedef struct ApeGCMemory_t ApeGCMemory_t;
+typedef struct ApeTracebackItem_t ApeTracebackItem_t;
+typedef struct ApeTraceback_t ApeTraceback_t;
+typedef struct ApeFrame_t ApeFrame_t;
+typedef struct ApeValDictionary_t ApeValDictionary_t;
+typedef struct ApeDictionary_t ApeDictionary_t;
+typedef struct ApeArray_t ApeArray_t;
+typedef struct ApePtrDictionary_t ApePtrDictionary_t;
+typedef struct ApePtrArray_t ApePtrArray_t;
+typedef struct ApeStringBuffer_t ApeStringBuffer_t;
+typedef struct ApeGlobalStore_t ApeGlobalStore_t;
+typedef struct ApeModule_t ApeModule_t;
+typedef struct ApeFileScope_t ApeFileScope_t;
+typedef struct ApeCompiler_t ApeCompiler_t;
+typedef struct ApeNativeFuncWrapper_t ApeNativeFuncWrapper_t;
 
 
 
@@ -513,21 +499,21 @@ typedef void* (*ApeDictItemCopyFNCallback_t)(void* item);
 typedef void (*ApeArrayItemDeinitFNCallback_t)(void* item);
 typedef void (*ApePtrArrayItemDestroyFNCallback_t)(void* item);
 typedef void* (*ApePtrArrayItemCopyFNCallback_t)(void* item);
-typedef ApeExpression_t* (*ApeRightAssocParseFNCallback_t)(parser_t* p);
-typedef ApeExpression_t* (*ApeLeftAssocParseFNCallback_t)(parser_t* p, ApeExpression_t* expr);
+typedef ApeExpression_t* (*ApeRightAssocParseFNCallback_t)(ApeParser_t* p);
+typedef ApeExpression_t* (*ApeLeftAssocParseFNCallback_t)(ApeParser_t* p, ApeExpression_t* expr);
 
 typedef void (*ApeExternalDataDestroyFNCallback_t)(void* data);
 typedef void* (*ApeExternalDataCopyFNCallback_t)(void* data);
 
 
-struct src_pos_t
+struct ApePosition_t
 {
-    const compiled_file_t* file;
+    const ApeCompiledFile_t* file;
     int line;
     int column;
 };
 
-struct ape_config_t
+struct ApeConfig_t
 {
     struct
     {
@@ -559,7 +545,7 @@ struct ape_config_t
     bool max_execution_time_set;
 };
 
-struct ape_timer_t
+struct ApeTimer_t
 {
 #if defined(APE_POSIX)
     int64_t start_offset;
@@ -576,29 +562,29 @@ struct ApeAllocator_t
     void* ctx;
 };
 
-struct error_t
+struct ApeError_t
 {
     ApeErrorType_t type;
     char message[APE_ERROR_MESSAGE_MAX_LENGTH];
-    src_pos_t pos;
-    traceback_t* traceback;
+    ApePosition_t pos;
+    ApeTraceback_t* traceback;
 };
 
-struct errors_t
+struct ApeErrorList_t
 {
-    error_t errors[ERRORS_MAX_COUNT];
+    ApeError_t errors[ERRORS_MAX_COUNT];
     int count;
 };
 
-struct token_t
+struct ApeToken_t
 {
-    token_type_t type;
+    ApeTokenType_t type;
     const char* literal;
     int len;
-    src_pos_t pos;
+    ApePosition_t pos;
 };
 
-struct compiled_file_t
+struct ApeCompiledFile_t
 {
     ApeAllocator_t* alloc;
     char* dir_path;
@@ -606,10 +592,10 @@ struct compiled_file_t
     ptrarray(char*) * lines;
 };
 
-struct lexer_t
+struct ApeLexer_t
 {
     ApeAllocator_t* alloc;
-    errors_t* errors;
+    ApeErrorList_t* errors;
     const char* input;
     int input_len;
     int position;
@@ -617,7 +603,7 @@ struct lexer_t
     char ch;
     int line;
     int column;
-    compiled_file_t* file;
+    ApeCompiledFile_t* file;
     bool failed;
     bool continue_template_string;
     struct
@@ -628,186 +614,186 @@ struct lexer_t
         int line;
         int column;
     } prev_token_state;
-    token_t prev_token;
-    token_t cur_token;
-    token_t peek_token;
+    ApeToken_t prev_token;
+    ApeToken_t cur_token;
+    ApeToken_t peek_token;
 };
 
-struct code_block_t
+struct ApeCodeblock_t
 {
     ApeAllocator_t* alloc;
-    ptrarray(statement_t) * statements;
+    ptrarray(ApeStatement_t) * statements;
 };
 
-struct map_literal_t
+struct ApeMapLiteral_t
 {
     ptrarray(ApeExpression_t) * keys;
     ptrarray(ApeExpression_t) * values;
 };
 
 
-struct prefix_expression_t
+struct ApePrefixExpr_t
 {
-    operator_t op;
+    ApeOperator_t op;
     ApeExpression_t* right;
 };
 
-struct infix_expression_t
+struct ApeInfixExpr_t
 {
-    operator_t op;
+    ApeOperator_t op;
     ApeExpression_t* left;
     ApeExpression_t* right;
 };
 
-struct if_case_t
+struct ApeIfCase_t
 {
     ApeAllocator_t* alloc;
     ApeExpression_t* test;
-    code_block_t* consequence;
+    ApeCodeblock_t* consequence;
 };
 
-struct fn_literal_t
+struct ApeFnLiteral_t
 {
     char* name;
-    ptrarray(ident_t) * params;
-    code_block_t* body;
+    ptrarray(ApeIdent_t) * params;
+    ApeCodeblock_t* body;
 };
 
-struct call_expression_t
+struct ApeCallExpr_t
 {
     ApeExpression_t* function;
     ptrarray(ApeExpression_t) * args;
 };
 
-struct index_expression_t
+struct ApeIndexExpr_t
 {
     ApeExpression_t* left;
     ApeExpression_t* index;
 };
 
-struct assign_expression_t
+struct ApeAssignExpr_t
 {
     ApeExpression_t* dest;
     ApeExpression_t* source;
     bool is_postfix;
 };
 
-struct logical_expression_t
+struct ApeLogicalExpr_t
 {
-    operator_t op;
+    ApeOperator_t op;
     ApeExpression_t* left;
     ApeExpression_t* right;
 };
 
-struct ternary_expression_t
+struct ApeTernaryExpr_t
 {
     ApeExpression_t* test;
     ApeExpression_t* if_true;
     ApeExpression_t* if_false;
 };
 
-struct ident_t
+struct ApeIdent_t
 {
     ApeAllocator_t* alloc;
     char* value;
-    src_pos_t pos;
+    ApePosition_t pos;
 };
 
 struct ApeExpression_t
 {
     ApeAllocator_t* alloc;
-    expression_type_t type;
+    ApeExpr_type_t type;
     union
     {
-        ident_t* ident;
+        ApeIdent_t* ident;
         double number_literal;
         bool bool_literal;
         char* string_literal;
         ptrarray(ApeExpression_t) * array;
-        map_literal_t map;
-        prefix_expression_t prefix;
-        infix_expression_t infix;
-        fn_literal_t fn_literal;
-        call_expression_t call_expr;
-        index_expression_t index_expr;
-        assign_expression_t assign;
-        logical_expression_t logical;
-        ternary_expression_t ternary;
+        ApeMapLiteral_t map;
+        ApePrefixExpr_t prefix;
+        ApeInfixExpr_t infix;
+        ApeFnLiteral_t fn_literal;
+        ApeCallExpr_t call_expr;
+        ApeIndexExpr_t index_expr;
+        ApeAssignExpr_t assign;
+        ApeLogicalExpr_t logical;
+        ApeTernaryExpr_t ternary;
     };
-    src_pos_t pos;
+    ApePosition_t pos;
 };
 
-struct define_statement_t
+struct ApeDefineStmt_t
 {
-    ident_t* name;
+    ApeIdent_t* name;
     ApeExpression_t* value;
     bool assignable;
 };
 
-struct if_statement_t
+struct ApeIfStmt_t
 {
-    ptrarray(if_case_t) * cases;
-    code_block_t* alternative;
+    ptrarray(ApeIfCase_t) * cases;
+    ApeCodeblock_t* alternative;
 };
 
-struct while_loop_statement_t
+struct ApeWhileLoopStmt_t
 {
     ApeExpression_t* test;
-    code_block_t* body;
+    ApeCodeblock_t* body;
 };
 
-struct foreach_statement_t
+struct ApeForeachStmt_t
 {
-    ident_t* iterator;
+    ApeIdent_t* iterator;
     ApeExpression_t* source;
-    code_block_t* body;
+    ApeCodeblock_t* body;
 };
 
-struct for_loop_statement_t
+struct ApeForLoopStmt_t
 {
-    statement_t* init;
+    ApeStatement_t* init;
     ApeExpression_t* test;
     ApeExpression_t* update;
-    code_block_t* body;
+    ApeCodeblock_t* body;
 };
 
-struct import_statement_t
+struct ApeImportStmt_t
 {
     char* path;
 };
 
-struct recover_statement_t
+struct ApeRecoverStmt_t
 {
-    ident_t* error_ident;
-    code_block_t* body;
+    ApeIdent_t* error_ident;
+    ApeCodeblock_t* body;
 };
 
-struct statement_t
+struct ApeStatement_t
 {
     ApeAllocator_t* alloc;
-    statement_type_t type;
+    ApeStatementType_t type;
     union
     {
-        define_statement_t define;
-        if_statement_t if_statement;
+        ApeDefineStmt_t define;
+        ApeIfStmt_t if_statement;
         ApeExpression_t* return_value;
         ApeExpression_t* expression;
-        while_loop_statement_t while_loop;
-        foreach_statement_t foreach;
-        for_loop_statement_t for_loop;
-        code_block_t* block;
-        import_statement_t import;
-        recover_statement_t recover;
+        ApeWhileLoopStmt_t while_loop;
+        ApeForeachStmt_t foreach;
+        ApeForLoopStmt_t for_loop;
+        ApeCodeblock_t* block;
+        ApeImportStmt_t import;
+        ApeRecoverStmt_t recover;
     };
-    src_pos_t pos;
+    ApePosition_t pos;
 };
 
-struct parser_t
+struct ApeParser_t
 {
     ApeAllocator_t* alloc;
-    const ape_config_t* config;
-    lexer_t lexer;
-    errors_t* errors;
+    const ApeConfig_t* config;
+    ApeLexer_t lexer;
+    ApeErrorList_t* errors;
 
     ApeRightAssocParseFNCallback_t right_assoc_parse_fns[TOKEN_TYPE_MAX];
     ApeLeftAssocParseFNCallback_t left_assoc_parse_fns[TOKEN_TYPE_MAX];
@@ -826,7 +812,7 @@ struct ApeObject_t
 };
 
 
-struct function_t
+struct ApeFunction_t
 {
     union
     {
@@ -838,14 +824,14 @@ struct function_t
         char* name;
         const char* const_name;
     };
-    compilation_result_t* comp_result;
+    ApeCompilationResult_t* comp_result;
     int num_locals;
     int num_args;
     int free_vals_count;
     bool owns_data;
 };
 
-struct native_function_t
+struct ApeNativeFunction_t
 {
     char* name;
     ApeNativeFNCallback_t fn;
@@ -853,20 +839,20 @@ struct native_function_t
     int data_len;
 };
 
-struct external_data_t
+struct ApeExternalData_t
 {
     void* data;
     ApeExternalDataDestroyFNCallback_t data_destroy_fn;
     ApeExternalDataCopyFNCallback_t data_copy_fn;
 };
 
-struct object_error_t
+struct ApeObjectError_t
 {
     char* message;
-    traceback_t* traceback;
+    ApeTraceback_t* traceback;
 };
 
-struct object_string_t
+struct ApeObjectString_t
 {
     union
     {
@@ -879,113 +865,113 @@ struct object_string_t
     int length;
 };
 
-struct object_data_t
+struct ApeObjectData_t
 {
-    gcmem_t* mem;
+    ApeGCMemory_t* mem;
     union
     {
-        object_string_t string;
-        object_error_t error;
+        ApeObjectString_t string;
+        ApeObjectError_t error;
         array(ApeObject_t) * array;
         valdict(ApeObject_t, ApeObject_t) * map;
-        function_t function;
-        native_function_t native_function;
-        external_data_t external;
+        ApeFunction_t function;
+        ApeNativeFunction_t native_function;
+        ApeExternalData_t external;
     };
     bool gcmark;
-    object_type_t type;
+    ApeObjectType_t type;
 };
 
-struct symbol_t
+struct ApeSymbol_t
 {
     ApeAllocator_t* alloc;
-    symbol_type_t type;
+    ApeSymbolType_t type;
     char* name;
     int index;
     bool assignable;
 };
 
-struct block_scope_t
+struct ApeBlockScope_t
 {
     ApeAllocator_t* alloc;
-    dict(symbol_t) * store;
+    dict(ApeSymbol_t) * store;
     int offset;
     int num_definitions;
 };
 
-struct symbol_table_t
+struct ApeSymbol_table_t
 {
     ApeAllocator_t* alloc;
-    symbol_table_t* outer;
-    global_store_t* global_store;
-    ptrarray(block_scope_t) * block_scopes;
-    ptrarray(symbol_t) * free_symbols;
-    ptrarray(symbol_t) * module_global_symbols;
+    ApeSymbol_table_t* outer;
+    ApeGlobalStore_t* global_store;
+    ptrarray(ApeBlockScope_t) * block_scopes;
+    ptrarray(ApeSymbol_t) * free_symbols;
+    ptrarray(ApeSymbol_t) * module_global_symbols;
     int max_num_definitions;
     int module_global_offset;
 };
 
-struct opcode_definition_t
+struct ApeOpcodeDefinition_t
 {
     const char* name;
     int num_operands;
     int operand_widths[2];
 };
 
-struct compilation_result_t
+struct ApeCompilationResult_t
 {
     ApeAllocator_t* alloc;
     uint8_t* bytecode;
-    src_pos_t* src_positions;
+    ApePosition_t* src_positions;
     int count;
 };
 
-struct compilation_scope_t
+struct ApeCompilationScope_t
 {
     ApeAllocator_t* alloc;
-    compilation_scope_t* outer;
+    ApeCompilationScope_t* outer;
     array(uint8_t) * bytecode;
-    array(src_pos_t) * src_positions;
+    array(ApePosition_t) * src_positions;
     array(int) * break_ip_stack;
     array(int) * continue_ip_stack;
     opcode_t last_opcode;
 };
 
-struct object_data_pool_t
+struct ApeObjectDataPool_t
 {
-    object_data_t* data[GCMEM_POOL_SIZE];
+    ApeObjectData_t* data[GCMEM_POOL_SIZE];
     int count;
 };
 
-struct gcmem_t
+struct ApeGCMemory_t
 {
     ApeAllocator_t* alloc;
     int allocations_since_sweep;
-    ptrarray(object_data_t) * objects;
-    ptrarray(object_data_t) * objects_back;
+    ptrarray(ApeObjectData_t) * objects;
+    ptrarray(ApeObjectData_t) * objects_back;
     array(ApeObject_t) * objects_not_gced;
-    object_data_pool_t data_only_pool;
-    object_data_pool_t pools[GCMEM_POOLS_NUM];
+    ApeObjectDataPool_t data_only_pool;
+    ApeObjectDataPool_t pools[GCMEM_POOLS_NUM];
 };
 
-struct traceback_item_t
+struct ApeTracebackItem_t
 {
     char* function_name;
-    src_pos_t pos;
+    ApePosition_t pos;
 };
 
-struct traceback_t
+struct ApeTraceback_t
 {
     ApeAllocator_t* alloc;
-    array(traceback_item_t) * items;
+    array(ApeTracebackItem_t) * items;
 };
 
-struct frame_t
+struct ApeFrame_t
 {
     ApeObject_t function;
     int ip;
     int base_pointer;
-    const src_pos_t* src_positions;
+    const ApePosition_t* src_positions;
     uint8_t* bytecode;
     int src_ip;
     int bytecode_size;
@@ -996,25 +982,25 @@ struct frame_t
 struct ApeVM_t
 {
     ApeAllocator_t* alloc;
-    const ape_config_t* config;
-    gcmem_t* mem;
-    errors_t* errors;
-    global_store_t* global_store;
+    const ApeConfig_t* config;
+    ApeGCMemory_t* mem;
+    ApeErrorList_t* errors;
+    ApeGlobalStore_t* global_store;
     ApeObject_t globals[VM_MAX_GLOBALS];
     int globals_count;
     ApeObject_t stack[VM_STACK_SIZE];
     int sp;
     ApeObject_t this_stack[VM_THIS_STACK_SIZE];
     int this_sp;
-    frame_t frames[VM_MAX_FRAMES];
+    ApeFrame_t frames[VM_MAX_FRAMES];
     int frames_count;
     ApeObject_t last_popped;
-    frame_t* current_frame;
+    ApeFrame_t* current_frame;
     bool running;
     ApeObject_t operator_oveload_keys[OPCODE_MAX];
 };
 
-struct valdict_t
+struct ApeValDictionary_t
 {
     ApeAllocator_t* alloc;
     size_t key_size;
@@ -1031,7 +1017,7 @@ struct valdict_t
     ApeCollectionsEqualsFNCallback_t _keys_equals;
 };
 
-struct dictionary_t
+struct ApeDictionary_t
 {
     ApeAllocator_t* alloc;
     unsigned int* cells;
@@ -1046,7 +1032,7 @@ struct dictionary_t
     ApeDictItemDestroyFNCallback_t destroy_fn;
 };
 
-struct array_t
+struct ApeArray_t
 {
     ApeAllocator_t* alloc;
     unsigned char* data;
@@ -1057,19 +1043,19 @@ struct array_t
     bool lock_capacity;
 };
 
-struct ptrdictionary_t
+struct ApePtrDictionary_t
 {
     ApeAllocator_t* alloc;
-    valdict_t vd;
+    ApeValDictionary_t vd;
 };
 
-struct ptrarray_t
+struct ApePtrArray_t
 {
     ApeAllocator_t* alloc;
-    array_t arr;
+    ApeArray_t arr;
 };
 
-struct strbuf_t
+struct ApeStringBuffer_t
 {
     ApeAllocator_t* alloc;
     bool failed;
@@ -1078,46 +1064,46 @@ struct strbuf_t
     size_t len;
 };
 
-struct global_store_t
+struct ApeGlobalStore_t
 {
     ApeAllocator_t* alloc;
-    dict(symbol_t) * symbols;
+    dict(ApeSymbol_t) * symbols;
     array(ApeObject_t) * objects;
 };
 
-struct module_t
+struct ApeModule_t
 {
     ApeAllocator_t* alloc;
     char* name;
-    ptrarray(symbol_t) * symbols;
+    ptrarray(ApeSymbol_t) * symbols;
 };
 
-struct file_scope_t
+struct ApeFileScope_t
 {
     ApeAllocator_t* alloc;
-    parser_t* parser;
-    symbol_table_t* symbol_table;
-    compiled_file_t* file;
+    ApeParser_t* parser;
+    ApeSymbol_table_t* symbol_table;
+    ApeCompiledFile_t* file;
     ptrarray(char) * loaded_module_names;
 };
 
-struct compiler_t
+struct ApeCompiler_t
 {
     ApeAllocator_t* alloc;
-    const ape_config_t* config;
-    gcmem_t* mem;
-    errors_t* errors;
-    ptrarray(compiled_file_t) * files;
-    global_store_t* global_store;
+    const ApeConfig_t* config;
+    ApeGCMemory_t* mem;
+    ApeErrorList_t* errors;
+    ptrarray(ApeCompiledFile_t) * files;
+    ApeGlobalStore_t* global_store;
     array(ApeObject_t) * constants;
-    compilation_scope_t* compilation_scope;
-    ptrarray(file_scope_t) * file_scopes;
-    array(src_pos_t) * src_positions_stack;
-    dict(module_t) * modules;
+    ApeCompilationScope_t* compilation_scope;
+    ptrarray(ApeFileScope_t) * file_scopes;
+    array(ApePosition_t) * src_positions_stack;
+    dict(ApeModule_t) * modules;
     dict(int) * string_constants_positions;
 };
 
-struct native_fn_wrapper_t
+struct ApeNativeFuncWrapper_t
 {
     ApeUserFNCallback_t fn;
     ApeContext_t* ape;
@@ -1127,26 +1113,26 @@ struct native_fn_wrapper_t
 struct ApeProgram_t
 {
     ApeContext_t* ape;
-    compilation_result_t* comp_res;
+    ApeCompilationResult_t* comp_res;
 };
 
 struct ApeContext_t
 {
     ApeAllocator_t alloc;
-    gcmem_t* mem;
-    ptrarray(compiled_file_t) * files;
-    global_store_t* global_store;
-    compiler_t* compiler;
+    ApeGCMemory_t* mem;
+    ptrarray(ApeCompiledFile_t) * files;
+    ApeGlobalStore_t* global_store;
+    ApeCompiler_t* compiler;
     ApeVM_t* vm;
-    errors_t errors;
-    ape_config_t config;
+    ApeErrorList_t errors;
+    ApeConfig_t config;
     ApeAllocator_t custom_allocator;
 };
 
-static const src_pos_t src_pos_invalid = { NULL, -1, -1 };
-static const src_pos_t src_pos_zero = { NULL, 0, 0 };
+static const ApePosition_t src_pos_invalid = { NULL, -1, -1 };
+static const ApePosition_t src_pos_zero = { NULL, 0, 0 };
 
-src_pos_t src_pos_make(const compiled_file_t* file, int line, int column);
+ApePosition_t src_pos_make(const ApeCompiledFile_t* file, int line, int column);
 char* ape_stringf(ApeAllocator_t* alloc, const char* format, ...);
 void ape_log(const char* file, int line, const char* format, ...);
 char* ape_strndup(ApeAllocator_t* alloc, const char* string, size_t n);
@@ -1156,8 +1142,8 @@ uint64_t ape_double_to_uint64(double val);
 double ape_uint64_to_double(uint64_t val);
 
 bool ape_timer_platform_supported(void);
-ape_timer_t ape_timer_start(void);
-double ape_timer_get_elapsed_ms(const ape_timer_t* timer);
+ApeTimer_t ape_timer_start(void);
+double ape_timer_get_elapsed_ms(const ApeTimer_t* timer);
 
 
 //-----------------------------------------------------------------------------
@@ -1178,134 +1164,134 @@ void allocator_free(ApeAllocator_t* allocator, void* ptr);
 //-----------------------------------------------------------------------------
 
 
-dictionary_t* dict_make_(ApeAllocator_t* alloc, ApeDictItemCopyFNCallback_t copy_fn, ApeDictItemDestroyFNCallback_t destroy_fn);
-void dict_destroy(dictionary_t* dict);
-void dict_destroy_with_items(dictionary_t* dict);
-dictionary_t* dict_copy_with_items(dictionary_t* dict);
-bool dict_set(dictionary_t* dict, const char* key, void* value);
-void* dict_get(const dictionary_t* dict, const char* key);
-void* dict_get_value_at(const dictionary_t* dict, unsigned int ix);
-const char* dict_get_key_at(const dictionary_t* dict, unsigned int ix);
-int dict_count(const dictionary_t* dict);
-bool dict_remove(dictionary_t* dict, const char* key);
+ApeDictionary_t* dict_make_(ApeAllocator_t* alloc, ApeDictItemCopyFNCallback_t copy_fn, ApeDictItemDestroyFNCallback_t destroy_fn);
+void dict_destroy(ApeDictionary_t* dict);
+void dict_destroy_with_items(ApeDictionary_t* dict);
+ApeDictionary_t* dict_copy_with_items(ApeDictionary_t* dict);
+bool dict_set(ApeDictionary_t* dict, const char* key, void* value);
+void* dict_get(const ApeDictionary_t* dict, const char* key);
+void* dict_get_value_at(const ApeDictionary_t* dict, unsigned int ix);
+const char* dict_get_key_at(const ApeDictionary_t* dict, unsigned int ix);
+int dict_count(const ApeDictionary_t* dict);
+bool dict_remove(ApeDictionary_t* dict, const char* key);
 
 //-----------------------------------------------------------------------------
 // Value dictionary
 //-----------------------------------------------------------------------------
 
 
-valdict_t* valdict_make_(ApeAllocator_t* alloc, size_t key_size, size_t val_size);
-valdict_t* valdict_make_with_capacity(ApeAllocator_t* alloc, unsigned int min_capacity, size_t key_size, size_t val_size);
-void valdict_destroy(valdict_t* dict);
-void valdict_set_hash_function(valdict_t* dict, ApeCollectionsHashFNCallback_t hash_fn);
-void valdict_set_equals_function(valdict_t* dict, ApeCollectionsEqualsFNCallback_t equals_fn);
-bool valdict_set(valdict_t* dict, void* key, void* value);
-void* valdict_get(const valdict_t* dict, const void* key);
-void* valdict_get_key_at(const valdict_t* dict, unsigned int ix);
-void* valdict_get_value_at(const valdict_t* dict, unsigned int ix);
-unsigned int valdict_get_capacity(const valdict_t* dict);
-bool valdict_set_value_at(const valdict_t* dict, unsigned int ix, const void* value);
-int valdict_count(const valdict_t* dict);
-bool valdict_remove(valdict_t* dict, void* key);
-void valdict_clear(valdict_t* dict);
+ApeValDictionary_t* valdict_make_(ApeAllocator_t* alloc, size_t key_size, size_t val_size);
+ApeValDictionary_t* valdict_make_with_capacity(ApeAllocator_t* alloc, unsigned int min_capacity, size_t key_size, size_t val_size);
+void valdict_destroy(ApeValDictionary_t* dict);
+void valdict_set_hash_function(ApeValDictionary_t* dict, ApeCollectionsHashFNCallback_t hash_fn);
+void valdict_set_equals_function(ApeValDictionary_t* dict, ApeCollectionsEqualsFNCallback_t equals_fn);
+bool valdict_set(ApeValDictionary_t* dict, void* key, void* value);
+void* valdict_get(const ApeValDictionary_t* dict, const void* key);
+void* valdict_get_key_at(const ApeValDictionary_t* dict, unsigned int ix);
+void* valdict_get_value_at(const ApeValDictionary_t* dict, unsigned int ix);
+unsigned int valdict_get_capacity(const ApeValDictionary_t* dict);
+bool valdict_set_value_at(const ApeValDictionary_t* dict, unsigned int ix, const void* value);
+int valdict_count(const ApeValDictionary_t* dict);
+bool valdict_remove(ApeValDictionary_t* dict, void* key);
+void valdict_clear(ApeValDictionary_t* dict);
 
 //-----------------------------------------------------------------------------
 // Pointer dictionary
 //-----------------------------------------------------------------------------
 
 
-ptrdictionary_t* ptrdict_make(ApeAllocator_t* alloc);
-void ptrdict_destroy(ptrdictionary_t* dict);
-void ptrdict_set_hash_function(ptrdictionary_t* dict, ApeCollectionsHashFNCallback_t hash_fn);
-void ptrdict_set_equals_function(ptrdictionary_t* dict, ApeCollectionsEqualsFNCallback_t equals_fn);
-bool ptrdict_set(ptrdictionary_t* dict, void* key, void* value);
-void* ptrdict_get(const ptrdictionary_t* dict, const void* key);
-void* ptrdict_get_value_at(const ptrdictionary_t* dict, unsigned int ix);
-void* ptrdict_get_key_at(const ptrdictionary_t* dict, unsigned int ix);
-int ptrdict_count(const ptrdictionary_t* dict);
-bool ptrdict_remove(ptrdictionary_t* dict, void* key);
+ApePtrDictionary_t* ptrdict_make(ApeAllocator_t* alloc);
+void ptrdict_destroy(ApePtrDictionary_t* dict);
+void ptrdict_set_hash_function(ApePtrDictionary_t* dict, ApeCollectionsHashFNCallback_t hash_fn);
+void ptrdict_set_equals_function(ApePtrDictionary_t* dict, ApeCollectionsEqualsFNCallback_t equals_fn);
+bool ptrdict_set(ApePtrDictionary_t* dict, void* key, void* value);
+void* ptrdict_get(const ApePtrDictionary_t* dict, const void* key);
+void* ptrdict_get_value_at(const ApePtrDictionary_t* dict, unsigned int ix);
+void* ptrdict_get_key_at(const ApePtrDictionary_t* dict, unsigned int ix);
+int ptrdict_count(const ApePtrDictionary_t* dict);
+bool ptrdict_remove(ApePtrDictionary_t* dict, void* key);
 
 //-----------------------------------------------------------------------------
 // Array
 //-----------------------------------------------------------------------------
 
 
-array_t* array_make_(ApeAllocator_t* alloc, size_t element_size);
-array_t* array_make_with_capacity(ApeAllocator_t* alloc, unsigned int capacity, size_t element_size);
-void array_destroy(array_t* arr);
-void array_destroy_with_items_(array_t* arr, ApeArrayItemDeinitFNCallback_t deinit_fn);
-array_t* array_copy(const array_t* arr);
-bool array_add(array_t* arr, const void* value);
-bool array_addn(array_t* arr, const void* values, int n);
-bool array_add_array(array_t* dest, array_t* source);
-bool array_push(array_t* arr, const void* value);
-bool array_pop(array_t* arr, void* out_value);
-void* array_top(array_t* arr);
-bool array_set(array_t* arr, unsigned int ix, void* value);
-bool array_setn(array_t* arr, unsigned int ix, void* values, int n);
-void* array_get(array_t* arr, unsigned int ix);
-const void* array_get_const(const array_t* arr, unsigned int ix);
-void* array_get_last(array_t* arr);
-int array_count(const array_t* arr);
-unsigned int array_get_capacity(const array_t* arr);
-bool array_remove_at(array_t* arr, unsigned int ix);
-bool array_remove_item(array_t* arr, void* ptr);
-void array_clear(array_t* arr);
-void array_clear_and_deinit_items_(array_t* arr, ApeArrayItemDeinitFNCallback_t deinit_fn);
-void array_lock_capacity(array_t* arr);
-int array_get_index(const array_t* arr, void* ptr);
-bool array_contains(const array_t* arr, void* ptr);
-void* array_data(array_t* arr);// might become invalidated by remove/add operations
-const void* array_const_data(const array_t* arr);
-void array_orphan_data(array_t* arr);
-bool array_reverse(array_t* arr);
+ApeArray_t* array_make_(ApeAllocator_t* alloc, size_t element_size);
+ApeArray_t* array_make_with_capacity(ApeAllocator_t* alloc, unsigned int capacity, size_t element_size);
+void array_destroy(ApeArray_t* arr);
+void array_destroy_with_items_(ApeArray_t* arr, ApeArrayItemDeinitFNCallback_t deinit_fn);
+ApeArray_t* array_copy(const ApeArray_t* arr);
+bool array_add(ApeArray_t* arr, const void* value);
+bool array_addn(ApeArray_t* arr, const void* values, int n);
+bool array_add_array(ApeArray_t* dest, ApeArray_t* source);
+bool array_push(ApeArray_t* arr, const void* value);
+bool array_pop(ApeArray_t* arr, void* out_value);
+void* array_top(ApeArray_t* arr);
+bool array_set(ApeArray_t* arr, unsigned int ix, void* value);
+bool array_setn(ApeArray_t* arr, unsigned int ix, void* values, int n);
+void* array_get(ApeArray_t* arr, unsigned int ix);
+const void* array_get_const(const ApeArray_t* arr, unsigned int ix);
+void* array_get_last(ApeArray_t* arr);
+int array_count(const ApeArray_t* arr);
+unsigned int array_get_capacity(const ApeArray_t* arr);
+bool array_remove_at(ApeArray_t* arr, unsigned int ix);
+bool array_remove_item(ApeArray_t* arr, void* ptr);
+void array_clear(ApeArray_t* arr);
+void array_clear_and_deinit_items_(ApeArray_t* arr, ApeArrayItemDeinitFNCallback_t deinit_fn);
+void array_lock_capacity(ApeArray_t* arr);
+int array_get_index(const ApeArray_t* arr, void* ptr);
+bool array_contains(const ApeArray_t* arr, void* ptr);
+void* array_data(ApeArray_t* arr);// might become invalidated by remove/add operations
+const void* array_const_data(const ApeArray_t* arr);
+void array_orphan_data(ApeArray_t* arr);
+bool array_reverse(ApeArray_t* arr);
 
 //-----------------------------------------------------------------------------
 // Pointer Array
 //-----------------------------------------------------------------------------
 
 
-ptrarray_t* ptrarray_make(ApeAllocator_t* alloc);
-ptrarray_t* ptrarray_make_with_capacity(ApeAllocator_t* alloc, unsigned int capacity);
-void ptrarray_destroy(ptrarray_t* arr);
-void ptrarray_destroy_with_items_(ptrarray_t* arr, ApePtrArrayItemDestroyFNCallback_t destroy_fn);
-ptrarray_t* ptrarray_copy(ptrarray_t* arr);
-ptrarray_t* ptrarray_copy_with_items_(ptrarray_t* arr, ApePtrArrayItemCopyFNCallback_t copy_fn, ApePtrArrayItemDestroyFNCallback_t destroy_fn);
-bool ptrarray_add(ptrarray_t* arr, void* ptr);
-bool ptrarray_set(ptrarray_t* arr, unsigned int ix, void* ptr);
-bool ptrarray_add_array(ptrarray_t* dest, ptrarray_t* source);
-void* ptrarray_get(ptrarray_t* arr, unsigned int ix);
-const void* ptrarray_get_const(const ptrarray_t* arr, unsigned int ix);
-bool ptrarray_push(ptrarray_t* arr, void* ptr);
-void* ptrarray_pop(ptrarray_t* arr);
-void* ptrarray_top(ptrarray_t* arr);
-int ptrarray_count(const ptrarray_t* arr);
-bool ptrarray_remove_at(ptrarray_t* arr, unsigned int ix);
-bool ptrarray_remove_item(ptrarray_t* arr, void* item);
-void ptrarray_clear(ptrarray_t* arr);
-void ptrarray_clear_and_destroy_items_(ptrarray_t* arr, ApePtrArrayItemDestroyFNCallback_t destroy_fn);
-void ptrarray_lock_capacity(ptrarray_t* arr);
-int ptrarray_get_index(ptrarray_t* arr, void* ptr);
-bool ptrarray_contains(ptrarray_t* arr, void* ptr);
-void* ptrarray_get_addr(ptrarray_t* arr, unsigned int ix);
-void* ptrarray_data(ptrarray_t* arr);// might become invalidated by remove/add operations
-void ptrarray_reverse(ptrarray_t* arr);
+ApePtrArray_t* ptrarray_make(ApeAllocator_t* alloc);
+ApePtrArray_t* ptrarray_make_with_capacity(ApeAllocator_t* alloc, unsigned int capacity);
+void ptrarray_destroy(ApePtrArray_t* arr);
+void ptrarray_destroy_with_items_(ApePtrArray_t* arr, ApePtrArrayItemDestroyFNCallback_t destroy_fn);
+ApePtrArray_t* ptrarray_copy(ApePtrArray_t* arr);
+ApePtrArray_t* ptrarray_copy_with_items_(ApePtrArray_t* arr, ApePtrArrayItemCopyFNCallback_t copy_fn, ApePtrArrayItemDestroyFNCallback_t destroy_fn);
+bool ptrarray_add(ApePtrArray_t* arr, void* ptr);
+bool ptrarray_set(ApePtrArray_t* arr, unsigned int ix, void* ptr);
+bool ptrarray_add_array(ApePtrArray_t* dest, ApePtrArray_t* source);
+void* ptrarray_get(ApePtrArray_t* arr, unsigned int ix);
+const void* ptrarray_get_const(const ApePtrArray_t* arr, unsigned int ix);
+bool ptrarray_push(ApePtrArray_t* arr, void* ptr);
+void* ptrarray_pop(ApePtrArray_t* arr);
+void* ptrarray_top(ApePtrArray_t* arr);
+int ptrarray_count(const ApePtrArray_t* arr);
+bool ptrarray_remove_at(ApePtrArray_t* arr, unsigned int ix);
+bool ptrarray_remove_item(ApePtrArray_t* arr, void* item);
+void ptrarray_clear(ApePtrArray_t* arr);
+void ptrarray_clear_and_destroy_items_(ApePtrArray_t* arr, ApePtrArrayItemDestroyFNCallback_t destroy_fn);
+void ptrarray_lock_capacity(ApePtrArray_t* arr);
+int ptrarray_get_index(ApePtrArray_t* arr, void* ptr);
+bool ptrarray_contains(ApePtrArray_t* arr, void* ptr);
+void* ptrarray_get_addr(ApePtrArray_t* arr, unsigned int ix);
+void* ptrarray_data(ApePtrArray_t* arr);// might become invalidated by remove/add operations
+void ptrarray_reverse(ApePtrArray_t* arr);
 
 //-----------------------------------------------------------------------------
 // String buffer
 //-----------------------------------------------------------------------------
 
 
-strbuf_t* strbuf_make(ApeAllocator_t* alloc);
-strbuf_t* strbuf_make_with_capacity(ApeAllocator_t* alloc, unsigned int capacity);
-void strbuf_destroy(strbuf_t* buf);
-void strbuf_clear(strbuf_t* buf);
-bool strbuf_append(strbuf_t* buf, const char* str);
-bool strbuf_appendf(strbuf_t* buf, const char* fmt, ...);
-const char* strbuf_get_string(const strbuf_t* buf);
-size_t strbuf_get_length(const strbuf_t* buf);
-char* strbuf_get_string_and_destroy(strbuf_t* buf);
-bool strbuf_failed(strbuf_t* buf);
+ApeStringBuffer_t* strbuf_make(ApeAllocator_t* alloc);
+ApeStringBuffer_t* strbuf_make_with_capacity(ApeAllocator_t* alloc, unsigned int capacity);
+void strbuf_destroy(ApeStringBuffer_t* buf);
+void strbuf_clear(ApeStringBuffer_t* buf);
+bool strbuf_append(ApeStringBuffer_t* buf, const char* str);
+bool strbuf_appendf(ApeStringBuffer_t* buf, const char* fmt, ...);
+const char* strbuf_get_string(const ApeStringBuffer_t* buf);
+size_t strbuf_get_length(const ApeStringBuffer_t* buf);
+char* strbuf_get_string_and_destroy(ApeStringBuffer_t* buf);
+bool strbuf_failed(ApeStringBuffer_t* buf);
 
 //-----------------------------------------------------------------------------
 // Utils
@@ -1318,146 +1304,146 @@ bool kg_is_path_absolute(const char* path);
 bool kg_streq(const char* a, const char* b);
 
 
-void errors_init(errors_t* errors);
-void errors_deinit(errors_t* errors);
+void errors_init(ApeErrorList_t* errors);
+void errors_deinit(ApeErrorList_t* errors);
 
-void errors_add_error(errors_t* errors, ApeErrorType_t type, src_pos_t pos, const char* message);
-void errors_add_errorf(errors_t* errors, ApeErrorType_t type, src_pos_t pos, const char* format, ...);
-void errors_clear(errors_t* errors);
-int errors_get_count(const errors_t* errors);
-error_t* errors_get(errors_t* errors, int ix);
-const error_t* errors_getc(const errors_t* errors, int ix);
+void errors_add_error(ApeErrorList_t* errors, ApeErrorType_t type, ApePosition_t pos, const char* message);
+void errors_add_errorf(ApeErrorList_t* errors, ApeErrorType_t type, ApePosition_t pos, const char* format, ...);
+void errors_clear(ApeErrorList_t* errors);
+int errors_get_count(const ApeErrorList_t* errors);
+ApeError_t* errors_get(ApeErrorList_t* errors, int ix);
+const ApeError_t* errors_getc(const ApeErrorList_t* errors, int ix);
 const char* error_type_to_string(ApeErrorType_t type);
-error_t* errors_get_last_error(errors_t* errors);
-bool errors_has_errors(const errors_t* errors);
+ApeError_t* errors_get_last_error(ApeErrorList_t* errors);
+bool errors_has_errors(const ApeErrorList_t* errors);
 
 
-void token_init(token_t* tok, token_type_t type, const char* literal, int len);// no need to destroy
-char* token_duplicate_literal(ApeAllocator_t* alloc, const token_t* tok);
-const char* token_type_to_string(token_type_t type);
+void token_init(ApeToken_t* tok, ApeTokenType_t type, const char* literal, int len);// no need to destroy
+char* token_duplicate_literal(ApeAllocator_t* alloc, const ApeToken_t* tok);
+const char* token_type_to_string(ApeTokenType_t type);
 
 
-compiled_file_t* compiled_file_make(ApeAllocator_t* alloc, const char* path);
-void compiled_file_destroy(compiled_file_t* file);
+ApeCompiledFile_t* compiled_file_make(ApeAllocator_t* alloc, const char* path);
+void compiled_file_destroy(ApeCompiledFile_t* file);
 
 
-bool lexer_init(lexer_t* lex, ApeAllocator_t* alloc, errors_t* errs, const char* input, compiled_file_t* file);// no need to deinit
+bool lexer_init(ApeLexer_t* lex, ApeAllocator_t* alloc, ApeErrorList_t* errs, const char* input, ApeCompiledFile_t* file);// no need to deinit
 
-bool lexer_failed(lexer_t* lex);
-void lexer_continue_template_string(lexer_t* lex);
-bool lexer_cur_token_is(lexer_t* lex, token_type_t type);
-bool lexer_peek_token_is(lexer_t* lex, token_type_t type);
-bool lexer_next_token(lexer_t* lex);
-bool lexer_previous_token(lexer_t* lex);
-token_t lexer_next_token_internal(lexer_t* lex);// exposed here for tests
-bool lexer_expect_current(lexer_t* lex, token_type_t type);
+bool lexer_failed(ApeLexer_t* lex);
+void lexer_continue_template_string(ApeLexer_t* lex);
+bool lexer_cur_token_is(ApeLexer_t* lex, ApeTokenType_t type);
+bool lexer_peek_token_is(ApeLexer_t* lex, ApeTokenType_t type);
+bool lexer_next_token(ApeLexer_t* lex);
+bool lexer_previous_token(ApeLexer_t* lex);
+ApeToken_t lexer_next_token_internal(ApeLexer_t* lex);// exposed here for tests
+bool lexer_expect_current(ApeLexer_t* lex, ApeTokenType_t type);
 
 
-char* statements_to_string(ApeAllocator_t* alloc, ptrarray(statement_t) * statements);
+char* statements_to_string(ApeAllocator_t* alloc, ptrarray(ApeStatement_t) * statements);
 
-statement_t* statement_make_define(ApeAllocator_t* alloc, ident_t* name, ApeExpression_t* value, bool assignable);
-statement_t* statement_make_if(ApeAllocator_t* alloc, ptrarray(if_case_t) * cases, code_block_t* alternative);
-statement_t* statement_make_return(ApeAllocator_t* alloc, ApeExpression_t* value);
-statement_t* statement_make_expression(ApeAllocator_t* alloc, ApeExpression_t* value);
-statement_t* statement_make_while_loop(ApeAllocator_t* alloc, ApeExpression_t* test, code_block_t* body);
-statement_t* statement_make_break(ApeAllocator_t* alloc);
-statement_t* statement_make_foreach(ApeAllocator_t* alloc, ident_t* iterator, ApeExpression_t* source, code_block_t* body);
-statement_t*
-statement_make_for_loop(ApeAllocator_t* alloc, statement_t* init, ApeExpression_t* test, ApeExpression_t* update, code_block_t* body);
-statement_t* statement_make_continue(ApeAllocator_t* alloc);
-statement_t* statement_make_block(ApeAllocator_t* alloc, code_block_t* block);
-statement_t* statement_make_import(ApeAllocator_t* alloc, char* path);
-statement_t* statement_make_recover(ApeAllocator_t* alloc, ident_t* error_ident, code_block_t* body);
+ApeStatement_t* statement_make_define(ApeAllocator_t* alloc, ApeIdent_t* name, ApeExpression_t* value, bool assignable);
+ApeStatement_t* statement_make_if(ApeAllocator_t* alloc, ptrarray(ApeIfCase_t) * cases, ApeCodeblock_t* alternative);
+ApeStatement_t* statement_make_return(ApeAllocator_t* alloc, ApeExpression_t* value);
+ApeStatement_t* statement_make_expression(ApeAllocator_t* alloc, ApeExpression_t* value);
+ApeStatement_t* statement_make_while_loop(ApeAllocator_t* alloc, ApeExpression_t* test, ApeCodeblock_t* body);
+ApeStatement_t* statement_make_break(ApeAllocator_t* alloc);
+ApeStatement_t* statement_make_foreach(ApeAllocator_t* alloc, ApeIdent_t* iterator, ApeExpression_t* source, ApeCodeblock_t* body);
+ApeStatement_t*
+statement_make_for_loop(ApeAllocator_t* alloc, ApeStatement_t* init, ApeExpression_t* test, ApeExpression_t* update, ApeCodeblock_t* body);
+ApeStatement_t* statement_make_continue(ApeAllocator_t* alloc);
+ApeStatement_t* statement_make_block(ApeAllocator_t* alloc, ApeCodeblock_t* block);
+ApeStatement_t* statement_make_import(ApeAllocator_t* alloc, char* path);
+ApeStatement_t* statement_make_recover(ApeAllocator_t* alloc, ApeIdent_t* error_ident, ApeCodeblock_t* body);
 
-void statement_destroy(statement_t* stmt);
+void statement_destroy(ApeStatement_t* stmt);
 
-statement_t* statement_copy(const statement_t* stmt);
+ApeStatement_t* statement_copy(const ApeStatement_t* stmt);
 
-code_block_t* code_block_make(ApeAllocator_t* alloc, ptrarray(statement_t) * statements);
-void code_block_destroy(code_block_t* stmt);
-code_block_t* code_block_copy(code_block_t* block);
+ApeCodeblock_t* code_block_make(ApeAllocator_t* alloc, ptrarray(ApeStatement_t) * statements);
+void code_block_destroy(ApeCodeblock_t* stmt);
+ApeCodeblock_t* code_block_copy(ApeCodeblock_t* block);
 
-ApeExpression_t* expression_make_ident(ApeAllocator_t* alloc, ident_t* ident);
+ApeExpression_t* expression_make_ident(ApeAllocator_t* alloc, ApeIdent_t* ident);
 ApeExpression_t* expression_make_number_literal(ApeAllocator_t* alloc, double val);
 ApeExpression_t* expression_make_bool_literal(ApeAllocator_t* alloc, bool val);
 ApeExpression_t* expression_make_string_literal(ApeAllocator_t* alloc, char* value);
 ApeExpression_t* expression_make_null_literal(ApeAllocator_t* alloc);
 ApeExpression_t* expression_make_array_literal(ApeAllocator_t* alloc, ptrarray(ApeExpression_t) * values);
 ApeExpression_t* expression_make_map_literal(ApeAllocator_t* alloc, ptrarray(ApeExpression_t) * keys, ptrarray(ApeExpression_t) * values);
-ApeExpression_t* expression_make_prefix(ApeAllocator_t* alloc, operator_t op, ApeExpression_t* right);
-ApeExpression_t* expression_make_infix(ApeAllocator_t* alloc, operator_t op, ApeExpression_t* left, ApeExpression_t* right);
-ApeExpression_t* expression_make_fn_literal(ApeAllocator_t* alloc, ptrarray(ident_t) * params, code_block_t* body);
+ApeExpression_t* expression_make_prefix(ApeAllocator_t* alloc, ApeOperator_t op, ApeExpression_t* right);
+ApeExpression_t* expression_make_infix(ApeAllocator_t* alloc, ApeOperator_t op, ApeExpression_t* left, ApeExpression_t* right);
+ApeExpression_t* expression_make_fn_literal(ApeAllocator_t* alloc, ptrarray(ApeIdent_t) * params, ApeCodeblock_t* body);
 ApeExpression_t* expression_make_call(ApeAllocator_t* alloc, ApeExpression_t* function, ptrarray(ApeExpression_t) * args);
 ApeExpression_t* expression_make_index(ApeAllocator_t* alloc, ApeExpression_t* left, ApeExpression_t* index);
 ApeExpression_t* expression_make_assign(ApeAllocator_t* alloc, ApeExpression_t* dest, ApeExpression_t* source, bool is_postfix);
-ApeExpression_t* expression_make_logical(ApeAllocator_t* alloc, operator_t op, ApeExpression_t* left, ApeExpression_t* right);
+ApeExpression_t* expression_make_logical(ApeAllocator_t* alloc, ApeOperator_t op, ApeExpression_t* left, ApeExpression_t* right);
 ApeExpression_t* expression_make_ternary(ApeAllocator_t* alloc, ApeExpression_t* test, ApeExpression_t* if_true, ApeExpression_t* if_false);
 
 void expression_destroy(ApeExpression_t* expr);
 
 ApeExpression_t* expression_copy(ApeExpression_t* expr);
 
-void statement_to_string(const statement_t* stmt, strbuf_t* buf);
-void expression_to_string(ApeExpression_t* expr, strbuf_t* buf);
+void statement_to_string(const ApeStatement_t* stmt, ApeStringBuffer_t* buf);
+void expression_to_string(ApeExpression_t* expr, ApeStringBuffer_t* buf);
 
-void code_block_to_string(const code_block_t* stmt, strbuf_t* buf);
-const char* operator_to_string(operator_t op);
+void code_block_to_string(const ApeCodeblock_t* stmt, ApeStringBuffer_t* buf);
+const char* operator_to_string(ApeOperator_t op);
 
-const char* expression_type_to_string(expression_type_t type);
+const char* expression_type_to_string(ApeExpr_type_t type);
 
-ident_t* ident_make(ApeAllocator_t* alloc, token_t tok);
-ident_t* ident_copy(ident_t* ident);
-void ident_destroy(ident_t* ident);
+ApeIdent_t* ident_make(ApeAllocator_t* alloc, ApeToken_t tok);
+ApeIdent_t* ident_copy(ApeIdent_t* ident);
+void ident_destroy(ApeIdent_t* ident);
 
-if_case_t* if_case_make(ApeAllocator_t* alloc, ApeExpression_t* test, code_block_t* consequence);
-void if_case_destroy(if_case_t* cond);
-if_case_t* if_case_copy(if_case_t* cond);
-
-
-parser_t* parser_make(ApeAllocator_t* alloc, const ape_config_t* config, errors_t* errors);
-void parser_destroy(parser_t* parser);
-
-ptrarray(statement_t) * parser_parse_all(parser_t* parser, const char* input, compiled_file_t* file);
+ApeIfCase_t* if_case_make(ApeAllocator_t* alloc, ApeExpression_t* test, ApeCodeblock_t* consequence);
+void if_case_destroy(ApeIfCase_t* cond);
+ApeIfCase_t* if_case_copy(ApeIfCase_t* cond);
 
 
-ApeObject_t object_make_from_data(object_type_t type, object_data_t* data);
+ApeParser_t* parser_make(ApeAllocator_t* alloc, const ApeConfig_t* config, ApeErrorList_t* errors);
+void parser_destroy(ApeParser_t* parser);
+
+ptrarray(ApeStatement_t) * parser_parse_all(ApeParser_t* parser, const char* input, ApeCompiledFile_t* file);
+
+
+ApeObject_t object_make_from_data(ApeObjectType_t type, ApeObjectData_t* data);
 ApeObject_t object_make_number(double val);
 ApeObject_t object_make_bool(bool val);
 ApeObject_t object_make_null(void);
-ApeObject_t object_make_string(gcmem_t* mem, const char* string);
-ApeObject_t object_make_string_with_capacity(gcmem_t* mem, int capacity);
-ApeObject_t object_make_native_function(gcmem_t* mem, const char* name, ApeNativeFNCallback_t fn, void* data, int data_len);
-ApeObject_t object_make_array(gcmem_t* mem);
-ApeObject_t object_make_array_with_capacity(gcmem_t* mem, unsigned capacity);
-ApeObject_t object_make_map(gcmem_t* mem);
-ApeObject_t object_make_map_with_capacity(gcmem_t* mem, unsigned capacity);
-ApeObject_t object_make_error(gcmem_t* mem, const char* message);
-ApeObject_t object_make_error_no_copy(gcmem_t* mem, char* message);
-ApeObject_t object_make_errorf(gcmem_t* mem, const char* fmt, ...);
+ApeObject_t object_make_string(ApeGCMemory_t* mem, const char* string);
+ApeObject_t object_make_string_with_capacity(ApeGCMemory_t* mem, int capacity);
+ApeObject_t object_make_native_function(ApeGCMemory_t* mem, const char* name, ApeNativeFNCallback_t fn, void* data, int data_len);
+ApeObject_t object_make_array(ApeGCMemory_t* mem);
+ApeObject_t object_make_array_with_capacity(ApeGCMemory_t* mem, unsigned capacity);
+ApeObject_t object_make_map(ApeGCMemory_t* mem);
+ApeObject_t object_make_map_with_capacity(ApeGCMemory_t* mem, unsigned capacity);
+ApeObject_t object_make_error(ApeGCMemory_t* mem, const char* message);
+ApeObject_t object_make_error_no_copy(ApeGCMemory_t* mem, char* message);
+ApeObject_t object_make_errorf(ApeGCMemory_t* mem, const char* fmt, ...);
 ApeObject_t
-object_make_function(gcmem_t* mem, const char* name, compilation_result_t* comp_res, bool owns_data, int num_locals, int num_args, int free_vals_count);
-ApeObject_t object_make_external(gcmem_t* mem, void* data);
+object_make_function(ApeGCMemory_t* mem, const char* name, ApeCompilationResult_t* comp_res, bool owns_data, int num_locals, int num_args, int free_vals_count);
+ApeObject_t object_make_external(ApeGCMemory_t* mem, void* data);
 
 void object_deinit(ApeObject_t obj);
-void object_data_deinit(object_data_t* obj);
+void object_data_deinit(ApeObjectData_t* obj);
 
 bool object_is_allocated(ApeObject_t obj);
-gcmem_t* object_get_mem(ApeObject_t obj);
+ApeGCMemory_t* object_get_mem(ApeObject_t obj);
 bool object_is_hashable(ApeObject_t obj);
-void object_to_string(ApeObject_t obj, strbuf_t* buf, bool quote_str);
-const char* object_get_type_name(const object_type_t type);
-char* object_get_type_union_name(ApeAllocator_t* alloc, const object_type_t type);
+void object_to_string(ApeObject_t obj, ApeStringBuffer_t* buf, bool quote_str);
+const char* object_get_type_name(const ApeObjectType_t type);
+char* object_get_type_union_name(ApeAllocator_t* alloc, const ApeObjectType_t type);
 char* object_serialize(ApeAllocator_t* alloc, ApeObject_t object, size_t* lendest);
-ApeObject_t object_deep_copy(gcmem_t* mem, ApeObject_t object);
-ApeObject_t object_copy(gcmem_t* mem, ApeObject_t obj);
+ApeObject_t object_deep_copy(ApeGCMemory_t* mem, ApeObject_t object);
+ApeObject_t object_copy(ApeGCMemory_t* mem, ApeObject_t obj);
 double object_compare(ApeObject_t a, ApeObject_t b, bool* out_ok);
 bool object_equals(ApeObject_t a, ApeObject_t b);
 
-object_data_t* object_get_allocated_data(ApeObject_t object);
+ApeObjectData_t* object_get_allocated_data(ApeObject_t object);
 
 bool object_get_bool(ApeObject_t obj);
 double object_get_number(ApeObject_t obj);
-function_t* object_get_function(ApeObject_t obj);
+ApeFunction_t* object_get_function(ApeObject_t obj);
 const char* object_get_string(ApeObject_t obj);
 int object_get_string_length(ApeObject_t obj);
 void object_set_string_length(ApeObject_t obj, int len);
@@ -1465,8 +1451,8 @@ int object_get_string_capacity(ApeObject_t obj);
 char* object_get_mutable_string(ApeObject_t obj);
 bool object_string_append(ApeObject_t obj, const char* src, int len);
 unsigned long object_get_string_hash(ApeObject_t obj);
-native_function_t* object_get_native_function(ApeObject_t obj);
-object_type_t object_get_type(ApeObject_t obj);
+ApeNativeFunction_t* object_get_native_function(ApeObject_t obj);
+ApeObjectType_t object_get_type(ApeObject_t obj);
 
 bool object_is_numeric(ApeObject_t obj);
 bool object_is_null(ApeObject_t obj);
@@ -1478,10 +1464,10 @@ void object_set_function_free_val(ApeObject_t obj, int ix, ApeObject_t val);
 ApeObject_t* object_get_function_free_vals(ApeObject_t obj);
 
 const char* object_get_error_message(ApeObject_t obj);
-void object_set_error_traceback(ApeObject_t obj, traceback_t* traceback);
-traceback_t* object_get_error_traceback(ApeObject_t obj);
+void object_set_error_traceback(ApeObject_t obj, ApeTraceback_t* traceback);
+ApeTraceback_t* object_get_error_traceback(ApeObject_t obj);
 
-external_data_t* object_get_external_data(ApeObject_t object);
+ApeExternalData_t* object_get_external_data(ApeObject_t object);
 bool object_set_external_destroy_function(ApeObject_t object, ApeExternalDataDestroyFNCallback_t destroy_fn);
 bool object_set_external_data(ApeObject_t object, void* data);
 bool object_set_external_copy_function(ApeObject_t object, ApeExternalDataCopyFNCallback_t copy_fn);
@@ -1496,96 +1482,96 @@ int object_get_map_length(ApeObject_t obj);
 ApeObject_t object_get_map_key_at(ApeObject_t obj, int ix);
 ApeObject_t object_get_map_value_at(ApeObject_t obj, int ix);
 bool object_set_map_value_at(ApeObject_t obj, int ix, ApeObject_t val);
-ApeObject_t object_get_kv_pair_at(gcmem_t* mem, ApeObject_t obj, int ix);
+ApeObject_t object_get_kv_pair_at(ApeGCMemory_t* mem, ApeObject_t obj, int ix);
 bool object_set_map_value(ApeObject_t obj, ApeObject_t key, ApeObject_t val);
 ApeObject_t object_get_map_value(ApeObject_t obj, ApeObject_t key);
 bool object_map_has_key(ApeObject_t obj, ApeObject_t key);
 
 
-global_store_t* global_store_make(ApeAllocator_t* alloc, gcmem_t* mem);
-void global_store_destroy(global_store_t* store);
-const symbol_t* global_store_get_symbol(global_store_t* store, const char* name);
-ApeObject_t global_store_get_object(global_store_t* store, const char* name);
-bool global_store_set(global_store_t* store, const char* name, ApeObject_t object);
-ApeObject_t global_store_get_object_at(global_store_t* store, int ix, bool* out_ok);
-bool global_store_set_object_at(global_store_t* store, int ix, ApeObject_t object);
-ApeObject_t* global_store_get_object_data(global_store_t* store);
-int global_store_get_object_count(global_store_t* store);
+ApeGlobalStore_t* global_store_make(ApeAllocator_t* alloc, ApeGCMemory_t* mem);
+void global_store_destroy(ApeGlobalStore_t* store);
+const ApeSymbol_t* global_store_get_symbol(ApeGlobalStore_t* store, const char* name);
+ApeObject_t global_store_get_object(ApeGlobalStore_t* store, const char* name);
+bool global_store_set(ApeGlobalStore_t* store, const char* name, ApeObject_t object);
+ApeObject_t global_store_get_object_at(ApeGlobalStore_t* store, int ix, bool* out_ok);
+bool global_store_set_object_at(ApeGlobalStore_t* store, int ix, ApeObject_t object);
+ApeObject_t* global_store_get_object_data(ApeGlobalStore_t* store);
+int global_store_get_object_count(ApeGlobalStore_t* store);
 
 
-symbol_t* symbol_make(ApeAllocator_t* alloc, const char* name, symbol_type_t type, int index, bool assignable);
-void symbol_destroy(symbol_t* symbol);
-symbol_t* symbol_copy(symbol_t* symbol);
+ApeSymbol_t* symbol_make(ApeAllocator_t* alloc, const char* name, ApeSymbolType_t type, int index, bool assignable);
+void symbol_destroy(ApeSymbol_t* symbol);
+ApeSymbol_t* symbol_copy(ApeSymbol_t* symbol);
 
-symbol_table_t* symbol_table_make(ApeAllocator_t* alloc, symbol_table_t* outer, global_store_t* global_store, int module_global_offset);
-void symbol_table_destroy(symbol_table_t* st);
-symbol_table_t* symbol_table_copy(symbol_table_t* st);
-bool symbol_table_add_module_symbol(symbol_table_t* st, symbol_t* symbol);
-const symbol_t* symbol_table_define(symbol_table_t* st, const char* name, bool assignable);
-const symbol_t* symbol_table_define_free(symbol_table_t* st, const symbol_t* original);
-const symbol_t* symbol_table_define_function_name(symbol_table_t* st, const char* name, bool assignable);
-const symbol_t* symbol_table_define_this(symbol_table_t* st);
+ApeSymbol_table_t* symbol_table_make(ApeAllocator_t* alloc, ApeSymbol_table_t* outer, ApeGlobalStore_t* global_store, int module_global_offset);
+void symbol_table_destroy(ApeSymbol_table_t* st);
+ApeSymbol_table_t* symbol_table_copy(ApeSymbol_table_t* st);
+bool symbol_table_add_module_symbol(ApeSymbol_table_t* st, ApeSymbol_t* symbol);
+const ApeSymbol_t* symbol_table_define(ApeSymbol_table_t* st, const char* name, bool assignable);
+const ApeSymbol_t* symbol_table_define_free(ApeSymbol_table_t* st, const ApeSymbol_t* original);
+const ApeSymbol_t* symbol_table_define_function_name(ApeSymbol_table_t* st, const char* name, bool assignable);
+const ApeSymbol_t* symbol_table_define_this(ApeSymbol_table_t* st);
 
-const symbol_t* symbol_table_resolve(symbol_table_t* st, const char* name);
+const ApeSymbol_t* symbol_table_resolve(ApeSymbol_table_t* st, const char* name);
 
-bool symbol_table_symbol_is_defined(symbol_table_t* st, const char* name);
-bool symbol_table_push_block_scope(symbol_table_t* table);
-void symbol_table_pop_block_scope(symbol_table_t* table);
-block_scope_t* symbol_table_get_block_scope(symbol_table_t* table);
+bool symbol_table_symbol_is_defined(ApeSymbol_table_t* st, const char* name);
+bool symbol_table_push_block_scope(ApeSymbol_table_t* table);
+void symbol_table_pop_block_scope(ApeSymbol_table_t* table);
+ApeBlockScope_t* symbol_table_get_block_scope(ApeSymbol_table_t* table);
 
-bool symbol_table_is_module_global_scope(symbol_table_t* table);
-bool symbol_table_is_top_block_scope(symbol_table_t* table);
-bool symbol_table_is_top_global_scope(symbol_table_t* table);
+bool symbol_table_is_module_global_scope(ApeSymbol_table_t* table);
+bool symbol_table_is_top_block_scope(ApeSymbol_table_t* table);
+bool symbol_table_is_top_global_scope(ApeSymbol_table_t* table);
 
-int symbol_table_get_module_global_symbol_count(const symbol_table_t* table);
-const symbol_t* symbol_table_get_module_global_symbol_at(const symbol_table_t* table, int ix);
+int symbol_table_get_module_global_symbol_count(const ApeSymbol_table_t* table);
+const ApeSymbol_t* symbol_table_get_module_global_symbol_at(const ApeSymbol_table_t* table, int ix);
 
-opcode_definition_t* opcode_lookup(opcode_t op);
+ApeOpcodeDefinition_t* opcode_lookup(opcode_t op);
 const char* opcode_get_name(opcode_t op);
 int code_make(opcode_t op, int operands_count, uint64_t* operands, array(uint8_t) * res);
-void code_to_string(uint8_t* code, src_pos_t* source_positions, size_t code_size, strbuf_t* res);
-bool code_read_operands(opcode_definition_t* def, uint8_t* instr, uint64_t out_operands[2]);
+void code_to_string(uint8_t* code, ApePosition_t* source_positions, size_t code_size, ApeStringBuffer_t* res);
+bool code_read_operands(ApeOpcodeDefinition_t* def, uint8_t* instr, uint64_t out_operands[2]);
 
 
-compilation_scope_t* compilation_scope_make(ApeAllocator_t* alloc, compilation_scope_t* outer);
-void compilation_scope_destroy(compilation_scope_t* scope);
-compilation_result_t* compilation_scope_orphan_result(compilation_scope_t* scope);
+ApeCompilationScope_t* compilation_scope_make(ApeAllocator_t* alloc, ApeCompilationScope_t* outer);
+void compilation_scope_destroy(ApeCompilationScope_t* scope);
+ApeCompilationResult_t* compilation_scope_orphan_result(ApeCompilationScope_t* scope);
 
-compilation_result_t* compilation_result_make(ApeAllocator_t* alloc, uint8_t* bytecode, src_pos_t* src_positions, int count);
-void compilation_result_destroy(compilation_result_t* res);
+ApeCompilationResult_t* compilation_result_make(ApeAllocator_t* alloc, uint8_t* bytecode, ApePosition_t* src_positions, int count);
+void compilation_result_destroy(ApeCompilationResult_t* res);
 
 ApeExpression_t* optimise_expression(ApeExpression_t* expr);
 
 
-compiler_t* compiler_make(ApeAllocator_t* alloc,
-                          const ape_config_t* config,
-                          gcmem_t* mem,
-                          errors_t* errors,
-                          ptrarray(compiled_file_t) * files,
-                          global_store_t* global_store);
-void compiler_destroy(compiler_t* comp);
-compilation_result_t* compiler_compile(compiler_t* comp, const char* code);
-compilation_result_t* compiler_compile_file(compiler_t* comp, const char* path);
-symbol_table_t* compiler_get_symbol_table(compiler_t* comp);
-void compiler_set_symbol_table(compiler_t* comp, symbol_table_t* table);
-array(ApeObject_t) * compiler_get_constants(const compiler_t* comp);
+ApeCompiler_t* compiler_make(ApeAllocator_t* alloc,
+                          const ApeConfig_t* config,
+                          ApeGCMemory_t* mem,
+                          ApeErrorList_t* errors,
+                          ptrarray(ApeCompiledFile_t) * files,
+                          ApeGlobalStore_t* global_store);
+void compiler_destroy(ApeCompiler_t* comp);
+ApeCompilationResult_t* compiler_compile(ApeCompiler_t* comp, const char* code);
+ApeCompilationResult_t* compiler_compile_file(ApeCompiler_t* comp, const char* path);
+ApeSymbol_table_t* compiler_get_symbol_table(ApeCompiler_t* comp);
+void compiler_set_symbol_table(ApeCompiler_t* comp, ApeSymbol_table_t* table);
+array(ApeObject_t) * compiler_get_constants(const ApeCompiler_t* comp);
 
 
-gcmem_t* gcmem_make(ApeAllocator_t* alloc);
-void gcmem_destroy(gcmem_t* mem);
+ApeGCMemory_t* gcmem_make(ApeAllocator_t* alloc);
+void gcmem_destroy(ApeGCMemory_t* mem);
 
-object_data_t* gcmem_alloc_object_data(gcmem_t* mem, object_type_t type);
-object_data_t* gcmem_get_object_data_from_pool(gcmem_t* mem, object_type_t type);
+ApeObjectData_t* gcmem_alloc_object_data(ApeGCMemory_t* mem, ApeObjectType_t type);
+ApeObjectData_t* gcmem_get_object_data_from_pool(ApeGCMemory_t* mem, ApeObjectType_t type);
 
-void gc_unmark_all(gcmem_t* mem);
+void gc_unmark_all(ApeGCMemory_t* mem);
 void gc_mark_objects(ApeObject_t* objects, int count);
 void gc_mark_object(ApeObject_t object);
-void gc_sweep(gcmem_t* mem);
+void gc_sweep(ApeGCMemory_t* mem);
 
 bool gc_disable_on_object(ApeObject_t obj);
 void gc_enable_on_object(ApeObject_t obj);
 
-int gc_should_sweep(gcmem_t* mem);
+int gc_should_sweep(ApeGCMemory_t* mem);
 
 
 int builtins_count(void);
@@ -1593,30 +1579,30 @@ ApeNativeFNCallback_t builtins_get_fn(int ix);
 const char* builtins_get_name(int ix);
 
 
-traceback_t* traceback_make(ApeAllocator_t* alloc);
-void traceback_destroy(traceback_t* traceback);
-bool traceback_append(traceback_t* traceback, const char* function_name, src_pos_t pos);
-bool traceback_append_from_vm(traceback_t* traceback, ApeVM_t* vm);
-bool traceback_to_string(const traceback_t* traceback, strbuf_t* buf);
-const char* traceback_item_get_line(traceback_item_t* item);
-const char* traceback_item_get_filepath(traceback_item_t* item);
+ApeTraceback_t* traceback_make(ApeAllocator_t* alloc);
+void traceback_destroy(ApeTraceback_t* traceback);
+bool traceback_append(ApeTraceback_t* traceback, const char* function_name, ApePosition_t pos);
+bool traceback_append_from_vm(ApeTraceback_t* traceback, ApeVM_t* vm);
+bool traceback_to_string(const ApeTraceback_t* traceback, ApeStringBuffer_t* buf);
+const char* traceback_item_get_line(ApeTracebackItem_t* item);
+const char* traceback_item_get_filepath(ApeTracebackItem_t* item);
 
 
-bool frame_init(frame_t* frame, ApeObject_t function, int base_pointer);
+bool frame_init(ApeFrame_t* frame, ApeObject_t function, int base_pointer);
 
-opcode_val_t frame_read_opcode(frame_t* frame);
-uint64_t frame_read_uint64(frame_t* frame);
-uint16_t frame_read_uint16(frame_t* frame);
-uint8_t frame_read_uint8(frame_t* frame);
-src_pos_t frame_src_position(const frame_t* frame);
+ApeOpcodeValue_t frame_read_opcode(ApeFrame_t* frame);
+uint64_t frame_read_uint64(ApeFrame_t* frame);
+uint16_t frame_read_uint16(ApeFrame_t* frame);
+uint8_t frame_read_uint8(ApeFrame_t* frame);
+ApePosition_t frame_src_position(const ApeFrame_t* frame);
 
 
-ApeVM_t* vm_make(ApeAllocator_t* alloc, const ape_config_t* config, gcmem_t* mem, errors_t* errors, global_store_t* global_store);// config can be null (for internal testing purposes)
+ApeVM_t* vm_make(ApeAllocator_t* alloc, const ApeConfig_t* config, ApeGCMemory_t* mem, ApeErrorList_t* errors, ApeGlobalStore_t* global_store);// config can be null (for internal testing purposes)
 void vm_destroy(ApeVM_t* vm);
 
 void vm_reset(ApeVM_t* vm);
 
-bool vm_run(ApeVM_t* vm, compilation_result_t* comp_res, array(ApeObject_t) * constants);
+bool vm_run(ApeVM_t* vm, ApeCompilationResult_t* comp_res, array(ApeObject_t) * constants);
 ApeObject_t vm_call(ApeVM_t* vm, array(ApeObject_t) * constants, ApeObject_t callee, int argc, ApeObject_t* args);
 bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) * constants);
 
@@ -1661,7 +1647,7 @@ void ape_set_runtime_errorf(ApeContext_t* ape, const char* format, ...);
 bool ape_has_errors(const ApeContext_t* ape);
 int ape_errors_count(const ApeContext_t* ape);
 void ape_clear_errors(ApeContext_t* ape);
-const error_t* ape_get_error(const ApeContext_t* ape, int index);
+const ApeError_t* ape_get_error(const ApeContext_t* ape, int index);
 
 bool ape_set_native_function(ApeContext_t* ape, const char* name, ApeUserFNCallback_t fn, void* data);
 bool ape_set_global_constant(ApeContext_t* ape, const char* name, ApeObject_t obj);
@@ -1703,7 +1689,7 @@ bool ape_object_get_bool(ApeObject_t obj);
 const char* ape_object_get_string(ApeObject_t obj);
 
 const char* ape_object_get_error_message(ApeObject_t obj);
-const traceback_t* ape_object_get_error_traceback(ApeObject_t obj);
+const ApeTraceback_t* ape_object_get_error_traceback(ApeObject_t obj);
 
 bool ape_object_set_external_destroy_function(ApeObject_t object, ApeDataDestroyFNCallback_t destroy_fn);
 bool ape_object_set_external_copy_function(ApeObject_t object, ApeDataCopyFNCallback_t copy_fn);
@@ -1747,23 +1733,23 @@ bool ape_object_get_map_bool(ApeObject_t object, const char* key);
 bool ape_object_map_has_key(ApeObject_t object, const char* key);
 
 // Ape error
-const char* ape_error_get_message(const error_t* error);
-const char* ape_error_get_filepath(const error_t* error);
-const char* ape_error_get_line(const error_t* error);
-int ape_error_get_line_number(const error_t* error);
-int ape_error_get_column_number(const error_t* error);
-ApeErrorType_t ape_error_get_type(const error_t* error);
-const char* ape_error_get_type_string(const error_t* error);
+const char* ape_error_get_message(const ApeError_t* error);
+const char* ape_error_get_filepath(const ApeError_t* error);
+const char* ape_error_get_line(const ApeError_t* error);
+int ape_error_get_line_number(const ApeError_t* error);
+int ape_error_get_column_number(const ApeError_t* error);
+ApeErrorType_t ape_error_get_type(const ApeError_t* error);
+const char* ape_error_get_type_string(const ApeError_t* error);
 const char* ape_error_type_to_string(ApeErrorType_t type);
-char* ape_error_serialize(ApeContext_t* ape, const error_t* error);
-const traceback_t* ape_error_get_traceback(const error_t* error);
+char* ape_error_serialize(ApeContext_t* ape, const ApeError_t* error);
+const ApeTraceback_t* ape_error_get_traceback(const ApeError_t* error);
 
 // Ape traceback
-int ape_traceback_get_depth(const traceback_t* traceback);
-const char* ape_traceback_get_filepath(const traceback_t* traceback, int depth);
-const char* ape_traceback_get_line(const traceback_t* traceback, int depth);
-int ape_traceback_get_line_number(const traceback_t* traceback, int depth);
-int ape_traceback_get_column_number(const traceback_t* traceback, int depth);
-const char* ape_traceback_get_function_name(const traceback_t* traceback, int depth);
+int ape_traceback_get_depth(const ApeTraceback_t* traceback);
+const char* ape_traceback_get_filepath(const ApeTraceback_t* traceback, int depth);
+const char* ape_traceback_get_line(const ApeTraceback_t* traceback, int depth);
+int ape_traceback_get_line_number(const ApeTraceback_t* traceback, int depth);
+int ape_traceback_get_column_number(const ApeTraceback_t* traceback, int depth);
+const char* ape_traceback_get_function_name(const ApeTraceback_t* traceback, int depth);
 
 

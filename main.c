@@ -113,7 +113,7 @@ static void print_errors(ApeContext_t *ape)
     int i;
     int count;
     char *err_str;
-    const error_t *err;
+    const ApeError_t *err;
     count = ape_errors_count(ape);
     for (i = 0; i < count; i++)
     {

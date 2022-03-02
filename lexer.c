@@ -1,19 +1,19 @@
 
 #include "ape.h"
 
-static bool read_char(lexer_t* lex);
-static char peek_char(lexer_t* lex);
+static bool read_char(ApeLexer_t* lex);
+static char peek_char(ApeLexer_t* lex);
 static bool is_letter(char ch);
 static bool is_digit(char ch);
 static bool is_one_of(char ch, const char* allowed, int allowed_len);
-static const char* read_identifier(lexer_t* lex, int* out_len);
-static const char* read_number(lexer_t* lex, int* out_len);
-static const char* read_string(lexer_t* lex, char delimiter, bool is_template, bool* out_template_found, int* out_len);
-static token_type_t lookup_identifier(const char* ident, int len);
-static void skip_whitespace(lexer_t* lex);
-static bool add_line(lexer_t* lex, int offset);
+static const char* read_identifier(ApeLexer_t* lex, int* out_len);
+static const char* read_number(ApeLexer_t* lex, int* out_len);
+static const char* read_string(ApeLexer_t* lex, char delimiter, bool is_template, bool* out_template_found, int* out_len);
+static ApeTokenType_t lookup_identifier(const char* ident, int len);
+static void skip_whitespace(ApeLexer_t* lex);
+static bool add_line(ApeLexer_t* lex, int offset);
 
-bool lexer_init(lexer_t* lex, ApeAllocator_t* alloc, errors_t* errs, const char* input, compiled_file_t* file)
+bool lexer_init(ApeLexer_t* lex, ApeAllocator_t* alloc, ApeErrorList_t* errs, const char* input, ApeCompiledFile_t* file)
 {
     lex->alloc = alloc;
     lex->errors = errs;
@@ -53,27 +53,27 @@ bool lexer_init(lexer_t* lex, ApeAllocator_t* alloc, errors_t* errs, const char*
     return true;
 }
 
-bool lexer_failed(lexer_t* lex)
+bool lexer_failed(ApeLexer_t* lex)
 {
     return lex->failed;
 }
 
-void lexer_continue_template_string(lexer_t* lex)
+void lexer_continue_template_string(ApeLexer_t* lex)
 {
     lex->continue_template_string = true;
 }
 
-bool lexer_cur_token_is(lexer_t* lex, token_type_t type)
+bool lexer_cur_token_is(ApeLexer_t* lex, ApeTokenType_t type)
 {
     return lex->cur_token.type == type;
 }
 
-bool lexer_peek_token_is(lexer_t* lex, token_type_t type)
+bool lexer_peek_token_is(ApeLexer_t* lex, ApeTokenType_t type)
 {
     return lex->peek_token.type == type;
 }
 
-bool lexer_next_token(lexer_t* lex)
+bool lexer_next_token(ApeLexer_t* lex)
 {
     lex->prev_token = lex->cur_token;
     lex->cur_token = lex->peek_token;
@@ -81,7 +81,7 @@ bool lexer_next_token(lexer_t* lex)
     return !lex->failed;
 }
 
-bool lexer_previous_token(lexer_t* lex)
+bool lexer_previous_token(ApeLexer_t* lex)
 {
     if(lex->prev_token.type == TOKEN_INVALID)
     {
@@ -101,7 +101,7 @@ bool lexer_previous_token(lexer_t* lex)
     return true;
 }
 
-token_t lexer_next_token_internal(lexer_t* lex)
+ApeToken_t lexer_next_token_internal(ApeLexer_t* lex)
 {
     lex->prev_token_state.ch = lex->ch;
     lex->prev_token_state.column = lex->column;
@@ -116,7 +116,7 @@ token_t lexer_next_token_internal(lexer_t* lex)
             skip_whitespace(lex);
         }
 
-        token_t out_tok;
+        ApeToken_t out_tok;
         out_tok.type = TOKEN_INVALID;
         out_tok.literal = lex->input + lex->position;
         out_tok.len = 1;
@@ -442,7 +442,7 @@ token_t lexer_next_token_internal(lexer_t* lex)
                 {
                     int ident_len = 0;
                     const char* ident = read_identifier(lex, &ident_len);
-                    token_type_t type = lookup_identifier(ident, ident_len);
+                    ApeTokenType_t type = lookup_identifier(ident, ident_len);
                     token_init(&out_tok, type, ident, ident_len);
                     return out_tok;
                 }
@@ -466,7 +466,7 @@ token_t lexer_next_token_internal(lexer_t* lex)
     }
 }
 
-bool lexer_expect_current(lexer_t* lex, token_type_t type)
+bool lexer_expect_current(ApeLexer_t* lex, ApeTokenType_t type)
 {
     if(lexer_failed(lex))
     {
@@ -486,7 +486,7 @@ bool lexer_expect_current(lexer_t* lex, token_type_t type)
 
 // INTERNAL
 
-static bool read_char(lexer_t* lex)
+static bool read_char(ApeLexer_t* lex)
 {
     if(lex->next_position >= lex->input_len)
     {
@@ -517,7 +517,7 @@ static bool read_char(lexer_t* lex)
     return true;
 }
 
-static char peek_char(lexer_t* lex)
+static char peek_char(ApeLexer_t* lex)
 {
     if(lex->next_position >= lex->input_len)
     {
@@ -551,7 +551,7 @@ static bool is_one_of(char ch, const char* allowed, int allowed_len)
     return false;
 }
 
-static const char* read_identifier(lexer_t* lex, int* out_len)
+static const char* read_identifier(ApeLexer_t* lex, int* out_len)
 {
     int position = lex->position;
     int len = 0;
@@ -573,7 +573,7 @@ end:
     return lex->input + position;
 }
 
-static const char* read_number(lexer_t* lex, int* out_len)
+static const char* read_number(ApeLexer_t* lex, int* out_len)
 {
     char allowed[] = ".xXaAbBcCdDeEfF";
     int position = lex->position;
@@ -586,7 +586,7 @@ static const char* read_number(lexer_t* lex, int* out_len)
     return lex->input + position;
 }
 
-static const char* read_string(lexer_t* lex, char delimiter, bool is_template, bool* out_template_found, int* out_len)
+static const char* read_string(ApeLexer_t* lex, char delimiter, bool is_template, bool* out_template_found, int* out_len)
 {
     *out_len = 0;
 
@@ -620,13 +620,13 @@ static const char* read_string(lexer_t* lex, char delimiter, bool is_template, b
     return lex->input + position;
 }
 
-static token_type_t lookup_identifier(const char* ident, int len)
+static ApeTokenType_t lookup_identifier(const char* ident, int len)
 {
     struct
     {
         const char* value;
         int len;
-        token_type_t type;
+        ApeTokenType_t type;
     } keywords[] = {
         { "fn", 2, TOKEN_FUNCTION },
         { "const", 5, TOKEN_CONST },
@@ -653,7 +653,7 @@ static token_type_t lookup_identifier(const char* ident, int len)
     return TOKEN_IDENT;
 }
 
-static void skip_whitespace(lexer_t* lex)
+static void skip_whitespace(ApeLexer_t* lex)
 {
     char ch = lex->ch;
     while(ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r')
@@ -663,7 +663,7 @@ static void skip_whitespace(lexer_t* lex)
     }
 }
 
-static bool add_line(lexer_t* lex, int offset)
+static bool add_line(ApeLexer_t* lex, int offset)
 {
     if(!lex->file)
     {
