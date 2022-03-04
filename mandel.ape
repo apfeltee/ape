@@ -31,7 +31,7 @@ while(cy <= ymax)
             y2 = ((y * y) >> 12);
             iter +=1;
         }
-        print(char_to_str(32 + iter));
+        print(chr(32 + iter));
         cx += dx;
     }
     print("\n");

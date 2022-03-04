@@ -1,17 +1,17 @@
 
-#include "ape.h"
+#include "priv.h"
 
-static bool read_char(ApeLexer_t* lex);
-static char peek_char(ApeLexer_t* lex);
-static bool is_letter(char ch);
-static bool is_digit(char ch);
-static bool is_one_of(char ch, const char* allowed, int allowed_len);
-static const char* read_identifier(ApeLexer_t* lex, int* out_len);
-static const char* read_number(ApeLexer_t* lex, int* out_len);
-static const char* read_string(ApeLexer_t* lex, char delimiter, bool is_template, bool* out_template_found, int* out_len);
-static ApeTokenType_t lookup_identifier(const char* ident, int len);
-static void skip_whitespace(ApeLexer_t* lex);
-static bool add_line(ApeLexer_t* lex, int offset);
+bool read_char(ApeLexer_t* lex);
+char peek_char(ApeLexer_t* lex);
+bool is_letter(char ch);
+bool is_digit(char ch);
+bool is_one_of(char ch, const char* allowed, int allowed_len);
+const char* read_identifier(ApeLexer_t* lex, int* out_len);
+const char* read_number(ApeLexer_t* lex, int* out_len);
+const char* read_string(ApeLexer_t* lex, char delimiter, bool is_template, bool* out_template_found, int* out_len);
+ApeTokenType_t lookup_identifier(const char* ident, int len);
+void skip_whitespace(ApeLexer_t* lex);
+bool add_line(ApeLexer_t* lex, int offset);
 
 bool lexer_init(ApeLexer_t* lex, ApeAllocator_t* alloc, ApeErrorList_t* errs, const char* input, ApeCompiledFile_t* file)
 {
@@ -486,7 +486,7 @@ bool lexer_expect_current(ApeLexer_t* lex, ApeTokenType_t type)
 
 // INTERNAL
 
-static bool read_char(ApeLexer_t* lex)
+bool read_char(ApeLexer_t* lex)
 {
     if(lex->next_position >= lex->input_len)
     {
@@ -517,7 +517,7 @@ static bool read_char(ApeLexer_t* lex)
     return true;
 }
 
-static char peek_char(ApeLexer_t* lex)
+char peek_char(ApeLexer_t* lex)
 {
     if(lex->next_position >= lex->input_len)
     {
@@ -529,17 +529,17 @@ static char peek_char(ApeLexer_t* lex)
     }
 }
 
-static bool is_letter(char ch)
+bool is_letter(char ch)
 {
     return ('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z') || ch == '_';
 }
 
-static bool is_digit(char ch)
+bool is_digit(char ch)
 {
     return ch >= '0' && ch <= '9';
 }
 
-static bool is_one_of(char ch, const char* allowed, int allowed_len)
+bool is_one_of(char ch, const char* allowed, int allowed_len)
 {
     for(int i = 0; i < allowed_len; i++)
     {
@@ -551,7 +551,7 @@ static bool is_one_of(char ch, const char* allowed, int allowed_len)
     return false;
 }
 
-static const char* read_identifier(ApeLexer_t* lex, int* out_len)
+const char* read_identifier(ApeLexer_t* lex, int* out_len)
 {
     int position = lex->position;
     int len = 0;
@@ -573,7 +573,7 @@ end:
     return lex->input + position;
 }
 
-static const char* read_number(ApeLexer_t* lex, int* out_len)
+const char* read_number(ApeLexer_t* lex, int* out_len)
 {
     char allowed[] = ".xXaAbBcCdDeEfF";
     int position = lex->position;
@@ -586,7 +586,7 @@ static const char* read_number(ApeLexer_t* lex, int* out_len)
     return lex->input + position;
 }
 
-static const char* read_string(ApeLexer_t* lex, char delimiter, bool is_template, bool* out_template_found, int* out_len)
+const char* read_string(ApeLexer_t* lex, char delimiter, bool is_template, bool* out_template_found, int* out_len)
 {
     *out_len = 0;
 
@@ -620,9 +620,9 @@ static const char* read_string(ApeLexer_t* lex, char delimiter, bool is_template
     return lex->input + position;
 }
 
-static ApeTokenType_t lookup_identifier(const char* ident, int len)
+ApeTokenType_t lookup_identifier(const char* ident, int len)
 {
-    struct
+    static struct
     {
         const char* value;
         int len;
@@ -653,7 +653,7 @@ static ApeTokenType_t lookup_identifier(const char* ident, int len)
     return TOKEN_IDENT;
 }
 
-static void skip_whitespace(ApeLexer_t* lex)
+void skip_whitespace(ApeLexer_t* lex)
 {
     char ch = lex->ch;
     while(ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r')
@@ -663,7 +663,7 @@ static void skip_whitespace(ApeLexer_t* lex)
     }
 }
 
-static bool add_line(ApeLexer_t* lex, int offset)
+bool add_line(ApeLexer_t* lex, int offset)
 {
     if(!lex->file)
     {

@@ -108,7 +108,7 @@ bool populate_flags(int argc, int begin, char** argv, const char* expectvalue, F
     return true;
 }
 
-static void print_errors(ApeContext_t *ape)
+void print_errors(ApeContext_t *ape)
 {
     int i;
     int count;
@@ -124,7 +124,7 @@ static void print_errors(ApeContext_t *ape)
     }
 }
 
-static ApeObject_t exit_repl(ApeContext_t *ape, void *data, int argc, ApeObject_t *args)
+ApeObject_t exit_repl(ApeContext_t *ape, void *data, int argc, ApeObject_t *args)
 {
     bool *exit_repl = (bool*)data;
     *exit_repl = true;
@@ -132,7 +132,7 @@ static ApeObject_t exit_repl(ApeContext_t *ape, void *data, int argc, ApeObject_
 }
 
 #if !defined(NO_READLINE)
-static bool notjustspace(const char* line)
+bool notjustspace(const char* line)
 {
     int c;
     size_t i;
@@ -161,6 +161,7 @@ void do_repl(ApeContext_t* ape)
         {
             continue;
         }
+        add_history(line);
         res = ape_execute(ape, line);
         if (ape_has_errors(ape))
         {
@@ -169,7 +170,6 @@ void do_repl(ApeContext_t* ape)
         }
         else
         {
-            add_history(line);
             object_str = ape_object_serialize(ape, res, &len);
             printf("%.*s\n", (int)len, object_str);
             free(object_str);
