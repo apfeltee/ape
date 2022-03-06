@@ -75,17 +75,6 @@ THE SOFTWARE.
 #define ERRORS_MAX_COUNT 16
 #define APE_ERROR_MESSAGE_MAX_LENGTH 255
 
-#define CHECK_ARGS(vm, generate_error, argc, args, ...) \
-    check_args((vm), (generate_error), (argc), (args),  \
-               sizeof((ApeObjectType_t[]){ __VA_ARGS__ }) / sizeof(ApeObjectType_t), (ApeObjectType_t[]){ __VA_ARGS__ })
-
-
-#define APE_CALL(ape, function_name, ...) \
-    ape_call((ape), (function_name), sizeof((ApeObject_t[]){ __VA_ARGS__ }) / sizeof(ApeObject_t), (ApeObject_t[]){ __VA_ARGS__ })
-
-#define APE_CHECK_ARGS(ape, generate_error, argc, args, ...) \
-    ape_check_args((ape), (generate_error), (argc), (args), sizeof((int[]){ __VA_ARGS__ }) / sizeof(int), (int[]){ __VA_ARGS__ })
-
 
 #define dict(TYPE) ApeDictionary_t
 
@@ -481,7 +470,7 @@ typedef struct ApeNativeFuncWrapper_t ApeNativeFuncWrapper_t;
 
 //typedef ApeObject_t (*ape_native_fn)(ApeContext_t* ape, void* data, int argc, ApeObject_t* args);
 typedef ApeObject_t (*ApeUserFNCallback_t)(ApeContext_t* ape, void* data, int argc, ApeObject_t* args);
-typedef ApeObject_t     (*ApeNativeFNCallback_t)            (ApeVM_t* vm, void* data, int argc, ApeObject_t* args);
+typedef ApeObject_t (*ApeNativeFNCallback_t)(ApeVM_t*, void*, int, ApeObject_t*);
 
 typedef void* (*ApeMallocFNCallback_t)(void* ctx, size_t size);
 typedef void (*ApeFreeFNCallback_t)(void* ctx, void* ptr);
@@ -831,13 +820,6 @@ struct ApeFunction_t
     bool owns_data;
 };
 
-struct ApeNativeFunction_t
-{
-    char* name;
-    ApeNativeFNCallback_t fn;
-    uint8_t data[NATIVE_FN_MAX_DATA_LEN];
-    int data_len;
-};
 
 struct ApeExternalData_t
 {
@@ -864,6 +846,24 @@ struct ApeObjectString_t
     int capacity;
     int length;
 };
+
+struct ApeNativeFunction_t
+{
+    char* name;
+    ApeNativeFNCallback_t native_funcptr;
+    //uint8_t data[NATIVE_FN_MAX_DATA_LEN];
+    void* data;
+    int data_len;
+};
+
+
+struct ApeNativeFuncWrapper_t
+{
+    ApeUserFNCallback_t wrapped_funcptr;
+    ApeContext_t* ape;
+    void* data;
+};
+
 
 struct ApeObjectData_t
 {
@@ -939,7 +939,7 @@ struct ApeCompilationScope_t
 
 struct ApeObjectDataPool_t
 {
-    ApeObjectData_t* data[GCMEM_POOL_SIZE];
+    ApeObjectData_t* datapool[GCMEM_POOL_SIZE];
     int count;
 };
 
@@ -1035,7 +1035,7 @@ struct ApeDictionary_t
 struct ApeArray_t
 {
     ApeAllocator_t* alloc;
-    unsigned char* data;
+    unsigned char* arraydata;
     unsigned char* data_allocated;
     unsigned int count;
     unsigned int capacity;
@@ -1059,7 +1059,7 @@ struct ApeStringBuffer_t
 {
     ApeAllocator_t* alloc;
     bool failed;
-    char* data;
+    char* stringdata;
     size_t capacity;
     size_t len;
 };
@@ -1103,12 +1103,6 @@ struct ApeCompiler_t
     dict(int) * string_constants_positions;
 };
 
-struct ApeNativeFuncWrapper_t
-{
-    ApeUserFNCallback_t fn;
-    ApeContext_t* ape;
-    void* data;
-};
 
 struct ApeProgram_t
 {

@@ -185,5 +185,6 @@ ApeObject_t call_native_function(ApeVM_t* vm, ApeObject_t callee, ApePosition_t 
 bool check_assign(ApeVM_t* vm, ApeObject_t old_value, ApeObject_t new_value);
 bool try_overload_operator(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, opcode_t op, bool* out_overload_found);
 
+void builtins_install(ApeVM_t* vm);
 
 

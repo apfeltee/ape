@@ -1154,13 +1154,13 @@ ApeArray_t* array_copy(const ApeArray_t* arr)
             allocator_free(arr->alloc, copy);
             return NULL;
         }
-        copy->data = copy->data_allocated;
-        memcpy(copy->data_allocated, arr->data, arr->capacity * arr->element_size);
+        copy->arraydata = copy->data_allocated;
+        memcpy(copy->data_allocated, arr->arraydata, arr->capacity * arr->element_size);
     }
     else
     {
         copy->data_allocated = NULL;
-        copy->data = NULL;
+        copy->arraydata = NULL;
     }
 
     return copy;
@@ -1181,15 +1181,15 @@ bool array_add(ApeArray_t* arr, const void* value)
         {
             return false;
         }
-        memcpy(new_data, arr->data, arr->count * arr->element_size);
+        memcpy(new_data, arr->arraydata, arr->count * arr->element_size);
         allocator_free(arr->alloc, arr->data_allocated);
         arr->data_allocated = new_data;
-        arr->data = arr->data_allocated;
+        arr->arraydata = arr->data_allocated;
         arr->capacity = new_capacity;
     }
     if(value)
     {
-        memcpy(arr->data + (arr->count * arr->element_size), value, arr->element_size);
+        memcpy(arr->arraydata + (arr->count * arr->element_size), value, arr->element_size);
     }
     arr->count++;
     return true;
@@ -1271,7 +1271,7 @@ bool array_set(ApeArray_t* arr, unsigned int ix, void* value)
         return false;
     }
     size_t offset = ix * arr->element_size;
-    memmove(arr->data + offset, value, arr->element_size);
+    memmove(arr->arraydata + offset, value, arr->element_size);
     return true;
 }
 
@@ -1309,7 +1309,7 @@ void* array_get(ApeArray_t* arr, unsigned int ix)
         return NULL;
     }
     size_t offset = ix * arr->element_size;
-    return arr->data + offset;
+    return arr->arraydata + offset;
 }
 
 const void* array_get_const(const ApeArray_t* arr, unsigned int ix)
@@ -1320,7 +1320,7 @@ const void* array_get_const(const ApeArray_t* arr, unsigned int ix)
         return NULL;
     }
     size_t offset = ix * arr->element_size;
-    return arr->data + offset;
+    return arr->arraydata + offset;
 }
 
 void* array_get_last(ApeArray_t* arr)
@@ -1354,7 +1354,7 @@ bool array_remove_at(ApeArray_t* arr, unsigned int ix)
     }
     if(ix == 0)
     {
-        arr->data += arr->element_size;
+        arr->arraydata += arr->element_size;
         arr->capacity--;
         arr->count--;
         return true;
@@ -1365,8 +1365,8 @@ bool array_remove_at(ApeArray_t* arr, unsigned int ix)
         return true;
     }
     size_t to_move_bytes = (arr->count - 1 - ix) * arr->element_size;
-    void* dest = arr->data + (ix * arr->element_size);
-    void* src = arr->data + ((ix + 1) * arr->element_size);
+    void* dest = arr->arraydata + (ix * arr->element_size);
+    void* src = arr->arraydata + ((ix + 1) * arr->element_size);
     memmove(dest, src, to_move_bytes);
     arr->count--;
     return true;
@@ -1421,12 +1421,12 @@ bool array_contains(const ApeArray_t* arr, void* ptr)
 
 void* array_data(ApeArray_t* arr)
 {
-    return arr->data;
+    return arr->arraydata;
 }
 
 const void* array_const_data(const ApeArray_t* arr)
 {
-    return arr->data;
+    return arr->arraydata;
 }
 
 void array_orphan_data(ApeArray_t* arr)
@@ -1465,7 +1465,7 @@ bool array_init_with_capacity(ApeArray_t* arr, ApeAllocator_t* alloc, unsigned i
     if(capacity > 0)
     {
         arr->data_allocated = allocator_malloc(arr->alloc, capacity * element_size);
-        arr->data = arr->data_allocated;
+        arr->arraydata = arr->data_allocated;
         if(!arr->data_allocated)
         {
             return false;
@@ -1474,7 +1474,7 @@ bool array_init_with_capacity(ApeArray_t* arr, ApeAllocator_t* alloc, unsigned i
     else
     {
         arr->data_allocated = NULL;
-        arr->data = NULL;
+        arr->arraydata = NULL;
     }
     arr->capacity = capacity;
     arr->count = 0;
@@ -1751,15 +1751,15 @@ ApeStringBuffer_t* strbuf_make_with_capacity(ApeAllocator_t* alloc, unsigned int
     memset(buf, 0, sizeof(ApeStringBuffer_t));
     buf->alloc = alloc;
     buf->failed = false;
-    buf->data = allocator_malloc(alloc, capacity);
-    if(buf->data == NULL)
+    buf->stringdata = allocator_malloc(alloc, capacity);
+    if(buf->stringdata == NULL)
     {
         allocator_free(alloc, buf);
         return NULL;
     }
     buf->capacity = capacity;
     buf->len = 0;
-    buf->data[0] = '\0';
+    buf->stringdata[0] = '\0';
     return buf;
 }
 
@@ -1769,7 +1769,7 @@ void strbuf_destroy(ApeStringBuffer_t* buf)
     {
         return;
     }
-    allocator_free(buf->alloc, buf->data);
+    allocator_free(buf->alloc, buf->stringdata);
     allocator_free(buf->alloc, buf);
 }
 
@@ -1780,7 +1780,7 @@ void strbuf_clear(ApeStringBuffer_t* buf)
         return;
     }
     buf->len = 0;
-    buf->data[0] = '\0';
+    buf->stringdata[0] = '\0';
 }
 
 bool strbuf_append(ApeStringBuffer_t* buf, const char* str)
@@ -1803,9 +1803,9 @@ bool strbuf_append(ApeStringBuffer_t* buf, const char* str)
             return false;
         }
     }
-    memcpy(buf->data + buf->len, str, str_len);
+    memcpy(buf->stringdata + buf->len, str, str_len);
     buf->len = buf->len + str_len;
-    buf->data[buf->len] = '\0';
+    buf->stringdata[buf->len] = '\0';
     return true;
 }
 
@@ -1833,7 +1833,7 @@ bool strbuf_appendf(ApeStringBuffer_t* buf, const char* fmt, ...)
         }
     }
     va_start(args, fmt);
-    int written = vsprintf(buf->data + buf->len, fmt, args);
+    int written = vsprintf(buf->stringdata + buf->len, fmt, args);
     (void)written;
     va_end(args);
     if(written != to_write)
@@ -1841,7 +1841,7 @@ bool strbuf_appendf(ApeStringBuffer_t* buf, const char* fmt, ...)
         return false;
     }
     buf->len = buf->len + to_write;
-    buf->data[buf->len] = '\0';
+    buf->stringdata[buf->len] = '\0';
     return true;
 }
 
@@ -1851,7 +1851,7 @@ const char* strbuf_get_string(const ApeStringBuffer_t* buf)
     {
         return NULL;
     }
-    return buf->data;
+    return buf->stringdata;
 }
 
 size_t strbuf_get_length(const ApeStringBuffer_t* buf)
@@ -1870,8 +1870,8 @@ char* strbuf_get_string_and_destroy(ApeStringBuffer_t* buf)
         strbuf_destroy(buf);
         return NULL;
     }
-    char* res = buf->data;
-    buf->data = NULL;
+    char* res = buf->stringdata;
+    buf->stringdata = NULL;
     strbuf_destroy(buf);
     return res;
 }
@@ -1889,10 +1889,10 @@ bool strbuf_grow(ApeStringBuffer_t* buf, size_t new_capacity)
         buf->failed = true;
         return false;
     }
-    memcpy(new_data, buf->data, buf->len);
+    memcpy(new_data, buf->stringdata, buf->len);
     new_data[buf->len] = '\0';
-    allocator_free(buf->alloc, buf->data);
-    buf->data = new_data;
+    allocator_free(buf->alloc, buf->stringdata);
+    buf->stringdata = new_data;
     buf->capacity = new_capacity;
     return true;
 }
@@ -4619,10 +4619,11 @@ ApeObject_t object_make_native_function(ApeGCMemory_t* mem, const char* name, Ap
     {
         return object_make_null();
     }
-    obj->native_function.fn = fn;
+    obj->native_function.native_funcptr = fn;
     if(data)
     {
-        memcpy(obj->native_function.data, data, data_len);
+        //memcpy(obj->native_function.data, data, data_len);
+        obj->native_function.data = data;
     }
     obj->native_function.data_len = data_len;
     return object_make_from_data(APE_OBJECT_NATIVE_FUNCTION, obj);
@@ -6000,7 +6001,7 @@ void gcmem_destroy(ApeGCMemory_t* mem)
         ApeObjectDataPool_t* pool = &mem->pools[i];
         for(int j = 0; j < pool->count; j++)
         {
-            ApeObjectData_t* data = pool->data[j];
+            ApeObjectData_t* data = pool->datapool[j];
             object_data_deinit(data);
             allocator_free(mem->alloc, data);
         }
@@ -6009,7 +6010,7 @@ void gcmem_destroy(ApeGCMemory_t* mem)
 
     for(int i = 0; i < mem->data_only_pool.count; i++)
     {
-        allocator_free(mem->alloc, mem->data_only_pool.data[i]);
+        allocator_free(mem->alloc, mem->data_only_pool.datapool[i]);
     }
 
     allocator_free(mem->alloc, mem);
@@ -6021,7 +6022,7 @@ ApeObjectData_t* gcmem_alloc_object_data(ApeGCMemory_t* mem, ApeObjectType_t typ
     mem->allocations_since_sweep++;
     if(mem->data_only_pool.count > 0)
     {
-        data = mem->data_only_pool.data[mem->data_only_pool.count - 1];
+        data = mem->data_only_pool.datapool[mem->data_only_pool.count - 1];
         mem->data_only_pool.count--;
     }
     else
@@ -6062,7 +6063,7 @@ ApeObjectData_t* gcmem_get_object_data_from_pool(ApeGCMemory_t* mem, ApeObjectTy
     {
         return NULL;
     }
-    ApeObjectData_t* data = pool->data[pool->count - 1];
+    ApeObjectData_t* data = pool->datapool[pool->count - 1];
 
     APE_ASSERT(ptrarray_count(mem->objects_back) >= ptrarray_count(mem->objects));
 
@@ -6208,7 +6209,7 @@ void gc_sweep(ApeGCMemory_t* mem)
             if(can_data_be_put_in_pool(mem, data))
             {
                 ApeObjectDataPool_t* pool = get_pool_for_type(mem, data->type);
-                pool->data[pool->count] = data;
+                pool->datapool[pool->count] = data;
                 pool->count++;
             }
             else
@@ -6216,7 +6217,7 @@ void gc_sweep(ApeGCMemory_t* mem)
                 object_data_deinit(data);
                 if(mem->data_only_pool.count < GCMEM_POOL_SIZE)
                 {
-                    mem->data_only_pool.data[mem->data_only_pool.count] = data;
+                    mem->data_only_pool.datapool[mem->data_only_pool.count] = data;
                     mem->data_only_pool.count++;
                 }
                 else
@@ -6663,18 +6664,19 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
         switch(opcode)
         {
             case OPCODE_CONSTANT:
-            {
-                uint16_t constant_ix = frame_read_uint16(vm->current_frame);
-                ApeObject_t* constant = array_get(constants, constant_ix);
-                if(!constant)
                 {
-                    errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                      "Constant at %d not found", constant_ix);
-                    goto err;
+                    uint16_t constant_ix = frame_read_uint16(vm->current_frame);
+                    ApeObject_t* constant = array_get(constants, constant_ix);
+                    if(!constant)
+                    {
+                        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                                          "Constant at %d not found", constant_ix);
+                        goto err;
+                    }
+                    stack_push(vm, *constant);
                 }
-                stack_push(vm, *constant);
                 break;
-            }
+
             case OPCODE_ADD:
             case OPCODE_SUB:
             case OPCODE_MUL:
@@ -6685,127 +6687,135 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
             case OPCODE_AND:
             case OPCODE_LSHIFT:
             case OPCODE_RSHIFT:
-            {
-                ApeObject_t right = stack_pop(vm);
-                ApeObject_t left = stack_pop(vm);
-                ApeObjectType_t left_type = object_get_type(left);
-                ApeObjectType_t right_type = object_get_type(right);
-                if(object_is_numeric(left) && object_is_numeric(right))
                 {
-                    double right_val = object_get_number(right);
-                    double left_val = object_get_number(left);
-
-                    int64_t left_val_int = (int64_t)left_val;
-                    int64_t right_val_int = (int64_t)right_val;
-
-                    double res = 0;
-                    switch(opcode)
+                    ApeObject_t right = stack_pop(vm);
+                    ApeObject_t left = stack_pop(vm);
+                    ApeObjectType_t left_type = object_get_type(left);
+                    ApeObjectType_t right_type = object_get_type(right);
+                    if(object_is_numeric(left) && object_is_numeric(right))
                     {
-                        case OPCODE_ADD:
-                            res = left_val + right_val;
-                            break;
-                        case OPCODE_SUB:
-                            res = left_val - right_val;
-                            break;
-                        case OPCODE_MUL:
-                            res = left_val * right_val;
-                            break;
-                        case OPCODE_DIV:
-                            res = left_val / right_val;
-                            break;
-                        case OPCODE_MOD:
-                            res = fmod(left_val, right_val);
-                            break;
-                        case OPCODE_OR:
-                            res = (double)(left_val_int | right_val_int);
-                            break;
-                        case OPCODE_XOR:
-                            res = (double)(left_val_int ^ right_val_int);
-                            break;
-                        case OPCODE_AND:
-                            res = (double)(left_val_int & right_val_int);
-                            break;
-                        case OPCODE_LSHIFT:
-                            res = (double)(left_val_int << right_val_int);
-                            break;
-                        case OPCODE_RSHIFT:
-                            res = (double)(left_val_int >> right_val_int);
-                            break;
-                        default:
-                            APE_ASSERT(false);
-                            break;
+                        double right_val = object_get_number(right);
+                        double left_val = object_get_number(left);
+
+                        int64_t left_val_int = (int64_t)left_val;
+                        int64_t right_val_int = (int64_t)right_val;
+
+                        double res = 0;
+                        switch(opcode)
+                        {
+                            case OPCODE_ADD:
+                                res = left_val + right_val;
+                                break;
+                            case OPCODE_SUB:
+                                res = left_val - right_val;
+                                break;
+                            case OPCODE_MUL:
+                                res = left_val * right_val;
+                                break;
+                            case OPCODE_DIV:
+                                res = left_val / right_val;
+                                break;
+                            case OPCODE_MOD:
+                                res = fmod(left_val, right_val);
+                                break;
+                            case OPCODE_OR:
+                                res = (double)(left_val_int | right_val_int);
+                                break;
+                            case OPCODE_XOR:
+                                res = (double)(left_val_int ^ right_val_int);
+                                break;
+                            case OPCODE_AND:
+                                res = (double)(left_val_int & right_val_int);
+                                break;
+                            case OPCODE_LSHIFT:
+                                res = (double)(left_val_int << right_val_int);
+                                break;
+                            case OPCODE_RSHIFT:
+                                res = (double)(left_val_int >> right_val_int);
+                                break;
+                            default:
+                                APE_ASSERT(false);
+                                break;
+                        }
+                        stack_push(vm, object_make_number(res));
                     }
-                    stack_push(vm, object_make_number(res));
-                }
-                else if(left_type == APE_OBJECT_STRING && right_type == APE_OBJECT_STRING && opcode == OPCODE_ADD)
-                {
-                    int left_len = (int)object_get_string_length(left);
-                    int right_len = (int)object_get_string_length(right);
+                    else if(left_type == APE_OBJECT_STRING && right_type == APE_OBJECT_STRING && opcode == OPCODE_ADD)
+                    {
+                        int left_len = (int)object_get_string_length(left);
+                        int right_len = (int)object_get_string_length(right);
 
-                    if(left_len == 0)
-                    {
-                        stack_push(vm, right);
+                        if(left_len == 0)
+                        {
+                            stack_push(vm, right);
+                        }
+                        else if(right_len == 0)
+                        {
+                            stack_push(vm, left);
+                        }
+                        else
+                        {
+                            const char* left_val = object_get_string(left);
+                            const char* right_val = object_get_string(right);
+
+                            ApeObject_t res = object_make_string_with_capacity(vm->mem, left_len + right_len);
+                            if(object_is_null(res))
+                            {
+                                goto err;
+                            }
+
+                            ok = object_string_append(res, left_val, left_len);
+                            if(!ok)
+                            {
+                                goto err;
+                            }
+
+                            ok = object_string_append(res, right_val, right_len);
+                            if(!ok)
+                            {
+                                goto err;
+                            }
+                            stack_push(vm, res);
+                        }
                     }
-                    else if(right_len == 0)
+                    else if((left_type == APE_OBJECT_ARRAY) && opcode == OPCODE_ADD)
                     {
+                        object_add_array_value(left, right);
                         stack_push(vm, left);
                     }
                     else
                     {
-                        const char* left_val = object_get_string(left);
-                        const char* right_val = object_get_string(right);
-
-                        ApeObject_t res = object_make_string_with_capacity(vm->mem, left_len + right_len);
-                        if(object_is_null(res))
-                        {
-                            goto err;
-                        }
-
-                        ok = object_string_append(res, left_val, left_len);
+                        bool overload_found = false;
+                        bool ok = try_overload_operator(vm, left, right, opcode, &overload_found);
                         if(!ok)
                         {
                             goto err;
                         }
-
-                        ok = object_string_append(res, right_val, right_len);
-                        if(!ok)
+                        if(!overload_found)
                         {
+                            const char* opcode_name = opcode_get_name(opcode);
+                            const char* left_type_name = object_get_type_name(left_type);
+                            const char* right_type_name = object_get_type_name(right_type);
+                            errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                                              "Invalid operand types for %s, got %s and %s", opcode_name, left_type_name,
+                                              right_type_name);
                             goto err;
                         }
-                        stack_push(vm, res);
-                    }
-                }
-                else
-                {
-                    bool overload_found = false;
-                    bool ok = try_overload_operator(vm, left, right, opcode, &overload_found);
-                    if(!ok)
-                    {
-                        goto err;
-                    }
-                    if(!overload_found)
-                    {
-                        const char* opcode_name = opcode_get_name(opcode);
-                        const char* left_type_name = object_get_type_name(left_type);
-                        const char* right_type_name = object_get_type_name(right_type);
-                        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                          "Invalid operand types for %s, got %s and %s", opcode_name, left_type_name,
-                                          right_type_name);
-                        goto err;
                     }
                 }
                 break;
-            }
+
             case OPCODE_POP:
-            {
-                stack_pop(vm);
+                {
+                    stack_pop(vm);
+                }
                 break;
-            }
+
             case OPCODE_TRUE:
-            {
-                stack_push(vm, object_make_bool(true));
+                {
+                    stack_push(vm, object_make_bool(true));
+                }
                 break;
-            }
+
             case OPCODE_FALSE:
             {
                 stack_push(vm, object_make_bool(false));
@@ -7733,7 +7743,7 @@ bool call_object(ApeVM_t* vm, ApeObject_t callee, int num_args)
 ApeObject_t call_native_function(ApeVM_t* vm, ApeObject_t callee, ApePosition_t src_pos, int argc, ApeObject_t* args)
 {
     ApeNativeFunction_t* native_fun = object_get_native_function(callee);
-    ApeObject_t res = native_fun->fn(vm, native_fun->data, argc, args);
+    ApeObject_t res = native_fun->native_funcptr(vm, native_fun->data, argc, args);
     if(errors_has_errors(vm->errors) && !APE_STREQ(native_fun->name, "crash"))
     {
         ApeError_t* err = errors_get_last_error(vm->errors);
@@ -7900,7 +7910,7 @@ ApeContext_t* ape_make_ex(ApeMallocFNCallback_t malloc_fn, ApeFreeFNCallback_t f
     {
         goto err;
     }
-
+    builtins_install(ape->vm);
     return ape;
 err:
     ape_deinit(ape);
@@ -7997,26 +8007,22 @@ err:
 
 ApeProgram_t* ape_compile_file(ApeContext_t* ape, const char* path)
 {
+    ApeCompilationResult_t* comp_res;
+    ApeProgram_t* program;
     ape_clear_errors(ape);
-
-    ApeCompilationResult_t* comp_res = NULL;
-
     comp_res = compiler_compile_file(ape->compiler, path);
     if(!comp_res || errors_get_count(&ape->errors) > 0)
     {
         goto err;
     }
-
-    ApeProgram_t* program = allocator_malloc(&ape->alloc, sizeof(ApeProgram_t));
+    program = allocator_malloc(&ape->alloc, sizeof(ApeProgram_t));
     if(!program)
     {
         goto err;
     }
-
     program->ape = ape;
     program->comp_res = comp_res;
     return program;
-
 err:
     compilation_result_destroy(comp_res);
     return NULL;
@@ -8024,28 +8030,25 @@ err:
 
 ApeObject_t ape_execute_program(ApeContext_t* ape, const ApeProgram_t* program)
 {
+    bool ok;
+    ApeObject_t res;
     reset_state(ape);
-
     if(ape != program->ape)
     {
         errors_add_error(&ape->errors, APE_ERROR_USER, src_pos_invalid, "ape program was compiled with a different ape instance");
         return ape_object_make_null();
     }
-
-    bool ok = vm_run(ape->vm, program->comp_res, compiler_get_constants(ape->compiler));
+    ok = vm_run(ape->vm, program->comp_res, compiler_get_constants(ape->compiler));
     if(!ok || errors_get_count(&ape->errors) > 0)
     {
         return ape_object_make_null();
     }
-
     APE_ASSERT(ape->vm->sp == 0);
-
-    ApeObject_t res = vm_get_last_popped(ape->vm);
+    res = vm_get_last_popped(ape->vm);
     if(object_get_type(res) == APE_OBJECT_NONE)
     {
         return ape_object_make_null();
     }
-
     return res;
 }
 
@@ -8212,40 +8215,6 @@ ApeObject_t ape_get_object(ApeContext_t* ape, const char* name)
     }
     return res;
 }
-
-bool ape_check_args(ApeContext_t* ape, bool generate_error, int argc, ApeObject_t* args, int expected_argc, int* expected_types)
-{
-    if(argc != expected_argc)
-    {
-        if(generate_error)
-        {
-            ape_set_runtime_errorf(ape, "Invalid number or arguments, got %d instead of %d", argc, expected_argc);
-        }
-        return false;
-    }
-
-    for(int i = 0; i < argc; i++)
-    {
-        ApeObject_t arg = args[i];
-        ApeObjectType_t type = ape_object_get_type(arg);
-        ApeObjectType_t expected_type = expected_types[i];
-        if(!(type & expected_type))
-        {
-            if(generate_error)
-            {
-                const char* type_str = ape_object_get_type_name(type);
-                const char* expected_type_str = ape_object_get_type_name(expected_type);
-                ape_set_runtime_errorf(ape, "Invalid argument type, got %s, expected %s", type_str, expected_type_str);
-            }
-            return false;
-        }
-    }
-    return true;
-}
-
-//-----------------------------------------------------------------------------
-// Ape object
-//-----------------------------------------------------------------------------
 
 ApeObject_t ape_object_make_number(double val)
 {
@@ -8962,7 +8931,7 @@ ApeObject_t ape_native_fn_wrapper(ApeVM_t* vm, void* data, int argc, ApeObject_t
     (void)vm;
     ApeNativeFuncWrapper_t* wrapper = (ApeNativeFuncWrapper_t*)data;
     APE_ASSERT(vm == wrapper->ape->vm);
-    ApeObject_t res = wrapper->fn(wrapper->ape, wrapper->data, argc, (ApeObject_t*)args);
+    ApeObject_t res = wrapper->wrapped_funcptr(wrapper->ape, wrapper->data, argc, (ApeObject_t*)args);
     if(ape_has_errors(wrapper->ape))
     {
         return object_make_null();
@@ -8974,7 +8943,7 @@ ApeObject_t ape_object_make_native_function_with_name(ApeContext_t* ape, const c
 {
     ApeNativeFuncWrapper_t wrapper;
     memset(&wrapper, 0, sizeof(ApeNativeFuncWrapper_t));
-    wrapper.fn = fn;
+    wrapper.wrapped_funcptr = fn;
     wrapper.ape = ape;
     wrapper.data = data;
     ApeObject_t wrapper_native_function

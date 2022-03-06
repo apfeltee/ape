@@ -4,7 +4,7 @@ INCFLAGS =
 CC = clang -Wall -Wextra
 # ricing intensifies
 #CFLAGS = $(INCFLAGS) -Ofast -march=native -flto -ffast-math -funroll-loops
-CFLAGS = $(INCFLAGS) -Og -g3 -ggdb3
+CFLAGS = $(INCFLAGS) -O0 -g3 -ggdb3
 LDFLAGS = -flto -ldl -lm  -lreadline -lpthread
 target = run
 

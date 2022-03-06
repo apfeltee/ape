@@ -1,13 +1,4 @@
 
-hnd = opendir(".")
-while(true)
-{
-    ent = readdir(hnd)
-    if(ent == null)
-    {
-        break
-    }
-    println("ent=", ent)
-}
-closedir(hnd)
 
+ents = Dir.read(".")
+println("ents=", ents)
