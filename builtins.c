@@ -12,10 +12,6 @@
     check_args((vm), (generate_error), (argc), (args),  \
                sizeof((ApeObjectType_t[]){ __VA_ARGS__ }) / sizeof(ApeObjectType_t), (ApeObjectType_t[]){ __VA_ARGS__ })
 
-
-#define APE_CALL(ape, function_name, ...) \
-    ape_call((ape), (function_name), sizeof((ApeObject_t[]){ __VA_ARGS__ }) / sizeof(ApeObject_t), (ApeObject_t[]){ __VA_ARGS__ })
-
 #define APE_CHECK_ARGS(ape, generate_error, argc, args, ...) \
     ape_check_args((ape), (generate_error), (argc), (args), sizeof((int[]){ __VA_ARGS__ }) / sizeof(int), (int[]){ __VA_ARGS__ })
 
@@ -85,7 +81,7 @@ static ApeObject_t cfn_first(ApeVM_t* vm, void* data, int argc, ApeObject_t* arg
         return object_make_null();
     }
     ApeObject_t arg = args[0];
-    return object_get_array_value_at(arg, 0);
+    return object_get_array_value(arg, 0);
 }
 
 static ApeObject_t cfn_last(ApeVM_t* vm, void* data, int argc, ApeObject_t* args)
@@ -96,7 +92,7 @@ static ApeObject_t cfn_last(ApeVM_t* vm, void* data, int argc, ApeObject_t* args
         return object_make_null();
     }
     ApeObject_t arg = args[0];
-    return object_get_array_value_at(arg, object_get_array_length(arg) - 1);
+    return object_get_array_value(arg, object_get_array_length(arg) - 1);
 }
 
 static ApeObject_t cfn_rest(ApeVM_t* vm, void* data, int argc, ApeObject_t* args)
@@ -120,7 +116,7 @@ static ApeObject_t cfn_rest(ApeVM_t* vm, void* data, int argc, ApeObject_t* args
     }
     for(int i = 1; i < len; i++)
     {
-        ApeObject_t item = object_get_array_value_at(arg, i);
+        ApeObject_t item = object_get_array_value(arg, i);
         bool ok = object_add_array_value(res, item);
         if(!ok)
         {
@@ -149,7 +145,7 @@ static ApeObject_t cfn_reverse(ApeVM_t* vm, void* data, int argc, ApeObject_t* a
         }
         for(int i = 0; i < len; i++)
         {
-            ApeObject_t obj = object_get_array_value_at(arg, i);
+            ApeObject_t obj = object_get_array_value(arg, i);
             bool ok = object_set_array_value_at(res, len - i - 1, obj);
             if(!ok)
             {
@@ -553,7 +549,7 @@ static ApeObject_t cfn_concat(ApeVM_t* vm, void* data, int argc, ApeObject_t* ar
         }
         for(int i = 0; i < object_get_array_length(args[1]); i++)
         {
-            ApeObject_t item = object_get_array_value_at(args[1], i);
+            ApeObject_t item = object_get_array_value(args[1], i);
             bool ok = object_add_array_value(args[0], item);
             if(!ok)
             {
@@ -608,7 +604,7 @@ static ApeObject_t cfn_remove(ApeVM_t* vm, void* data, int argc, ApeObject_t* ar
     int ix = -1;
     for(int i = 0; i < object_get_array_length(args[0]); i++)
     {
-        ApeObject_t obj = object_get_array_value_at(args[0], i);
+        ApeObject_t obj = object_get_array_value(args[0], i);
         if(object_equals(obj, args[1]))
         {
             ix = i;
@@ -766,7 +762,7 @@ static ApeObject_t cfn_slice(ApeVM_t* vm, void* data, int argc, ApeObject_t* arg
         }
         for(int i = index; i < len; i++)
         {
-            ApeObject_t item = object_get_array_value_at(args[0], i);
+            ApeObject_t item = object_get_array_value(args[0], i);
             bool ok = object_add_array_value(res, item);
             if(!ok)
             {
@@ -1125,10 +1121,64 @@ static ApeObject_t cfn_file_isdirectory(ApeVM_t* vm, void* data, int argc, ApeOb
     return object_make_bool(false);
 }
 
+static ApeObject_t timespec_to_map(ApeVM_t* vm, struct timespec ts)
+{
+    ApeObject_t map;
+    map = object_make_map(vm->mem);
+    ape_object_set_map_number(map, "sec", ts.tv_sec);
+    ape_object_set_map_number(map, "nsec", ts.tv_nsec);
+    return map;
+}
+
+static ApeObject_t cfn_file_stat(ApeVM_t* vm, void* data, int argc, ApeObject_t* args)
+{
+    const char* path;
+    struct stat st;
+    ApeObject_t map;
+    (void)data;
+    if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING))
+    {
+        return object_make_bool(false);
+    }
+    path = object_get_string(args[0]);
+    if(stat(path, &st) != -1)
+    {
+        map = object_make_map(vm->mem);
+        //ape_object_add_array_string(ary, dent->d_name);
+        ape_object_set_map_string(map, "name", path);
+        ape_object_set_map_string(map, "path", path);
+        ape_object_set_map_number(map, "dev", st.st_dev);
+        ape_object_set_map_number(map, "inode", st.st_ino);
+        ape_object_set_map_number(map, "mode", st.st_mode);
+        ape_object_set_map_number(map, "nlink", st.st_nlink);
+        ape_object_set_map_number(map, "uid", st.st_uid);
+        ape_object_set_map_number(map, "gid", st.st_gid);
+        ape_object_set_map_number(map, "rdev", st.st_rdev);
+        ape_object_set_map_number(map, "size", st.st_size);
+        ape_object_set_map_number(map, "blksize", st.st_blksize);
+        ape_object_set_map_number(map, "blocks", st.st_blocks);
+        ape_object_set_map_value(map, "atim", timespec_to_map(vm, st.st_atim));
+        ape_object_set_map_value(map, "mtim", timespec_to_map(vm, st.st_mtim));
+        ape_object_set_map_value(map, "ctim", timespec_to_map(vm, st.st_ctim));
+        return map;
+    }
+    return object_make_null();
+}
+
+static ApeObject_t objfn_string_length(ApeVM_t* vm, void* data, int argc, ApeObject_t* args)
+{
+    ApeObject_t self;
+    self = args[0];
+    return object_make_number(object_get_string_length(self));
+}
+
+
 #if !defined(CORE_NODIRENT)
 
 static ApeObject_t cfn_dir_readdir(ApeVM_t* vm, void* data, int argc, ApeObject_t* args)
 {
+    bool isdir;
+    bool isfile;
     const char* path;
     DIR* hnd;
     struct dirent* dent;
@@ -1142,7 +1192,6 @@ static ApeObject_t cfn_dir_readdir(ApeVM_t* vm, void* data, int argc, ApeObject_
     }
     path = object_get_string(args[0]);
     hnd = opendir(path);
-    //fprintf(stderr, "opendir(\"%s\") = %p\n", path, hnd);
     if(hnd == NULL)
     {
         return object_make_null();
@@ -1155,12 +1204,16 @@ static ApeObject_t cfn_dir_readdir(ApeVM_t* vm, void* data, int argc, ApeObject_
         {
             break;
         }
+        isfile = (dent->d_type == DT_REG);
+        isdir = (dent->d_type == DT_DIR);
         subm = object_make_map(vm->mem);
         //ape_object_add_array_string(ary, dent->d_name);
         ape_object_set_map_string(subm, "name", dent->d_name);
         ape_object_set_map_number(subm, "ino", dent->d_ino);
         ape_object_set_map_number(subm, "type", dent->d_type);
-        ape_object_add_array_value(ary, subm);
+        ape_object_set_map_bool(subm, "isfile", isfile);
+        ape_object_set_map_bool(subm, "isdir", isdir);
+        object_add_array_value(ary, subm);
     }
     closedir(hnd);
     return ary;
@@ -1205,7 +1258,7 @@ static bool check_args(ApeVM_t* vm, bool generate_error, int argc, ApeObject_t* 
     return true;
 }
 
-static NatFunc_t g_native_functions[] =
+static NatFunc_t g_core_globalfuncs[] =
 {
     { "len", cfn_len },
     { "println", cfn_println },
@@ -1259,16 +1312,17 @@ static NatFunc_t g_native_functions[] =
 
 };
 
-static NatFunc_t g_filefuncs[]=
+static NatFunc_t g_core_filefuncs[]=
 {
     {"read", cfn_file_read},
     {"write", cfn_file_write},
     {"isfile", cfn_file_isfile},
     {"isdirectory", cfn_file_isdirectory},
+    {"stat", cfn_file_stat},
     {NULL, NULL},
 };
 
-static NatFunc_t g_dirfuncs[]=
+static NatFunc_t g_core_dirfuncs[]=
 {
     // filesystem
     #if !defined(CORE_NODIRENT)
@@ -1280,33 +1334,20 @@ static NatFunc_t g_dirfuncs[]=
 void builtins_install(ApeVM_t* vm)
 {
     int i;
-    /*
-    bool global_store_set(ApeGlobalStore_t* store, const char* name, ApeObject_t object)
-    */
     ApeObject_t map;
-    /*
-        bool object_set_map_value_at(ApeObject_t obj, int ix, ApeObject_t val);
-        bool object_set_map_value(ApeObject_t obj, ApeObject_t key, ApeObject_t val);
-        bool ape_object_set_map_value_at(ApeObject_t object, int ix, ApeObject_t val);
-        bool ape_object_set_map_value_with_value_key(ApeObject_t object, ApeObject_t key, ApeObject_t value);
-        bool ape_object_set_map_value(ApeObject_t object, const char* key, ApeObject_t value);
-        bool ape_object_set_map_string(ApeObject_t object, const char* key, const char* string);
-        bool ape_object_set_map_number(ApeObject_t object, const char* key, double number);
-        bool ape_object_set_map_bool(ApeObject_t object, const char* key, bool value);
-    */
     {
         map = object_make_map(vm->mem);
-        for(i=0; g_dirfuncs[i].name != NULL; i++)
+        for(i=0; g_core_dirfuncs[i].name != NULL; i++)
         {
-            make_fn_entry(vm, map, g_dirfuncs[i].name, g_dirfuncs[i].fn);
+            make_fn_entry(vm, map, g_core_dirfuncs[i].name, g_core_dirfuncs[i].fn);
         }
         global_store_set(vm->global_store, "Dir", map);
     }
     {
         map = object_make_map(vm->mem);
-        for(i=0; g_filefuncs[i].name != NULL; i++)
+        for(i=0; g_core_filefuncs[i].name != NULL; i++)
         {
-            make_fn_entry(vm, map, g_filefuncs[i].name, g_filefuncs[i].fn);
+            make_fn_entry(vm, map, g_core_filefuncs[i].name, g_core_filefuncs[i].fn);
         }
         global_store_set(vm->global_store, "File", map);
     }
@@ -1314,16 +1355,27 @@ void builtins_install(ApeVM_t* vm)
 
 int builtins_count()
 {
-    return APE_ARRAY_LEN(g_native_functions);
+    return APE_ARRAY_LEN(g_core_globalfuncs);
 }
 
 ApeNativeFNCallback_t builtins_get_fn(int ix)
 {
-    return g_native_functions[ix].fn;
+    return g_core_globalfuncs[ix].fn;
 }
 
 const char* builtins_get_name(int ix)
 {
-    return g_native_functions[ix].name;
+    return g_core_globalfuncs[ix].name;
 }
 
+ApeNativeFNCallback_t builtin_get_object(ApeObjectType_t objt, const char* idxname)
+{
+    if(objt == APE_OBJECT_STRING)
+    {
+        if(APE_STREQ(idxname, "length"))
+        {
+            return objfn_string_length;
+        }
+    }
+    return NULL;
+}

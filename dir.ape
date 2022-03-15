@@ -1,4 +1,15 @@
 
 
-ents = Dir.read(".")
-println("ents=", ents)
+for(ent in Dir.read("."))
+{
+    suff = ""
+    pref = "[FILE]"
+    if(ent.type == 4)
+    {
+        suff = "/"
+        pref = "[DIR] "
+    }
+    st = File.stat(ent.name)
+    sz = st.size
+    println(pref, " ", sz, " ", ent.name, suff)
+}

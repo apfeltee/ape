@@ -5036,7 +5036,7 @@ ApeObject_t object_copy(ApeGCMemory_t* mem, ApeObject_t obj)
             }
             for(int i = 0; i < len; i++)
             {
-                ApeObject_t item = object_get_array_value_at(obj, i);
+                ApeObject_t item = object_get_array_value(obj, i);
                 bool ok = object_add_array_value(copy, item);
                 if(!ok)
                 {
@@ -5458,7 +5458,7 @@ bool object_set_external_copy_function(ApeObject_t object, ApeExternalDataCopyFN
     return true;
 }
 
-ApeObject_t object_get_array_value_at(ApeObject_t object, int ix)
+ApeObject_t object_get_array_value(ApeObject_t object, int ix)
 {
     APE_ASSERT(object_get_type(object) == APE_OBJECT_ARRAY);
     array(ApeObject_t)* array = object_get_allocated_array(object);
@@ -5726,7 +5726,7 @@ ApeObject_t object_deep_copy_internal(ApeGCMemory_t* mem, ApeObject_t obj, valdi
             }
             for(int i = 0; i < len; i++)
             {
-                ApeObject_t item = object_get_array_value_at(obj, i);
+                ApeObject_t item = object_get_array_value(obj, i);
                 ApeObject_t item_copy = object_deep_copy_internal(mem, item, copies);
                 if(!object_is_null(item) && object_is_null(item_copy))
                 {
@@ -6150,7 +6150,7 @@ void gc_mark_object(ApeObject_t obj)
             int len = object_get_array_length(obj);
             for(int i = 0; i < len; i++)
             {
-                ApeObject_t val = object_get_array_value_at(obj, i);
+                ApeObject_t val = object_get_array_value(obj, i);
                 if(object_is_allocated(val))
                 {
                     ApeObjectData_t* val_data = object_get_allocated_data(val);
@@ -6823,155 +6823,163 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
             }
             case OPCODE_COMPARE:
             case OPCODE_COMPARE_EQ:
-            {
-                ApeObject_t right = stack_pop(vm);
-                ApeObject_t left = stack_pop(vm);
-                bool is_overloaded = false;
-                bool ok = try_overload_operator(vm, left, right, OPCODE_COMPARE, &is_overloaded);
-                if(!ok)
                 {
-                    goto err;
-                }
-                if(!is_overloaded)
-                {
-                    double comparison_res = object_compare(left, right, &ok);
-                    if(ok || opcode == OPCODE_COMPARE_EQ)
+                    ApeObject_t right = stack_pop(vm);
+                    ApeObject_t left = stack_pop(vm);
+                    bool is_overloaded = false;
+                    bool ok = try_overload_operator(vm, left, right, OPCODE_COMPARE, &is_overloaded);
+                    if(!ok)
                     {
-                        ApeObject_t res = object_make_number(comparison_res);
-                        stack_push(vm, res);
-                    }
-                    else
-                    {
-                        const char* right_type_string = object_get_type_name(object_get_type(right));
-                        const char* left_type_string = object_get_type_name(object_get_type(left));
-                        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                          "Cannot compare %s and %s", left_type_string, right_type_string);
                         goto err;
+                    }
+                    if(!is_overloaded)
+                    {
+                        double comparison_res = object_compare(left, right, &ok);
+                        if(ok || opcode == OPCODE_COMPARE_EQ)
+                        {
+                            ApeObject_t res = object_make_number(comparison_res);
+                            stack_push(vm, res);
+                        }
+                        else
+                        {
+                            const char* right_type_string = object_get_type_name(object_get_type(right));
+                            const char* left_type_string = object_get_type_name(object_get_type(left));
+                            errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                                              "Cannot compare %s and %s", left_type_string, right_type_string);
+                            goto err;
+                        }
                     }
                 }
                 break;
-            }
+
             case OPCODE_EQUAL:
             case OPCODE_NOT_EQUAL:
             case OPCODE_GREATER_THAN:
             case OPCODE_GREATER_THAN_EQUAL:
-            {
-                ApeObject_t value = stack_pop(vm);
-                double comparison_res = object_get_number(value);
-                bool res_val = false;
-                switch(opcode)
                 {
-                    case OPCODE_EQUAL:
-                        res_val = APE_DBLEQ(comparison_res, 0);
-                        break;
-                    case OPCODE_NOT_EQUAL:
-                        res_val = !APE_DBLEQ(comparison_res, 0);
-                        break;
-                    case OPCODE_GREATER_THAN:
-                        res_val = comparison_res > 0;
-                        break;
-                    case OPCODE_GREATER_THAN_EQUAL:
+                    ApeObject_t value = stack_pop(vm);
+                    double comparison_res = object_get_number(value);
+                    bool res_val = false;
+                    switch(opcode)
                     {
-                        res_val = comparison_res > 0 || APE_DBLEQ(comparison_res, 0);
-                        break;
+                        case OPCODE_EQUAL:
+                            res_val = APE_DBLEQ(comparison_res, 0);
+                            break;
+                        case OPCODE_NOT_EQUAL:
+                            res_val = !APE_DBLEQ(comparison_res, 0);
+                            break;
+                        case OPCODE_GREATER_THAN:
+                            res_val = comparison_res > 0;
+                            break;
+                        case OPCODE_GREATER_THAN_EQUAL:
+                        {
+                            res_val = comparison_res > 0 || APE_DBLEQ(comparison_res, 0);
+                            break;
+                        }
+                        default:
+                            APE_ASSERT(false);
+                            break;
                     }
-                    default:
-                        APE_ASSERT(false);
-                        break;
+                    ApeObject_t res = object_make_bool(res_val);
+                    stack_push(vm, res);
                 }
-                ApeObject_t res = object_make_bool(res_val);
-                stack_push(vm, res);
                 break;
-            }
+
             case OPCODE_MINUS:
-            {
-                ApeObject_t operand = stack_pop(vm);
-                ApeObjectType_t operand_type = object_get_type(operand);
-                if(operand_type == APE_OBJECT_NUMBER)
                 {
-                    double val = object_get_number(operand);
-                    ApeObject_t res = object_make_number(-val);
-                    stack_push(vm, res);
-                }
-                else
-                {
-                    bool overload_found = false;
-                    bool ok = try_overload_operator(vm, operand, object_make_null(), OPCODE_MINUS, &overload_found);
-                    if(!ok)
+                    ApeObject_t operand = stack_pop(vm);
+                    ApeObjectType_t operand_type = object_get_type(operand);
+                    if(operand_type == APE_OBJECT_NUMBER)
                     {
-                        goto err;
-                    }
-                    if(!overload_found)
-                    {
-                        const char* operand_type_string = object_get_type_name(operand_type);
-                        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                          "Invalid operand type for MINUS, got %s", operand_type_string);
-                        goto err;
-                    }
-                }
-                break;
-            }
-            case OPCODE_BANG:
-            {
-                ApeObject_t operand = stack_pop(vm);
-                ApeObjectType_t type = object_get_type(operand);
-                if(type == APE_OBJECT_BOOL)
-                {
-                    ApeObject_t res = object_make_bool(!object_get_bool(operand));
-                    stack_push(vm, res);
-                }
-                else if(type == APE_OBJECT_NULL)
-                {
-                    ApeObject_t res = object_make_bool(true);
-                    stack_push(vm, res);
-                }
-                else
-                {
-                    bool overload_found = false;
-                    bool ok = try_overload_operator(vm, operand, object_make_null(), OPCODE_BANG, &overload_found);
-                    if(!ok)
-                    {
-                        goto err;
-                    }
-                    if(!overload_found)
-                    {
-                        ApeObject_t res = object_make_bool(false);
+                        double val = object_get_number(operand);
+                        ApeObject_t res = object_make_number(-val);
                         stack_push(vm, res);
                     }
+                    else
+                    {
+                        bool overload_found = false;
+                        bool ok = try_overload_operator(vm, operand, object_make_null(), OPCODE_MINUS, &overload_found);
+                        if(!ok)
+                        {
+                            goto err;
+                        }
+                        if(!overload_found)
+                        {
+                            const char* operand_type_string = object_get_type_name(operand_type);
+                            errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                                              "Invalid operand type for MINUS, got %s", operand_type_string);
+                            goto err;
+                        }
+                    }
                 }
                 break;
-            }
+
+            case OPCODE_BANG:
+                {
+                    ApeObject_t operand = stack_pop(vm);
+                    ApeObjectType_t type = object_get_type(operand);
+                    if(type == APE_OBJECT_BOOL)
+                    {
+                        ApeObject_t res = object_make_bool(!object_get_bool(operand));
+                        stack_push(vm, res);
+                    }
+                    else if(type == APE_OBJECT_NULL)
+                    {
+                        ApeObject_t res = object_make_bool(true);
+                        stack_push(vm, res);
+                    }
+                    else
+                    {
+                        bool overload_found = false;
+                        bool ok = try_overload_operator(vm, operand, object_make_null(), OPCODE_BANG, &overload_found);
+                        if(!ok)
+                        {
+                            goto err;
+                        }
+                        if(!overload_found)
+                        {
+                            ApeObject_t res = object_make_bool(false);
+                            stack_push(vm, res);
+                        }
+                    }
+                }
+                break;
+
             case OPCODE_JUMP:
-            {
-                uint16_t pos = frame_read_uint16(vm->current_frame);
-                vm->current_frame->ip = pos;
+                {
+                    uint16_t pos = frame_read_uint16(vm->current_frame);
+                    vm->current_frame->ip = pos;
+                }
                 break;
-            }
+
             case OPCODE_JUMP_IF_FALSE:
-            {
-                uint16_t pos = frame_read_uint16(vm->current_frame);
-                ApeObject_t test = stack_pop(vm);
-                if(!object_get_bool(test))
                 {
-                    vm->current_frame->ip = pos;
+                    uint16_t pos = frame_read_uint16(vm->current_frame);
+                    ApeObject_t test = stack_pop(vm);
+                    if(!object_get_bool(test))
+                    {
+                        vm->current_frame->ip = pos;
+                    }
                 }
                 break;
-            }
+
             case OPCODE_JUMP_IF_TRUE:
-            {
-                uint16_t pos = frame_read_uint16(vm->current_frame);
-                ApeObject_t test = stack_pop(vm);
-                if(object_get_bool(test))
                 {
-                    vm->current_frame->ip = pos;
+                    uint16_t pos = frame_read_uint16(vm->current_frame);
+                    ApeObject_t test = stack_pop(vm);
+                    if(object_get_bool(test))
+                    {
+                        vm->current_frame->ip = pos;
+                    }
                 }
                 break;
-            }
+
             case OPCODE_NULL:
-            {
-                stack_push(vm, object_make_null());
+                {
+                    stack_push(vm, object_make_null());
+                }
                 break;
-            }
+
             case OPCODE_DEFINE_MODULE_GLOBAL:
             {
                 uint16_t ix = frame_read_uint16(vm->current_frame);
@@ -6980,145 +6988,177 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
                 break;
             }
             case OPCODE_SET_MODULE_GLOBAL:
-            {
-                uint16_t ix = frame_read_uint16(vm->current_frame);
-                ApeObject_t new_value = stack_pop(vm);
-                ApeObject_t old_value = vm_get_global(vm, ix);
-                if(!check_assign(vm, old_value, new_value))
                 {
-                    goto err;
+                    uint16_t ix = frame_read_uint16(vm->current_frame);
+                    ApeObject_t new_value = stack_pop(vm);
+                    ApeObject_t old_value = vm_get_global(vm, ix);
+                    if(!check_assign(vm, old_value, new_value))
+                    {
+                        goto err;
+                    }
+                    vm_set_global(vm, ix, new_value);
                 }
-                vm_set_global(vm, ix, new_value);
                 break;
-            }
+
             case OPCODE_GET_MODULE_GLOBAL:
-            {
-                uint16_t ix = frame_read_uint16(vm->current_frame);
-                ApeObject_t global = vm->globals[ix];
-                stack_push(vm, global);
+                {
+                    uint16_t ix = frame_read_uint16(vm->current_frame);
+                    ApeObject_t global = vm->globals[ix];
+                    stack_push(vm, global);
+                }
                 break;
-            }
+
             case OPCODE_ARRAY:
-            {
-                uint16_t count = frame_read_uint16(vm->current_frame);
-                ApeObject_t array_obj = object_make_array_with_capacity(vm->mem, count);
-                if(object_is_null(array_obj))
                 {
-                    goto err;
-                }
-                ApeObject_t* items = vm->stack + vm->sp - count;
-                for(int i = 0; i < count; i++)
-                {
-                    ApeObject_t item = items[i];
-                    ok = object_add_array_value(array_obj, item);
-                    if(!ok)
+                    uint16_t count = frame_read_uint16(vm->current_frame);
+                    ApeObject_t array_obj = object_make_array_with_capacity(vm->mem, count);
+                    if(object_is_null(array_obj))
                     {
                         goto err;
                     }
+                    ApeObject_t* items = vm->stack + vm->sp - count;
+                    for(int i = 0; i < count; i++)
+                    {
+                        ApeObject_t item = items[i];
+                        ok = object_add_array_value(array_obj, item);
+                        if(!ok)
+                        {
+                            goto err;
+                        }
+                    }
+                    set_sp(vm, vm->sp - count);
+                    stack_push(vm, array_obj);
                 }
-                set_sp(vm, vm->sp - count);
-                stack_push(vm, array_obj);
                 break;
-            }
+
             case OPCODE_MAP_START:
-            {
-                uint16_t count = frame_read_uint16(vm->current_frame);
-                ApeObject_t map_obj = object_make_map_with_capacity(vm->mem, count);
-                if(object_is_null(map_obj))
                 {
-                    goto err;
+                    uint16_t count = frame_read_uint16(vm->current_frame);
+                    ApeObject_t map_obj = object_make_map_with_capacity(vm->mem, count);
+                    if(object_is_null(map_obj))
+                    {
+                        goto err;
+                    }
+                    this_stack_push(vm, map_obj);
                 }
-                this_stack_push(vm, map_obj);
                 break;
-            }
+
             case OPCODE_MAP_END:
-            {
-                uint16_t kvp_count = frame_read_uint16(vm->current_frame);
-                uint16_t items_count = kvp_count * 2;
-                ApeObject_t map_obj = this_stack_pop(vm);
-                ApeObject_t* kv_pairs = vm->stack + vm->sp - items_count;
-                for(int i = 0; i < items_count; i += 2)
                 {
-                    ApeObject_t key = kv_pairs[i];
-                    if(!object_is_hashable(key))
+                    uint16_t kvp_count = frame_read_uint16(vm->current_frame);
+                    uint16_t items_count = kvp_count * 2;
+                    ApeObject_t map_obj = this_stack_pop(vm);
+                    ApeObject_t* kv_pairs = vm->stack + vm->sp - items_count;
+                    for(int i = 0; i < items_count; i += 2)
                     {
-                        ApeObjectType_t key_type = object_get_type(key);
-                        const char* key_type_name = object_get_type_name(key_type);
-                        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                          "Key of type %s is not hashable", key_type_name);
-                        goto err;
+                        ApeObject_t key = kv_pairs[i];
+                        if(!object_is_hashable(key))
+                        {
+                            ApeObjectType_t key_type = object_get_type(key);
+                            const char* key_type_name = object_get_type_name(key_type);
+                            errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                                              "Key of type %s is not hashable", key_type_name);
+                            goto err;
+                        }
+                        ApeObject_t val = kv_pairs[i + 1];
+                        ok = object_set_map_value(map_obj, key, val);
+                        if(!ok)
+                        {
+                            goto err;
+                        }
                     }
-                    ApeObject_t val = kv_pairs[i + 1];
-                    ok = object_set_map_value(map_obj, key, val);
-                    if(!ok)
-                    {
-                        goto err;
-                    }
+                    set_sp(vm, vm->sp - items_count);
+                    stack_push(vm, map_obj);
                 }
-                set_sp(vm, vm->sp - items_count);
-                stack_push(vm, map_obj);
                 break;
-            }
+
             case OPCODE_GET_THIS:
-            {
-                ApeObject_t obj = this_stack_get(vm, 0);
-                stack_push(vm, obj);
-                break;
-            }
-            case OPCODE_GET_INDEX:
-            {
-                ApeObject_t index = stack_pop(vm);
-                ApeObject_t left = stack_pop(vm);
-                ApeObjectType_t left_type = object_get_type(left);
-                ApeObjectType_t index_type = object_get_type(index);
-                const char* left_type_name = object_get_type_name(left_type);
-                const char* index_type_name = object_get_type_name(index_type);
-
-                if(left_type != APE_OBJECT_ARRAY && left_type != APE_OBJECT_MAP && left_type != APE_OBJECT_STRING)
                 {
-                    errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                      "Type %s is not indexable", left_type_name);
-                    goto err;
+                    ApeObject_t obj = this_stack_get(vm, 0);
+                    stack_push(vm, obj);
                 }
+                break;
 
-                ApeObject_t res = object_make_null();
-
-                if(left_type == APE_OBJECT_ARRAY)
+            case OPCODE_GET_INDEX:
                 {
-                    if(index_type != APE_OBJECT_NUMBER)
+                    const char* idxname;
+                    ApeObject_t index = stack_pop(vm);
+                    ApeObject_t left = stack_pop(vm);
+                    ApeObjectType_t left_type = object_get_type(left);
+                    ApeObjectType_t index_type = object_get_type(index);
+                    const char* left_type_name = object_get_type_name(left_type);
+                    const char* index_type_name = object_get_type_name(index_type);
+                    /*
+                    * todo: object method lookup could be implemented here
+                    */
+                    #if 0
+                    {
+                        int argc;
+                        ApeObject_t args[10];
+                        ApeNativeFNCallback_t afn;
+                        argc = 0;
+                        if(index_type == APE_OBJECT_STRING)
+                        {
+                            idxname = object_get_string(index);
+                            fprintf(stderr, "index is a string: name=%s\n", idxname);
+                            if((afn = builtin_get_object(left_type, idxname)) != NULL)
+                            {
+                                fprintf(stderr, "got a callback: afn=%p\n", afn);
+                                //typedef ApeObject_t (*ApeNativeFNCallback_t)(ApeVM_t*, void*, int, ApeObject_t*);
+                                args[argc] = left;
+                                argc++;
+                                stack_push(vm, afn(vm, NULL, argc, args));
+                                break;
+                            }
+                        }
+                    }
+                    #endif
+
+                    if(left_type != APE_OBJECT_ARRAY && left_type != APE_OBJECT_MAP && left_type != APE_OBJECT_STRING)
                     {
                         errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                          "Cannot index %s with %s", left_type_name, index_type_name);
+                            "Type %s is not indexable (in OPCODE_GET_INDEX)", left_type_name);
                         goto err;
                     }
-                    int ix = (int)object_get_number(index);
-                    if(ix < 0)
+                    ApeObject_t res = object_make_null();
+
+                    if(left_type == APE_OBJECT_ARRAY)
                     {
-                        ix = object_get_array_length(left) + ix;
+                        if(index_type != APE_OBJECT_NUMBER)
+                        {
+                            errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
+                                              "Cannot index %s with %s", left_type_name, index_type_name);
+                            goto err;
+                        }
+                        int ix = (int)object_get_number(index);
+                        if(ix < 0)
+                        {
+                            ix = object_get_array_length(left) + ix;
+                        }
+                        if(ix >= 0 && ix < object_get_array_length(left))
+                        {
+                            res = object_get_array_value(left, ix);
+                        }
                     }
-                    if(ix >= 0 && ix < object_get_array_length(left))
+                    else if(left_type == APE_OBJECT_MAP)
                     {
-                        res = object_get_array_value_at(left, ix);
+                        res = object_get_map_value(left, index);
                     }
-                }
-                else if(left_type == APE_OBJECT_MAP)
-                {
-                    res = object_get_map_value(left, index);
-                }
-                else if(left_type == APE_OBJECT_STRING)
-                {
-                    const char* str = object_get_string(left);
-                    int left_len = object_get_string_length(left);
-                    int ix = (int)object_get_number(index);
-                    if(ix >= 0 && ix < left_len)
+                    else if(left_type == APE_OBJECT_STRING)
                     {
-                        char res_str[2] = { str[ix], '\0' };
-                        res = object_make_string(vm->mem, res_str);
+                        const char* str = object_get_string(left);
+                        int left_len = object_get_string_length(left);
+                        int ix = (int)object_get_number(index);
+                        if(ix >= 0 && ix < left_len)
+                        {
+                            char res_str[2] = { str[ix], '\0' };
+                            res = object_make_string(vm->mem, res_str);
+                        }
                     }
+                    stack_push(vm, res);
                 }
-                stack_push(vm, res);
                 break;
-            }
+
             case OPCODE_GET_VALUE_AT:
             {
                 ApeObject_t index = stack_pop(vm);
@@ -7131,7 +7171,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
                 if(left_type != APE_OBJECT_ARRAY && left_type != APE_OBJECT_MAP && left_type != APE_OBJECT_STRING)
                 {
                     errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                      "Type %s is not indexable", left_type_name);
+                                      "Type %s is not indexable (in OPCODE_GET_VALUE_AT)", left_type_name);
                     goto err;
                 }
 
@@ -7146,7 +7186,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
 
                 if(left_type == APE_OBJECT_ARRAY)
                 {
-                    res = object_get_array_value_at(left, ix);
+                    res = object_get_array_value(left, ix);
                 }
                 else if(left_type == APE_OBJECT_MAP)
                 {
@@ -7308,7 +7348,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, array(ApeObject_t) *
                     if(left_type != APE_OBJECT_ARRAY && left_type != APE_OBJECT_MAP)
                     {
                         errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                          "Type %s is not indexable", left_type_name);
+                                          "Type %s is not indexable (in OPCODE_SET_INDEX)", left_type_name);
                         goto err;
                     }
 
@@ -8036,18 +8076,18 @@ ApeObject_t ape_execute_program(ApeContext_t* ape, const ApeProgram_t* program)
     if(ape != program->ape)
     {
         errors_add_error(&ape->errors, APE_ERROR_USER, src_pos_invalid, "ape program was compiled with a different ape instance");
-        return ape_object_make_null();
+        return object_make_null();
     }
     ok = vm_run(ape->vm, program->comp_res, compiler_get_constants(ape->compiler));
     if(!ok || errors_get_count(&ape->errors) > 0)
     {
-        return ape_object_make_null();
+        return object_make_null();
     }
     APE_ASSERT(ape->vm->sp == 0);
     res = vm_get_last_popped(ape->vm);
     if(object_get_type(res) == APE_OBJECT_NONE)
     {
-        return ape_object_make_null();
+        return object_make_null();
     }
     return res;
 }
@@ -8094,7 +8134,7 @@ ApeObject_t ape_execute(ApeContext_t* ape, const char* code)
 
 err:
     compilation_result_destroy(comp_res);
-    return ape_object_make_null();
+    return object_make_null();
 }
 
 ApeObject_t ape_execute_file(ApeContext_t* ape, const char* path)
@@ -8129,7 +8169,7 @@ ApeObject_t ape_execute_file(ApeContext_t* ape, const char* path)
 
 err:
     compilation_result_destroy(comp_res);
-    return ape_object_make_null();
+    return object_make_null();
 }
 
 ApeObject_t ape_call(ApeContext_t* ape, const char* function_name, int argc, ApeObject_t* args)
@@ -8139,12 +8179,12 @@ ApeObject_t ape_call(ApeContext_t* ape, const char* function_name, int argc, Ape
     ApeObject_t callee = ape_get_object(ape, function_name);
     if(object_get_type(callee) == APE_OBJECT_NULL)
     {
-        return ape_object_make_null();
+        return object_make_null();
     }
     ApeObject_t res = vm_call(ape->vm, compiler_get_constants(ape->compiler), callee, argc, (ApeObject_t*)args);
     if(errors_get_count(&ape->errors) > 0)
     {
-        return ape_object_make_null();
+        return object_make_null();
     }
     return res;
 }
@@ -8191,7 +8231,7 @@ ApeObject_t ape_get_object(ApeContext_t* ape, const char* name)
     if(!symbol)
     {
         errors_add_errorf(&ape->errors, APE_ERROR_USER, src_pos_invalid, "Symbol \"%s\" is not defined", name);
-        return ape_object_make_null();
+        return object_make_null();
     }
     ApeObject_t res = object_make_null();
     if(symbol->type == SYMBOL_MODULE_GLOBAL)
@@ -8205,77 +8245,25 @@ ApeObject_t ape_get_object(ApeContext_t* ape, const char* name)
         if(!ok)
         {
             errors_add_errorf(&ape->errors, APE_ERROR_USER, src_pos_invalid, "Failed to get global object at %d", symbol->index);
-            return ape_object_make_null();
+            return object_make_null();
         }
     }
     else
     {
         errors_add_errorf(&ape->errors, APE_ERROR_USER, src_pos_invalid, "Value associated with symbol \"%s\" could not be loaded", name);
-        return ape_object_make_null();
+        return object_make_null();
     }
     return res;
 }
 
-ApeObject_t ape_object_make_number(double val)
-{
-    return object_make_number(val);
-}
 
-ApeObject_t ape_object_make_bool(bool val)
-{
-    return object_make_bool(val);
-}
 
-ApeObject_t ape_object_make_string(ApeContext_t* ape, const char* str)
-{
-    return object_make_string(ape->mem, str);
-}
-
-ApeObject_t ape_object_make_stringf(ApeContext_t* ape, const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    int to_write = vsnprintf(NULL, 0, fmt, args);
-    va_end(args);
-    va_start(args, fmt);
-    ApeObject_t res = object_make_string_with_capacity(ape->mem, to_write);
-    if(object_is_null(res))
-    {
-        return ape_object_make_null();
-    }
-    char* res_buf = object_get_mutable_string(res);
-    int written = vsprintf(res_buf, fmt, args);
-    (void)written;
-    APE_ASSERT(written == to_write);
-    va_end(args);
-    object_set_string_length(res, to_write);
-    return res;
-}
-
-ApeObject_t ape_object_make_null()
-{
-    return object_make_null();
-}
-
-ApeObject_t ape_object_make_array(ApeContext_t* ape)
-{
-    return object_make_array(ape->mem);
-}
-
-ApeObject_t ape_object_make_map(ApeContext_t* ape)
-{
-    return object_make_map(ape->mem);
-}
 
 ApeObject_t ape_object_make_native_function(ApeContext_t* ape, ApeUserFNCallback_t fn, void* data)
 {
     return ape_object_make_native_function_with_name(ape, "", fn, data);
 }
 
-ApeObject_t ape_object_make_error(ApeContext_t* ape, const char* msg)
-{
-    return object_make_error(ape->mem, msg);
-}
 
 ApeObject_t ape_object_make_errorf(ApeContext_t* ape, const char* fmt, ...)
 {
@@ -8287,7 +8275,7 @@ ApeObject_t ape_object_make_errorf(ApeContext_t* ape, const char* fmt, ...)
     char* res = (char*)allocator_malloc(&ape->alloc, to_write + 1);
     if(!res)
     {
-        return ape_object_make_null();
+        return object_make_null();
     }
     int written = vsprintf(res, fmt, args);
     (void)written;
@@ -8298,8 +8286,7 @@ ApeObject_t ape_object_make_errorf(ApeContext_t* ape, const char* fmt, ...)
 
 ApeObject_t ape_object_make_external(ApeContext_t* ape, void* data)
 {
-    ApeObject_t res = object_make_external(ape->mem, data);
-    return res;
+    return object_make_external(ape->mem, data);
 }
 
 char* ape_object_serialize(ApeContext_t* ape, ApeObject_t obj, size_t* lendest)
@@ -8444,85 +8431,39 @@ const char* ape_object_get_type_name(ApeObjectType_t type)
     }
 }
 
-double ape_object_get_number(ApeObject_t obj)
-{
-    return object_get_number(obj);
-}
-
-bool ape_object_get_bool(ApeObject_t obj)
-{
-    return object_get_bool(obj);
-}
-
-const char* ape_object_get_string(ApeObject_t obj)
-{
-    return object_get_string(obj);
-}
-
-const char* ape_object_get_error_message(ApeObject_t obj)
-{
-    return object_get_error_message(obj);
-}
-
-const ApeTraceback_t* ape_object_get_error_traceback(ApeObject_t ape_obj)
-{
-    ApeObject_t obj = ape_obj;
-    return (const ApeTraceback_t*)object_get_error_traceback(obj);
-}
-
-bool ape_object_set_external_destroy_function(ApeObject_t object, ApeDataDestroyFNCallback_t destroy_fn)
-{
-    return object_set_external_destroy_function(object, (ApeExternalDataDestroyFNCallback_t)destroy_fn);
-}
-
-bool ape_object_set_external_copy_function(ApeObject_t object, ApeDataCopyFNCallback_t copy_fn)
-{
-    return object_set_external_copy_function(object, (ApeExternalDataCopyFNCallback_t)copy_fn);
-}
-
 //-----------------------------------------------------------------------------
 // Ape object array
 //-----------------------------------------------------------------------------
 
-int ape_object_get_array_length(ApeObject_t obj)
-{
-    return object_get_array_length(obj);
-}
-
-ApeObject_t ape_object_get_array_value(ApeObject_t obj, int ix)
-{
-    ApeObject_t res = object_get_array_value_at(obj, ix);
-    return res;
-}
 
 const char* ape_object_get_array_string(ApeObject_t obj, int ix)
 {
-    ApeObject_t object = ape_object_get_array_value(obj, ix);
+    ApeObject_t object = object_get_array_value(obj, ix);
     if(ape_object_get_type(object) != APE_OBJECT_STRING)
     {
         return NULL;
     }
-    return ape_object_get_string(object);
+    return object_get_string(object);
 }
 
 double ape_object_get_array_number(ApeObject_t obj, int ix)
 {
-    ApeObject_t object = ape_object_get_array_value(obj, ix);
+    ApeObject_t object = object_get_array_value(obj, ix);
     if(ape_object_get_type(object) != APE_OBJECT_NUMBER)
     {
         return 0;
     }
-    return ape_object_get_number(object);
+    return object_get_number(object);
 }
 
 bool ape_object_get_array_bool(ApeObject_t obj, int ix)
 {
-    ApeObject_t object = ape_object_get_array_value(obj, ix);
+    ApeObject_t object = object_get_array_value(obj, ix);
     if(ape_object_get_type(object) != APE_OBJECT_BOOL)
     {
         return 0;
     }
-    return ape_object_get_bool(object);
+    return object_get_bool(object);
 }
 
 bool ape_object_set_array_value(ApeObject_t ape_obj, int ix, ApeObject_t ape_value)
@@ -8555,12 +8496,6 @@ bool ape_object_set_array_bool(ApeObject_t obj, int ix, bool value)
     return ape_object_set_array_value(obj, ix, new_value);
 }
 
-bool ape_object_add_array_value(ApeObject_t ape_obj, ApeObject_t ape_value)
-{
-    ApeObject_t obj = ape_obj;
-    ApeObject_t value = ape_value;
-    return object_add_array_value(obj, value);
-}
 
 bool ape_object_add_array_string(ApeObject_t obj, const char* string)
 {
@@ -8570,54 +8505,25 @@ bool ape_object_add_array_string(ApeObject_t obj, const char* string)
         return false;
     }
     ApeObject_t new_value = object_make_string(mem, string);
-    return ape_object_add_array_value(obj, new_value);
+    return object_add_array_value(obj, new_value);
 }
 
 bool ape_object_add_array_number(ApeObject_t obj, double number)
 {
     ApeObject_t new_value = object_make_number(number);
-    return ape_object_add_array_value(obj, new_value);
+    return object_add_array_value(obj, new_value);
 }
 
 bool ape_object_add_array_bool(ApeObject_t obj, bool value)
 {
     ApeObject_t new_value = object_make_bool(value);
-    return ape_object_add_array_value(obj, new_value);
+    return object_add_array_value(obj, new_value);
 }
 
 //-----------------------------------------------------------------------------
 // Ape object map
 //-----------------------------------------------------------------------------
 
-int ape_object_get_map_length(ApeObject_t obj)
-{
-    return object_get_map_length(obj);
-}
-
-ApeObject_t ape_object_get_map_key_at(ApeObject_t ape_obj, int ix)
-{
-    ApeObject_t obj = ape_obj;
-    return object_get_map_key_at(obj, ix);
-}
-
-ApeObject_t ape_object_get_map_value_at(ApeObject_t ape_obj, int ix)
-{
-    ApeObject_t obj = ape_obj;
-    ApeObject_t res = object_get_map_value_at(obj, ix);
-    return res;
-}
-
-bool ape_object_set_map_value_at(ApeObject_t ape_obj, int ix, ApeObject_t ape_val)
-{
-    ApeObject_t obj = ape_obj;
-    ApeObject_t val = ape_val;
-    return object_set_map_value_at(obj, ix, val);
-}
-
-bool ape_object_set_map_value_with_value_key(ApeObject_t obj, ApeObject_t key, ApeObject_t val)
-{
-    return object_set_map_value(obj, key, val);
-}
 
 bool ape_object_set_map_value(ApeObject_t obj, const char* key, ApeObject_t value)
 {
@@ -8631,7 +8537,7 @@ bool ape_object_set_map_value(ApeObject_t obj, const char* key, ApeObject_t valu
     {
         return false;
     }
-    return ape_object_set_map_value_with_value_key(obj, key_object, value);
+    return object_set_map_value(obj, key_object, value);
 }
 
 bool ape_object_set_map_string(ApeObject_t obj, const char* key, const char* string)
@@ -8661,43 +8567,39 @@ bool ape_object_set_map_bool(ApeObject_t obj, const char* key, bool value)
     return ape_object_set_map_value(obj, key, bool_object);
 }
 
-ApeObject_t ape_object_get_map_value_with_value_key(ApeObject_t obj, ApeObject_t key)
-{
-    return object_get_map_value(obj, key);
-}
 
 ApeObject_t ape_object_get_map_value(ApeObject_t object, const char* key)
 {
     ApeGCMemory_t* mem = object_get_mem(object);
     if(!mem)
     {
-        return ape_object_make_null();
+        return object_make_null();
     }
     ApeObject_t key_object = object_make_string(mem, key);
     if(object_is_null(key_object))
     {
-        return ape_object_make_null();
+        return object_make_null();
     }
-    ApeObject_t res = ape_object_get_map_value_with_value_key(object, key_object);
+    ApeObject_t res = object_get_map_value(object, key_object);
     return res;
 }
 
 const char* ape_object_get_map_string(ApeObject_t object, const char* key)
 {
     ApeObject_t res = ape_object_get_map_value(object, key);
-    return ape_object_get_string(res);
+    return object_get_string(res);
 }
 
 double ape_object_get_map_number(ApeObject_t object, const char* key)
 {
     ApeObject_t res = ape_object_get_map_value(object, key);
-    return ape_object_get_number(res);
+    return object_get_number(res);
 }
 
 bool ape_object_get_map_bool(ApeObject_t object, const char* key)
 {
     ApeObject_t res = ape_object_get_map_value(object, key);
-    return ape_object_get_bool(res);
+    return object_get_bool(res);
 }
 
 bool ape_object_map_has_key(ApeObject_t ape_object, const char* key)
@@ -8950,7 +8852,7 @@ ApeObject_t ape_object_make_native_function_with_name(ApeContext_t* ape, const c
     = object_make_native_function(ape->mem, name, ape_native_fn_wrapper, &wrapper, sizeof(wrapper));
     if(object_is_null(wrapper_native_function))
     {
-        return ape_object_make_null();
+        return object_make_null();
     }
     return wrapper_native_function;
 }

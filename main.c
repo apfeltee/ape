@@ -48,7 +48,7 @@ struct Options_t
 };
 
 
-bool populate_flags(int argc, int begin, char** argv, const char* expectvalue, FlagContext_t* fx)
+static bool populate_flags(int argc, int begin, char** argv, const char* expectvalue, FlagContext_t* fx)
 {
     int i;
     int nextch;
@@ -108,7 +108,7 @@ bool populate_flags(int argc, int begin, char** argv, const char* expectvalue, F
     return true;
 }
 
-void print_errors(ApeContext_t *ape)
+static void print_errors(ApeContext_t *ape)
 {
     int i;
     int count;
@@ -124,15 +124,15 @@ void print_errors(ApeContext_t *ape)
     }
 }
 
-ApeObject_t exit_repl(ApeContext_t *ape, void *data, int argc, ApeObject_t *args)
+static ApeObject_t exit_repl(ApeContext_t *ape, void *data, int argc, ApeObject_t *args)
 {
     bool *exit_repl = (bool*)data;
     *exit_repl = true;
-    return ape_object_make_null();
+    return object_make_null();
 }
 
 #if !defined(NO_READLINE)
-bool notjustspace(const char* line)
+static bool notjustspace(const char* line)
 {
     int c;
     size_t i;
@@ -146,7 +146,7 @@ bool notjustspace(const char* line)
     return false;
 }
 
-void do_repl(ApeContext_t* ape)
+static void do_repl(ApeContext_t* ape)
 {
     size_t len;
     char *line;
@@ -178,7 +178,7 @@ void do_repl(ApeContext_t* ape)
 }
 #endif
 
-void show_usage()
+static void show_usage()
 {
     printf("known options:\n");
     printf(
@@ -189,7 +189,7 @@ void show_usage()
     );
 }
 
-bool parse_options(Options_t* opts, Flag_t* flags, int fcnt)
+static bool parse_options(Options_t* opts, Flag_t* flags, int fcnt)
 {
     int i;
     opts->codeline = NULL;
@@ -256,7 +256,7 @@ int main(int argc, char *argv[])
     ape_set_native_function(ape, "exit", exit_repl, &exit);
     if((fx.poscnt > 0) || (opts.codeline != NULL))
     {
-        args_array = ape_object_make_array(ape);
+        args_array = object_make_array(ape->mem);
         for(i=0; i<fx.poscnt; i++)
         {
             ape_object_add_array_string(args_array, fx.positional[i]);

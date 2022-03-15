@@ -551,7 +551,7 @@ void object_to_string(ApeObject_t obj, ApeStringBuffer_t* buf, bool quote_str)
                 strbuf_append(buf, "[");
                 for(int i = 0; i < object_get_array_length(obj); i++)
                 {
-                    ApeObject_t iobj = object_get_array_value_at(obj, i);
+                    ApeObject_t iobj = object_get_array_value(obj, i);
                     object_to_string(iobj, buf, true);
                     if(i < (object_get_array_length(obj) - 1))
                     {
