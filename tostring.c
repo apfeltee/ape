@@ -18,7 +18,7 @@ static const char* g_type_names[] = {
 };
 
 
-char* statements_to_string(ApeAllocator_t* alloc, ptrarray(ApeStatement_t) * statements)
+char* statements_to_string(ApeAllocator_t* alloc, ApePtrArray_t * statements)
 {
     ApeStringBuffer_t* buf = strbuf_make(alloc);
     if(!buf)

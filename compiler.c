@@ -26,7 +26,7 @@ const ApeSymbol_t* define_symbol(ApeCompiler_t* comp, ApePosition_t pos, const c
 
 
 ApeCompiler_t*
-compiler_make(ApeAllocator_t* alloc, const ApeConfig_t* config, ApeGCMemory_t* mem, ApeErrorList_t* errors, ptrarray(ApeCompiledFile_t) * files, ApeGlobalStore_t* global_store)
+compiler_make(ApeAllocator_t* alloc, const ApeConfig_t* config, ApeGCMemory_t* mem, ApeErrorList_t* errors, ApePtrArray_t * files, ApeGlobalStore_t* global_store)
 {
     ApeCompiler_t* comp = allocator_malloc(alloc, sizeof(ApeCompiler_t));
     if(!comp)
@@ -178,7 +178,7 @@ void compiler_set_symbol_table(ApeCompiler_t* comp, ApeSymbol_table_t* table)
     file_scope->symbol_table = table;
 }
 
-array(ApeObject_t) * compiler_get_constants(const ApeCompiler_t* comp)
+ApeArray_t* compiler_get_constants(const ApeCompiler_t* comp)
 {
     return comp->constants;
 }
@@ -189,7 +189,7 @@ bool compiler_init(ApeCompiler_t* comp,
                           const ApeConfig_t* config,
                           ApeGCMemory_t* mem,
                           ApeErrorList_t* errors,
-                          ptrarray(ApeCompiledFile_t) * files,
+                          ApePtrArray_t * files,
                           ApeGlobalStore_t* global_store)
 {
     memset(comp, 0, sizeof(ApeCompiler_t));
@@ -292,7 +292,7 @@ bool compiler_init_shallow_copy(ApeCompiler_t* copy, ApeCompiler_t* src)
     copy_st = NULL;
     compiler_set_symbol_table(copy, src_st_copy);
 
-    dict(ApeModule_t)* modules_copy = dict_copy_with_items(src->modules);
+    ApeDictionary_t* modules_copy = dict_copy_with_items(src->modules);
     if(!modules_copy)
     {
         goto err;
@@ -300,7 +300,7 @@ bool compiler_init_shallow_copy(ApeCompiler_t* copy, ApeCompiler_t* src)
     dict_destroy_with_items(copy->modules);
     copy->modules = modules_copy;
 
-    array(ApeObject_t)* constants_copy = array_copy(src->constants);
+    ApeArray_t* constants_copy = array_copy(src->constants);
     if(!constants_copy)
     {
         goto err;
@@ -329,8 +329,8 @@ bool compiler_init_shallow_copy(ApeCompiler_t* copy, ApeCompiler_t* src)
     ApeFileScope_t* src_file_scope = ptrarray_top(src->file_scopes);
     ApeFileScope_t* copy_file_scope = ptrarray_top(copy->file_scopes);
 
-    ptrarray(char)* src_loaded_module_names = src_file_scope->loaded_module_names;
-    ptrarray(char)* copy_loaded_module_names = copy_file_scope->loaded_module_names;
+    ApePtrArray_t* src_loaded_module_names = src_file_scope->loaded_module_names;
+    ApePtrArray_t* copy_loaded_module_names = copy_file_scope->loaded_module_names;
 
     for(int i = 0; i < ptrarray_count(src_loaded_module_names); i++)
     {
@@ -450,7 +450,7 @@ bool compile_code(ApeCompiler_t* comp, const char* code)
     ApeFileScope_t* file_scope = ptrarray_top(comp->file_scopes);
     APE_ASSERT(file_scope);
 
-    ptrarray(ApeStatement_t)* statements = parser_parse_all(file_scope->parser, code, file_scope->file);
+    ApePtrArray_t* statements = parser_parse_all(file_scope->parser, code, file_scope->file);
     if(!statements)
     {
         // errors are added by parser
@@ -474,7 +474,7 @@ bool compile_code(ApeCompiler_t* comp, const char* code)
     return ok;
 }
 
-bool compile_statements(ApeCompiler_t* comp, ptrarray(ApeStatement_t) * statements)
+bool compile_statements(ApeCompiler_t* comp, ApePtrArray_t * statements)
 {
     bool ok = true;
     for(int i = 0; i < ptrarray_count(statements); i++)
@@ -711,7 +711,7 @@ bool compile_statement(ApeCompiler_t* comp, const ApeStatement_t* stmt)
         {
             const ApeIfStmt_t* if_stmt = &stmt->if_statement;
 
-            array(int)* jump_to_end_ips = array_make(comp->alloc, int);
+            ApeArray_t* jump_to_end_ips = array_make(comp->alloc, int);
             if(!jump_to_end_ips)
             {
                 goto statement_if_error;
@@ -1704,7 +1704,7 @@ bool compile_expression(ApeCompiler_t* comp, ApeExpression_t* expr)
                 }
             }
 
-            ptrarray(ApeSymbol_t)* free_symbols = symbol_table->free_symbols;
+            ApePtrArray_t* free_symbols = symbol_table->free_symbols;
             symbol_table->free_symbols = NULL;// because it gets destroyed with compiler_pop_compilation_scope()
 
             int num_locals = symbol_table->max_num_definitions;
@@ -2027,7 +2027,7 @@ int add_constant(ApeCompiler_t* comp, ApeObject_t obj)
 
 void change_uint16_operand(ApeCompiler_t* comp, int ip, uint16_t operand)
 {
-    array(uint8_t)* bytecode = get_bytecode(comp);
+    ApeArray_t* bytecode = get_bytecode(comp);
     if((ip + 1) >= array_count(bytecode))
     {
         APE_ASSERT(false);
@@ -2170,13 +2170,13 @@ int get_ip(ApeCompiler_t* comp)
     return array_count(compilation_scope->bytecode);
 }
 
-array(ApePosition_t) * get_src_positions(ApeCompiler_t* comp)
+ApeArray_t * get_src_positions(ApeCompiler_t* comp)
 {
     ApeCompilationScope_t* compilation_scope = get_compilation_scope(comp);
     return compilation_scope->src_positions;
 }
 
-array(uint8_t) * get_bytecode(ApeCompiler_t* comp)
+ApeArray_t * get_bytecode(ApeCompiler_t* comp)
 {
     ApeCompilationScope_t* compilation_scope = get_compilation_scope(comp);
     return compilation_scope->bytecode;
