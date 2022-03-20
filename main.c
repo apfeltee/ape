@@ -240,12 +240,13 @@ static bool parse_options(Options_t* opts, Flag_t* flags, int fcnt)
 int main(int argc, char *argv[])
 {
     int i;
+    bool replexit;
     const char* filename;
     FlagContext_t fx;
     Options_t opts;
     ApeContext_t *ape;
     ApeObject_t args_array;
-
+    replexit = false;
     populate_flags(argc, 1, argv, "epI", &fx);
     ape = ape_make();
     if(!parse_options(&opts, fx.flags, fx.fcnt))
@@ -253,7 +254,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "failed to process command line flags.\n");
         return 1;
     }
-    ape_set_native_function(ape, "exit", exit_repl, &exit);
+    ape_set_native_function(ape, "exit", exit_repl, &replexit);
     if((fx.poscnt > 0) || (opts.codeline != NULL))
     {
         args_array = object_make_array(ape->mem);

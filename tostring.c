@@ -20,15 +20,19 @@ static const char* g_type_names[] = {
 
 char* statements_to_string(ApeAllocator_t* alloc, ApePtrArray_t * statements)
 {
-    ApeStringBuffer_t* buf = strbuf_make(alloc);
+    int i;
+    int count;
+    const ApeStatement_t* stmt;
+    ApeStringBuffer_t* buf;
+    buf = strbuf_make(alloc);
     if(!buf)
     {
         return NULL;
     }
-    int count = ptrarray_count(statements);
-    for(int i = 0; i < count; i++)
+    count = ptrarray_count(statements);
+    for(i = 0; i < count; i++)
     {
-        const ApeStatement_t* stmt = ptrarray_get(statements, i);
+        stmt = (ApeStatement_t*)ptrarray_get(statements, i);
         statement_to_string(stmt, buf);
         if(i < (count - 1))
         {
@@ -40,11 +44,15 @@ char* statements_to_string(ApeAllocator_t* alloc, ApePtrArray_t * statements)
 
 void statement_to_string(const ApeStatement_t* stmt, ApeStringBuffer_t* buf)
 {
+    int i;
+    const ApeDefineStmt_t* def_stmt;
+    ApeIfCase_t* if_case;
+    ApeIfCase_t* elif_case;
     switch(stmt->type)
     {
         case STATEMENT_DEFINE:
         {
-            const ApeDefineStmt_t* def_stmt = &stmt->define;
+            def_stmt = &stmt->define;
             if(stmt->define.assignable)
             {
                 strbuf_append(buf, "var ");
@@ -65,14 +73,14 @@ void statement_to_string(const ApeStatement_t* stmt, ApeStringBuffer_t* buf)
         }
         case STATEMENT_IF:
         {
-            ApeIfCase_t* if_case = ptrarray_get(stmt->if_statement.cases, 0);
+            if_case = (ApeIfCase_t*)ptrarray_get(stmt->if_statement.cases, 0);
             strbuf_append(buf, "if (");
             expression_to_string(if_case->test, buf);
             strbuf_append(buf, ") ");
             code_block_to_string(if_case->consequence, buf);
-            for(int i = 1; i < ptrarray_count(stmt->if_statement.cases); i++)
+            for(i = 1; i < ptrarray_count(stmt->if_statement.cases); i++)
             {
-                ApeIfCase_t* elif_case = ptrarray_get(stmt->if_statement.cases, i);
+                elif_case = (ApeIfCase_t*)ptrarray_get(stmt->if_statement.cases, i);
                 strbuf_append(buf, " elif (");
                 expression_to_string(elif_case->test, buf);
                 strbuf_append(buf, ") ");
@@ -185,6 +193,9 @@ void statement_to_string(const ApeStatement_t* stmt, ApeStringBuffer_t* buf)
 
 void expression_to_string(ApeExpression_t* expr, ApeStringBuffer_t* buf)
 {
+    int i;
+    ApeExpression_t* arr_expr;
+    ApeMapLiteral_t* map;
     switch(expr->type)
     {
         case EXPRESSION_IDENT:
@@ -215,9 +226,9 @@ void expression_to_string(ApeExpression_t* expr, ApeStringBuffer_t* buf)
         case EXPRESSION_ARRAY_LITERAL:
         {
             strbuf_append(buf, "[");
-            for(int i = 0; i < ptrarray_count(expr->array); i++)
+            for(i = 0; i < ptrarray_count(expr->array); i++)
             {
-                ApeExpression_t* arr_expr = ptrarray_get(expr->array, i);
+                arr_expr = (ApeExpression_t*)ptrarray_get(expr->array, i);
                 expression_to_string(arr_expr, buf);
                 if(i < (ptrarray_count(expr->array) - 1))
                 {
@@ -229,18 +240,15 @@ void expression_to_string(ApeExpression_t* expr, ApeStringBuffer_t* buf)
         }
         case EXPRESSION_MAP_LITERAL:
         {
-            ApeMapLiteral_t* map = &expr->map;
-
+            map = &expr->map;
             strbuf_append(buf, "{");
-            for(int i = 0; i < ptrarray_count(map->keys); i++)
+            for(i = 0; i < ptrarray_count(map->keys); i++)
             {
-                ApeExpression_t* key_expr = ptrarray_get(map->keys, i);
-                ApeExpression_t* val_expr = ptrarray_get(map->values, i);
-
+                ApeExpression_t* key_expr = (ApeExpression_t*)ptrarray_get(map->keys, i);
+                ApeExpression_t* val_expr = (ApeExpression_t*)ptrarray_get(map->values, i);
                 expression_to_string(key_expr, buf);
                 strbuf_append(buf, " : ");
                 expression_to_string(val_expr, buf);
-
                 if(i < (ptrarray_count(map->keys) - 1))
                 {
                     strbuf_append(buf, ", ");
@@ -275,9 +283,9 @@ void expression_to_string(ApeExpression_t* expr, ApeStringBuffer_t* buf)
             strbuf_append(buf, "fn");
 
             strbuf_append(buf, "(");
-            for(int i = 0; i < ptrarray_count(fn->params); i++)
+            for(i = 0; i < ptrarray_count(fn->params); i++)
             {
-                ApeIdent_t* param = ptrarray_get(fn->params, i);
+                ApeIdent_t* param = (ApeIdent_t*)ptrarray_get(fn->params, i);
                 strbuf_append(buf, param->value);
                 if(i < (ptrarray_count(fn->params) - 1))
                 {
@@ -299,7 +307,7 @@ void expression_to_string(ApeExpression_t* expr, ApeStringBuffer_t* buf)
             strbuf_append(buf, "(");
             for(int i = 0; i < ptrarray_count(call_expr->args); i++)
             {
-                ApeExpression_t* arg = ptrarray_get(call_expr->args, i);
+                ApeExpression_t* arg = (ApeExpression_t*)ptrarray_get(call_expr->args, i);
                 expression_to_string(arg, buf);
                 if(i < (ptrarray_count(call_expr->args) - 1))
                 {
@@ -354,10 +362,12 @@ void expression_to_string(ApeExpression_t* expr, ApeStringBuffer_t* buf)
 
 void code_block_to_string(const ApeCodeblock_t* stmt, ApeStringBuffer_t* buf)
 {
+    int i;
+    ApeStatement_t* istmt;
     strbuf_append(buf, "{ ");
-    for(int i = 0; i < ptrarray_count(stmt->statements); i++)
+    for(i = 0; i < ptrarray_count(stmt->statements); i++)
     {
-        ApeStatement_t* istmt = ptrarray_get(stmt->statements, i);
+        istmt = (ApeStatement_t*)ptrarray_get(stmt->statements, i);
         statement_to_string(istmt, buf);
         strbuf_append(buf, "\n");
     }
@@ -495,7 +505,9 @@ void code_to_string(uint8_t* code, ApePosition_t* source_positions, size_t code_
 
 void object_to_string(ApeObject_t obj, ApeStringBuffer_t* buf, bool quote_str)
 {
-    ApeObjectType_t type = object_get_type(obj);
+    int i;
+    ApeObjectType_t type;
+    type = object_get_type(obj);
     switch(type)
     {
         case APE_OBJECT_FREED:
@@ -549,7 +561,7 @@ void object_to_string(ApeObject_t obj, ApeStringBuffer_t* buf, bool quote_str)
         case APE_OBJECT_ARRAY:
             {
                 strbuf_append(buf, "[");
-                for(int i = 0; i < object_get_array_length(obj); i++)
+                for(i = 0; i < object_get_array_length(obj); i++)
                 {
                     ApeObject_t iobj = object_get_array_value(obj, i);
                     object_to_string(iobj, buf, true);
@@ -564,7 +576,7 @@ void object_to_string(ApeObject_t obj, ApeStringBuffer_t* buf, bool quote_str)
         case APE_OBJECT_MAP:
             {
                 strbuf_append(buf, "{");
-                for(int i = 0; i < object_get_map_length(obj); i++)
+                for(i = 0; i < object_get_map_length(obj); i++)
                 {
                     ApeObject_t key = object_get_map_key_at(obj, i);
                     ApeObject_t val = object_get_map_value_at(obj, i);
@@ -612,10 +624,12 @@ void object_to_string(ApeObject_t obj, ApeStringBuffer_t* buf, bool quote_str)
 
 bool traceback_to_string(const ApeTraceback_t* traceback, ApeStringBuffer_t* buf)
 {
-    int depth = array_count(traceback->items);
-    for(int i = 0; i < depth; i++)
+    int i;
+    int depth;
+    depth = array_count(traceback->items);
+    for(i = 0; i < depth; i++)
     {
-        ApeTracebackItem_t* item = array_get(traceback->items, i);
+        ApeTracebackItem_t* item = (ApeTracebackItem_t*)array_get(traceback->items, i);
         const char* filename = traceback_item_get_filepath(item);
         if(item->pos.line >= 0 && item->pos.column >= 0)
         {

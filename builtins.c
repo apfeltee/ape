@@ -1,4 +1,5 @@
 
+#include <stdarg.h>
 #include <sys/stat.h>
 #if __has_include(<dirent.h>)
     #include <dirent.h>
@@ -8,14 +9,27 @@
 
 #include "priv.h"
 
-#define CHECK_ARGS(vm, generate_error, argc, args, ...) \
-    check_args((vm), (generate_error), (argc), (args),  \
-               sizeof((ApeObjectType_t[]){ __VA_ARGS__ }) / sizeof(ApeObjectType_t), (ApeObjectType_t[]){ __VA_ARGS__ })
-
-#define APE_CHECK_ARGS(ape, generate_error, argc, args, ...) \
-    ape_check_args((ape), (generate_error), (argc), (args), sizeof((int[]){ __VA_ARGS__ }) / sizeof(int), (int[]){ __VA_ARGS__ })
-
-
+#if 0
+    #define CHECK_ARGS(vm, generate_error, argc, args, ...) \
+        check_args( \
+            (vm), \
+            (generate_error), \
+            (argc), \
+            (args),  \
+            (sizeof((ApeObjectType_t[]){ __VA_ARGS__ }) / sizeof(ApeObjectType_t)), \
+            ((ApeObjectType_t*)((ApeObjectType_t[]){ __VA_ARGS__ })) \
+        )
+#else
+    #define CHECK_ARGS(vm, generate_error, argc, args, ...) \
+        check_args( \
+            (vm), \
+            (generate_error), \
+            (argc), \
+            (args),  \
+            (sizeof((int[]){ __VA_ARGS__ }) / sizeof(int)), \
+            typargs_to_array(__VA_ARGS__, -1) \
+        )
+#endif
 
 //ApeObject_t object_make_native_function(ApeGCMemory_t* mem, const char* name, ApeNativeFNCallback_t fn, void* data, int data_len);
 #define make_fn_data(vm, name, fnc, dataptr, datasize) \
@@ -30,8 +44,6 @@
 #define make_fn_entry(vm, map, name, fnc) \
     make_fn_entry_data(vm, map, name, fnc, NULL, 0)
 
-
-
 typedef struct NatFunc_t NatFunc_t;
 struct NatFunc_t
 {
@@ -39,9 +51,66 @@ struct NatFunc_t
     ApeNativeFNCallback_t fn;
 };
 
+static ApeObjectType_t* typargs_to_array(int first, ...)
+{
+    int idx;
+    int thing;
+    va_list va;
+    static ApeObjectType_t rt[20];
+    idx = 0;
+    rt[idx] = (ApeObjectType_t)first;
+    va_start(va, first);
+    idx++;
+    while(true)
+    {
+        thing = va_arg(va, int);
+        if(thing == -1)
+        {
+            break;
+        }
+        rt[idx] = (ApeObjectType_t)thing;
+        idx++;
+    }
+    va_end(va);
+    return rt;
+}
 
-static bool check_args(ApeVM_t* vm, bool generate_error, int argc, ApeObject_t* args, int expected_argc, ApeObjectType_t* expected_types);
+static bool check_args(ApeVM_t* vm, bool generate_error, int argc, ApeObject_t* args, int expected_argc, const ApeObjectType_t* expected_types)
+{
+    if(argc != expected_argc)
+    {
+        if(generate_error)
+        {
+            errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid,
+                              "Invalid number or arguments, got %d instead of %d", argc, expected_argc);
+        }
+        return false;
+    }
 
+    for(int i = 0; i < argc; i++)
+    {
+        ApeObject_t arg = args[i];
+        ApeObjectType_t type = object_get_type(arg);
+        ApeObjectType_t expected_type = expected_types[i];
+        if(!(type & expected_type))
+        {
+            if(generate_error)
+            {
+                const char* type_str = object_get_type_name(type);
+                char* expected_type_str = object_get_type_union_name(vm->alloc, expected_type);
+                if(!expected_type_str)
+                {
+                    return false;
+                }
+                errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid,
+                                  "Invalid argument %d type, got %s, expected %s", i, type_str, expected_type_str);
+                allocator_free(vm->alloc, expected_type_str);
+            }
+            return false;
+        }
+    }
+    return true;
+}
 
 // INTERNAL
 static ApeObject_t cfn_len(ApeVM_t* vm, void* data, int argc, ApeObject_t* args)
@@ -1220,43 +1289,6 @@ static ApeObject_t cfn_dir_readdir(ApeVM_t* vm, void* data, int argc, ApeObject_
 }
 
 #endif
-
-static bool check_args(ApeVM_t* vm, bool generate_error, int argc, ApeObject_t* args, int expected_argc, ApeObjectType_t* expected_types)
-{
-    if(argc != expected_argc)
-    {
-        if(generate_error)
-        {
-            errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid,
-                              "Invalid number or arguments, got %d instead of %d", argc, expected_argc);
-        }
-        return false;
-    }
-
-    for(int i = 0; i < argc; i++)
-    {
-        ApeObject_t arg = args[i];
-        ApeObjectType_t type = object_get_type(arg);
-        ApeObjectType_t expected_type = expected_types[i];
-        if(!(type & expected_type))
-        {
-            if(generate_error)
-            {
-                const char* type_str = object_get_type_name(type);
-                char* expected_type_str = object_get_type_union_name(vm->alloc, expected_type);
-                if(!expected_type_str)
-                {
-                    return false;
-                }
-                errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid,
-                                  "Invalid argument %d type, got %s, expected %s", i, type_str, expected_type_str);
-                allocator_free(vm->alloc, expected_type_str);
-            }
-            return false;
-        }
-    }
-    return true;
-}
 
 static NatFunc_t g_core_globalfuncs[] =
 {

@@ -32,6 +32,11 @@ THE SOFTWARE.
     #endif /* _CRT_SECURE_NO_WARNINGS */
 #endif /* _MSC_VER */
 
+#ifdef __cplusplus
+    #define APE_EXTERNC_BEGIN extern "C" {
+    #define APE_EXTERNC_END }
+#endif    
+
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -113,8 +118,9 @@ THE SOFTWARE.
     #define APE_LOG(...) ((void)0)
 #endif
 
-
-#define COLLECTIONS_AMALGAMATED
+#ifdef __cplusplus
+    APE_EXTERNC_BEGIN
+#endif
 
 enum ApeErrorType_t
 {
@@ -443,7 +449,7 @@ typedef struct ApeObjectString_t ApeObjectString_t;
 typedef struct ApeObjectData_t ApeObjectData_t;
 typedef struct ApeSymbol_t ApeSymbol_t;
 typedef struct ApeBlockScope_t ApeBlockScope_t;
-typedef struct ApeSymbol_table_t ApeSymbol_table_t;
+typedef struct ApeSymbolTable_t ApeSymbolTable_t;
 typedef struct ApeOpcodeDefinition_t ApeOpcodeDefinition_t;
 typedef struct ApeCompilationResult_t ApeCompilationResult_t;
 typedef struct ApeCompilationScope_t ApeCompilationScope_t;
@@ -897,10 +903,10 @@ struct ApeBlockScope_t
     int num_definitions;
 };
 
-struct ApeSymbol_table_t
+struct ApeSymbolTable_t
 {
     ApeAllocator_t* alloc;
-    ApeSymbol_table_t* outer;
+    ApeSymbolTable_t* outer;
     ApeGlobalStore_t* global_store;
     ApePtrArray_t * block_scopes;
     ApePtrArray_t * free_symbols;
@@ -1080,7 +1086,7 @@ struct ApeFileScope_t
 {
     ApeAllocator_t* alloc;
     ApeParser_t* parser;
-    ApeSymbol_table_t* symbol_table;
+    ApeSymbolTable_t* symbol_table;
     ApeCompiledFile_t* file;
     ApePtrArray_t * loaded_module_names;
 };
@@ -1137,8 +1143,8 @@ ApeCompiler_t *compiler_make(ApeAllocator_t *alloc, const ApeConfig_t *config, A
 void compiler_destroy(ApeCompiler_t *comp);
 ApeCompilationResult_t *compiler_compile(ApeCompiler_t *comp, const char *code);
 ApeCompilationResult_t *compiler_compile_file(ApeCompiler_t *comp, const char *path);
-ApeSymbol_table_t *compiler_get_symbol_table(ApeCompiler_t *comp);
-void compiler_set_symbol_table(ApeCompiler_t *comp, ApeSymbol_table_t *table);
+ApeSymbolTable_t *compiler_get_symbol_table(ApeCompiler_t *comp);
+void compiler_set_symbol_table(ApeCompiler_t *comp, ApeSymbolTable_t *table);
 ApeArray_t *compiler_get_constants(const ApeCompiler_t *comp);
 bool compiler_init(ApeCompiler_t *comp, ApeAllocator_t *alloc, const ApeConfig_t *config, ApeGCMemory_t *mem, ApeErrorList_t *errors, ApePtrArray_t *files, ApeGlobalStore_t *global_store);
 void compiler_deinit(ApeCompiler_t *comp);
@@ -1380,30 +1386,30 @@ int global_store_get_object_count(ApeGlobalStore_t *store);
 ApeSymbol_t *symbol_make(ApeAllocator_t *alloc, const char *name, ApeSymbolType_t type, int index, bool assignable);
 void symbol_destroy(ApeSymbol_t *symbol);
 ApeSymbol_t *symbol_copy(ApeSymbol_t *symbol);
-ApeSymbol_table_t *symbol_table_make(ApeAllocator_t *alloc, ApeSymbol_table_t *outer, ApeGlobalStore_t *global_store, int module_global_offset);
-void symbol_table_destroy(ApeSymbol_table_t *table);
-ApeSymbol_table_t *symbol_table_copy(ApeSymbol_table_t *table);
-bool symbol_table_add_module_symbol(ApeSymbol_table_t *st, ApeSymbol_t *symbol);
-const ApeSymbol_t *symbol_table_define(ApeSymbol_table_t *table, const char *name, bool assignable);
-const ApeSymbol_t *symbol_table_define_free(ApeSymbol_table_t *st, const ApeSymbol_t *original);
-const ApeSymbol_t *symbol_table_define_function_name(ApeSymbol_table_t *st, const char *name, bool assignable);
-const ApeSymbol_t *symbol_table_define_this(ApeSymbol_table_t *st);
-const ApeSymbol_t *symbol_table_resolve(ApeSymbol_table_t *table, const char *name);
-bool symbol_table_symbol_is_defined(ApeSymbol_table_t *table, const char *name);
-bool symbol_table_push_block_scope(ApeSymbol_table_t *table);
-void symbol_table_pop_block_scope(ApeSymbol_table_t *table);
-ApeBlockScope_t *symbol_table_get_block_scope(ApeSymbol_table_t *table);
-bool symbol_table_is_module_global_scope(ApeSymbol_table_t *table);
-bool symbol_table_is_top_block_scope(ApeSymbol_table_t *table);
-bool symbol_table_is_top_global_scope(ApeSymbol_table_t *table);
-int symbol_table_get_module_global_symbol_count(const ApeSymbol_table_t *table);
-const ApeSymbol_t *symbol_table_get_module_global_symbol_at(const ApeSymbol_table_t *table, int ix);
+ApeSymbolTable_t *symbol_table_make(ApeAllocator_t *alloc, ApeSymbolTable_t *outer, ApeGlobalStore_t *global_store, int module_global_offset);
+void symbol_table_destroy(ApeSymbolTable_t *table);
+ApeSymbolTable_t *symbol_table_copy(ApeSymbolTable_t *table);
+bool symbol_table_add_module_symbol(ApeSymbolTable_t *st, ApeSymbol_t *symbol);
+const ApeSymbol_t *symbol_table_define(ApeSymbolTable_t *table, const char *name, bool assignable);
+const ApeSymbol_t *symbol_table_define_free(ApeSymbolTable_t *st, const ApeSymbol_t *original);
+const ApeSymbol_t *symbol_table_define_function_name(ApeSymbolTable_t *st, const char *name, bool assignable);
+const ApeSymbol_t *symbol_table_define_this(ApeSymbolTable_t *st);
+const ApeSymbol_t *symbol_table_resolve(ApeSymbolTable_t *table, const char *name);
+bool symbol_table_symbol_is_defined(ApeSymbolTable_t *table, const char *name);
+bool symbol_table_push_block_scope(ApeSymbolTable_t *table);
+void symbol_table_pop_block_scope(ApeSymbolTable_t *table);
+ApeBlockScope_t *symbol_table_get_block_scope(ApeSymbolTable_t *table);
+bool symbol_table_is_module_global_scope(ApeSymbolTable_t *table);
+bool symbol_table_is_top_block_scope(ApeSymbolTable_t *table);
+bool symbol_table_is_top_global_scope(ApeSymbolTable_t *table);
+int symbol_table_get_module_global_symbol_count(const ApeSymbolTable_t *table);
+const ApeSymbol_t *symbol_table_get_module_global_symbol_at(const ApeSymbolTable_t *table, int ix);
 ApeBlockScope_t *block_scope_make(ApeAllocator_t *alloc, int offset);
 void block_scope_destroy(ApeBlockScope_t *scope);
 ApeBlockScope_t *block_scope_copy(ApeBlockScope_t *scope);
-bool set_symbol(ApeSymbol_table_t *table, ApeSymbol_t *symbol);
-int next_symbol_index(ApeSymbol_table_t *table);
-int count_num_definitions(ApeSymbol_table_t *table);
+bool set_symbol(ApeSymbolTable_t *table, ApeSymbol_t *symbol);
+int next_symbol_index(ApeSymbolTable_t *table);
+int count_num_definitions(ApeSymbolTable_t *table);
 ApeOpcodeDefinition_t *opcode_lookup(opcode_t op);
 const char *opcode_get_name(opcode_t op);
 int code_make(opcode_t op, int operands_count, uint64_t *operands, ApeArray_t *res);
@@ -1717,4 +1723,7 @@ const char *ape_error_type_to_string(ApeErrorType_t type);
 const char *error_type_to_string(ApeErrorType_t type);
 const char *token_type_to_string(ApeTokenType_t type);
 
+#ifdef __cplusplus
+    APE_EXTERNC_END
+#endif
 

@@ -1,18 +1,6 @@
 
 #include "priv.h"
 
-bool read_char(ApeLexer_t* lex);
-char peek_char(ApeLexer_t* lex);
-bool is_letter(char ch);
-bool is_digit(char ch);
-bool is_one_of(char ch, const char* allowed, int allowed_len);
-const char* read_identifier(ApeLexer_t* lex, int* out_len);
-const char* read_number(ApeLexer_t* lex, int* out_len);
-const char* read_string(ApeLexer_t* lex, char delimiter, bool is_template, bool* out_template_found, int* out_len);
-ApeTokenType_t lookup_identifier(const char* ident, int len);
-void skip_whitespace(ApeLexer_t* lex);
-bool add_line(ApeLexer_t* lex, int offset);
-
 bool lexer_init(ApeLexer_t* lex, ApeAllocator_t* alloc, ApeErrorList_t* errs, const char* input, ApeCompiledFile_t* file)
 {
     lex->alloc = alloc;

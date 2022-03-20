@@ -677,14 +677,16 @@ ApeValDictionary_t* valdict_make_(ApeAllocator_t* alloc, size_t key_size, size_t
 
 ApeValDictionary_t* valdict_make_with_capacity(ApeAllocator_t* alloc, unsigned int min_capacity, size_t key_size, size_t val_size)
 {
-    unsigned int capacity = upper_power_of_two(min_capacity * 2);
-
-    ApeValDictionary_t* dict = (ApeValDictionary_t*)allocator_malloc(alloc, sizeof(ApeValDictionary_t));
+    bool ok;
+    ApeValDictionary_t* dict;
+    unsigned int capacity;
+    dict = (ApeValDictionary_t*)allocator_malloc(alloc, sizeof(ApeValDictionary_t));
+    capacity = upper_power_of_two(min_capacity * 2);
     if(!dict)
     {
         return NULL;
     }
-    bool ok = valdict_init(dict, alloc, key_size, val_size, capacity);
+    ok = valdict_init(dict, alloc, key_size, val_size, capacity);
     if(!ok)
     {
         allocator_free(alloc, dict);
@@ -865,14 +867,11 @@ bool valdict_init(ApeValDictionary_t* dict, ApeAllocator_t* alloc, size_t key_si
     dict->values = NULL;
     dict->cell_ixs = NULL;
     dict->hashes = NULL;
-
     dict->count = 0;
     dict->cell_capacity = initial_capacity;
     dict->item_capacity = (unsigned int)(initial_capacity * 0.7f);
-
     dict->_keys_equals = NULL;
     dict->_hash_key = NULL;
-
     dict->cells = (unsigned int*)allocator_malloc(dict->alloc, dict->cell_capacity * sizeof(*dict->cells));
     dict->keys = allocator_malloc(dict->alloc, dict->item_capacity * key_size);
     dict->values = allocator_malloc(dict->alloc, dict->item_capacity * val_size);
@@ -920,22 +919,38 @@ void valdict_deinit(ApeValDictionary_t* dict)
 unsigned int valdict_get_cell_ix(const ApeValDictionary_t* dict, const void* key, unsigned long hash, bool* out_found)
 {
     *out_found = false;
-    unsigned int cell_ix = hash & (dict->cell_capacity - 1);
-    for(unsigned int i = 0; i < dict->cell_capacity; i++)
+    bool are_equal;
+    unsigned int ofs;
+    unsigned int i;
+    unsigned int ix;
+    unsigned int cell;
+    unsigned int cell_ix;
+    unsigned long hash_to_check;
+    void* key_to_check;
+    //fprintf(stderr, "valdict_get_cell_ix: dict=%p, dict->cell_capacity=%d\n", dict, dict->cell_capacity);
+    ofs = 0;
+    if(dict->cell_capacity > 1)
     {
-        unsigned int ix = (cell_ix + i) & (dict->cell_capacity - 1);
-        unsigned int cell = dict->cells[ix];
+        ofs = (dict->cell_capacity - 1);
+    }
+    cell_ix = hash & ofs;
+    for(i = 0; i < dict->cell_capacity; i++)
+    {
+        cell = VALDICT_INVALID_IX;
+        ix = (cell_ix + i) & ofs;
+        //fprintf(stderr, "(cell_ix=%d + i=%d) & ofs=%d == %d\n", cell_ix, i, ofs, ix);
+        cell = dict->cells[ix];
         if(cell == VALDICT_INVALID_IX)
         {
             return ix;
         }
-        unsigned long hash_to_check = dict->hashes[cell];
+        hash_to_check = dict->hashes[cell];
         if(hash != hash_to_check)
         {
             continue;
         }
-        void* key_to_check = valdict_get_key_at(dict, cell);
-        bool are_equal = valdict_keys_are_equal(dict, key, key_to_check);
+        key_to_check = valdict_get_key_at(dict, cell);
+        are_equal = valdict_keys_are_equal(dict, key, key_to_check);
         if(are_equal)
         {
             *out_found = true;
@@ -3540,16 +3555,16 @@ ApeSymbol_t* symbol_copy(ApeSymbol_t* symbol)
     return symbol_make(symbol->alloc, symbol->name, symbol->type, symbol->index, symbol->assignable);
 }
 
-ApeSymbol_table_t* symbol_table_make(ApeAllocator_t* alloc, ApeSymbol_table_t* outer, ApeGlobalStore_t* global_store, int module_global_offset)
+ApeSymbolTable_t* symbol_table_make(ApeAllocator_t* alloc, ApeSymbolTable_t* outer, ApeGlobalStore_t* global_store, int module_global_offset)
 {
     bool ok;
-    ApeSymbol_table_t* table;
-    table = (ApeSymbol_table_t*)allocator_malloc(alloc, sizeof(ApeSymbol_table_t));
+    ApeSymbolTable_t* table;
+    table = (ApeSymbolTable_t*)allocator_malloc(alloc, sizeof(ApeSymbolTable_t));
     if(!table)
     {
         return NULL;
     }
-    memset(table, 0, sizeof(ApeSymbol_table_t));
+    memset(table, 0, sizeof(ApeSymbolTable_t));
     table->alloc = alloc;
     table->max_num_definitions = 0;
     table->outer = outer;
@@ -3581,7 +3596,7 @@ err:
     return NULL;
 }
 
-void symbol_table_destroy(ApeSymbol_table_t* table)
+void symbol_table_destroy(ApeSymbolTable_t* table)
 {
     ApeAllocator_t* alloc;
     if(!table)
@@ -3597,19 +3612,19 @@ void symbol_table_destroy(ApeSymbol_table_t* table)
     ptrarray_destroy_with_items(table->module_global_symbols, symbol_destroy);
     ptrarray_destroy_with_items(table->free_symbols, symbol_destroy);
     alloc = table->alloc;
-    memset(table, 0, sizeof(ApeSymbol_table_t));
+    memset(table, 0, sizeof(ApeSymbolTable_t));
     allocator_free(alloc, table);
 }
 
-ApeSymbol_table_t* symbol_table_copy(ApeSymbol_table_t* table)
+ApeSymbolTable_t* symbol_table_copy(ApeSymbolTable_t* table)
 {
-    ApeSymbol_table_t* copy;
-    copy = (ApeSymbol_table_t*)allocator_malloc(table->alloc, sizeof(ApeSymbol_table_t));
+    ApeSymbolTable_t* copy;
+    copy = (ApeSymbolTable_t*)allocator_malloc(table->alloc, sizeof(ApeSymbolTable_t));
     if(!copy)
     {
         return NULL;
     }
-    memset(copy, 0, sizeof(ApeSymbol_table_t));
+    memset(copy, 0, sizeof(ApeSymbolTable_t));
     copy->alloc = table->alloc;
     copy->outer = table->outer;
     copy->global_store = table->global_store;
@@ -3636,7 +3651,7 @@ err:
     return NULL;
 }
 
-bool symbol_table_add_module_symbol(ApeSymbol_table_t* st, ApeSymbol_t* symbol)
+bool symbol_table_add_module_symbol(ApeSymbolTable_t* st, ApeSymbol_t* symbol)
 {
     bool ok;
     if(symbol->type != SYMBOL_MODULE_GLOBAL)
@@ -3662,7 +3677,7 @@ bool symbol_table_add_module_symbol(ApeSymbol_table_t* st, ApeSymbol_t* symbol)
     return true;
 }
 
-const ApeSymbol_t* symbol_table_define(ApeSymbol_table_t* table, const char* name, bool assignable)
+const ApeSymbol_t* symbol_table_define(ApeSymbolTable_t* table, const char* name, bool assignable)
 {
     
     bool ok;
@@ -3736,7 +3751,7 @@ const ApeSymbol_t* symbol_table_define(ApeSymbol_table_t* table, const char* nam
     return symbol;
 }
 
-const ApeSymbol_t* symbol_table_define_free(ApeSymbol_table_t* st, const ApeSymbol_t* original)
+const ApeSymbol_t* symbol_table_define_free(ApeSymbolTable_t* st, const ApeSymbol_t* original)
 {
     ApeSymbol_t* copy = symbol_make(st->alloc, original->name, original->type, original->index, original->assignable);
     if(!copy)
@@ -3767,7 +3782,7 @@ const ApeSymbol_t* symbol_table_define_free(ApeSymbol_table_t* st, const ApeSymb
     return symbol;
 }
 
-const ApeSymbol_t* symbol_table_define_function_name(ApeSymbol_table_t* st, const char* name, bool assignable)
+const ApeSymbol_t* symbol_table_define_function_name(ApeSymbolTable_t* st, const char* name, bool assignable)
 {
     bool ok;
     ApeSymbol_t* symbol;
@@ -3790,7 +3805,7 @@ const ApeSymbol_t* symbol_table_define_function_name(ApeSymbol_table_t* st, cons
     return symbol;
 }
 
-const ApeSymbol_t* symbol_table_define_this(ApeSymbol_table_t* st)
+const ApeSymbol_t* symbol_table_define_this(ApeSymbolTable_t* st)
 {
     bool ok;
     ApeSymbol_t* symbol;
@@ -3808,7 +3823,7 @@ const ApeSymbol_t* symbol_table_define_this(ApeSymbol_table_t* st)
     return symbol;
 }
 
-const ApeSymbol_t* symbol_table_resolve(ApeSymbol_table_t* table, const char* name)
+const ApeSymbol_t* symbol_table_resolve(ApeSymbolTable_t* table, const char* name)
 {
     int i;
     const ApeSymbol_t* symbol;
@@ -3849,7 +3864,7 @@ const ApeSymbol_t* symbol_table_resolve(ApeSymbol_table_t* table, const char* na
     return symbol;
 }
 
-bool symbol_table_symbol_is_defined(ApeSymbol_table_t* table, const char* name)
+bool symbol_table_symbol_is_defined(ApeSymbolTable_t* table, const char* name)
 {
     ApeBlockScope_t* top_scope;
     const ApeSymbol_t* symbol;
@@ -3868,7 +3883,7 @@ bool symbol_table_symbol_is_defined(ApeSymbol_table_t* table, const char* name)
     return false;
 }
 
-bool symbol_table_push_block_scope(ApeSymbol_table_t* table)
+bool symbol_table_push_block_scope(ApeSymbolTable_t* table)
 {
     bool ok;
     int block_scope_offset;
@@ -3899,7 +3914,7 @@ bool symbol_table_push_block_scope(ApeSymbol_table_t* table)
     return true;
 }
 
-void symbol_table_pop_block_scope(ApeSymbol_table_t* table)
+void symbol_table_pop_block_scope(ApeSymbolTable_t* table)
 {
     ApeBlockScope_t* top_scope;
     top_scope = (ApeBlockScope_t*)ptrarray_top(table->block_scopes);
@@ -3907,34 +3922,34 @@ void symbol_table_pop_block_scope(ApeSymbol_table_t* table)
     block_scope_destroy(top_scope);
 }
 
-ApeBlockScope_t* symbol_table_get_block_scope(ApeSymbol_table_t* table)
+ApeBlockScope_t* symbol_table_get_block_scope(ApeSymbolTable_t* table)
 {
     ApeBlockScope_t* top_scope;
     top_scope = (ApeBlockScope_t*)ptrarray_top(table->block_scopes);
     return top_scope;
 }
 
-bool symbol_table_is_module_global_scope(ApeSymbol_table_t* table)
+bool symbol_table_is_module_global_scope(ApeSymbolTable_t* table)
 {
     return table->outer == NULL;
 }
 
-bool symbol_table_is_top_block_scope(ApeSymbol_table_t* table)
+bool symbol_table_is_top_block_scope(ApeSymbolTable_t* table)
 {
     return ptrarray_count(table->block_scopes) == 1;
 }
 
-bool symbol_table_is_top_global_scope(ApeSymbol_table_t* table)
+bool symbol_table_is_top_global_scope(ApeSymbolTable_t* table)
 {
     return symbol_table_is_module_global_scope(table) && symbol_table_is_top_block_scope(table);
 }
 
-int symbol_table_get_module_global_symbol_count(const ApeSymbol_table_t* table)
+int symbol_table_get_module_global_symbol_count(const ApeSymbolTable_t* table)
 {
     return ptrarray_count(table->module_global_symbols);
 }
 
-const ApeSymbol_t* symbol_table_get_module_global_symbol_at(const ApeSymbol_table_t* table, int ix)
+const ApeSymbol_t* symbol_table_get_module_global_symbol_at(const ApeSymbolTable_t* table, int ix)
 {
     return (ApeSymbol_t*)ptrarray_get(table->module_global_symbols, ix);
 }
@@ -3988,7 +4003,7 @@ ApeBlockScope_t* block_scope_copy(ApeBlockScope_t* scope)
     return copy;
 }
 
-bool set_symbol(ApeSymbol_table_t* table, ApeSymbol_t* symbol)
+bool set_symbol(ApeSymbolTable_t* table, ApeSymbol_t* symbol)
 {
     ApeBlockScope_t* top_scope;
     ApeSymbol_t* existing;
@@ -4001,7 +4016,7 @@ bool set_symbol(ApeSymbol_table_t* table, ApeSymbol_t* symbol)
     return dict_set(top_scope->store, symbol->name, symbol);
 }
 
-int next_symbol_index(ApeSymbol_table_t* table)
+int next_symbol_index(ApeSymbolTable_t* table)
 {
     int ix;
     ApeBlockScope_t* top_scope;
@@ -4010,7 +4025,7 @@ int next_symbol_index(ApeSymbol_table_t* table)
     return ix;
 }
 
-int count_num_definitions(ApeSymbol_table_t* table)
+int count_num_definitions(ApeSymbolTable_t* table)
 {
     int i;
     int count;
@@ -4563,9 +4578,10 @@ bool module_add_symbol(ApeModule_t* module, const ApeSymbol_t* symbol)
 
 ApeObject_t object_make_from_data(ApeObjectType_t type, ApeObjectData_t* data)
 {
+    uint64_t type_tag;
     ApeObject_t object;
     object.handle = OBJECT_PATTERN;
-    uint64_t type_tag = get_type_tag(type) & 0x7;
+    type_tag = get_type_tag(type) & 0x7;
     object.handle |= (type_tag << 48);
     object.handle |= (uintptr_t)data;// assumes no pointer exceeds 48 bits
     return object;
@@ -8284,7 +8300,7 @@ bool ape_set_global_constant(ApeContext_t* ape, const char* name, ApeObject_t ob
 
 ApeObject_t ape_get_object(ApeContext_t* ape, const char* name)
 {
-    ApeSymbol_table_t* st = compiler_get_symbol_table(ape->compiler);
+    ApeSymbolTable_t* st = compiler_get_symbol_table(ape->compiler);
     const ApeSymbol_t* symbol = symbol_table_resolve(st, name);
     if(!symbol)
     {
