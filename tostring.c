@@ -664,32 +664,7 @@ const char* ape_error_type_to_string(ApeErrorType_t type)
     }
 }
 
-const char* error_type_to_string(ApeErrorType_t type)
-{
-    switch(type)
-    {
-        case APE_ERROR_PARSING:
-            return "PARSING";
-        case APE_ERROR_COMPILATION:
-            return "COMPILATION";
-        case APE_ERROR_RUNTIME:
-            return "RUNTIME";
-        case APE_ERROR_TIMEOUT:
-            return "TIMEOUT";
-        case APE_ERROR_ALLOCATION:
-            return "ALLOCATION";
-        case APE_ERROR_USER:
-            return "USER";
-        default:
-            return "INVALID";
-    }
-}
-
 const char* token_type_to_string(ApeTokenType_t type)
 {
     return g_type_names[type];
 }
-
-
-
-

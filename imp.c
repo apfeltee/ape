@@ -451,49 +451,6 @@ int dict_count(const ApeDictionary_t* dict)
     return dict->count;
 }
 
-bool dict_remove(ApeDictionary_t* dict, const char* key)
-{
-    unsigned long hash = hash_string(key);
-    bool found = false;
-    unsigned int cell = dict_get_cell_ix(dict, key, hash, &found);
-    if(!found)
-    {
-        return false;
-    }
-
-    unsigned int item_ix = dict->cells[cell];
-    allocator_free(dict->alloc, dict->keys[item_ix]);
-    unsigned int last_item_ix = dict->count - 1;
-    if(item_ix < last_item_ix)
-    {
-        dict->keys[item_ix] = dict->keys[last_item_ix];
-        dict->values[item_ix] = dict->values[last_item_ix];
-        dict->cell_ixs[item_ix] = dict->cell_ixs[last_item_ix];
-        dict->hashes[item_ix] = dict->hashes[last_item_ix];
-        dict->cells[dict->cell_ixs[item_ix]] = item_ix;
-    }
-    dict->count--;
-
-    unsigned int i = cell;
-    unsigned int j = i;
-    for(unsigned int x = 0; x < (dict->cell_capacity - 1); x++)
-    {
-        j = (j + 1) & (dict->cell_capacity - 1);
-        if(dict->cells[j] == DICT_INVALID_IX)
-        {
-            break;
-        }
-        unsigned int k = dict->hashes[dict->cells[j]] & (dict->cell_capacity - 1);
-        if((j > i && (k <= i || k > j)) || (j < i && (k <= i && k > j)))
-        {
-            dict->cell_ixs[dict->cells[j]] = i;
-            dict->cells[i] = dict->cells[j];
-            i = j;
-        }
-    }
-    dict->cells[i] = DICT_INVALID_IX;
-    return true;
-}
 
 // Private definitions
 bool dict_init(ApeDictionary_t* dict, ApeAllocator_t* alloc, unsigned int initial_capacity, ApeDictItemCopyFNCallback_t copy_fn, ApeDictItemDestroyFNCallback_t destroy_fn)
@@ -3407,7 +3364,7 @@ ApeGlobalStore_t* global_store_make(ApeAllocator_t* alloc, ApeGCMemory_t* mem)
         for(int i = 0; i < builtins_count(); i++)
         {
             const char* name = builtins_get_name(i);
-            ApeObject_t builtin = object_make_native_function(mem, name, builtins_get_fn(i), NULL, 0);
+            ApeObject_t builtin = object_make_native_function_memory(mem, name, builtins_get_fn(i), NULL, 0);
             if(object_is_null(builtin))
             {
                 goto err;
@@ -4673,7 +4630,7 @@ ApeObject_t object_make_stringf(ApeGCMemory_t* mem, const char* fmt, ...)
     return res;
 }
 
-ApeObject_t object_make_native_function(ApeGCMemory_t* mem, const char* name, ApeNativeFNCallback_t fn, void* data, int data_len)
+ApeObject_t object_make_native_function_memory(ApeGCMemory_t* mem, const char* name, ApeNativeFNCallback_t fn, void* data, int data_len)
 {
     if(data_len > NATIVE_FN_MAX_DATA_LEN)
     {
@@ -5122,7 +5079,7 @@ ApeObject_t object_copy(ApeGCMemory_t* mem, ApeObject_t obj)
             {
                 ApeObject_t key = (ApeObject_t)object_get_map_key_at(obj, i);
                 ApeObject_t val = (ApeObject_t)object_get_map_value_at(obj, i);
-                bool ok = object_set_map_value(copy, key, val);
+                bool ok = object_set_map_value_object(copy, key, val);
                 if(!ok)
                 {
                     return object_make_null();
@@ -5646,26 +5603,26 @@ ApeObject_t object_get_kv_pair_at(ApeGCMemory_t* mem, ApeObject_t object, int ix
     {
         return object_make_null();
     }
-    object_set_map_value(res, key_obj, key);
+    object_set_map_value_object(res, key_obj, key);
 
     ApeObject_t val_obj = object_make_string(mem, "value");
     if(object_is_null(val_obj))
     {
         return object_make_null();
     }
-    object_set_map_value(res, val_obj, val);
+    object_set_map_value_object(res, val_obj, val);
 
     return res;
 }
 
-bool object_set_map_value(ApeObject_t object, ApeObject_t key, ApeObject_t val)
+bool object_set_map_value_object(ApeObject_t object, ApeObject_t key, ApeObject_t val)
 {
     APE_ASSERT(object_get_type(object) == APE_OBJECT_MAP);
     ApeObjectData_t* data = object_get_allocated_data(object);
     return valdict_set(data->map, &key, &val);
 }
 
-ApeObject_t object_get_map_value(ApeObject_t object, ApeObject_t key)
+ApeObject_t object_get_map_value_object(ApeObject_t object, ApeObject_t key)
 {
     APE_ASSERT(object_get_type(object) == APE_OBJECT_MAP);
     ApeObjectData_t* data = object_get_allocated_data(object);
@@ -5677,7 +5634,7 @@ ApeObject_t object_get_map_value(ApeObject_t object, ApeObject_t key)
     return *res;
 }
 
-bool object_map_has_key(ApeObject_t object, ApeObject_t key)
+bool object_map_has_key_object(ApeObject_t object, ApeObject_t key)
 {
     APE_ASSERT(object_get_type(object) == APE_OBJECT_MAP);
     ApeObjectData_t* data = object_get_allocated_data(object);
@@ -5851,7 +5808,7 @@ ApeObject_t object_deep_copy_internal(ApeGCMemory_t* mem, ApeObject_t obj, ApeVa
                     return object_make_null();
                 }
 
-                bool ok = object_set_map_value(copy, key_copy, val_copy);
+                bool ok = object_set_map_value_object(copy, key_copy, val_copy);
                 if(!ok)
                 {
                     return object_make_null();
@@ -7145,7 +7102,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                             goto err;
                         }
                         ApeObject_t val = kv_pairs[i + 1];
-                        ok = object_set_map_value(map_obj, key, val);
+                        ok = object_set_map_value_object(map_obj, key, val);
                         if(!ok)
                         {
                             goto err;
@@ -7165,7 +7122,9 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
 
             case OPCODE_GET_INDEX:
                 {
+                    #if 0
                     const char* idxname;
+                    #endif
                     ApeObject_t index = stack_pop(vm);
                     ApeObject_t left = stack_pop(vm);
                     ApeObjectType_t left_type = object_get_type(left);
@@ -7226,7 +7185,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     }
                     else if(left_type == APE_OBJECT_MAP)
                     {
-                        res = object_get_map_value(left, index);
+                        res = object_get_map_value_object(left, index);
                     }
                     else if(left_type == APE_OBJECT_STRING)
                     {
@@ -7455,12 +7414,12 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     }
                     else if(left_type == APE_OBJECT_MAP)
                     {
-                        ApeObject_t old_value = object_get_map_value(left, index);
+                        ApeObject_t old_value = object_get_map_value_object(left, index);
                         if(!check_assign(vm, old_value, new_value))
                         {
                             goto err;
                         }
-                        ok = object_set_map_value(left, index, new_value);
+                        ok = object_set_map_value_object(left, index, new_value);
                         if(!ok)
                         {
                             goto err;
@@ -7899,8 +7858,11 @@ ApeObject_t call_native_function(ApeVM_t* vm, ApeObject_t callee, ApePosition_t 
 
 bool check_assign(ApeVM_t* vm, ApeObject_t old_value, ApeObject_t new_value)
 {
-    ApeObjectType_t old_value_type = object_get_type(old_value);
-    ApeObjectType_t new_value_type = object_get_type(new_value);
+    ApeObjectType_t old_value_type;
+    ApeObjectType_t new_value_type;
+    (void)vm;
+    old_value_type = object_get_type(old_value);
+    new_value_type = object_get_type(new_value);
     if(old_value_type == APE_OBJECT_NULL || new_value_type == APE_OBJECT_NULL)
     {
         return true;
@@ -7918,43 +7880,43 @@ bool check_assign(ApeVM_t* vm, ApeObject_t old_value, ApeObject_t new_value)
 
 bool try_overload_operator(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, opcode_t op, bool* out_overload_found)
 {
+    int num_operands;
+    ApeObject_t key;
+    ApeObject_t callee;
+    ApeObjectType_t left_type;
+    ApeObjectType_t right_type;
     *out_overload_found = false;
-    ApeObjectType_t left_type = object_get_type(left);
-    ApeObjectType_t right_type = object_get_type(right);
+    left_type = object_get_type(left);
+    right_type = object_get_type(right);
     if(left_type != APE_OBJECT_MAP && right_type != APE_OBJECT_MAP)
     {
         *out_overload_found = false;
         return true;
     }
-
-    int num_operands = 2;
+    num_operands = 2;
     if(op == OPCODE_MINUS || op == OPCODE_BANG)
     {
         num_operands = 1;
     }
-
-    ApeObject_t key = vm->operator_oveload_keys[op];
-    ApeObject_t callee = object_make_null();
+    key = vm->operator_oveload_keys[op];
+    callee = object_make_null();
     if(left_type == APE_OBJECT_MAP)
     {
-        callee = object_get_map_value(left, key);
+        callee = object_get_map_value_object(left, key);
     }
     if(!object_is_callable(callee))
     {
         if(right_type == APE_OBJECT_MAP)
         {
-            callee = object_get_map_value(right, key);
+            callee = object_get_map_value_object(right, key);
         }
-
         if(!object_is_callable(callee))
         {
             *out_overload_found = false;
             return true;
         }
     }
-
     *out_overload_found = true;
-
     stack_push(vm, callee);
     stack_push(vm, left);
     if(num_operands == 2)
@@ -7963,21 +7925,6 @@ bool try_overload_operator(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, opc
     }
     return call_object(vm, callee, num_operands);
 }
-
-
-void ape_deinit(ApeContext_t* ape);
-ApeObject_t ape_native_fn_wrapper(ApeVM_t* vm, void* data, int argc, ApeObject_t* args);
-
-ApeObject_t ape_object_make_native_function_with_name(ApeContext_t* ape, const char* name, ApeUserFNCallback_t fn, void* data);
-
-void reset_state(ApeContext_t* ape);
-void set_default_config(ApeContext_t* ape);
-char* read_file_default(void* ctx, const char* filename);
-size_t write_file_default(void* context, const char* path, const char* string, size_t string_size);
-size_t stdout_write_default(void* context, const void* data, size_t size);
-
-void* ape_malloc(void* ctx, size_t size);
-void ape_free(void* ctx, void* ptr);
 
 //-----------------------------------------------------------------------------
 // Ape
@@ -8103,77 +8050,8 @@ void ape_set_file_read_function(ApeContext_t* ape, ApeReadFileFNCallback_t file_
     ape->config.fileio.read_file.context = context;
 }
 
-ApeProgram_t* ape_compile(ApeContext_t* ape, const char* code)
-{
-    ApeProgram_t* program;
-    ApeCompilationResult_t* comp_res;
-    ape_clear_errors(ape);
-    
-    comp_res = compiler_compile(ape->compiler, code);
-    if(!comp_res || errors_get_count(&ape->errors) > 0)
-    {
-        goto err;
-    }
-    program = (ApeProgram_t*)allocator_malloc(&ape->alloc, sizeof(ApeProgram_t));
-    if(!program)
-    {
-        goto err;
-    }
-    program->ape = ape;
-    program->comp_res = comp_res;
-    return program;
 
-err:
-    compilation_result_destroy(comp_res);
-    return NULL;
-}
 
-ApeProgram_t* ape_compile_file(ApeContext_t* ape, const char* path)
-{
-    ApeCompilationResult_t* comp_res;
-    ApeProgram_t* program;
-    ape_clear_errors(ape);
-    comp_res = compiler_compile_file(ape->compiler, path);
-    if(!comp_res || errors_get_count(&ape->errors) > 0)
-    {
-        goto err;
-    }
-    program = (ApeProgram_t*)allocator_malloc(&ape->alloc, sizeof(ApeProgram_t));
-    if(!program)
-    {
-        goto err;
-    }
-    program->ape = ape;
-    program->comp_res = comp_res;
-    return program;
-err:
-    compilation_result_destroy(comp_res);
-    return NULL;
-}
-
-ApeObject_t ape_execute_program(ApeContext_t* ape, const ApeProgram_t* program)
-{
-    bool ok;
-    ApeObject_t res;
-    reset_state(ape);
-    if(ape != program->ape)
-    {
-        errors_add_error(&ape->errors, APE_ERROR_USER, src_pos_invalid, "ape program was compiled with a different ape instance");
-        return object_make_null();
-    }
-    ok = vm_run(ape->vm, program->comp_res, compiler_get_constants(ape->compiler));
-    if(!ok || errors_get_count(&ape->errors) > 0)
-    {
-        return object_make_null();
-    }
-    APE_ASSERT(ape->vm->sp == 0);
-    res = vm_get_last_popped(ape->vm);
-    if(object_get_type(res) == APE_OBJECT_NONE)
-    {
-        return object_make_null();
-    }
-    return res;
-}
 
 void ape_program_destroy(ApeProgram_t* program)
 {
@@ -8246,22 +8124,7 @@ err:
     return object_make_null();
 }
 
-ApeObject_t ape_call(ApeContext_t* ape, const char* function_name, int argc, ApeObject_t* args)
-{
-    reset_state(ape);
 
-    ApeObject_t callee = ape_get_object(ape, function_name);
-    if(object_get_type(callee) == APE_OBJECT_NULL)
-    {
-        return object_make_null();
-    }
-    ApeObject_t res = vm_call(ape->vm, compiler_get_constants(ape->compiler), callee, argc, (ApeObject_t*)args);
-    if(errors_get_count(&ape->errors) > 0)
-    {
-        return object_make_null();
-    }
-    return res;
-}
 
 bool ape_has_errors(const ApeContext_t* ape)
 {
@@ -8286,7 +8149,7 @@ const ApeError_t* ape_get_error(const ApeContext_t* ape, int index)
 bool ape_set_native_function(ApeContext_t* ape, const char* name, ApeUserFNCallback_t fn, void* data)
 {
     ApeObject_t obj = ape_object_make_native_function_with_name(ape, name, fn, data);
-    if(ape_object_is_null(obj))
+    if(object_is_null(obj))
     {
         return false;
     }
@@ -8335,34 +8198,7 @@ ApeObject_t ape_object_make_native_function(ApeContext_t* ape, ApeUserFNCallback
     return ape_object_make_native_function_with_name(ape, "", fn, data);
 }
 
-ApeObject_t ape_object_make_errorf(ApeContext_t* ape, const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    int to_write = vsnprintf(NULL, 0, fmt, args);
-    va_end(args);
-    va_start(args, fmt);
-    char* res = (char*)allocator_malloc(&ape->alloc, to_write + 1);
-    if(!res)
-    {
-        return object_make_null();
-    }
-    int written = vsprintf(res, fmt, args);
-    (void)written;
-    APE_ASSERT(written == to_write);
-    va_end(args);
-    return object_make_error_no_copy(ape->mem, res);
-}
 
-ApeObject_t ape_object_make_external(ApeContext_t* ape, void* data)
-{
-    return object_make_external(ape->mem, data);
-}
-
-char* ape_object_serialize(ApeContext_t* ape, ApeObject_t obj, size_t* lendest)
-{
-    return object_serialize(&ape->alloc, obj, lendest);
-}
 
 bool ape_object_disable_gc(ApeObject_t ape_obj)
 {
@@ -8374,34 +8210,6 @@ void ape_object_enable_gc(ApeObject_t ape_obj)
 {
     ApeObject_t obj = ape_obj;
     gc_enable_on_object(obj);
-}
-
-bool ape_object_equals(ApeObject_t ape_a, ApeObject_t ape_b)
-{
-    ApeObject_t a = ape_a;
-    ApeObject_t b = ape_b;
-    return object_equals(a, b);
-}
-
-bool ape_object_is_null(ApeObject_t obj)
-{
-    return ape_object_get_type(obj) == APE_OBJECT_NULL;
-}
-
-ApeObject_t ape_object_copy(ApeObject_t ape_obj)
-{
-    ApeObject_t obj = ape_obj;
-    ApeGCMemory_t* mem = object_get_mem(obj);
-    ApeObject_t res = object_copy(mem, obj);
-    return res;
-}
-
-ApeObject_t ape_object_deep_copy(ApeObject_t ape_obj)
-{
-    ApeObject_t obj = ape_obj;
-    ApeGCMemory_t* mem = object_get_mem(obj);
-    ApeObject_t res = object_deep_copy(mem, obj);
-    return res;
 }
 
 void ape_set_runtime_error(ApeContext_t* ape, const char* message)
@@ -8425,82 +8233,6 @@ void ape_set_runtime_errorf(ApeContext_t* ape, const char* fmt, ...)
     errors_add_error(&ape->errors, APE_ERROR_RUNTIME, src_pos_invalid, res);
 }
 
-ApeObjectType_t ape_object_get_type(ApeObject_t ape_obj)
-{
-    ApeObject_t obj = ape_obj;
-    switch(object_get_type(obj))
-    {
-        case APE_OBJECT_NONE:
-            return APE_OBJECT_NONE;
-        case APE_OBJECT_ERROR:
-            return APE_OBJECT_ERROR;
-        case APE_OBJECT_NUMBER:
-            return APE_OBJECT_NUMBER;
-        case APE_OBJECT_BOOL:
-            return APE_OBJECT_BOOL;
-        case APE_OBJECT_STRING:
-            return APE_OBJECT_STRING;
-        case APE_OBJECT_NULL:
-            return APE_OBJECT_NULL;
-        case APE_OBJECT_NATIVE_FUNCTION:
-            return APE_OBJECT_NATIVE_FUNCTION;
-        case APE_OBJECT_ARRAY:
-            return APE_OBJECT_ARRAY;
-        case APE_OBJECT_MAP:
-            return APE_OBJECT_MAP;
-        case APE_OBJECT_FUNCTION:
-            return APE_OBJECT_FUNCTION;
-        case APE_OBJECT_EXTERNAL:
-            return APE_OBJECT_EXTERNAL;
-        case APE_OBJECT_FREED:
-            return APE_OBJECT_FREED;
-        case APE_OBJECT_ANY:
-            return APE_OBJECT_ANY;
-        default:
-            return APE_OBJECT_NONE;
-    }
-}
-
-const char* ape_object_get_type_string(ApeObject_t obj)
-{
-    return ape_object_get_type_name(ape_object_get_type(obj));
-}
-
-const char* ape_object_get_type_name(ApeObjectType_t type)
-{
-    switch(type)
-    {
-        case APE_OBJECT_NONE:
-            return "NONE";
-        case APE_OBJECT_ERROR:
-            return "ERROR";
-        case APE_OBJECT_NUMBER:
-            return "NUMBER";
-        case APE_OBJECT_BOOL:
-            return "BOOL";
-        case APE_OBJECT_STRING:
-            return "STRING";
-        case APE_OBJECT_NULL:
-            return "NULL";
-        case APE_OBJECT_NATIVE_FUNCTION:
-            return "NATIVE_FUNCTION";
-        case APE_OBJECT_ARRAY:
-            return "ARRAY";
-        case APE_OBJECT_MAP:
-            return "MAP";
-        case APE_OBJECT_FUNCTION:
-            return "FUNCTION";
-        case APE_OBJECT_EXTERNAL:
-            return "EXTERNAL";
-        case APE_OBJECT_FREED:
-            return "FREED";
-        case APE_OBJECT_ANY:
-            return "ANY";
-        default:
-            return "NONE";
-    }
-}
-
 //-----------------------------------------------------------------------------
 // Ape object array
 //-----------------------------------------------------------------------------
@@ -8509,7 +8241,7 @@ const char* ape_object_get_type_name(ApeObjectType_t type)
 const char* ape_object_get_array_string(ApeObject_t obj, int ix)
 {
     ApeObject_t object = object_get_array_value(obj, ix);
-    if(ape_object_get_type(object) != APE_OBJECT_STRING)
+    if(object_get_type(object) != APE_OBJECT_STRING)
     {
         return NULL;
     }
@@ -8519,7 +8251,7 @@ const char* ape_object_get_array_string(ApeObject_t obj, int ix)
 double ape_object_get_array_number(ApeObject_t obj, int ix)
 {
     ApeObject_t object = object_get_array_value(obj, ix);
-    if(ape_object_get_type(object) != APE_OBJECT_NUMBER)
+    if(object_get_type(object) != APE_OBJECT_NUMBER)
     {
         return 0;
     }
@@ -8529,7 +8261,7 @@ double ape_object_get_array_number(ApeObject_t obj, int ix)
 bool ape_object_get_array_bool(ApeObject_t obj, int ix)
 {
     ApeObject_t object = object_get_array_value(obj, ix);
-    if(ape_object_get_type(object) != APE_OBJECT_BOOL)
+    if(object_get_type(object) != APE_OBJECT_BOOL)
     {
         return 0;
     }
@@ -8607,7 +8339,7 @@ bool ape_object_set_map_value(ApeObject_t obj, const char* key, ApeObject_t valu
     {
         return false;
     }
-    return object_set_map_value(obj, key_object, value);
+    return object_set_map_value_object(obj, key_object, value);
 }
 
 bool ape_object_set_map_string(ApeObject_t obj, const char* key, const char* string)
@@ -8650,7 +8382,7 @@ ApeObject_t ape_object_get_map_value(ApeObject_t object, const char* key)
     {
         return object_make_null();
     }
-    ApeObject_t res = object_get_map_value(object, key_object);
+    ApeObject_t res = object_get_map_value_object(object, key_object);
     return res;
 }
 
@@ -8685,7 +8417,7 @@ bool ape_object_map_has_key(ApeObject_t ape_object, const char* key)
     {
         return false;
     }
-    return object_map_has_key(object, key_object);
+    return object_map_has_key_object(object, key_object);
 }
 
 //-----------------------------------------------------------------------------
@@ -8918,8 +8650,7 @@ ApeObject_t ape_object_make_native_function_with_name(ApeContext_t* ape, const c
     wrapper.wrapped_funcptr = fn;
     wrapper.ape = ape;
     wrapper.data = data;
-    ApeObject_t wrapper_native_function
-    = object_make_native_function(ape->mem, name, ape_native_fn_wrapper, &wrapper, sizeof(wrapper));
+    ApeObject_t wrapper_native_function = object_make_native_function_memory(ape->mem, name, ape_native_fn_wrapper, &wrapper, sizeof(wrapper));
     if(object_is_null(wrapper_native_function))
     {
         return object_make_null();

@@ -33,7 +33,7 @@
 
 //ApeObject_t object_make_native_function(ApeGCMemory_t* mem, const char* name, ApeNativeFNCallback_t fn, void* data, int data_len);
 #define make_fn_data(vm, name, fnc, dataptr, datasize) \
-    object_make_native_function(vm->mem, name, fnc, dataptr, datasize)
+    object_make_native_function_memory(vm->mem, name, fnc, dataptr, datasize)
 
 #define make_fn(vm, name, fnc) \
     make_fn_data(vm, name, fnc, NULL, 0)
@@ -1237,6 +1237,9 @@ static ApeObject_t cfn_file_stat(ApeVM_t* vm, void* data, int argc, ApeObject_t*
 static ApeObject_t objfn_string_length(ApeVM_t* vm, void* data, int argc, ApeObject_t* args)
 {
     ApeObject_t self;
+    (void)vm;
+    (void)data;
+    (void)argc;
     self = args[0];
     return object_make_number(object_get_string_length(self));
 }
@@ -1252,7 +1255,6 @@ static ApeObject_t cfn_dir_readdir(ApeVM_t* vm, void* data, int argc, ApeObject_
     DIR* hnd;
     struct dirent* dent;
     ApeObject_t ary;
-    ApeObject_t sobj;
     ApeObject_t subm;
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING))
@@ -1343,6 +1345,10 @@ static NatFunc_t g_core_globalfuncs[] =
     { "abs", cfn_abs },
 
 };
+
+/*
+Object.copy instead of clone?
+*/
 
 static NatFunc_t g_core_filefuncs[]=
 {

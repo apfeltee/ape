@@ -126,7 +126,11 @@ static void print_errors(ApeContext_t *ape)
 
 static ApeObject_t exit_repl(ApeContext_t *ape, void *data, int argc, ApeObject_t *args)
 {
-    bool *exit_repl = (bool*)data;
+    bool *exit_repl;
+    (void)ape;
+    (void)argc;
+    (void)args;
+    exit_repl = (bool*)data;
     *exit_repl = true;
     return object_make_null();
 }
@@ -170,7 +174,7 @@ static void do_repl(ApeContext_t* ape)
         }
         else
         {
-            object_str = ape_object_serialize(ape, res, &len);
+            object_str = object_serialize(&ape->alloc, res, &len);
             printf("%.*s\n", (int)len, object_str);
             free(object_str);
         }
