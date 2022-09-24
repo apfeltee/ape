@@ -4,7 +4,8 @@ begin
   data = {}
   names = []
   unused = []
-  File.foreach("prot.txt") do |line|
+  errcnt = 0
+  File.foreach("prot.inc") do |line|
     m = line.match(/\b(?<name>\w+)\b\s*\(/)
     if m then
       n = m["name"]
@@ -19,14 +20,17 @@ begin
       if names.include?(nn) then
         re = nn.gsub(/^ape_/, "(ape_)?")
         $stderr.printf("duplicate entry: %p -> \\b%s\\b\n", n, re)
+        errcnt += 1
       else
         names.push(nn)
       end
     end
   end
-
+  if errcnt > 0 then
+    exit
+  end
   data.sort.each do |old, new|
-    #printf("  %p => %p,\n", old, new)
+    printf("  %p => %p,\n", old, new)
   end
 
 

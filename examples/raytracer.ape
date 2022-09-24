@@ -40,7 +40,7 @@ fn vec3(x, y, z) {
             return v
         },
         __operator_bang__: fn(a) {
-            return a * (1 / sqrt(a % a))
+            return a * (1 / Math.sqrt(a % a))
         }
     }
 }
@@ -66,7 +66,7 @@ fn test(o, d, t, n) {
                 var q = b * b - c
                 
                 if (q > 0) {
-                    var s = -b - sqrt(q)
+                    var s = -b - Math.sqrt(q)
 
                     if (s < t && s > 0.01) {
                         t = s
@@ -94,7 +94,7 @@ fn sample(o, d) {
     n = test_res.n
 
     if (m == 0) {
-        return vec3(0.7, 0.6, 1.0) * pow(1 - d.z, 4)
+        return vec3(0.7, 0.6, 1.0) * Math.pow(1 - d.z, 4)
     }
 
     var h = o + d * t
@@ -114,11 +114,11 @@ fn sample(o, d) {
         }
     }
 
-    var p = pow(l % r * (b > 0), 99)
+    var p = Math.pow(l % r * (b > 0), 99)
 
     if (m == 1) {
         h = h * 0.2
-        var x = floor(ceil(h.x) + ceil(h.y)) & 1
+        var x = Math.floor(Math.ceil(h.x) + Math.ceil(h.y)) & 1
         if (x) {
             return vec3(3, 1, 1) * (b * 0.2 + 0.1)
         } else {
@@ -129,7 +129,8 @@ fn sample(o, d) {
     return vec3(p, p, p) + sample(h, r) * 0.5
 }
 
-fn main() {
+fn main()
+{
     print("P3 512 512 255 ")
     
     var g = !vec3(-6, -16, 0)
@@ -137,18 +138,21 @@ fn main() {
     var b = !(g^a) * 0.002
     var c = (a+b) * -256 + g
 
-    for (var y = 511; y >= 0; y -= 1) {
-        for (var x = 511; x >= 0; x -= 1) {
+    for (var y = 511; y >= 0; y -= 1)
+    {
+        for (var x = 511; x >= 0; x -= 1)
+        {
             var p = vec3(13, 13, 13)
-            for (var r = 0; r < 64; r += 1) { 
+            for (var r = 0; r < 64; r += 1)
+            { 
                 var t = a * (random() - 0.5) * 99 + b * (random() - 0.5) * 99
                 p = sample(vec3(17,16,8) + t, !(t * -1 + (a * (random() + x) + b * (y + random()) + c) * 16)) * 3.5 + p
             }
-            print(floor(p.x))
+            print(Math.floor(p.x))
             print(" ")
-            print(floor(p.y))
+            print(Math.floor(p.y))
             print(" ")
-            print(floor(p.z))
+            print(Math.floor(p.z))
             print(" ")
         }
     }

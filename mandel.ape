@@ -1,42 +1,41 @@
 
-xmin = -8601;
-xmax = 2867;
-ymin = -4915;
-ymax = 4915;
-maxiter = 32;
-dx = (xmax - xmin) / 79;
-dy = (ymax - ymin) / 24;
-cy = ymin;
-
-line = "";
-while(cy <= ymax)
+left_edge   = -420;
+right_edge  =  300;
+top_edge    =  300;
+bottom_edge = -300;
+x_step      =    7;
+y_step      =   15;
+max_iter    =  50;
+y0 = top_edge;
+while(y0 > bottom_edge)
 {
-    cx = xmin;
-    while(cx <= xmax)
+    x0 = left_edge;
+    while(x0 < right_edge)
     {
-        x = 0;
         y = 0;
-        x2 = 0;
-        y2 = 0;
-        iter=0;
-        while(iter < maxiter)
+        x = 0;
+        the_char = 32;
+        i = 0;
+        while (i < max_iter)
         {
-            if((x2 + y2) > 16384)
+            x_x = (x * x) / 200;
+            y_y = (y * y) / 200;
+            if (x_x + y_y > 800)
             {
-                break;
+                the_char = 48 + i;
+                if(i > 9)
+                {
+                    the_char = 64;
+                }
+                i = max_iter;
             }
-            y = ((x * y) >> 11) + cy;
-            x = x2 - y2 + cx;
-            x2 = ((x * x) >> 12);
-            y2 = ((y * y) >> 12);
-            iter +=1;
+            y = x * y / 100 + y0;
+            x = x_x - y_y + x0;
+            i = i + 1;
         }
-        print(chr(32 + iter));
-        cx += dx;
+        print(chr(the_char));
+        x0 = x0 + x_step;
     }
-    print("\n");
-
-    cy += dy;
+    println();
+    y0 = y0 - y_step;
 }
-
-

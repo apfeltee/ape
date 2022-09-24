@@ -1,42 +1,79 @@
 
-left_edge   = -420;
-right_edge  =  300;
-top_edge    =  300;
-bottom_edge = -300;
-x_step      =    7;
-y_step      =   15;
+// this file also conveniently tests recursive calls
 
-max_iter    =  500;
-y0 = top_edge;
-while(y0 > bottom_edge)
+fn do_add(x, y)
 {
-    x0 = left_edge;
-    while(x0 < right_edge)
-    {
-        y = 0;
-        x = 0;
-        the_char = 32;
-        i = 0;
-        while (i < max_iter)
-        {
-            x_x = (x * x) / 200;
-            y_y = (y * y) / 200;
-            if (x_x + y_y > 800)
-            {
-                the_char = 48 + i;
-                if(i > 9)
-                {
-                    the_char = 64;
-                }
-                i = max_iter;
-            }
-            y = x * y / 100 + y0;
-            x = x_x - y_y + x0;
-            i = i + 1;
-        }
-        print(chr(the_char));
-        x0 = x0 + x_step;
-    }
-    println();
-    y0 = y0 - y_step;
+    return x + y
 }
+
+fn do_sub(x, y)
+{
+    return x - y
+}
+
+fn do_mul(x, y)
+{
+    t = x * y
+    return (t + 8192 / 2) / 8192
+}
+
+fn do_div(x, y)
+{
+    t = x * 8192
+    return (t + y / 2) / y
+}
+
+fn of_int(x)
+{
+    return x * 8192
+}
+
+fn iter(n, a, b, xn, yn)
+{
+    if(n == 100)
+    {
+        return true
+    }
+    xn2 = do_mul(xn, xn)
+    yn2 = do_mul(yn, yn)
+    if(do_add(xn2, yn2) > of_int(4))
+    {
+        return false
+    }
+    return iter(n + 1, a, b, do_add(do_sub(xn2, yn2), a), do_add(do_mul(of_int(2), do_mul(xn, yn)), b))
+}
+
+fn inside(x, y)
+{
+    return iter(0, x, y, of_int(0), of_int(0))
+}
+
+fn run()
+{
+    steps = 30
+    xmin = of_int(-2)
+    xmax = of_int(1)
+    deltax = do_div(do_sub(xmax, xmin), of_int(2 * steps))
+    ymin = of_int(-1)
+    ymax = of_int(1)
+    deltay = do_div(do_sub(ymax, ymin), of_int(steps))
+    for(i = 0; i < steps; i++)
+    {
+        y = do_add(ymin, do_mul(of_int(i), deltay))
+        for(j = 0; j < 2 * steps; j++)
+        {
+            x = do_add(xmin, do_mul(of_int(j), deltax))
+            if(inside(x, y))
+            {
+                print("#")
+            }
+            else
+            {
+                print("-")
+            }
+        }
+        print("\n")
+    }
+}
+run()
+

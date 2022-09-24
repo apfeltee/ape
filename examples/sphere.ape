@@ -1,0 +1,64 @@
+
+shades = ".:!*oe&#%@";
+light = [ 30, 30, -50 ];
+
+fn normalize(v)
+{
+    l = Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+    v[0] /= l;
+    v[1] /= l;
+    v[2] /= l;
+    return v
+}
+ 
+fn dot(x, y)
+{
+    d = x[0]*y[0] + x[1]*y[1] + x[2]*y[2];
+    return ((d < 0) ? -d : 0);
+}
+ 
+fn draw_sphere(R, k, ambient)
+{
+    vec = [0, 0, 0, 0]
+    i = 0
+    j = 0
+    intensity = 0;
+    b = 0
+    x = 0
+    y = 0
+    for (i = Math.floor(-R); i <= Math.ceil(R); i++)
+    {
+        x = i + 0.5;
+        for (j = Math.floor(-2 * R); j <= Math.ceil(2 * R); j++)
+        {
+            y = j / 2.0 + 0.5;
+            if (x * x + y * y <= R * R)
+            {
+                vec[0] = x;
+                vec[1] = y;
+                vec[2] = Math.sqrt(R * R - x * x - y * y);
+                vec = normalize(vec);
+                b = Math.pow(dot(light, vec), k) + ambient;
+                intensity = (1 - b) * (len(shades) - 0);
+                if(intensity < 0)
+                {
+                    intensity = 0;
+                }
+                if(intensity >= len(shades) - 0)
+                {
+                    intensity = len(shades) - 1;
+                }
+                print(shades[intensity]);
+            }
+            else
+            {
+                print(' ');
+            }
+        }
+        print('\n');
+    }
+}
+
+light = normalize(light);
+draw_sphere(20, 4, 0.1);
+draw_sphere(10, 2, 0.4);
