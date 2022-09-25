@@ -94,14 +94,8 @@ THE SOFTWARE.
 #define APE_ERROR_MESSAGE_MAX_LENGTH 255
 
 
-#define valdict_make(allocator, key_type, val_type) valdict_make_(allocator, sizeof(key_type), sizeof(val_type))
 
 
-#define ptrarray_destroy_with_items(arr, fn) ptrarray_destroy_with_items_(arr, (PtrArrayItemDestroyFNCallback)(fn))
-#define ptrarray_clear_and_destroy_items(arr, fn) ptrarray_clear_and_destroy_items_(arr, (PtrArrayItemDestroyFNCallback)(fn))
-
-#define ptrarray_copy_with_items(arr, copy_fn, destroy_fn) \
-    ptrarray_copy_with_items_(arr, (PtrArrayItemCopyFNCallback)(copy_fn), (PtrArrayItemDestroyFNCallback)(destroy_fn))
 
 #define APE_STREQ(a, b) (strcmp((a), (b)) == 0)
 #define APE_STRNEQ(a, b, n) (strncmp((a), (b), (n)) == 0)
@@ -521,67 +515,6 @@ Allocator allocator_make(AllocatorMallocFNCallback malloc_fn, AllocatorFreeFNCal
 void *allocator_malloc(Allocator *allocator, size_t size);
 void allocator_free(Allocator *allocator, void *ptr);
 
-ValDictionary *valdict_make_(Allocator *alloc, size_t key_size, size_t val_size);
-ValDictionary *valdict_make_with_capacity(Allocator *alloc, unsigned int min_capacity, size_t key_size, size_t val_size);
-void valdict_destroy(ValDictionary *dict);
-void valdict_set_hash_function(ValDictionary *dict, CollectionsHashFNCallback hash_fn);
-void valdict_set_equals_function(ValDictionary *dict, CollectionsEqualsFNCallback equals_fn);
-bool valdict_set(ValDictionary *dict, void *key, void *value);
-void *valdict_get(const ValDictionary *dict, const void *key);
-void *valdict_get_key_at(const ValDictionary *dict, unsigned int ix);
-void *valdict_get_value_at(const ValDictionary *dict, unsigned int ix);
-unsigned int valdict_get_capacity(const ValDictionary *dict);
-bool valdict_set_value_at(const ValDictionary *dict, unsigned int ix, const void *value);
-int valdict_count(const ValDictionary *dict);
-bool valdict_remove(ValDictionary *dict, void *key);
-void valdict_clear(ValDictionary *dict);
-bool valdict_init(ValDictionary *dict, Allocator *alloc, size_t key_size, size_t val_size, unsigned int initial_capacity);
-void valdict_deinit(ValDictionary *dict);
-unsigned int valdict_get_cell_ix(const ValDictionary *dict, const void *key, unsigned long hash, bool *out_found);
-bool valdict_grow_and_rehash(ValDictionary *dict);
-bool valdict_set_key_at(ValDictionary *dict, unsigned int ix, void *key);
-bool valdict_keys_are_equal(const ValDictionary *dict, const void *a, const void *b);
-unsigned long valdict_hash_key(const ValDictionary *dict, const void *key);
-
-PtrDictionary *ptrdict_make(Allocator *alloc);
-void ptrdict_destroy(PtrDictionary *dict);
-void ptrdict_set_hash_function(PtrDictionary *dict, CollectionsHashFNCallback hash_fn);
-void ptrdict_set_equals_function(PtrDictionary *dict, CollectionsEqualsFNCallback equals_fn);
-bool ptrdict_set(PtrDictionary *dict, void *key, void *value);
-void *ptrdict_get(const PtrDictionary *dict, const void *key);
-void *ptrdict_get_value_at(const PtrDictionary *dict, unsigned int ix);
-void *ptrdict_get_key_at(const PtrDictionary *dict, unsigned int ix);
-int ptrdict_count(const PtrDictionary *dict);
-bool ptrdict_remove(PtrDictionary *dict, void *key);
-
-
-
-PtrArray *ptrarray_make(Allocator *alloc);
-PtrArray *ptrarray_make_with_capacity(Allocator *alloc, unsigned int capacity);
-void ptrarray_destroy(PtrArray *arr);
-void ptrarray_destroy_with_items_(PtrArray *arr, PtrArrayItemDestroyFNCallback destroy_fn);
-PtrArray *ptrarray_copy(PtrArray *arr);
-PtrArray *ptrarray_copy_with_items_(PtrArray *arr, PtrArrayItemCopyFNCallback copy_fn, PtrArrayItemDestroyFNCallback destroy_fn);
-bool ptrarray_add(PtrArray *arr, void *ptr);
-bool ptrarray_set(PtrArray *arr, unsigned int ix, void *ptr);
-bool ptrarray_add_array(PtrArray *dest, PtrArray *source);
-void *ptrarray_get(PtrArray *arr, unsigned int ix);
-const void *ptrarray_get_const(const PtrArray *arr, unsigned int ix);
-bool ptrarray_push(PtrArray *arr, void *ptr);
-void *ptrarray_pop(PtrArray *arr);
-void *ptrarray_top(PtrArray *arr);
-int ptrarray_count(const PtrArray *arr);
-bool ptrarray_remove_at(PtrArray *arr, unsigned int ix);
-bool ptrarray_remove_item(PtrArray *arr, void *item);
-void ptrarray_clear(PtrArray *arr);
-void ptrarray_clear_and_destroy_items_(PtrArray *arr, PtrArrayItemDestroyFNCallback destroy_fn);
-void ptrarray_lock_capacity(PtrArray *arr);
-int ptrarray_get_index(PtrArray *arr, void *ptr);
-bool ptrarray_contains(PtrArray *arr, void *item);
-void *ptrarray_get_addr(PtrArray *arr, unsigned int ix);
-void *ptrarray_data(PtrArray *arr);
-void ptrarray_reverse(PtrArray *arr);
-
 StringBuffer *strbuf_make(Allocator *alloc);
 StringBuffer *strbuf_make_with_capacity(Allocator *alloc, unsigned int capacity);
 void strbuf_destroy(StringBuffer *buf);
@@ -969,6 +902,26 @@ static TokenType lookup_identifier(const char *ident, int len);
 static void skip_whitespace(Lexer *lex);
 static bool add_line(Lexer *lex, int offset);
 
+
+
+static unsigned int upper_power_of_two(unsigned int v);
+static void errors_init(ErrorList *errors);
+static void errors_deinit(ErrorList *errors);
+static const Error *errors_getc(const ErrorList *errors, int ix);
+static bool set_symbol(SymbolTable *table, Symbol *symbol);
+static int next_symbol_index(SymbolTable *table);
+static int count_num_definitions(SymbolTable *table);
+static uint64_t get_type_tag(ObjectType type);
+static bool freevals_are_allocated(FunctionObject *fun);
+static void set_sp(VM *vm, int new_sp);
+static void this_stack_push(VM *vm, Object obj);
+static Object this_stack_pop(VM *vm);
+static Object this_stack_get(VM *vm, int nth_item);
+static bool try_overload_operator(VM *vm, Object left, Object right, opcode_t op, bool *out_overload_found);
+static void set_default_config(Context *ape);
+static char *read_file_default(void *ctx, const char *filename);
+static size_t write_file_default(void *ctx, const char *path, const char *string, size_t string_size);
+static size_t stdout_write_default(void *ctx, const void *data, size_t size);
 
 
 struct NatFunc_t
@@ -1470,19 +1423,376 @@ struct VM
 
 struct ValDictionary
 {
-    Allocator* alloc;
-    size_t key_size;
-    size_t val_size;
-    unsigned int* cells;
-    unsigned long* hashes;
-    void* keys;
-    void* values;
-    unsigned int* cell_ixs;
-    unsigned int m_count;
-    unsigned int item_capacity;
-    unsigned int cell_capacity;
-    CollectionsHashFNCallback _hash_key;
-    CollectionsEqualsFNCallback _keys_equals;
+    public:
+        template<typename KeyType, typename ValueType>
+        static ValDictionary* make(Allocator* alloc)
+        {
+            return ValDictionary::makeWithCapacity(alloc, DICT_INITIAL_SIZE, sizeof(KeyType), sizeof(ValueType));
+        }
+
+        static ValDictionary* makeWithCapacity(Allocator* alloc, unsigned int min_capacity, size_t key_size, size_t val_size)
+        {
+            bool ok;
+            ValDictionary* dict;
+            unsigned int capacity;
+            dict = (ValDictionary*)allocator_malloc(alloc, sizeof(ValDictionary));
+            capacity = upper_power_of_two(min_capacity * 2);
+            if(!dict)
+            {
+                return NULL;
+            }
+            ok = dict->init(alloc, key_size, val_size, capacity);
+            if(!ok)
+            {
+                allocator_free(alloc, dict);
+                return NULL;
+            }
+            return dict;
+        }
+
+    public:
+        Allocator* alloc;
+        size_t key_size;
+        size_t val_size;
+        unsigned int* cells;
+        unsigned long* hashes;
+        void* keys;
+        void* values;
+        unsigned int* cell_ixs;
+        unsigned int m_count;
+        unsigned int item_capacity;
+        unsigned int cell_capacity;
+        CollectionsHashFNCallback _hash_key;
+        CollectionsEqualsFNCallback _keys_equals;
+
+    public:
+        void destroy()
+        {
+            if(!this)
+            {
+                return;
+            }
+            Allocator* alloc = this->alloc;
+            this->deinit();
+            allocator_free(alloc, this);
+        }
+
+        void setHashFunction(CollectionsHashFNCallback hash_fn)
+        {
+            this->_hash_key = hash_fn;
+        }
+
+        void setEqualsFunction(CollectionsEqualsFNCallback equals_fn)
+        {
+            this->_keys_equals = equals_fn;
+        }
+
+        bool set(void* key, void* value)
+        {
+            unsigned long hash = this->hashKey(key);
+            bool found = false;
+            unsigned int cell_ix = this->getCellIndex(key, hash, &found);
+            if(found)
+            {
+                unsigned int item_ix = this->cells[cell_ix];
+                this->setValueAt(item_ix, value);
+                return true;
+            }
+            if(this->m_count >= this->item_capacity)
+            {
+                bool ok = this->growAndRehash();
+                if(!ok)
+                {
+                    return false;
+                }
+                cell_ix = this->getCellIndex(key, hash, &found);
+            }
+            unsigned int last_ix = this->m_count;
+            this->m_count++;
+            this->cells[cell_ix] = last_ix;
+            this->setKeyAt(last_ix, key);
+            this->setValueAt(last_ix, value);
+            this->cell_ixs[last_ix] = cell_ix;
+            this->hashes[last_ix] = hash;
+            return true;
+        }
+
+        void* get(const void* key) const
+        {
+            unsigned long hash = this->hashKey(key);
+            bool found = false;
+            unsigned long cell_ix = this->getCellIndex(key, hash, &found);
+            if(!found)
+            {
+                return NULL;
+            }
+            unsigned int item_ix = this->cells[cell_ix];
+            return this->getValueAt(item_ix);
+        }
+
+        void* getKeyAt(unsigned int ix) const
+        {
+            if(ix >= this->m_count)
+            {
+                return NULL;
+            }
+            return (char*)this->keys + (this->key_size * ix);
+        }
+
+        void* getValueAt(unsigned int ix) const
+        {
+            if(ix >= this->m_count)
+            {
+                return NULL;
+            }
+            return (char*)this->values + (this->val_size * ix);
+        }
+
+        unsigned int getCapacity()
+        {
+            return this->item_capacity;
+        }
+
+        bool setValueAt(unsigned int ix, const void* value)
+        {
+            if(ix >= this->m_count)
+            {
+                return false;
+            }
+            size_t offset = ix * this->val_size;
+            memcpy((char*)this->values + offset, value, this->val_size);
+            return true;
+        }
+
+        int count() const
+        {
+            if(!this)
+            {
+                return 0;
+            }
+            return this->m_count;
+        }
+
+        bool remove(void* key)
+        {
+            unsigned long hash = this->hashKey(key);
+            bool found = false;
+            unsigned int cell = this->getCellIndex( key, hash, &found);
+            if(!found)
+            {
+                return false;
+            }
+
+            unsigned int item_ix = this->cells[cell];
+            unsigned int last_item_ix = this->m_count - 1;
+            if(item_ix < last_item_ix)
+            {
+                void* last_key = this->getKeyAt(last_item_ix);
+                this->setKeyAt( item_ix, last_key);
+                void* last_value = this->getKeyAt(last_item_ix);
+                this->setValueAt(item_ix, last_value);
+                this->cell_ixs[item_ix] = this->cell_ixs[last_item_ix];
+                this->hashes[item_ix] = this->hashes[last_item_ix];
+                this->cells[this->cell_ixs[item_ix]] = item_ix;
+            }
+            this->m_count--;
+
+            unsigned int i = cell;
+            unsigned int j = i;
+            for(unsigned int x = 0; x < (this->cell_capacity - 1); x++)
+            {
+                j = (j + 1) & (this->cell_capacity - 1);
+                if(this->cells[j] == VALDICT_INVALID_IX)
+                {
+                    break;
+                }
+                unsigned int k = this->hashes[this->cells[j]] & (this->cell_capacity - 1);
+                if((j > i && (k <= i || k > j)) || (j < i && (k <= i && k > j)))
+                {
+                    this->cell_ixs[this->cells[j]] = i;
+                    this->cells[i] = this->cells[j];
+                    i = j;
+                }
+            }
+            this->cells[i] = VALDICT_INVALID_IX;
+            return true;
+        }
+
+        void clear()
+        {
+            this->m_count = 0;
+            for(unsigned int i = 0; i < this->cell_capacity; i++)
+            {
+                this->cells[i] = VALDICT_INVALID_IX;
+            }
+        }
+
+        // Private definitions
+        bool init(Allocator* alloc, size_t key_size, size_t val_size, unsigned int initial_capacity)
+        {
+            this->alloc = alloc;
+            this->key_size = key_size;
+            this->val_size = val_size;
+            this->cells = NULL;
+            this->keys = NULL;
+            this->values = NULL;
+            this->cell_ixs = NULL;
+            this->hashes = NULL;
+            this->m_count = 0;
+            this->cell_capacity = initial_capacity;
+            this->item_capacity = (unsigned int)(initial_capacity * 0.7f);
+            this->_keys_equals = NULL;
+            this->_hash_key = NULL;
+            this->cells = (unsigned int*)allocator_malloc(this->alloc, this->cell_capacity * sizeof(*this->cells));
+            this->keys = allocator_malloc(this->alloc, this->item_capacity * key_size);
+            this->values = allocator_malloc(this->alloc, this->item_capacity * val_size);
+            this->cell_ixs = (unsigned int*)allocator_malloc(this->alloc, this->item_capacity * sizeof(*this->cell_ixs));
+            this->hashes = (long unsigned int*)allocator_malloc(this->alloc, this->item_capacity * sizeof(*this->hashes));
+            if(this->cells == NULL || this->keys == NULL || this->values == NULL || this->cell_ixs == NULL || this->hashes == NULL)
+            {
+                goto error;
+            }
+            for(unsigned int i = 0; i < this->cell_capacity; i++)
+            {
+                this->cells[i] = VALDICT_INVALID_IX;
+            }
+            return true;
+        error:
+            allocator_free(this->alloc, this->cells);
+            allocator_free(this->alloc, this->keys);
+            allocator_free(this->alloc, this->values);
+            allocator_free(this->alloc, this->cell_ixs);
+            allocator_free(this->alloc, this->hashes);
+            return false;
+        }
+
+        void deinit()
+        {
+            this->key_size = 0;
+            this->val_size = 0;
+            this->m_count = 0;
+            this->item_capacity = 0;
+            this->cell_capacity = 0;
+
+            allocator_free(this->alloc, this->cells);
+            allocator_free(this->alloc, this->keys);
+            allocator_free(this->alloc, this->values);
+            allocator_free(this->alloc, this->cell_ixs);
+            allocator_free(this->alloc, this->hashes);
+
+            this->cells = NULL;
+            this->keys = NULL;
+            this->values = NULL;
+            this->cell_ixs = NULL;
+            this->hashes = NULL;
+        }
+
+        unsigned int getCellIndex(const void* key, unsigned long hash, bool* out_found) const
+        {
+            *out_found = false;
+            bool are_equal;
+            unsigned int ofs;
+            unsigned int i;
+            unsigned int ix;
+            unsigned int cell;
+            unsigned int cell_ix;
+            unsigned long hash_to_check;
+            void* key_to_check;
+            //fprintf(stderr, "valdict_get_cell_ix: this=%p, this->cell_capacity=%d\n", this, this->cell_capacity);
+            ofs = 0;
+            if(this->cell_capacity > 1)
+            {
+                ofs = (this->cell_capacity - 1);
+            }
+            cell_ix = hash & ofs;
+            for(i = 0; i < this->cell_capacity; i++)
+            {
+                cell = VALDICT_INVALID_IX;
+                ix = (cell_ix + i) & ofs;
+                //fprintf(stderr, "(cell_ix=%d + i=%d) & ofs=%d == %d\n", cell_ix, i, ofs, ix);
+                cell = this->cells[ix];
+                if(cell == VALDICT_INVALID_IX)
+                {
+                    return ix;
+                }
+                hash_to_check = this->hashes[cell];
+                if(hash != hash_to_check)
+                {
+                    continue;
+                }
+                key_to_check = this->getKeyAt(cell);
+                are_equal = this->keysAreEqual(key, key_to_check);
+                if(are_equal)
+                {
+                    *out_found = true;
+                    return ix;
+                }
+            }
+            return VALDICT_INVALID_IX;
+        }
+
+        bool growAndRehash()
+        {
+            ValDictionary new_dict;
+            unsigned new_capacity = this->cell_capacity == 0 ? DICT_INITIAL_SIZE : this->cell_capacity * 2;
+            bool ok = new_dict.init(this->alloc, this->key_size, this->val_size, new_capacity);
+            if(!ok)
+            {
+                return false;
+            }
+            new_dict._keys_equals = this->_keys_equals;
+            new_dict._hash_key = this->_hash_key;
+            for(unsigned int i = 0; i < this->m_count; i++)
+            {
+                char* key = (char*)this->getKeyAt( i);
+                void* value = this->getValueAt(i);
+                ok = new_dict.set(key, value);
+                if(!ok)
+                {
+                    new_dict.deinit();
+                    return false;
+                }
+            }
+            this->deinit();
+            *this = new_dict;
+            return true;
+        }
+
+        bool setKeyAt(unsigned int ix, void* key)
+        {
+            if(ix >= this->m_count)
+            {
+                return false;
+            }
+            size_t offset = ix * this->key_size;
+            memcpy((char*)this->keys + offset, key, this->key_size);
+            return true;
+        }
+
+        bool keysAreEqual(const void* a, const void* b) const
+        {
+            if(this->_keys_equals)
+            {
+                return this->_keys_equals(a, b);
+            }
+            else
+            {
+                return memcmp(a, b, this->key_size) == 0;
+            }
+        }
+
+        unsigned long hashKey(const void* key) const
+        {
+            if(this->_hash_key)
+            {
+                return this->_hash_key(key);
+            }
+            else
+            {
+                return collections_hash(key, this->key_size);
+            }
+        }
+
 };
 
 struct Dictionary
@@ -2031,7 +2341,7 @@ struct Array
             return true;
         }
 
-        void* get(unsigned int ix)
+        void* get(unsigned int ix) const
         {
             if(ix >= this->m_count)
             {
@@ -2220,16 +2530,253 @@ struct Array
 
 };
 
-struct PtrDictionary
-{
-    Allocator* alloc;
-    ValDictionary vd;
-};
-
 struct PtrArray
 {
-    Allocator* alloc;
-    Array arr;
+    public:
+        static PtrArray* make(Allocator* alloc)
+        {
+            return PtrArray::make(alloc, 0);
+        }
+
+        static PtrArray* make(Allocator* alloc, unsigned int capacity)
+        {
+            PtrArray* ptrarr = (PtrArray*)allocator_malloc(alloc, sizeof(PtrArray));
+            if(!ptrarr)
+            {
+                return NULL;
+            }
+            ptrarr->alloc = alloc;
+            bool ok = ptrarr->arr.init(alloc, capacity, sizeof(void*));
+            if(!ok)
+            {
+                allocator_free(alloc, ptrarr);
+                return NULL;
+            }
+            return ptrarr;
+        }
+
+
+    public:
+        Allocator* alloc;
+        Array arr;
+
+    public:
+        void destroy()
+        {
+            if(!this)
+            {
+                return;
+            }
+            this->arr.deinit();
+            allocator_free(this->alloc, this);
+        }
+
+        template<typename FnType>
+        void destroyWithItems(FnType destroy_fn)
+        {// todo: destroy and copy in make fn
+            if(this == NULL)
+            {
+                return;
+            }
+            if(destroy_fn)
+            {
+                this->clearAndDestroyItems(destroy_fn);
+            }
+            this->destroy();
+        }
+
+        PtrArray* copy()
+        {
+            PtrArray* arr_copy = PtrArray::make(this->alloc, this->arr.capacity);
+            if(!arr_copy)
+            {
+                return NULL;
+            }
+            for(int i = 0; i < this->count(); i++)
+            {
+                void* item = this->get(i);
+                bool ok = arr_copy->add(item);
+                if(!ok)
+                {
+                    arr_copy->destroy();
+                    return NULL;
+                }
+            }
+            return arr_copy;
+        }
+
+        template<typename FnCopyType, typename FnDestroyType>
+        PtrArray* copyWithItems(FnCopyType copy_fn, FnDestroyType destroy_fn)
+        {
+            PtrArray* arr_copy = PtrArray::make(this->alloc, this->arr.capacity);
+            if(!arr_copy)
+            {
+                return NULL;
+            }
+            for(int i = 0; i < this->count(); i++)
+            {
+                void* item = this->get(i);
+                void* item_copy = ((PtrArrayItemCopyFNCallback)copy_fn)(item);
+                if(item && !item_copy)
+                {
+                    goto err;
+                }
+                bool ok = arr_copy->add(item_copy);
+                if(!ok)
+                {
+                    goto err;
+                }
+            }
+            return arr_copy;
+        err:
+            arr_copy->destroyWithItems(destroy_fn);
+            return NULL;
+        }
+
+        bool add(void* ptr)
+        {
+            return this->arr.add(&ptr);
+        }
+
+        bool set(unsigned int ix, void* ptr)
+        {
+            return this->arr.set(ix, &ptr);
+        }
+
+        bool addArray(PtrArray* source)
+        {
+            return this->arr.addArray(&source->arr);
+        }
+
+        void* get(unsigned int ix) const
+        {
+            void* res = this->arr.get(ix);
+            if(!res)
+            {
+                return NULL;
+            }
+            return *(void**)res;
+        }
+
+        const void* getConst(unsigned int ix) const
+        {
+            const void* res = this->arr.getConst(ix);
+            if(!res)
+            {
+                return NULL;
+            }
+            return *(void* const*)res;
+        }
+
+        bool push(void* ptr)
+        {
+            return this->add( ptr);
+        }
+
+        void* pop()
+        {
+            int ix = this->count() - 1;
+            void* res = this->get(ix);
+            this->removeAt(ix);
+            return res;
+        }
+
+        void* top() const
+        {
+            int cn = this->count();
+            if(cn == 0)
+            {
+                return NULL;
+            }
+            return this->get(cn - 1);
+        }
+
+        int count() const
+        {
+            if(!this)
+            {
+                return 0;
+            }
+            return this->arr.count();
+        }
+
+        bool removeAt(unsigned int ix)
+        {
+            return this->arr.removeAt(ix);
+        }
+
+        bool removeItem(void* item)
+        {
+            for(int i = 0; i < this->count(); i++)
+            {
+                if(item == this->get(i))
+                {
+                    this->removeAt(i);
+                    return true;
+                }
+            }
+            COLLECTIONS_ASSERT(false);
+            return false;
+        }
+
+        void clear()
+        {
+            this->arr.clear();
+        }
+
+        template<typename FnType>
+        void clearAndDestroyItems(FnType destroy_fn)
+        {
+            for(int i = 0; i < this->count(); i++)
+            {
+                void* item = this->get(i);
+                ((PtrArrayItemDestroyFNCallback)destroy_fn)(item);
+            }
+            this->clear();
+        }
+
+        void lockCapacity()
+        {
+            this->arr.lockCapacity();
+        }
+
+        int getIndex(void* ptr) const
+        {
+            for(int i = 0; i < this->count(); i++)
+            {
+                if(this->get(i) == ptr)
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        bool contains(void* item) const
+        {
+            return this->getIndex(item) >= 0;
+        }
+
+        void* getAddr(unsigned int ix) const
+        {
+            void* res = this->arr.get(ix);
+            if(res == NULL)
+            {
+                return NULL;
+            }
+            return res;
+        }
+
+        void* data()
+        {
+            return this->arr.data();
+        }
+
+        void reverse()
+        {
+            this->arr.reverse();
+        }
+
 };
 
 struct StringBuffer
@@ -2337,7 +2884,7 @@ bool lexer_init(Lexer* lex, Allocator* alloc, ErrorList* errs, const char* input
     lex->ch = '\0';
     if(file)
     {
-        lex->line = ptrarray_count(file->lines);
+        lex->line = file->lines->count();
     }
     else
     {
@@ -2983,7 +3530,7 @@ static bool add_line(Lexer* lex, int offset)
         return true;
     }
 
-    if(lex->line < ptrarray_count(lex->file->lines))
+    if(lex->line < lex->file->lines->count())
     {
         return true;
     }
@@ -3005,7 +3552,7 @@ static bool add_line(Lexer* lex, int offset)
         lex->failed = true;
         return false;
     }
-    bool ok = ptrarray_add(lex->file->lines, line);
+    bool ok = lex->file->lines->add(line);
     if(!ok)
     {
         lex->failed = true;
@@ -3272,13 +3819,13 @@ void expression_destroy(Expression* expr)
         }
         case EXPRESSION_ARRAY_LITERAL:
         {
-            ptrarray_destroy_with_items(expr->array, expression_destroy);
+            expr->array->destroyWithItems(expression_destroy);
             break;
         }
         case EXPRESSION_MAP_LITERAL:
         {
-            ptrarray_destroy_with_items(expr->map.keys, expression_destroy);
-            ptrarray_destroy_with_items(expr->map.values, expression_destroy);
+            expr->map.keys->destroyWithItems(expression_destroy);
+            expr->map.values->destroyWithItems(expression_destroy);
             break;
         }
         case EXPRESSION_PREFIX:
@@ -3296,13 +3843,13 @@ void expression_destroy(Expression* expr)
         {
             FnLiteral* fn = &expr->fn_literal;
             allocator_free(expr->alloc, fn->name);
-            ptrarray_destroy_with_items(fn->params, ident_destroy);
+            fn->params->destroyWithItems(ident_destroy);
             code_block_destroy(fn->body);
             break;
         }
         case EXPRESSION_CALL:
         {
-            ptrarray_destroy_with_items(expr->call_expr.args, expression_destroy);
+            expr->call_expr.args->destroyWithItems(expression_destroy);
             expression_destroy(expr->call_expr.function);
             break;
         }
@@ -3396,7 +3943,7 @@ Expression* expression_copy(Expression* expr)
         }
         case EXPRESSION_ARRAY_LITERAL:
         {
-            PtrArray* values_copy = ptrarray_copy_with_items(expr->array, expression_copy, expression_destroy);
+            PtrArray* values_copy = expr->array->copyWithItems(expression_copy, expression_destroy);
             if(!values_copy)
             {
                 return NULL;
@@ -3404,26 +3951,26 @@ Expression* expression_copy(Expression* expr)
             res = expression_make_array_literal(expr->alloc, values_copy);
             if(!res)
             {
-                ptrarray_destroy_with_items(values_copy, expression_destroy);
+                values_copy->destroyWithItems(expression_destroy);
                 return NULL;
             }
             break;
         }
         case EXPRESSION_MAP_LITERAL:
         {
-            PtrArray* keys_copy = ptrarray_copy_with_items(expr->map.keys, expression_copy, expression_destroy);
-            PtrArray* values_copy = ptrarray_copy_with_items(expr->map.values, expression_copy, expression_destroy);
+            PtrArray* keys_copy = expr->map.keys->copyWithItems(expression_copy, expression_destroy);
+            PtrArray* values_copy = expr->map.values->copyWithItems(expression_copy, expression_destroy);
             if(!keys_copy || !values_copy)
             {
-                ptrarray_destroy_with_items(keys_copy, expression_destroy);
-                ptrarray_destroy_with_items(values_copy, expression_destroy);
+                keys_copy->destroyWithItems(expression_destroy);
+                values_copy->destroyWithItems(expression_destroy);
                 return NULL;
             }
             res = expression_make_map_literal(expr->alloc, keys_copy, values_copy);
             if(!res)
             {
-                ptrarray_destroy_with_items(keys_copy, expression_destroy);
-                ptrarray_destroy_with_items(values_copy, expression_destroy);
+                keys_copy->destroyWithItems(expression_destroy);
+                values_copy->destroyWithItems(expression_destroy);
                 return NULL;
             }
             break;
@@ -3464,12 +4011,12 @@ Expression* expression_copy(Expression* expr)
         }
         case EXPRESSION_FUNCTION_LITERAL:
         {
-            PtrArray* params_copy = ptrarray_copy_with_items(expr->fn_literal.params, ident_copy, ident_destroy);
+            PtrArray* params_copy = expr->fn_literal.params->copyWithItems(ident_copy, ident_destroy);
             Codeblock* body_copy = code_block_copy(expr->fn_literal.body);
             char* name_copy = ape_strdup(expr->alloc, expr->fn_literal.name);
             if(!params_copy || !body_copy)
             {
-                ptrarray_destroy_with_items(params_copy, ident_destroy);
+                params_copy->destroyWithItems(ident_destroy);
                 code_block_destroy(body_copy);
                 allocator_free(expr->alloc, name_copy);
                 return NULL;
@@ -3477,7 +4024,7 @@ Expression* expression_copy(Expression* expr)
             res = expression_make_fn_literal(expr->alloc, params_copy, body_copy);
             if(!res)
             {
-                ptrarray_destroy_with_items(params_copy, ident_destroy);
+                params_copy->destroyWithItems(ident_destroy);
                 code_block_destroy(body_copy);
                 allocator_free(expr->alloc, name_copy);
                 return NULL;
@@ -3488,18 +4035,18 @@ Expression* expression_copy(Expression* expr)
         case EXPRESSION_CALL:
         {
             Expression* function_copy = expression_copy(expr->call_expr.function);
-            PtrArray* args_copy = ptrarray_copy_with_items(expr->call_expr.args, expression_copy, expression_destroy);
+            PtrArray* args_copy = expr->call_expr.args->copyWithItems(expression_copy, expression_destroy);
             if(!function_copy || !args_copy)
             {
                 expression_destroy(function_copy);
-                ptrarray_destroy_with_items(expr->call_expr.args, expression_destroy);
+                expr->call_expr.args->destroyWithItems(expression_destroy);
                 return NULL;
             }
             res = expression_make_call(expr->alloc, function_copy, args_copy);
             if(!res)
             {
                 expression_destroy(function_copy);
-                ptrarray_destroy_with_items(expr->call_expr.args, expression_destroy);
+                expr->call_expr.args->destroyWithItems(expression_destroy);
                 return NULL;
             }
             break;
@@ -3753,7 +4300,7 @@ void statement_destroy(Expression* stmt)
         }
         case EXPRESSION_IF:
         {
-            ptrarray_destroy_with_items(stmt->if_statement.cases, if_case_destroy);
+            stmt->if_statement.cases->destroyWithItems(if_case_destroy);
             code_block_destroy(stmt->if_statement.alternative);
             break;
         }
@@ -3847,18 +4394,18 @@ Expression* statement_copy(const Expression* stmt)
         }
         case EXPRESSION_IF:
         {
-            PtrArray* cases_copy = ptrarray_copy_with_items(stmt->if_statement.cases, if_case_copy, if_case_destroy);
+            PtrArray* cases_copy = stmt->if_statement.cases->copyWithItems(if_case_copy, if_case_destroy);
             Codeblock* alternative_copy = code_block_copy(stmt->if_statement.alternative);
             if(!cases_copy || !alternative_copy)
             {
-                ptrarray_destroy_with_items(cases_copy, if_case_destroy);
+                cases_copy->destroyWithItems(if_case_destroy);
                 code_block_destroy(alternative_copy);
                 return NULL;
             }
             res = statement_make_if(stmt->alloc, cases_copy, alternative_copy);
             if(res)
             {
-                ptrarray_destroy_with_items(cases_copy, if_case_destroy);
+                cases_copy->destroyWithItems(if_case_destroy);
                 code_block_destroy(alternative_copy);
                 return NULL;
             }
@@ -4043,7 +4590,7 @@ void code_block_destroy(Codeblock* block)
     {
         return;
     }
-    ptrarray_destroy_with_items(block->statements, statement_destroy);
+    block->statements->destroyWithItems(statement_destroy);
     allocator_free(block->alloc, block);
 }
 
@@ -4053,7 +4600,7 @@ Codeblock* code_block_copy(Codeblock* block)
     {
         return NULL;
     }
-    PtrArray* statements_copy = ptrarray_copy_with_items(block->statements, statement_copy, statement_destroy);
+    PtrArray* statements_copy = block->statements->copyWithItems(statement_copy, statement_destroy);
     if(!statements_copy)
     {
         return NULL;
@@ -4061,7 +4608,7 @@ Codeblock* code_block_copy(Codeblock* block)
     Codeblock* res = code_block_make(block->alloc, statements_copy);
     if(!res)
     {
-        ptrarray_destroy_with_items(statements_copy, statement_destroy);
+        statements_copy->destroyWithItems(statement_destroy);
         return NULL;
     }
     return res;
@@ -4262,7 +4809,7 @@ PtrArray * parser_parse_all(Parser* parser, const char* input, CompiledFile* fil
     }
     lexer_next_token(&parser->lexer);
     lexer_next_token(&parser->lexer);
-    statements = ptrarray_make(parser->alloc);
+    statements = PtrArray::make(parser->alloc);
     if(!statements)
     {
         return NULL;
@@ -4279,7 +4826,7 @@ PtrArray * parser_parse_all(Parser* parser, const char* input, CompiledFile* fil
         {
             goto err;
         }
-        ok = ptrarray_add(statements, stmt);
+        ok = statements->add(stmt);
         if(!ok)
         {
             statement_destroy(stmt);
@@ -4293,7 +4840,7 @@ PtrArray * parser_parse_all(Parser* parser, const char* input, CompiledFile* fil
 
     return statements;
 err:
-    ptrarray_destroy_with_items(statements, statement_destroy);
+    statements->destroyWithItems(statement_destroy);
     return NULL;
 }
 
@@ -4448,7 +4995,7 @@ Expression* parse_if_statement(Parser* p)
     IfCase* cond;
     cases = NULL;
     alternative = NULL;
-    cases = ptrarray_make(p->alloc);
+    cases = PtrArray::make(p->alloc);
     if(!cases)
     {
         goto err;
@@ -4464,7 +5011,7 @@ Expression* parse_if_statement(Parser* p)
     {
         goto err;
     }
-    ok = ptrarray_add(cases, cond);
+    ok = cases->add(cond);
     if(!ok)
     {
         if_case_destroy(cond);
@@ -4501,7 +5048,7 @@ Expression* parse_if_statement(Parser* p)
             {
                 goto err;
             }
-            ok = ptrarray_add(cases, elif);
+            ok = cases->add(elif);
             if(!ok)
             {
                 if_case_destroy(elif);
@@ -4539,7 +5086,7 @@ Expression* parse_if_statement(Parser* p)
     }
     return res;
 err:
-    ptrarray_destroy_with_items(cases, if_case_destroy);
+    cases->destroyWithItems(if_case_destroy);
     code_block_destroy(alternative);
     return NULL;
 }
@@ -4931,7 +5478,7 @@ Codeblock* parse_code_block(Parser* p)
     }
     lexer_next_token(&p->lexer);
     p->depth++;
-    statements = ptrarray_make(p->alloc);
+    statements = PtrArray::make(p->alloc);
     if(!statements)
     {
         goto err;
@@ -4953,7 +5500,7 @@ Codeblock* parse_code_block(Parser* p)
         {
             goto err;
         }
-        ok = ptrarray_add(statements, stmt);
+        ok = statements->add(stmt);
         if(!ok)
         {
             statement_destroy(stmt);
@@ -4970,7 +5517,7 @@ Codeblock* parse_code_block(Parser* p)
     return res;
 err:
     p->depth--;
-    ptrarray_destroy_with_items(statements, statement_destroy);
+    statements->destroyWithItems(statement_destroy);
     return NULL;
 }
 
@@ -5204,7 +5751,7 @@ Expression* parse_array_literal(Parser* p)
     res = expression_make_array_literal(p->alloc, array);
     if(!res)
     {
-        ptrarray_destroy_with_items(array, expression_destroy);
+        array->destroyWithItems(expression_destroy);
         return NULL;
     }
     return res;
@@ -5219,8 +5766,8 @@ Expression* parse_map_literal(Parser* p)
     Expression* key;
     Expression* value;
     Expression* res;
-    keys = ptrarray_make(p->alloc);
-    values = ptrarray_make(p->alloc);
+    keys = PtrArray::make(p->alloc);
+    values = PtrArray::make(p->alloc);
     if(!keys || !values)
     {
         goto err;
@@ -5265,7 +5812,7 @@ Expression* parse_map_literal(Parser* p)
             }
         }
 
-        ok = ptrarray_add(keys, key);
+        ok = keys->add(key);
         if(!ok)
         {
             expression_destroy(key);
@@ -5284,7 +5831,7 @@ Expression* parse_map_literal(Parser* p)
         {
             goto err;
         }
-        ok = ptrarray_add(values, value);
+        ok = values->add(value);
         if(!ok)
         {
             expression_destroy(value);
@@ -5313,8 +5860,8 @@ Expression* parse_map_literal(Parser* p)
     }
     return res;
 err:
-    ptrarray_destroy_with_items(keys, expression_destroy);
-    ptrarray_destroy_with_items(values, expression_destroy);
+    keys->destroyWithItems(expression_destroy);
+    values->destroyWithItems(expression_destroy);
     return NULL;
 }
 
@@ -5389,7 +5936,7 @@ Expression* parse_function_literal(Parser* p)
     {
         lexer_next_token(&p->lexer);
     }
-    params = ptrarray_make(p->alloc);
+    params = PtrArray::make(p->alloc);
     ok = parse_function_parameters(p, params);
     if(!ok)
     {
@@ -5409,7 +5956,7 @@ Expression* parse_function_literal(Parser* p)
     return res;
 err:
     code_block_destroy(body);
-    ptrarray_destroy_with_items(params, ident_destroy);
+    params->destroyWithItems(ident_destroy);
     p->depth -= 1;
     return NULL;
 }
@@ -5437,7 +5984,7 @@ bool parse_function_parameters(Parser* p, PtrArray * out_params)
     {
         return false;
     }
-    ok = ptrarray_add(out_params, ident);
+    ok = out_params->add(ident);
     if(!ok)
     {
         ident_destroy(ident);
@@ -5456,7 +6003,7 @@ bool parse_function_parameters(Parser* p, PtrArray * out_params)
         {
             return false;
         }
-        ok = ptrarray_add(out_params, ident);
+        ok = out_params->add(ident);
         if(!ok)
         {
             ident_destroy(ident);
@@ -5487,7 +6034,7 @@ Expression* parse_call_expression(Parser* p, Expression* left)
     res = expression_make_call(p->alloc, function, args);
     if(!res)
     {
-        ptrarray_destroy_with_items(args, expression_destroy);
+        args->destroyWithItems(expression_destroy);
         return NULL;
     }
     return res;
@@ -5503,7 +6050,7 @@ PtrArray* parse_expression_list(Parser* p, TokenType start_token, TokenType end_
         return NULL;
     }
     lexer_next_token(&p->lexer);
-    res = ptrarray_make(p->alloc);
+    res = PtrArray::make(p->alloc);
     if(lexer_cur_token_is(&p->lexer, end_token))
     {
         lexer_next_token(&p->lexer);
@@ -5514,7 +6061,7 @@ PtrArray* parse_expression_list(Parser* p, TokenType start_token, TokenType end_
     {
         goto err;
     }
-    ok = ptrarray_add(res, arg_expr);
+    ok = res->add(arg_expr);
     if(!ok)
     {
         expression_destroy(arg_expr);
@@ -5532,7 +6079,7 @@ PtrArray* parse_expression_list(Parser* p, TokenType start_token, TokenType end_
         {
             goto err;
         }
-        ok = ptrarray_add(res, arg_expr);
+        ok = res->add(arg_expr);
         if(!ok)
         {
             expression_destroy(arg_expr);
@@ -5546,7 +6093,7 @@ PtrArray* parse_expression_list(Parser* p, TokenType start_token, TokenType end_
     lexer_next_token(&p->lexer);
     return res;
 err:
-    ptrarray_destroy_with_items(res, expression_destroy);
+    res->destroyWithItems(expression_destroy);
     return NULL;
 }
 
@@ -6079,17 +6626,17 @@ static Expression* wrap_expression_in_function_call(Allocator* alloc, Expression
     function_ident_expr->pos = expr->pos;
     ident = NULL;
 
-    PtrArray* args = ptrarray_make(alloc);
+    PtrArray* args = PtrArray::make(alloc);
     if(!args)
     {
         expression_destroy(function_ident_expr);
         return NULL;
     }
 
-    bool ok = ptrarray_add(args, expr);
+    bool ok = args->add(expr);
     if(!ok)
     {
-        ptrarray_destroy(args);
+        args->destroy();
         expression_destroy(function_ident_expr);
         return NULL;
     }
@@ -6097,7 +6644,7 @@ static Expression* wrap_expression_in_function_call(Allocator* alloc, Expression
     Expression* call_expr = expression_make_call(alloc, function_ident_expr, args);
     if(!call_expr)
     {
-        ptrarray_destroy(args);
+        args->destroy();
         expression_destroy(function_ident_expr);
         return NULL;
     }
@@ -6269,14 +6816,14 @@ CompilationResult* compiler_compile_file(Compiler* comp, const char* path)
     {
         goto err;
     }
-    ok = ptrarray_add(comp->files, file);
+    ok = comp->files->add(file);
     if(!ok)
     {
         compiled_file_destroy(file);
         goto err;
     }
-    APE_ASSERT(ptrarray_count(comp->file_scopes) == 1);
-    file_scope = (FileScope*)ptrarray_top(comp->file_scopes);
+    APE_ASSERT(comp->file_scopes->count() == 1);
+    file_scope = (FileScope*)comp->file_scopes->top();
     if(!file_scope)
     {
         goto err;
@@ -6300,7 +6847,7 @@ err:
 SymbolTable* compiler_get_symbol_table(Compiler* comp)
 {
     FileScope* file_scope;
-    file_scope = (FileScope*)ptrarray_top(comp->file_scopes);
+    file_scope = (FileScope*)comp->file_scopes->top();
     if(!file_scope)
     {
         APE_ASSERT(false);
@@ -6312,7 +6859,7 @@ SymbolTable* compiler_get_symbol_table(Compiler* comp)
 static void compiler_set_symbol_table(Compiler* comp, SymbolTable* table)
 {
     FileScope* file_scope;
-    file_scope = (FileScope*)ptrarray_top(comp->file_scopes);
+    file_scope = (FileScope*)comp->file_scopes->top();
     if(!file_scope)
     {
         APE_ASSERT(false);
@@ -6343,7 +6890,7 @@ bool compiler_init(Compiler* comp,
     comp->errors = errors;
     comp->files = files;
     comp->global_store = global_store;
-    comp->file_scopes = ptrarray_make(alloc);
+    comp->file_scopes = PtrArray::make(alloc);
     if(!comp->file_scopes)
     {
         goto err;
@@ -6399,7 +6946,7 @@ void compiler_deinit(Compiler* comp)
         allocator_free(comp->alloc, val);
     }
     comp->string_constants_positions->destroy();
-    while(ptrarray_count(comp->file_scopes) > 0)
+    while(comp->file_scopes->count() > 0)
     {
         pop_file_scope(comp);
     }
@@ -6410,7 +6957,7 @@ void compiler_deinit(Compiler* comp)
     comp->modules->destroyWithItems();
     Array::destroy(comp->src_positions_stack);
     Array::destroy(comp->constants);
-    ptrarray_destroy(comp->file_scopes);
+    comp->file_scopes->destroy();
     memset(comp, 0, sizeof(Compiler));
 }
 
@@ -6439,7 +6986,7 @@ bool compiler_init_shallow_copy(Compiler* copy, Compiler* src)
         return false;
     }
     src_st = compiler_get_symbol_table(src);
-    APE_ASSERT(ptrarray_count(src->file_scopes) == 1);
+    APE_ASSERT(src->file_scopes->count() == 1);
     APE_ASSERT(src_st->outer == NULL);
     src_st_copy = symbol_table_copy(src_st);
     if(!src_st_copy)
@@ -6481,20 +7028,20 @@ bool compiler_init_shallow_copy(Compiler* copy, Compiler* src)
             goto err;
         }
     }
-    src_file_scope = (FileScope*)ptrarray_top(src->file_scopes);
-    copy_file_scope = (FileScope*)ptrarray_top(copy->file_scopes);
+    src_file_scope = (FileScope*)src->file_scopes->top();
+    copy_file_scope = (FileScope*)copy->file_scopes->top();
     src_loaded_module_names = src_file_scope->loaded_module_names;
     copy_loaded_module_names = copy_file_scope->loaded_module_names;
-    for(i = 0; i < ptrarray_count(src_loaded_module_names); i++)
+    for(i = 0; i < src_loaded_module_names->count(); i++)
     {
 
-        loaded_name = (const char*)ptrarray_get(src_loaded_module_names, i);
+        loaded_name = (const char*)src_loaded_module_names->get(i);
         loaded_name_copy = ape_strdup(copy->alloc, loaded_name);
         if(!loaded_name_copy)
         {
             goto err;
         }
-        ok = ptrarray_add(copy_loaded_module_names, loaded_name_copy);
+        ok = copy_loaded_module_names->add(loaded_name_copy);
         if(!ok)
         {
             allocator_free(copy->alloc, loaded_name_copy);
@@ -6571,7 +7118,7 @@ static void pop_compilation_scope(Compiler* comp)
 static bool push_symbol_table(Compiler* comp, int global_offset)
 {
     FileScope* file_scope;
-    file_scope = (FileScope*)ptrarray_top(comp->file_scopes);
+    file_scope = (FileScope*)comp->file_scopes->top();
     if(!file_scope)
     {
         APE_ASSERT(false);
@@ -6591,7 +7138,7 @@ static void pop_symbol_table(Compiler* comp)
 {
     FileScope* file_scope;
     SymbolTable* current_table;
-    file_scope = (FileScope*)ptrarray_top(comp->file_scopes);
+    file_scope = (FileScope*)comp->file_scopes->top();
     if(!file_scope)
     {
         APE_ASSERT(false);
@@ -6619,7 +7166,7 @@ static bool compile_code(Compiler* comp, const char* code)
     bool ok;
     FileScope* file_scope;
     PtrArray* statements;
-    file_scope = (FileScope*)ptrarray_top(comp->file_scopes);
+    file_scope = (FileScope*)comp->file_scopes->top();
     APE_ASSERT(file_scope);
     statements = parser_parse_all(file_scope->parser, code, file_scope->file);
     if(!statements)
@@ -6628,7 +7175,7 @@ static bool compile_code(Compiler* comp, const char* code)
         return false;
     }
     ok = compile_statements(comp, statements);
-    ptrarray_destroy_with_items(statements, statement_destroy);
+    statements->destroyWithItems(statement_destroy);
 
     // Left for debugging purposes
     //    if (ok) {
@@ -6649,9 +7196,9 @@ static bool compile_statements(Compiler* comp, PtrArray * statements)
     bool ok;
     const Expression* stmt;
     ok = true;
-    for(i = 0; i < ptrarray_count(statements); i++)
+    for(i = 0; i < statements->count(); i++)
     {
-        stmt = (const Expression*)ptrarray_get(statements, i);
+        stmt = (const Expression*)statements->get(i);
         ok = compile_statement(comp, stmt);
         if(!ok)
         {
@@ -6684,12 +7231,12 @@ static bool import_module(Compiler* comp, const Expression* import_stmt)
     result = false;
     filepath = NULL;
     code = NULL;
-    file_scope = (FileScope*)ptrarray_top(comp->file_scopes);
+    file_scope = (FileScope*)comp->file_scopes->top();
     module_path = import_stmt->import.path;
     module_name = get_module_name(module_path);
-    for(i = 0; i < ptrarray_count(file_scope->loaded_module_names); i++)
+    for(i = 0; i < file_scope->loaded_module_names->count(); i++)
     {
-        loaded_name = (const char*)ptrarray_get(file_scope->loaded_module_names, i);
+        loaded_name = (const char*)file_scope->loaded_module_names->get(i);
         if(kg_streq(loaded_name, module_name))
         {
             errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos, "Module \"%s\" was already imported", module_name);
@@ -6726,15 +7273,15 @@ static bool import_module(Compiler* comp, const Expression* import_stmt)
         goto end;
     }
     symbol_table = compiler_get_symbol_table(comp);
-    if(symbol_table->outer != NULL || ptrarray_count(symbol_table->block_scopes) > 1)
+    if(symbol_table->outer != NULL || symbol_table->block_scopes->count() > 1)
     {
         errors_add_error(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos, "Modules can only be imported in global scope");
         result = false;
         goto end;
     }
-    for(i = 0; i < ptrarray_count(comp->file_scopes); i++)
+    for(i = 0; i < comp->file_scopes->count(); i++)
     {
-        fs = (FileScope*)ptrarray_get(comp->file_scopes, i);
+        fs = (FileScope*)comp->file_scopes->get(i);
         if(APE_STREQ(fs->file->path, filepath))
         {
             errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos, "Cyclic reference of file \"%s\"", filepath);
@@ -6795,9 +7342,9 @@ static bool import_module(Compiler* comp, const Expression* import_stmt)
             goto end;
         }
     }
-    for(i = 0; i < ptrarray_count(module->symbols); i++)
+    for(i = 0; i < module->symbols->count(); i++)
     {
-        symbol = (Symbol*)ptrarray_get(module->symbols, i);
+        symbol = (Symbol*)module->symbols->get(i);
         ok = symbol_table_add_module_symbol(symbol_table, symbol);
         if(!ok)
         {
@@ -6811,7 +7358,7 @@ static bool import_module(Compiler* comp, const Expression* import_stmt)
         result = false;
         goto end;
     }
-    ok = ptrarray_add(file_scope->loaded_module_names, name_copy);
+    ok = file_scope->loaded_module_names->add(name_copy);
     if(!ok)
     {
         allocator_free(comp->alloc, name_copy);
@@ -6901,9 +7448,9 @@ static bool compile_statement(Compiler* comp, const Expression* stmt)
                 {
                     goto statement_if_error;
                 }
-                for(i = 0; i < ptrarray_count(if_stmt->cases); i++)
+                for(i = 0; i < if_stmt->cases->count(); i++)
                 {
-                    if_case = (IfCase*)ptrarray_get(if_stmt->cases, i);
+                    if_case = (IfCase*)if_stmt->cases->get(i);
                     ok = compile_expression(comp, if_case->test);
                     if(!ok)
                     {
@@ -6916,7 +7463,7 @@ static bool compile_statement(Compiler* comp, const Expression* stmt)
                         goto statement_if_error;
                     }
                     // don't emit jump for the last statement
-                    if(i < (ptrarray_count(if_stmt->cases) - 1) || if_stmt->alternative)
+                    if(i < (if_stmt->cases->count() - 1) || if_stmt->alternative)
                     {
 
                         jump_to_end_ip = emit(comp, OPCODE_JUMP, 1, (uint64_t)(0xbeef));
@@ -7689,15 +8236,15 @@ static bool compile_expression(Compiler* comp, Expression* expr)
         }
         case EXPRESSION_ARRAY_LITERAL:
         {
-            for(int i = 0; i < ptrarray_count(expr->array); i++)
+            for(int i = 0; i < expr->array->count(); i++)
             {
-                ok = compile_expression(comp, (Expression*)ptrarray_get(expr->array, i));
+                ok = compile_expression(comp, (Expression*)expr->array->get(i));
                 if(!ok)
                 {
                     goto error;
                 }
             }
-            ip = emit(comp, OPCODE_ARRAY, 1, (uint64_t)ptrarray_count(expr->array));
+            ip = emit(comp, OPCODE_ARRAY, 1, (uint64_t)expr->array->count());
             if(ip < 0)
             {
                 goto error;
@@ -7707,7 +8254,7 @@ static bool compile_expression(Compiler* comp, Expression* expr)
         case EXPRESSION_MAP_LITERAL:
         {
             const MapLiteral* map = &expr->map;
-            int len = ptrarray_count(map->keys);
+            int len = map->keys->count();
             ip = emit(comp, OPCODE_MAP_START, 1, (uint64_t)len);
             if(ip < 0)
             {
@@ -7716,8 +8263,8 @@ static bool compile_expression(Compiler* comp, Expression* expr)
 
             for(int i = 0; i < len; i++)
             {
-                Expression* key = (Expression*)ptrarray_get(map->keys, i);
-                Expression* val = (Expression*)ptrarray_get(map->values, i);
+                Expression* key = (Expression*)map->keys->get(i);
+                Expression* val = (Expression*)map->values->get(i);
 
                 ok = compile_expression(comp, key);
                 if(!ok)
@@ -7846,9 +8393,9 @@ static bool compile_expression(Compiler* comp, Expression* expr)
                 goto error;
             }
 
-            for(int i = 0; i < ptrarray_count(expr->fn_literal.params); i++)
+            for(int i = 0; i < expr->fn_literal.params->count(); i++)
             {
-                Ident* param = (Ident*)ptrarray_get(expr->fn_literal.params, i);
+                Ident* param = (Ident*)expr->fn_literal.params->get(i);
                 const Symbol* param_symbol = define_symbol(comp, param->pos, param->value, true, false);
                 if(!param_symbol)
                 {
@@ -7879,7 +8426,7 @@ static bool compile_expression(Compiler* comp, Expression* expr)
             CompilationResult* comp_res = compilation_scope_orphan_result(compilation_scope);
             if(!comp_res)
             {
-                ptrarray_destroy_with_items(free_symbols, symbol_destroy);
+                free_symbols->destroyWithItems(symbol_destroy);
                 goto error;
             }
             pop_symbol_table(comp);
@@ -7887,22 +8434,22 @@ static bool compile_expression(Compiler* comp, Expression* expr)
             compilation_scope = get_compilation_scope(comp);
             symbol_table = compiler_get_symbol_table(comp);
 
-            Object obj = object_make_function(comp->mem, fn->name, comp_res, true, num_locals, ptrarray_count(fn->params), 0);
+            Object obj = object_make_function(comp->mem, fn->name, comp_res, true, num_locals, fn->params->count(), 0);
 
             if(object_is_null(obj))
             {
-                ptrarray_destroy_with_items(free_symbols, symbol_destroy);
+                free_symbols->destroyWithItems(symbol_destroy);
                 compilation_result_destroy(comp_res);
                 goto error;
             }
 
-            for(int i = 0; i < ptrarray_count(free_symbols); i++)
+            for(int i = 0; i < free_symbols->count(); i++)
             {
-                Symbol* symbol = (Symbol*)ptrarray_get(free_symbols, i);
+                Symbol* symbol = (Symbol*)free_symbols->get(i);
                 ok = read_symbol(comp, symbol);
                 if(!ok)
                 {
-                    ptrarray_destroy_with_items(free_symbols, symbol_destroy);
+                    free_symbols->destroyWithItems(symbol_destroy);
                     goto error;
                 }
             }
@@ -7910,18 +8457,18 @@ static bool compile_expression(Compiler* comp, Expression* expr)
             int pos = add_constant(comp, obj);
             if(pos < 0)
             {
-                ptrarray_destroy_with_items(free_symbols, symbol_destroy);
+                free_symbols->destroyWithItems(symbol_destroy);
                 goto error;
             }
 
-            ip = emit(comp, OPCODE_FUNCTION, 2, (uint64_t)pos, (uint64_t)ptrarray_count(free_symbols));
+            ip = emit(comp, OPCODE_FUNCTION, 2, (uint64_t)pos, (uint64_t)free_symbols->count());
             if(ip < 0)
             {
-                ptrarray_destroy_with_items(free_symbols, symbol_destroy);
+                free_symbols->destroyWithItems(symbol_destroy);
                 goto error;
             }
 
-            ptrarray_destroy_with_items(free_symbols, symbol_destroy);
+            free_symbols->destroyWithItems(symbol_destroy);
 
             break;
         }
@@ -7933,9 +8480,9 @@ static bool compile_expression(Compiler* comp, Expression* expr)
                 goto error;
             }
 
-            for(int i = 0; i < ptrarray_count(expr->call_expr.args); i++)
+            for(int i = 0; i < expr->call_expr.args->count(); i++)
             {
-                Expression* arg_expr = (Expression*)ptrarray_get(expr->call_expr.args, i);
+                Expression* arg_expr = (Expression*)expr->call_expr.args->get(i);
                 ok = compile_expression(comp, arg_expr);
                 if(!ok)
                 {
@@ -7943,7 +8490,7 @@ static bool compile_expression(Compiler* comp, Expression* expr)
                 }
             }
 
-            ip = emit(comp, OPCODE_CALL, 1, (uint64_t)ptrarray_count(expr->call_expr.args));
+            ip = emit(comp, OPCODE_CALL, 1, (uint64_t)expr->call_expr.args->count());
             if(ip < 0)
             {
                 goto error;
@@ -8154,7 +8701,7 @@ static bool compile_code_block(Compiler* comp, const Codeblock* block)
         return false;
     }
 
-    if(ptrarray_count(block->statements) == 0)
+    if(block->statements->count() == 0)
     {
         int ip = emit(comp, OPCODE_NULL, 0);
         if(ip < 0)
@@ -8168,9 +8715,9 @@ static bool compile_code_block(Compiler* comp, const Codeblock* block)
         }
     }
 
-    for(int i = 0; i < ptrarray_count(block->statements); i++)
+    for(int i = 0; i < block->statements->count(); i++)
     {
-        const Expression* stmt = (Expression*)ptrarray_get(block->statements, i);
+        const Expression* stmt = (Expression*)block->statements->get(i);
         bool ok = compile_statement(comp, stmt);
         if(!ok)
         {
@@ -8365,7 +8912,7 @@ static FileScope* file_scope_make(Compiler* comp, CompiledFile* file)
     }
     file_scope->symbol_table = NULL;
     file_scope->file = file;
-    file_scope->loaded_module_names = ptrarray_make(comp->alloc);
+    file_scope->loaded_module_names = PtrArray::make(comp->alloc);
     if(!file_scope->loaded_module_names)
     {
         goto err;
@@ -8378,12 +8925,12 @@ err:
 
 static void file_scope_destroy(FileScope* scope)
 {
-    for(int i = 0; i < ptrarray_count(scope->loaded_module_names); i++)
+    for(int i = 0; i < scope->loaded_module_names->count(); i++)
     {
-        void* name = ptrarray_get(scope->loaded_module_names, i);
+        void* name = scope->loaded_module_names->get(i);
         allocator_free(scope->alloc, name);
     }
-    ptrarray_destroy(scope->loaded_module_names);
+    scope->loaded_module_names->destroy();
     parser_destroy(scope->parser);
     allocator_free(scope->alloc, scope);
 }
@@ -8391,7 +8938,7 @@ static void file_scope_destroy(FileScope* scope)
 static bool push_file_scope(Compiler* comp, const char* filepath)
 {
     SymbolTable* prev_st = NULL;
-    if(ptrarray_count(comp->file_scopes) > 0)
+    if(comp->file_scopes->count() > 0)
     {
         prev_st = compiler_get_symbol_table(comp);
     }
@@ -8402,7 +8949,7 @@ static bool push_file_scope(Compiler* comp, const char* filepath)
         return false;
     }
 
-    bool ok = ptrarray_add(comp->files, file);
+    bool ok = comp->files->add(file);
     if(!ok)
     {
         compiled_file_destroy(file);
@@ -8415,7 +8962,7 @@ static bool push_file_scope(Compiler* comp, const char* filepath)
         return false;
     }
 
-    ok = ptrarray_push(comp->file_scopes, file_scope);
+    ok = comp->file_scopes->push(file_scope);
     if(!ok)
     {
         file_scope_destroy(file_scope);
@@ -8432,7 +8979,7 @@ static bool push_file_scope(Compiler* comp, const char* filepath)
     ok = push_symbol_table(comp, global_offset);
     if(!ok)
     {
-        ptrarray_pop(comp->file_scopes);
+        comp->file_scopes->pop();
         file_scope_destroy(file_scope);
         return false;
     }
@@ -8450,7 +8997,7 @@ static void pop_file_scope(Compiler* comp)
     {
         pop_symbol_table(comp);
     }
-    FileScope* scope = (FileScope*)ptrarray_top(comp->file_scopes);
+    FileScope* scope = (FileScope*)comp->file_scopes->top();
     if(!scope)
     {
         APE_ASSERT(false);
@@ -8458,9 +9005,9 @@ static void pop_file_scope(Compiler* comp)
     }
     file_scope_destroy(scope);
 
-    ptrarray_pop(comp->file_scopes);
+    comp->file_scopes->pop();
 
-    if(ptrarray_count(comp->file_scopes) > 0)
+    if(comp->file_scopes->count() > 0)
     {
         SymbolTable* current_st = compiler_get_symbol_table(comp);
         BlockScope* current_st_top_scope = symbol_table_get_block_scope(current_st);
@@ -8558,10 +9105,10 @@ char* statements_to_string(Allocator* alloc, PtrArray * statements)
     {
         return NULL;
     }
-    cn = ptrarray_count(statements);
+    cn = statements->count();
     for(i = 0; i < cn; i++)
     {
-        stmt = (Expression*)ptrarray_get(statements, i);
+        stmt = (Expression*)statements->get(i);
         statement_to_string(stmt, buf);
         if(i < (cn - 1))
         {
@@ -8602,14 +9149,14 @@ void statement_to_string(const Expression* stmt, StringBuffer* buf)
         }
         case EXPRESSION_IF:
         {
-            if_case = (IfCase*)ptrarray_get(stmt->if_statement.cases, 0);
+            if_case = (IfCase*)stmt->if_statement.cases->get(0);
             strbuf_append(buf, "if (");
             expression_to_string(if_case->test, buf);
             strbuf_append(buf, ") ");
             code_block_to_string(if_case->consequence, buf);
-            for(i = 1; i < ptrarray_count(stmt->if_statement.cases); i++)
+            for(i = 1; i < stmt->if_statement.cases->count(); i++)
             {
-                elif_case = (IfCase*)ptrarray_get(stmt->if_statement.cases, i);
+                elif_case = (IfCase*)stmt->if_statement.cases->get(i);
                 strbuf_append(buf, " elif (");
                 expression_to_string(elif_case->test, buf);
                 strbuf_append(buf, ") ");
@@ -8755,11 +9302,11 @@ void expression_to_string(Expression* expr, StringBuffer* buf)
         case EXPRESSION_ARRAY_LITERAL:
         {
             strbuf_append(buf, "[");
-            for(i = 0; i < ptrarray_count(expr->array); i++)
+            for(i = 0; i < expr->array->count(); i++)
             {
-                arr_expr = (Expression*)ptrarray_get(expr->array, i);
+                arr_expr = (Expression*)expr->array->get(i);
                 expression_to_string(arr_expr, buf);
-                if(i < (ptrarray_count(expr->array) - 1))
+                if(i < (expr->array->count() - 1))
                 {
                     strbuf_append(buf, ", ");
                 }
@@ -8771,14 +9318,14 @@ void expression_to_string(Expression* expr, StringBuffer* buf)
         {
             map = &expr->map;
             strbuf_append(buf, "{");
-            for(i = 0; i < ptrarray_count(map->keys); i++)
+            for(i = 0; i < map->keys->count(); i++)
             {
-                Expression* key_expr = (Expression*)ptrarray_get(map->keys, i);
-                Expression* val_expr = (Expression*)ptrarray_get(map->values, i);
+                Expression* key_expr = (Expression*)map->keys->get(i);
+                Expression* val_expr = (Expression*)map->values->get(i);
                 expression_to_string(key_expr, buf);
                 strbuf_append(buf, " : ");
                 expression_to_string(val_expr, buf);
-                if(i < (ptrarray_count(map->keys) - 1))
+                if(i < (map->keys->count() - 1))
                 {
                     strbuf_append(buf, ", ");
                 }
@@ -8812,11 +9359,11 @@ void expression_to_string(Expression* expr, StringBuffer* buf)
             strbuf_append(buf, "fn");
 
             strbuf_append(buf, "(");
-            for(i = 0; i < ptrarray_count(fn->params); i++)
+            for(i = 0; i < fn->params->count(); i++)
             {
-                Ident* param = (Ident*)ptrarray_get(fn->params, i);
+                Ident* param = (Ident*)fn->params->get(i);
                 strbuf_append(buf, param->value);
-                if(i < (ptrarray_count(fn->params) - 1))
+                if(i < (fn->params->count() - 1))
                 {
                     strbuf_append(buf, ", ");
                 }
@@ -8834,11 +9381,11 @@ void expression_to_string(Expression* expr, StringBuffer* buf)
             expression_to_string(call_expr->function, buf);
 
             strbuf_append(buf, "(");
-            for(int i = 0; i < ptrarray_count(call_expr->args); i++)
+            for(int i = 0; i < call_expr->args->count(); i++)
             {
-                Expression* arg = (Expression*)ptrarray_get(call_expr->args, i);
+                Expression* arg = (Expression*)call_expr->args->get(i);
                 expression_to_string(arg, buf);
-                if(i < (ptrarray_count(call_expr->args) - 1))
+                if(i < (call_expr->args->count() - 1))
                 {
                     strbuf_append(buf, ", ");
                 }
@@ -8894,9 +9441,9 @@ void code_block_to_string(const Codeblock* stmt, StringBuffer* buf)
     int i;
     Expression* istmt;
     strbuf_append(buf, "{ ");
-    for(i = 0; i < ptrarray_count(stmt->statements); i++)
+    for(i = 0; i < stmt->statements->count(); i++)
     {
-        istmt = (Expression*)ptrarray_get(stmt->statements, i);
+        istmt = (Expression*)stmt->statements->get(i);
         statement_to_string(istmt, buf);
         strbuf_append(buf, "\n");
     }
@@ -9224,25 +9771,6 @@ THE SOFTWARE.
 */
 
 
-static unsigned int upper_power_of_two(unsigned int v);
-static void errors_init(ErrorList *errors);
-static void errors_deinit(ErrorList *errors);
-static const Error *errors_getc(const ErrorList *errors, int ix);
-static bool set_symbol(SymbolTable *table, Symbol *symbol);
-static int next_symbol_index(SymbolTable *table);
-static int count_num_definitions(SymbolTable *table);
-static uint64_t get_type_tag(ObjectType type);
-static bool freevals_are_allocated(FunctionObject *fun);
-static void set_sp(VM *vm, int new_sp);
-static void this_stack_push(VM *vm, Object obj);
-static Object this_stack_pop(VM *vm);
-static Object this_stack_get(VM *vm, int nth_item);
-static bool try_overload_operator(VM *vm, Object left, Object right, opcode_t op, bool *out_overload_found);
-static void set_default_config(Context *ape);
-static char *read_file_default(void *ctx, const char *filename);
-static size_t write_file_default(void *ctx, const char *path, const char *string, size_t string_size);
-static size_t stdout_write_default(void *ctx, const void *data, size_t size);
-
 
 
 /**/
@@ -9532,695 +10060,6 @@ void allocator_free(Allocator* allocator, void* ptr)
 
 
 //-----------------------------------------------------------------------------
-// Value dictionary
-//-----------------------------------------------------------------------------
-
-
-// Public
-ValDictionary* valdict_make_(Allocator* alloc, size_t key_size, size_t val_size)
-{
-    return valdict_make_with_capacity(alloc, DICT_INITIAL_SIZE, key_size, val_size);
-}
-
-ValDictionary* valdict_make_with_capacity(Allocator* alloc, unsigned int min_capacity, size_t key_size, size_t val_size)
-{
-    bool ok;
-    ValDictionary* dict;
-    unsigned int capacity;
-    dict = (ValDictionary*)allocator_malloc(alloc, sizeof(ValDictionary));
-    capacity = upper_power_of_two(min_capacity * 2);
-    if(!dict)
-    {
-        return NULL;
-    }
-    ok = valdict_init(dict, alloc, key_size, val_size, capacity);
-    if(!ok)
-    {
-        allocator_free(alloc, dict);
-        return NULL;
-    }
-    return dict;
-}
-
-void valdict_destroy(ValDictionary* dict)
-{
-    if(!dict)
-    {
-        return;
-    }
-    Allocator* alloc = dict->alloc;
-    valdict_deinit(dict);
-    allocator_free(alloc, dict);
-}
-
-void valdict_set_hash_function(ValDictionary* dict, CollectionsHashFNCallback hash_fn)
-{
-    dict->_hash_key = hash_fn;
-}
-
-void valdict_set_equals_function(ValDictionary* dict, CollectionsEqualsFNCallback equals_fn)
-{
-    dict->_keys_equals = equals_fn;
-}
-
-bool valdict_set(ValDictionary* dict, void* key, void* value)
-{
-    unsigned long hash = valdict_hash_key(dict, key);
-    bool found = false;
-    unsigned int cell_ix = valdict_get_cell_ix(dict, key, hash, &found);
-    if(found)
-    {
-        unsigned int item_ix = dict->cells[cell_ix];
-        valdict_set_value_at(dict, item_ix, value);
-        return true;
-    }
-    if(dict->m_count >= dict->item_capacity)
-    {
-        bool ok = valdict_grow_and_rehash(dict);
-        if(!ok)
-        {
-            return false;
-        }
-        cell_ix = valdict_get_cell_ix(dict, key, hash, &found);
-    }
-    unsigned int last_ix = dict->m_count;
-    dict->m_count++;
-    dict->cells[cell_ix] = last_ix;
-    valdict_set_key_at(dict, last_ix, key);
-    valdict_set_value_at(dict, last_ix, value);
-    dict->cell_ixs[last_ix] = cell_ix;
-    dict->hashes[last_ix] = hash;
-    return true;
-}
-
-void* valdict_get(const ValDictionary* dict, const void* key)
-{
-    unsigned long hash = valdict_hash_key(dict, key);
-    bool found = false;
-    unsigned long cell_ix = valdict_get_cell_ix(dict, key, hash, &found);
-    if(!found)
-    {
-        return NULL;
-    }
-    unsigned int item_ix = dict->cells[cell_ix];
-    return valdict_get_value_at(dict, item_ix);
-}
-
-void* valdict_get_key_at(const ValDictionary* dict, unsigned int ix)
-{
-    if(ix >= dict->m_count)
-    {
-        return NULL;
-    }
-    return (char*)dict->keys + (dict->key_size * ix);
-}
-
-void* valdict_get_value_at(const ValDictionary* dict, unsigned int ix)
-{
-    if(ix >= dict->m_count)
-    {
-        return NULL;
-    }
-    return (char*)dict->values + (dict->val_size * ix);
-}
-
-unsigned int valdict_get_capacity(const ValDictionary* dict)
-{
-    return dict->item_capacity;
-}
-
-bool valdict_set_value_at(const ValDictionary* dict, unsigned int ix, const void* value)
-{
-    if(ix >= dict->m_count)
-    {
-        return false;
-    }
-    size_t offset = ix * dict->val_size;
-    memcpy((char*)dict->values + offset, value, dict->val_size);
-    return true;
-}
-
-int valdict_count(const ValDictionary* dict)
-{
-    if(!dict)
-    {
-        return 0;
-    }
-    return dict->m_count;
-}
-
-bool valdict_remove(ValDictionary* dict, void* key)
-{
-    unsigned long hash = valdict_hash_key(dict, key);
-    bool found = false;
-    unsigned int cell = valdict_get_cell_ix(dict, key, hash, &found);
-    if(!found)
-    {
-        return false;
-    }
-
-    unsigned int item_ix = dict->cells[cell];
-    unsigned int last_item_ix = dict->m_count - 1;
-    if(item_ix < last_item_ix)
-    {
-        void* last_key = valdict_get_key_at(dict, last_item_ix);
-        valdict_set_key_at(dict, item_ix, last_key);
-        void* last_value = valdict_get_key_at(dict, last_item_ix);
-        valdict_set_value_at(dict, item_ix, last_value);
-        dict->cell_ixs[item_ix] = dict->cell_ixs[last_item_ix];
-        dict->hashes[item_ix] = dict->hashes[last_item_ix];
-        dict->cells[dict->cell_ixs[item_ix]] = item_ix;
-    }
-    dict->m_count--;
-
-    unsigned int i = cell;
-    unsigned int j = i;
-    for(unsigned int x = 0; x < (dict->cell_capacity - 1); x++)
-    {
-        j = (j + 1) & (dict->cell_capacity - 1);
-        if(dict->cells[j] == VALDICT_INVALID_IX)
-        {
-            break;
-        }
-        unsigned int k = dict->hashes[dict->cells[j]] & (dict->cell_capacity - 1);
-        if((j > i && (k <= i || k > j)) || (j < i && (k <= i && k > j)))
-        {
-            dict->cell_ixs[dict->cells[j]] = i;
-            dict->cells[i] = dict->cells[j];
-            i = j;
-        }
-    }
-    dict->cells[i] = VALDICT_INVALID_IX;
-    return true;
-}
-
-void valdict_clear(ValDictionary* dict)
-{
-    dict->m_count = 0;
-    for(unsigned int i = 0; i < dict->cell_capacity; i++)
-    {
-        dict->cells[i] = VALDICT_INVALID_IX;
-    }
-}
-
-// Private definitions
-bool valdict_init(ValDictionary* dict, Allocator* alloc, size_t key_size, size_t val_size, unsigned int initial_capacity)
-{
-    dict->alloc = alloc;
-    dict->key_size = key_size;
-    dict->val_size = val_size;
-    dict->cells = NULL;
-    dict->keys = NULL;
-    dict->values = NULL;
-    dict->cell_ixs = NULL;
-    dict->hashes = NULL;
-    dict->m_count = 0;
-    dict->cell_capacity = initial_capacity;
-    dict->item_capacity = (unsigned int)(initial_capacity * 0.7f);
-    dict->_keys_equals = NULL;
-    dict->_hash_key = NULL;
-    dict->cells = (unsigned int*)allocator_malloc(dict->alloc, dict->cell_capacity * sizeof(*dict->cells));
-    dict->keys = allocator_malloc(dict->alloc, dict->item_capacity * key_size);
-    dict->values = allocator_malloc(dict->alloc, dict->item_capacity * val_size);
-    dict->cell_ixs = (unsigned int*)allocator_malloc(dict->alloc, dict->item_capacity * sizeof(*dict->cell_ixs));
-    dict->hashes = (long unsigned int*)allocator_malloc(dict->alloc, dict->item_capacity * sizeof(*dict->hashes));
-    if(dict->cells == NULL || dict->keys == NULL || dict->values == NULL || dict->cell_ixs == NULL || dict->hashes == NULL)
-    {
-        goto error;
-    }
-    for(unsigned int i = 0; i < dict->cell_capacity; i++)
-    {
-        dict->cells[i] = VALDICT_INVALID_IX;
-    }
-    return true;
-error:
-    allocator_free(dict->alloc, dict->cells);
-    allocator_free(dict->alloc, dict->keys);
-    allocator_free(dict->alloc, dict->values);
-    allocator_free(dict->alloc, dict->cell_ixs);
-    allocator_free(dict->alloc, dict->hashes);
-    return false;
-}
-
-void valdict_deinit(ValDictionary* dict)
-{
-    dict->key_size = 0;
-    dict->val_size = 0;
-    dict->m_count = 0;
-    dict->item_capacity = 0;
-    dict->cell_capacity = 0;
-
-    allocator_free(dict->alloc, dict->cells);
-    allocator_free(dict->alloc, dict->keys);
-    allocator_free(dict->alloc, dict->values);
-    allocator_free(dict->alloc, dict->cell_ixs);
-    allocator_free(dict->alloc, dict->hashes);
-
-    dict->cells = NULL;
-    dict->keys = NULL;
-    dict->values = NULL;
-    dict->cell_ixs = NULL;
-    dict->hashes = NULL;
-}
-
-unsigned int valdict_get_cell_ix(const ValDictionary* dict, const void* key, unsigned long hash, bool* out_found)
-{
-    *out_found = false;
-    bool are_equal;
-    unsigned int ofs;
-    unsigned int i;
-    unsigned int ix;
-    unsigned int cell;
-    unsigned int cell_ix;
-    unsigned long hash_to_check;
-    void* key_to_check;
-    //fprintf(stderr, "valdict_get_cell_ix: dict=%p, dict->cell_capacity=%d\n", dict, dict->cell_capacity);
-    ofs = 0;
-    if(dict->cell_capacity > 1)
-    {
-        ofs = (dict->cell_capacity - 1);
-    }
-    cell_ix = hash & ofs;
-    for(i = 0; i < dict->cell_capacity; i++)
-    {
-        cell = VALDICT_INVALID_IX;
-        ix = (cell_ix + i) & ofs;
-        //fprintf(stderr, "(cell_ix=%d + i=%d) & ofs=%d == %d\n", cell_ix, i, ofs, ix);
-        cell = dict->cells[ix];
-        if(cell == VALDICT_INVALID_IX)
-        {
-            return ix;
-        }
-        hash_to_check = dict->hashes[cell];
-        if(hash != hash_to_check)
-        {
-            continue;
-        }
-        key_to_check = valdict_get_key_at(dict, cell);
-        are_equal = valdict_keys_are_equal(dict, key, key_to_check);
-        if(are_equal)
-        {
-            *out_found = true;
-            return ix;
-        }
-    }
-    return VALDICT_INVALID_IX;
-}
-
-bool valdict_grow_and_rehash(ValDictionary* dict)
-{
-    ValDictionary new_dict;
-    unsigned new_capacity = dict->cell_capacity == 0 ? DICT_INITIAL_SIZE : dict->cell_capacity * 2;
-    bool ok = valdict_init(&new_dict, dict->alloc, dict->key_size, dict->val_size, new_capacity);
-    if(!ok)
-    {
-        return false;
-    }
-    new_dict._keys_equals = dict->_keys_equals;
-    new_dict._hash_key = dict->_hash_key;
-    for(unsigned int i = 0; i < dict->m_count; i++)
-    {
-        char* key = (char*)valdict_get_key_at(dict, i);
-        void* value = valdict_get_value_at(dict, i);
-        ok = valdict_set(&new_dict, key, value);
-        if(!ok)
-        {
-            valdict_deinit(&new_dict);
-            return false;
-        }
-    }
-    valdict_deinit(dict);
-    *dict = new_dict;
-    return true;
-}
-
-bool valdict_set_key_at(ValDictionary* dict, unsigned int ix, void* key)
-{
-    if(ix >= dict->m_count)
-    {
-        return false;
-    }
-    size_t offset = ix * dict->key_size;
-    memcpy((char*)dict->keys + offset, key, dict->key_size);
-    return true;
-}
-
-bool valdict_keys_are_equal(const ValDictionary* dict, const void* a, const void* b)
-{
-    if(dict->_keys_equals)
-    {
-        return dict->_keys_equals(a, b);
-    }
-    else
-    {
-        return memcmp(a, b, dict->key_size) == 0;
-    }
-}
-
-unsigned long valdict_hash_key(const ValDictionary* dict, const void* key)
-{
-    if(dict->_hash_key)
-    {
-        return dict->_hash_key(key);
-    }
-    else
-    {
-        return collections_hash(key, dict->key_size);
-    }
-}
-
-//-----------------------------------------------------------------------------
-// Pointer dictionary
-//-----------------------------------------------------------------------------
-
-// Public
-PtrDictionary* ptrdict_make(Allocator* alloc)
-{
-    PtrDictionary* dict = (PtrDictionary*)allocator_malloc(alloc, sizeof(PtrDictionary));
-    if(!dict)
-    {
-        return NULL;
-    }
-    dict->alloc = alloc;
-    bool ok = valdict_init(&dict->vd, alloc, sizeof(void*), sizeof(void*), DICT_INITIAL_SIZE);
-    if(!ok)
-    {
-        allocator_free(alloc, dict);
-        return NULL;
-    }
-    return dict;
-}
-
-void ptrdict_destroy(PtrDictionary* dict)
-{
-    if(dict == NULL)
-    {
-        return;
-    }
-    valdict_deinit(&dict->vd);
-    allocator_free(dict->alloc, dict);
-}
-
-void ptrdict_set_hash_function(PtrDictionary* dict, CollectionsHashFNCallback hash_fn)
-{
-    valdict_set_hash_function(&dict->vd, hash_fn);
-}
-
-void ptrdict_set_equals_function(PtrDictionary* dict, CollectionsEqualsFNCallback equals_fn)
-{
-    valdict_set_equals_function(&dict->vd, equals_fn);
-}
-
-bool ptrdict_set(PtrDictionary* dict, void* key, void* value)
-{
-    return valdict_set(&dict->vd, &key, &value);
-}
-
-void* ptrdict_get(const PtrDictionary* dict, const void* key)
-{
-    void* res = (void*)valdict_get(&dict->vd, &key);
-    if(!res)
-    {
-        return NULL;
-    }
-    return *(void**)res;
-}
-
-void* ptrdict_get_value_at(const PtrDictionary* dict, unsigned int ix)
-{
-    void* res = valdict_get_value_at(&dict->vd, ix);
-    if(!res)
-    {
-        return NULL;
-    }
-    return *(void**)res;
-}
-
-void* ptrdict_get_key_at(const PtrDictionary* dict, unsigned int ix)
-{
-    void* res = valdict_get_key_at(&dict->vd, ix);
-    if(!res)
-    {
-        return NULL;
-    }
-    return *(void**)res;
-}
-
-int ptrdict_count(const PtrDictionary* dict)
-{
-    return valdict_count(&dict->vd);
-}
-
-bool ptrdict_remove(PtrDictionary* dict, void* key)
-{
-    return valdict_remove(&dict->vd, &key);
-}
-
-
-//-----------------------------------------------------------------------------
-// Pointer Array
-//-----------------------------------------------------------------------------
-
-
-PtrArray* ptrarray_make(Allocator* alloc)
-{
-    return ptrarray_make_with_capacity(alloc, 0);
-}
-
-PtrArray* ptrarray_make_with_capacity(Allocator* alloc, unsigned int capacity)
-{
-    PtrArray* ptrarr = (PtrArray*)allocator_malloc(alloc, sizeof(PtrArray));
-    if(!ptrarr)
-    {
-        return NULL;
-    }
-    ptrarr->alloc = alloc;
-    bool ok = ptrarr->arr.init(alloc, capacity, sizeof(void*));
-    if(!ok)
-    {
-        allocator_free(alloc, ptrarr);
-        return NULL;
-    }
-    return ptrarr;
-}
-
-void ptrarray_destroy(PtrArray* arr)
-{
-    if(!arr)
-    {
-        return;
-    }
-    arr->arr.deinit();
-    allocator_free(arr->alloc, arr);
-}
-
-void ptrarray_destroy_with_items_(PtrArray* arr, PtrArrayItemDestroyFNCallback destroy_fn)
-{// todo: destroy and copy in make fn
-    if(arr == NULL)
-    {
-        return;
-    }
-
-    if(destroy_fn)
-    {
-        ptrarray_clear_and_destroy_items_(arr, destroy_fn);
-    }
-
-    ptrarray_destroy(arr);
-}
-
-PtrArray* ptrarray_copy(PtrArray* arr)
-{
-    PtrArray* arr_copy = ptrarray_make_with_capacity(arr->alloc, arr->arr.capacity);
-    if(!arr_copy)
-    {
-        return NULL;
-    }
-    for(int i = 0; i < ptrarray_count(arr); i++)
-    {
-        void* item = ptrarray_get(arr, i);
-        bool ok = ptrarray_add(arr_copy, item);
-        if(!ok)
-        {
-            ptrarray_destroy(arr_copy);
-            return NULL;
-        }
-    }
-    return arr_copy;
-}
-
-PtrArray* ptrarray_copy_with_items_(PtrArray* arr, PtrArrayItemCopyFNCallback copy_fn, PtrArrayItemDestroyFNCallback destroy_fn)
-{
-    PtrArray* arr_copy = ptrarray_make_with_capacity(arr->alloc, arr->arr.capacity);
-    if(!arr_copy)
-    {
-        return NULL;
-    }
-    for(int i = 0; i < ptrarray_count(arr); i++)
-    {
-        void* item = ptrarray_get(arr, i);
-        void* item_copy = copy_fn(item);
-        if(item && !item_copy)
-        {
-            goto err;
-        }
-        bool ok = ptrarray_add(arr_copy, item_copy);
-        if(!ok)
-        {
-            goto err;
-        }
-    }
-    return arr_copy;
-err:
-    ptrarray_destroy_with_items_(arr_copy, destroy_fn);
-    return NULL;
-}
-
-bool ptrarray_add(PtrArray* arr, void* ptr)
-{
-    return arr->arr.add(&ptr);
-}
-
-bool ptrarray_set(PtrArray* arr, unsigned int ix, void* ptr)
-{
-    return arr->arr.set(ix, &ptr);
-}
-
-bool ptrarray_add_array(PtrArray* dest, PtrArray* source)
-{
-    return dest->arr.addArray(&source->arr);
-}
-
-void* ptrarray_get(PtrArray* arr, unsigned int ix)
-{
-    void* res = arr->arr.get(ix);
-    if(!res)
-    {
-        return NULL;
-    }
-    return *(void**)res;
-}
-
-const void* ptrarray_get_const(const PtrArray* arr, unsigned int ix)
-{
-    const void* res = arr->arr.getConst(ix);
-    if(!res)
-    {
-        return NULL;
-    }
-    return *(void* const*)res;
-}
-
-bool ptrarray_push(PtrArray* arr, void* ptr)
-{
-    return ptrarray_add(arr, ptr);
-}
-
-
-void* ptrarray_pop(PtrArray* arr)
-{
-    int ix = ptrarray_count(arr) - 1;
-    void* res = ptrarray_get(arr, ix);
-    ptrarray_remove_at(arr, ix);
-    return res;
-}
-
-void* ptrarray_top(PtrArray* arr)
-{
-    int cn = ptrarray_count(arr);
-    if(cn == 0)
-    {
-        return NULL;
-    }
-    return ptrarray_get(arr, cn - 1);
-}
-
-int ptrarray_count(const PtrArray* arr)
-{
-    if(!arr)
-    {
-        return 0;
-    }
-    return arr->arr.count();
-}
-
-bool ptrarray_remove_at(PtrArray* arr, unsigned int ix)
-{
-    return arr->arr.removeAt(ix);
-}
-
-bool ptrarray_remove_item(PtrArray* arr, void* item)
-{
-    for(int i = 0; i < ptrarray_count(arr); i++)
-    {
-        if(item == ptrarray_get(arr, i))
-        {
-            ptrarray_remove_at(arr, i);
-            return true;
-        }
-    }
-    COLLECTIONS_ASSERT(false);
-    return false;
-}
-
-void ptrarray_clear(PtrArray* arr)
-{
-    arr->arr.clear();
-}
-
-void ptrarray_clear_and_destroy_items_(PtrArray* arr, PtrArrayItemDestroyFNCallback destroy_fn)
-{
-    for(int i = 0; i < ptrarray_count(arr); i++)
-    {
-        void* item = ptrarray_get(arr, i);
-        destroy_fn(item);
-    }
-    ptrarray_clear(arr);
-}
-
-void ptrarray_lock_capacity(PtrArray* arr)
-{
-    arr->arr.lockCapacity();
-}
-
-int ptrarray_get_index(PtrArray* arr, void* ptr)
-{
-    for(int i = 0; i < ptrarray_count(arr); i++)
-    {
-        if(ptrarray_get(arr, i) == ptr)
-        {
-            return i;
-        }
-    }
-    return -1;
-}
-
-bool ptrarray_contains(PtrArray* arr, void* item)
-{
-    return ptrarray_get_index(arr, item) >= 0;
-}
-
-void* ptrarray_get_addr(PtrArray* arr, unsigned int ix)
-{
-    void* res = arr->arr.get(ix);
-    if(res == NULL)
-    {
-        return NULL;
-    }
-    return res;
-}
-
-void* ptrarray_data(PtrArray* arr)
-{
-    return arr->arr.data();
-}
-
-void ptrarray_reverse(PtrArray* arr)
-{
-    arr->arr.reverse();
-}
-
-//-----------------------------------------------------------------------------
 // String buffer
 //-----------------------------------------------------------------------------
 
@@ -10401,7 +10240,7 @@ PtrArray * kg_split_string(Allocator* alloc, const char* str, const char* delimi
     const char* line_start;
     const char* line_end;
     ok = false;
-    res = ptrarray_make(alloc);
+    res = PtrArray::make(alloc);
     rest = NULL;
     if(!str)
     {
@@ -10418,7 +10257,7 @@ PtrArray * kg_split_string(Allocator* alloc, const char* str, const char* delimi
         {
             goto err;
         }
-        ok = ptrarray_add(res, line);
+        ok = res->add(line);
         if(!ok)
         {
             allocator_free(alloc, line);
@@ -10432,7 +10271,7 @@ PtrArray * kg_split_string(Allocator* alloc, const char* str, const char* delimi
     {
         goto err;
     }
-    ok = ptrarray_add(res, rest);
+    ok = res->add(rest);
     if(!ok)
     {
         goto err;
@@ -10442,13 +10281,13 @@ err:
     allocator_free(alloc, rest);
     if(res)
     {
-        for(i = 0; i < ptrarray_count(res); i++)
+        for(i = 0; i < res->count(); i++)
         {
-            line = (char*)ptrarray_get(res, i);
+            line = (char*)res->get(i);
             allocator_free(alloc, line);
         }
     }
-    ptrarray_destroy(res);
+    res->destroy();
     return NULL;
 }
 
@@ -10462,11 +10301,11 @@ char* kg_join(Allocator* alloc, PtrArray * items, const char* with)
     {
         return NULL;
     }
-    for(i = 0; i < ptrarray_count(items); i++)
+    for(i = 0; i < items->count(); i++)
     {
-        item = (char*)ptrarray_get(items, i);
+        item = (char*)items->get(i);
         strbuf_append(res, item);
-        if(i < (ptrarray_count(items) - 1))
+        if(i < (items->count() - 1))
         {
             strbuf_append(res, with);
         }
@@ -10488,14 +10327,14 @@ char* kg_canonicalise_path(Allocator* alloc, const char* path)
         return NULL;
     }
 
-    for(i = 0; i < ptrarray_count(split) - 1; i++)
+    for(i = 0; i < split->count() - 1; i++)
     {
-        char* item = (char*)ptrarray_get(split, i);
-        char* next_item = (char*)ptrarray_get(split, i + 1);
+        char* item = (char*)split->get(i);
+        char* next_item = (char*)split->get(i + 1);
         if(kg_streq(item, "."))
         {
             allocator_free(alloc, item);
-            ptrarray_remove_at(split, i);
+            split->removeAt(i);
             i = -1;
             continue;
         }
@@ -10503,20 +10342,20 @@ char* kg_canonicalise_path(Allocator* alloc, const char* path)
         {
             allocator_free(alloc, item);
             allocator_free(alloc, next_item);
-            ptrarray_remove_at(split, i);
-            ptrarray_remove_at(split, i);
+            split->removeAt(i);
+            split->removeAt(i);
             i = -1;
             continue;
         }
     }
 
     char* joined = kg_join(alloc, split, "/");
-    for(i = 0; i < ptrarray_count(split); i++)
+    for(i = 0; i < split->count(); i++)
     {
-        void* item = (void*)ptrarray_get(split, i);
+        void* item = (void*)split->get(i);
         allocator_free(alloc, item);
     }
-    ptrarray_destroy(split);
+    split->destroy();
     return joined;
 }
 
@@ -10663,7 +10502,7 @@ CompiledFile* compiled_file_make(Allocator* alloc, const char* path)
     {
         goto error;
     }
-    file->lines = ptrarray_make(alloc);
+    file->lines = PtrArray::make(alloc);
     if(!file->lines)
     {
         goto error;
@@ -10681,12 +10520,12 @@ void compiled_file_destroy(CompiledFile* file)
     {
         return;
     }
-    for(i = 0; i < ptrarray_count(file->lines); i++)
+    for(i = 0; i < file->lines->count(); i++)
     {
-        void* item = (void*)ptrarray_get(file->lines, i);
+        void* item = (void*)file->lines->get(i);
         allocator_free(file->alloc, item);
     }
-    ptrarray_destroy(file->lines);
+    file->lines->destroy();
     allocator_free(file->alloc, file->dir_path);
     allocator_free(file->alloc, file->path);
     allocator_free(file->alloc, file);
@@ -10885,17 +10724,17 @@ SymbolTable* symbol_table_make(Allocator* alloc, SymbolTable* outer, GlobalStore
     table->outer = outer;
     table->global_store = global_store;
     table->module_global_offset = module_global_offset;
-    table->block_scopes = ptrarray_make(alloc);
+    table->block_scopes = PtrArray::make(alloc);
     if(!table->block_scopes)
     {
         goto err;
     }
-    table->free_symbols = ptrarray_make(alloc);
+    table->free_symbols = PtrArray::make(alloc);
     if(!table->free_symbols)
     {
         goto err;
     }
-    table->module_global_symbols = ptrarray_make(alloc);
+    table->module_global_symbols = PtrArray::make(alloc);
     if(!table->module_global_symbols)
     {
         goto err;
@@ -10919,13 +10758,13 @@ void symbol_table_destroy(SymbolTable* table)
         return;
     }
 
-    while(ptrarray_count(table->block_scopes) > 0)
+    while(table->block_scopes->count() > 0)
     {
         symbol_table_pop_block_scope(table);
     }
-    ptrarray_destroy(table->block_scopes);
-    ptrarray_destroy_with_items(table->module_global_symbols, symbol_destroy);
-    ptrarray_destroy_with_items(table->free_symbols, symbol_destroy);
+    table->block_scopes->destroy();
+    table->module_global_symbols->destroyWithItems(symbol_destroy);
+    table->free_symbols->destroyWithItems(symbol_destroy);
     alloc = table->alloc;
     memset(table, 0, sizeof(SymbolTable));
     allocator_free(alloc, table);
@@ -10943,17 +10782,17 @@ SymbolTable* symbol_table_copy(SymbolTable* table)
     copy->alloc = table->alloc;
     copy->outer = table->outer;
     copy->global_store = table->global_store;
-    copy->block_scopes = ptrarray_copy_with_items(table->block_scopes, block_scope_copy, block_scope_destroy);
+    copy->block_scopes = table->block_scopes->copyWithItems(block_scope_copy, block_scope_destroy);
     if(!copy->block_scopes)
     {
         goto err;
     }
-    copy->free_symbols = ptrarray_copy_with_items(table->free_symbols, symbol_copy, symbol_destroy);
+    copy->free_symbols = table->free_symbols->copyWithItems(symbol_copy, symbol_destroy);
     if(!copy->free_symbols)
     {
         goto err;
     }
-    copy->module_global_symbols = ptrarray_copy_with_items(table->module_global_symbols, symbol_copy, symbol_destroy);
+    copy->module_global_symbols = table->module_global_symbols->copyWithItems(symbol_copy, symbol_destroy);
     if(!copy->module_global_symbols)
     {
         goto err;
@@ -11026,7 +10865,7 @@ const Symbol* symbol_table_define(SymbolTable* table, const char* name, bool ass
     }
     global_symbol_added = false;
     ok = false;
-    if(symbol_type == SYMBOL_MODULE_GLOBAL && ptrarray_count(table->block_scopes) == 1)
+    if(symbol_type == SYMBOL_MODULE_GLOBAL && table->block_scopes->count() == 1)
     {
         global_symbol_copy = symbol_copy(symbol);
         if(!global_symbol_copy)
@@ -11034,7 +10873,7 @@ const Symbol* symbol_table_define(SymbolTable* table, const char* name, bool ass
             symbol_destroy(symbol);
             return NULL;
         }
-        ok = ptrarray_add(table->module_global_symbols, global_symbol_copy);
+        ok = table->module_global_symbols->add(global_symbol_copy);
         if(!ok)
         {
             symbol_destroy(global_symbol_copy);
@@ -11049,13 +10888,13 @@ const Symbol* symbol_table_define(SymbolTable* table, const char* name, bool ass
     {
         if(global_symbol_added)
         {
-            global_symbol_copy = (Symbol*)ptrarray_pop(table->module_global_symbols);
+            global_symbol_copy = (Symbol*)table->module_global_symbols->pop();
             symbol_destroy(global_symbol_copy);
         }
         symbol_destroy(symbol);
         return NULL;
     }
-    top_scope = (BlockScope*)ptrarray_top(table->block_scopes);
+    top_scope = (BlockScope*)table->block_scopes->top();
     top_scope->num_definitions++;
     definitions_count = count_num_definitions(table);
     if(definitions_count > table->max_num_definitions)
@@ -11076,14 +10915,14 @@ const Symbol* symbol_table_define_free(SymbolTable* st, const Symbol* original)
     {
         return NULL;
     }
-    ok = ptrarray_add(st->free_symbols, copy);
+    ok = st->free_symbols->add(copy);
     if(!ok)
     {
         symbol_destroy(copy);
         return NULL;
     }
 
-    symbol = symbol_make(st->alloc, original->name, SYMBOL_FREE, ptrarray_count(st->free_symbols) - 1, original->assignable);
+    symbol = symbol_make(st->alloc, original->name, SYMBOL_FREE, st->free_symbols->count() - 1, original->assignable);
     if(!symbol)
     {
         return NULL;
@@ -11151,9 +10990,9 @@ const Symbol* symbol_table_resolve(SymbolTable* table, const char* name)
     {
         return symbol;
     }
-    for(i = ptrarray_count(table->block_scopes) - 1; i >= 0; i--)
+    for(i = table->block_scopes->count() - 1; i >= 0; i--)
     {
-        scope = (BlockScope*)ptrarray_get(table->block_scopes, i);
+        scope = (BlockScope*)table->block_scopes->get(i);
         symbol = (Symbol*)scope->store->get(name);
         if(symbol)
         {
@@ -11191,7 +11030,7 @@ bool symbol_table_symbol_is_defined(SymbolTable* table, const char* name)
     {
         return true;
     }
-    top_scope = (BlockScope*)ptrarray_top(table->block_scopes);
+    top_scope = (BlockScope*)table->block_scopes->top();
     symbol = (Symbol*)top_scope->store->get(name);
     if(symbol)
     {
@@ -11207,7 +11046,7 @@ bool symbol_table_push_block_scope(SymbolTable* table)
     BlockScope* prev_block_scope;
     BlockScope* new_scope;
     block_scope_offset = 0;
-    prev_block_scope = (BlockScope*)ptrarray_top(table->block_scopes);
+    prev_block_scope = (BlockScope*)table->block_scopes->top();
     if(prev_block_scope)
     {
         block_scope_offset = table->module_global_offset + prev_block_scope->offset + prev_block_scope->num_definitions;
@@ -11222,7 +11061,7 @@ bool symbol_table_push_block_scope(SymbolTable* table)
     {
         return false;
     }
-    ok = ptrarray_push(table->block_scopes, new_scope);
+    ok = table->block_scopes->push(new_scope);
     if(!ok)
     {
         block_scope_destroy(new_scope);
@@ -11234,15 +11073,15 @@ bool symbol_table_push_block_scope(SymbolTable* table)
 void symbol_table_pop_block_scope(SymbolTable* table)
 {
     BlockScope* top_scope;
-    top_scope = (BlockScope*)ptrarray_top(table->block_scopes);
-    ptrarray_pop(table->block_scopes);
+    top_scope = (BlockScope*)table->block_scopes->top();
+    table->block_scopes->pop();
     block_scope_destroy(top_scope);
 }
 
 BlockScope* symbol_table_get_block_scope(SymbolTable* table)
 {
     BlockScope* top_scope;
-    top_scope = (BlockScope*)ptrarray_top(table->block_scopes);
+    top_scope = (BlockScope*)table->block_scopes->top();
     return top_scope;
 }
 
@@ -11253,7 +11092,7 @@ bool symbol_table_is_module_global_scope(SymbolTable* table)
 
 bool symbol_table_is_top_block_scope(SymbolTable* table)
 {
-    return ptrarray_count(table->block_scopes) == 1;
+    return table->block_scopes->count() == 1;
 }
 
 bool symbol_table_is_top_global_scope(SymbolTable* table)
@@ -11263,12 +11102,12 @@ bool symbol_table_is_top_global_scope(SymbolTable* table)
 
 int symbol_table_get_module_global_symbol_count(const SymbolTable* table)
 {
-    return ptrarray_count(table->module_global_symbols);
+    return table->module_global_symbols->count();
 }
 
 const Symbol* symbol_table_get_module_global_symbol_at(const SymbolTable* table, int ix)
 {
-    return (Symbol*)ptrarray_get(table->module_global_symbols, ix);
+    return (Symbol*)table->module_global_symbols->get(ix);
 }
 
 // INTERNAL
@@ -11324,7 +11163,7 @@ static bool set_symbol(SymbolTable* table, Symbol* symbol)
 {
     BlockScope* top_scope;
     Symbol* existing;
-    top_scope = (BlockScope*)ptrarray_top(table->block_scopes);
+    top_scope = (BlockScope*)table->block_scopes->top();
     existing= (Symbol*)top_scope->store->get(symbol->name);
     if(existing)
     {
@@ -11337,7 +11176,7 @@ static int next_symbol_index(SymbolTable* table)
 {
     int ix;
     BlockScope* top_scope;
-    top_scope = (BlockScope*)ptrarray_top(table->block_scopes);
+    top_scope = (BlockScope*)table->block_scopes->top();
     ix = top_scope->offset + top_scope->num_definitions;
     return ix;
 }
@@ -11348,9 +11187,9 @@ static int count_num_definitions(SymbolTable* table)
     int cn;
     BlockScope* scope;
     cn = 0;
-    for(i = ptrarray_count(table->block_scopes) - 1; i >= 0; i--)
+    for(i = table->block_scopes->count() - 1; i >= 0; i--)
     {
-        scope = (BlockScope*)ptrarray_get(table->block_scopes, i);
+        scope = (BlockScope*)table->block_scopes->get(i);
         cn += scope->num_definitions;
     }
     return cn;
@@ -11752,7 +11591,7 @@ Module* module_make(Allocator* alloc, const char* name)
         module_destroy(module);
         return NULL;
     }
-    module->symbols = ptrarray_make(alloc);
+    module->symbols = PtrArray::make(alloc);
     if(!module->symbols)
     {
         module_destroy(module);
@@ -11768,7 +11607,7 @@ void module_destroy(Module* module)
         return;
     }
     allocator_free(module->alloc, module->name);
-    ptrarray_destroy_with_items(module->symbols, symbol_destroy);
+    module->symbols->destroyWithItems(symbol_destroy);
     allocator_free(module->alloc, module);
 }
 
@@ -11787,7 +11626,7 @@ Module* module_copy(Module* src)
         module_destroy(copy);
         return NULL;
     }
-    copy->symbols = ptrarray_copy_with_items(src->symbols, symbol_copy, symbol_destroy);
+    copy->symbols = src->symbols->copyWithItems(symbol_copy, symbol_destroy);
     if(!copy->symbols)
     {
         module_destroy(copy);
@@ -11825,7 +11664,7 @@ bool module_add_symbol(Module* module, const Symbol* symbol)
     {
         return false;
     }
-    ok = ptrarray_add(module->symbols, module_symbol);
+    ok = module->symbols->add(module_symbol);
     if(!ok)
     {
         symbol_destroy(module_symbol);
@@ -12001,7 +11840,7 @@ Object object_make_map_with_capacity(GCMemory* mem, unsigned capacity)
     ObjectData* data = gcmem_get_object_data_from_pool(mem, APE_OBJECT_MAP);
     if(data)
     {
-        valdict_clear(data->map);
+        data->map->clear();
         return object_make_from_data(APE_OBJECT_MAP, data);
     }
     data = gcmem_alloc_object_data(mem, APE_OBJECT_MAP);
@@ -12009,13 +11848,13 @@ Object object_make_map_with_capacity(GCMemory* mem, unsigned capacity)
     {
         return object_make_null();
     }
-    data->map = valdict_make_with_capacity(mem->alloc, capacity, sizeof(Object), sizeof(Object));
+    data->map = ValDictionary::makeWithCapacity(mem->alloc, capacity, sizeof(Object), sizeof(Object));
     if(!data->map)
     {
         return object_make_null();
     }
-    valdict_set_hash_function(data->map, (CollectionsHashFNCallback)object_hash);
-    valdict_set_equals_function(data->map, (CollectionsEqualsFNCallback)object_equals_wrapped);
+    data->map->setHashFunction((CollectionsHashFNCallback)object_hash);
+    data->map->setEqualsFunction((CollectionsEqualsFNCallback)object_equals_wrapped);
     return object_make_from_data(APE_OBJECT_MAP, data);
 }
 
@@ -12167,7 +12006,7 @@ void object_data_deinit(ObjectData* data)
         }
         case APE_OBJECT_MAP:
         {
-            valdict_destroy(data->map);
+            data->map->destroy();
             break;
         }
         case APE_OBJECT_NATIVE_FUNCTION:
@@ -12322,13 +12161,13 @@ char* object_serialize(Allocator* alloc, Object object, size_t* lendest)
 
 Object object_deep_copy(GCMemory* mem, Object obj)
 {
-    ValDictionary* copies = valdict_make(mem->alloc, Object, Object);
+    ValDictionary* copies = ValDictionary::make<Object, Object>(mem->alloc);
     if(!copies)
     {
         return object_make_null();
     }
     Object res = object_deep_copy_internal(mem, obj, copies);
-    valdict_destroy(copies);
+    copies->destroy();
     return res;
 }
 
@@ -12853,14 +12692,14 @@ int object_get_map_length(Object object)
 {
     APE_ASSERT(object_get_type(object) == APE_OBJECT_MAP);
     ObjectData* data = object_get_allocated_data(object);
-    return valdict_count(data->map);
+    return data->map->count();
 }
 
 Object object_get_map_key_at(Object object, int ix)
 {
     APE_ASSERT(object_get_type(object) == APE_OBJECT_MAP);
     ObjectData* data = object_get_allocated_data(object);
-    Object* res = (Object*)valdict_get_key_at(data->map, ix);
+    Object* res = (Object*)data->map->getKeyAt(ix);
     if(!res)
     {
         return object_make_null();
@@ -12872,7 +12711,7 @@ Object object_get_map_value_at(Object object, int ix)
 {
     APE_ASSERT(object_get_type(object) == APE_OBJECT_MAP);
     ObjectData* data = object_get_allocated_data(object);
-    Object* res = (Object*)valdict_get_value_at(data->map, ix);
+    Object* res = (Object*)data->map->getValueAt(ix);
     if(!res)
     {
         return object_make_null();
@@ -12888,14 +12727,14 @@ bool object_set_map_value_at(Object object, int ix, Object val)
         return false;
     }
     ObjectData* data = object_get_allocated_data(object);
-    return valdict_set_value_at(data->map, ix, &val);
+    return data->map->setValueAt(ix, &val);
 }
 
 Object object_get_kv_pair_at(GCMemory* mem, Object object, int ix)
 {
     APE_ASSERT(object_get_type(object) == APE_OBJECT_MAP);
     ObjectData* data = object_get_allocated_data(object);
-    if(ix >= valdict_count(data->map))
+    if(ix >= data->map->count())
     {
         return object_make_null();
     }
@@ -12928,14 +12767,14 @@ bool object_set_map_value_object(Object object, Object key, Object val)
 {
     APE_ASSERT(object_get_type(object) == APE_OBJECT_MAP);
     ObjectData* data = object_get_allocated_data(object);
-    return valdict_set(data->map, &key, &val);
+    return data->map->set(&key, &val);
 }
 
 Object object_get_map_value_object(Object object, Object key)
 {
     APE_ASSERT(object_get_type(object) == APE_OBJECT_MAP);
     ObjectData* data = object_get_allocated_data(object);
-    Object* res = (Object*)valdict_get(data->map, &key);
+    Object* res = (Object*)data->map->get(&key);
     if(!res)
     {
         return object_make_null();
@@ -12947,14 +12786,14 @@ bool object_map_has_key_object(Object object, Object key)
 {
     APE_ASSERT(object_get_type(object) == APE_OBJECT_MAP);
     ObjectData* data = object_get_allocated_data(object);
-    Object* res = (Object*)valdict_get(data->map, &key);
+    Object* res = (Object*)data->map->get( &key);
     return res != NULL;
 }
 
 // INTERNAL
 Object object_deep_copy_internal(GCMemory* mem, Object obj, ValDictionary * copies)
 {
-    Object* copy_ptr = (Object*)valdict_get(copies, &obj);
+    Object* copy_ptr = (Object*)copies->get(&obj);
     if(copy_ptr)
     {
         return *copy_ptr;
@@ -13029,7 +12868,7 @@ Object object_deep_copy_internal(GCMemory* mem, Object obj, ValDictionary * copi
                     return object_make_null();
                 }
 
-                bool ok = valdict_set(copies, &obj, &copy);
+                bool ok = copies->set(&obj, &copy);
                 if(!ok)
                 {
                     return object_make_null();
@@ -13067,7 +12906,7 @@ Object object_deep_copy_internal(GCMemory* mem, Object obj, ValDictionary * copi
                 {
                     return object_make_null();
                 }
-                bool ok = valdict_set(copies, &obj, &copy);
+                bool ok = copies->set(&obj, &copy);
                 if(!ok)
                 {
                     return object_make_null();
@@ -13096,7 +12935,7 @@ Object object_deep_copy_internal(GCMemory* mem, Object obj, ValDictionary * copi
                 {
                     return object_make_null();
                 }
-                bool ok = valdict_set(copies, &obj, &copy);
+                bool ok = copies->set( &obj, &copy);
                 if(!ok)
                 {
                     return object_make_null();
@@ -13300,12 +13139,12 @@ GCMemory* gcmem_make(Allocator* alloc)
     }
     memset(mem, 0, sizeof(GCMemory));
     mem->alloc = alloc;
-    mem->objects = ptrarray_make(alloc);
+    mem->objects = PtrArray::make(alloc);
     if(!mem->objects)
     {
         goto error;
     }
-    mem->objects_back = ptrarray_make(alloc);
+    mem->objects_back = PtrArray::make(alloc);
     if(!mem->objects_back)
     {
         goto error;
@@ -13338,15 +13177,15 @@ void gcmem_destroy(GCMemory* mem)
     }
 
     Array::destroy(mem->objects_not_gced);
-    ptrarray_destroy(mem->objects_back);
+    mem->objects_back->destroy();
 
-    for(int i = 0; i < ptrarray_count(mem->objects); i++)
+    for(int i = 0; i < mem->objects->count(); i++)
     {
-        ObjectData* obj = (ObjectData*)ptrarray_get(mem->objects, i);
+        ObjectData* obj = (ObjectData*)mem->objects->get(i);
         object_data_deinit(obj);
         allocator_free(mem->alloc, obj);
     }
-    ptrarray_destroy(mem->objects);
+    mem->objects->destroy();
 
     for(int i = 0; i < GCMEM_POOLS_NUM; i++)
     {
@@ -13388,16 +13227,16 @@ ObjectData* gcmem_alloc_object_data(GCMemory* mem, ObjectType type)
 
     memset(data, 0, sizeof(ObjectData));
 
-    APE_ASSERT(ptrarray_count(mem->objects_back) >= ptrarray_count(mem->objects));
+    APE_ASSERT(mem->objects_back->count() >= mem->objects->count());
     // we want to make sure that appending to objects_back never fails in sweep
     // so this only reserves space there.
-    bool ok = ptrarray_add(mem->objects_back, data);
+    bool ok = mem->objects_back->add(data);
     if(!ok)
     {
         allocator_free(mem->alloc, data);
         return NULL;
     }
-    ok = ptrarray_add(mem->objects, data);
+    ok = mem->objects->add(data);
     if(!ok)
     {
         allocator_free(mem->alloc, data);
@@ -13417,16 +13256,16 @@ ObjectData* gcmem_get_object_data_from_pool(GCMemory* mem, ObjectType type)
     }
     ObjectData* data = pool->datapool[pool->m_count - 1];
 
-    APE_ASSERT(ptrarray_count(mem->objects_back) >= ptrarray_count(mem->objects));
+    APE_ASSERT(mem->objects_back->count() >= mem->objects->count());
 
     // we want to make sure that appending to objects_back never fails in sweep
     // so this only reserves space there.
-    bool ok = ptrarray_add(mem->objects_back, data);
+    bool ok = mem->objects_back->add(data);
     if(!ok)
     {
         return NULL;
     }
-    ok = ptrarray_add(mem->objects, data);
+    ok = mem->objects->add(data);
     if(!ok)
     {
         return NULL;
@@ -13439,9 +13278,9 @@ ObjectData* gcmem_get_object_data_from_pool(GCMemory* mem, ObjectType type)
 
 void gc_unmark_all(GCMemory* mem)
 {
-    for(int i = 0; i < ptrarray_count(mem->objects); i++)
+    for(int i = 0; i < mem->objects->count(); i++)
     {
-        ObjectData* data = (ObjectData*)ptrarray_get(mem->objects, i);
+        ObjectData* data = (ObjectData*)mem->objects->get(i);
         data->gcmark = false;
     }
 }
@@ -13545,16 +13384,16 @@ void gc_sweep(GCMemory* mem)
     bool ok;
     gc_mark_objects((Object*)mem->objects_not_gced->data(), mem->objects_not_gced->count());
 
-    APE_ASSERT(ptrarray_count(mem->objects_back) >= ptrarray_count(mem->objects));
+    APE_ASSERT(mem->objects_back->count() >= mem->objects->count());
 
-    ptrarray_clear(mem->objects_back);
-    for(i = 0; i < ptrarray_count(mem->objects); i++)
+    mem->objects_back->clear();
+    for(i = 0; i < mem->objects->count(); i++)
     {
-        ObjectData* data = (ObjectData*)ptrarray_get(mem->objects, i);
+        ObjectData* data = (ObjectData*)mem->objects->get(i);
         if(data->gcmark)
         {
             // this should never fail because objects_back's size should be equal to objects
-            ok = ptrarray_add(mem->objects_back, data);
+            ok = mem->objects_back->add(data);
             (void)ok;
             APE_ASSERT(ok);
         }
@@ -13752,11 +13591,11 @@ const char* traceback_item_get_line(TracebackItem* item)
         return NULL;
     }
     PtrArray* lines = item->pos.file->lines;
-    if(item->pos.line >= ptrarray_count(lines))
+    if(item->pos.line >= lines->count())
     {
         return NULL;
     }
-    const char* line = (const char*)ptrarray_get(lines, item->pos.line);
+    const char* line = (const char*)lines->get(item->pos.line);
     return line;
 }
 
@@ -15271,7 +15110,7 @@ Context* ape_make_ex(MallocFNCallback malloc_fn, FreeFNCallback free_fn, void* c
         goto err;
     }
 
-    ape->files = ptrarray_make(&ape->alloc);
+    ape->files = PtrArray::make(&ape->alloc);
     if(!ape->files)
     {
         goto err;
@@ -15762,11 +15601,11 @@ const char* ape_error_get_line(const Error* ae)
         return NULL;
     }
     PtrArray* lines = error->pos.file->lines;
-    if(error->pos.line >= ptrarray_count(lines))
+    if(error->pos.line >= lines->count())
     {
         return NULL;
     }
-    const char* line = (const char*)ptrarray_get(lines, error->pos.line);
+    const char* line = (const char*)lines->get(error->pos.line);
     return line;
 }
 
@@ -15942,7 +15781,7 @@ void ape_deinit(Context* ape)
     compiler_destroy(ape->compiler);
     global_store_destroy(ape->global_store);
     gcmem_destroy(ape->mem);
-    ptrarray_destroy_with_items(ape->files, compiled_file_destroy);
+    ape->files->destroyWithItems(compiled_file_destroy);
     errors_deinit(&ape->errors);
 }
 
@@ -17389,13 +17228,13 @@ static Object cfn_string_split(VM* vm, void* data, int argc, Object* args)
     else
     {
         parr = kg_split_string(vm->alloc, str, delim);
-        for(i=0; i<ptrarray_count(parr); i++)
+        for(i=0; i<parr->count(); i++)
         {
-            itm = (char*)ptrarray_get(parr, i);
+            itm = (char*)parr->get(i);
             object_add_array_value(arr, object_make_string(vm->mem, itm));
             allocator_free(vm->alloc, (void*)itm);
         }
-        ptrarray_destroy(parr);
+        parr->destroy();
     }
     return arr;
 }
