@@ -433,7 +433,6 @@ struct /**/ObjectString;
 struct /**/ObjectData;
 struct /**/Symbol;
 struct /**/BlockScope;
-struct /**/SymbolTable;
 struct /**/OpcodeDefinition;
 struct /**/CompilationResult;
 struct /**/CompilationScope;
@@ -489,15 +488,8 @@ NativeFNCallback builtins_get_fn(int ix);
 const char *builtins_get_name(int ix);
 NativeFNCallback builtin_get_object(ObjectType objt, const char *idxname);
 /* compiler.c */
-Compiler *compiler_make(Allocator *alloc, const Config *config, GCMemory *mem, ErrorList *errors, PtrArray *files, GlobalStore *global_store);
-void compiler_destroy(Compiler *comp);
-CompilationResult *compiler_compile(Compiler *comp, const char *code);
-CompilationResult *compiler_compile_file(Compiler *comp, const char *path);
-SymbolTable *compiler_get_symbol_table(Compiler *comp);
-Array *compiler_get_constants(const Compiler *comp);
-bool compiler_init(Compiler *comp, Allocator *alloc, const Config *config, GCMemory *mem, ErrorList *errors, PtrArray *files, GlobalStore *global_store);
-void compiler_deinit(Compiler *comp);
-bool compiler_init_shallow_copy(Compiler *copy, Compiler *src);
+
+
 /* imp.c */
 char *ape_stringf(Allocator *alloc, const char *format, ...);
 void ape_log(const char *file, int line, const char *format, ...);
@@ -551,28 +543,9 @@ bool global_store_set_object_at(GlobalStore *store, int ix, Object object);
 Object *global_store_get_object_data(GlobalStore *store);
 int global_store_get_object_count(GlobalStore *store);
 
-Symbol *symbol_make(Allocator *alloc, const char *name, SymbolType type, int index, bool assignable);
-void symbol_destroy(Symbol *symbol);
-Symbol *symbol_copy(Symbol *symbol);
-SymbolTable *symbol_table_make(Allocator *alloc, SymbolTable *outer, GlobalStore *global_store, int module_global_offset);
-void symbol_table_destroy(SymbolTable *table);
-SymbolTable *symbol_table_copy(SymbolTable *table);
-bool symbol_table_add_module_symbol(SymbolTable *st, Symbol *symbol);
-const Symbol *symbol_table_define(SymbolTable *table, const char *name, bool assignable);
-const Symbol *symbol_table_define_free(SymbolTable *st, const Symbol *original);
-const Symbol *symbol_table_define_function_name(SymbolTable *st, const char *name, bool assignable);
-const Symbol *symbol_table_define_this(SymbolTable *st);
-const Symbol *symbol_table_resolve(SymbolTable *table, const char *name);
-bool symbol_table_symbol_is_defined(SymbolTable *table, const char *name);
-bool symbol_table_push_block_scope(SymbolTable *table);
-void symbol_table_pop_block_scope(SymbolTable *table);
-BlockScope *symbol_table_get_block_scope(SymbolTable *table);
-bool symbol_table_is_module_global_scope(SymbolTable *table);
-bool symbol_table_is_top_block_scope(SymbolTable *table);
-bool symbol_table_is_top_global_scope(SymbolTable *table);
-int symbol_table_get_module_global_symbol_count(const SymbolTable *table);
 
-const Symbol *symbol_table_get_module_global_symbol_at(const SymbolTable *table, int ix);
+
+
 BlockScope *block_scope_make(Allocator *alloc, int offset);
 void block_scope_destroy(BlockScope *scope);
 BlockScope *block_scope_copy(BlockScope *scope);
@@ -908,9 +881,7 @@ static unsigned int upper_power_of_two(unsigned int v);
 static void errors_init(ErrorList *errors);
 static void errors_deinit(ErrorList *errors);
 static const Error *errors_getc(const ErrorList *errors, int ix);
-static bool set_symbol(SymbolTable *table, Symbol *symbol);
-static int next_symbol_index(SymbolTable *table);
-static int count_num_definitions(SymbolTable *table);
+
 static uint64_t get_type_tag(ObjectType type);
 static bool freevals_are_allocated(FunctionObject *fun);
 static void set_sp(VM *vm, int new_sp);
@@ -1303,14 +1274,6 @@ struct ObjectData
     ObjectType type;
 };
 
-struct Symbol
-{
-    Allocator* alloc;
-    SymbolType type;
-    char* name;
-    int index;
-    bool assignable;
-};
 
 struct BlockScope
 {
@@ -1320,17 +1283,6 @@ struct BlockScope
     int num_definitions;
 };
 
-struct SymbolTable
-{
-    Allocator* alloc;
-    SymbolTable* outer;
-    GlobalStore* global_store;
-    PtrArray * block_scopes;
-    PtrArray * free_symbols;
-    PtrArray * module_global_symbols;
-    int max_num_definitions;
-    int module_global_offset;
-};
 
 struct OpcodeDefinition
 {
@@ -2788,6 +2740,514 @@ struct StringBuffer
     size_t len;
 };
 
+
+struct Symbol
+{
+    public:
+        struct Table
+        {
+            public:
+                static Table* make(Allocator* alloc, Table* outer, GlobalStore* global_store, int module_global_offset)
+                {
+                    bool ok;
+                    Table* table;
+                    table = (Table*)allocator_malloc(alloc, sizeof(Table));
+                    if(!table)
+                    {
+                        return NULL;
+                    }
+                    memset(table, 0, sizeof(Table));
+                    table->alloc = alloc;
+                    table->max_num_definitions = 0;
+                    table->outer = outer;
+                    table->global_store = global_store;
+                    table->module_global_offset = module_global_offset;
+                    table->block_scopes = PtrArray::make(alloc);
+                    if(!table->block_scopes)
+                    {
+                        goto err;
+                    }
+                    table->free_symbols = PtrArray::make(alloc);
+                    if(!table->free_symbols)
+                    {
+                        goto err;
+                    }
+                    table->module_global_symbols = PtrArray::make(alloc);
+                    if(!table->module_global_symbols)
+                    {
+                        goto err;
+                    }
+                    ok = table->pushBlockScope();
+                    if(!ok)
+                    {
+                        goto err;
+                    }
+                    return table;
+                err:
+                    table->destroy();
+                    return NULL;
+                }
+
+            public:
+                Allocator* alloc;
+                Table* outer;
+                GlobalStore* global_store;
+                PtrArray * block_scopes;
+                PtrArray * free_symbols;
+                PtrArray * module_global_symbols;
+                int max_num_definitions;
+                int module_global_offset;
+
+            public:
+                void destroy()
+                {
+                    Allocator* alloc;
+                    while(this->block_scopes->count() > 0)
+                    {
+                        this->popBlockScope();
+                    }
+                    this->block_scopes->destroy();
+                    this->module_global_symbols->destroyWithItems(Symbol::callback_destroy);
+                    this->free_symbols->destroyWithItems(Symbol::callback_destroy);
+                    alloc = this->alloc;
+                    memset(this, 0, sizeof(Table));
+                    allocator_free(alloc, this);
+                }
+
+                Table* copy()
+                {
+                    Table* copy;
+                    copy = (Table*)allocator_malloc(this->alloc, sizeof(Table));
+                    if(!copy)
+                    {
+                        return NULL;
+                    }
+                    memset(copy, 0, sizeof(Table));
+                    copy->alloc = this->alloc;
+                    copy->outer = this->outer;
+                    copy->global_store = this->global_store;
+                    copy->block_scopes = this->block_scopes->copyWithItems(block_scope_copy, block_scope_destroy);
+                    if(!copy->block_scopes)
+                    {
+                        goto err;
+                    }
+                    copy->free_symbols = this->free_symbols->copyWithItems(Symbol::callback_copy, Symbol::callback_destroy);
+                    if(!copy->free_symbols)
+                    {
+                        goto err;
+                    }
+                    copy->module_global_symbols = this->module_global_symbols->copyWithItems(Symbol::callback_copy, Symbol::callback_destroy);
+                    if(!copy->module_global_symbols)
+                    {
+                        goto err;
+                    }
+                    copy->max_num_definitions = this->max_num_definitions;
+                    copy->module_global_offset = this->module_global_offset;
+                    return copy;
+                err:
+                    copy->destroy();
+                    return NULL;
+                }
+
+                bool set(Symbol* symbol)
+                {
+                    BlockScope* top_scope;
+                    Symbol* existing;
+                    top_scope = (BlockScope*)this->block_scopes->top();
+                    existing= (Symbol*)top_scope->store->get(symbol->name);
+                    if(existing)
+                    {
+                        existing->destroy();
+                    }
+                    return top_scope->store->set(symbol->name, symbol);
+                }
+
+                int nextIndex()
+                {
+                    int ix;
+                    BlockScope* top_scope;
+                    top_scope = (BlockScope*)this->block_scopes->top();
+                    ix = top_scope->offset + top_scope->num_definitions;
+                    return ix;
+                }
+
+                int defCount()
+                {
+                    int i;
+                    int cn;
+                    BlockScope* scope;
+                    cn = 0;
+                    for(i = this->block_scopes->count() - 1; i >= 0; i--)
+                    {
+                        scope = (BlockScope*)this->block_scopes->get(i);
+                        cn += scope->num_definitions;
+                    }
+                    return cn;
+                }
+
+                bool addModuleSymbol(Symbol* symbol)
+                {
+                    bool ok;
+                    if(symbol->type != SYMBOL_MODULE_GLOBAL)
+                    {
+                        APE_ASSERT(false);
+                        return false;
+                    }
+                    if(this->isDefined(symbol->name))
+                    {
+                        return true;// todo: make sure it should be true in this case
+                    }
+                    Symbol* copy = symbol->copy();
+                    if(!copy)
+                    {
+                        return false;
+                    }
+                    ok = this->set(copy);
+                    if(!ok)
+                    {
+                        copy->destroy();
+                        return false;
+                    }
+                    return true;
+                }
+
+                const Symbol* define(const char* name, bool assignable)
+                {
+                    
+                    bool ok;
+                    bool global_symbol_added;
+                    int ix;
+                    int definitions_count;
+                    BlockScope* top_scope;
+                    SymbolType symbol_type;
+                    Symbol* symbol;
+                    Symbol* global_symbol_copy;
+                    const Symbol* global_symbol;
+                    global_symbol = global_store_get_symbol(this->global_store, name);
+                    if(global_symbol)
+                    {
+                        return NULL;
+                    }
+                    if(strchr(name, ':'))
+                    {
+                        return NULL;// module symbol
+                    }
+                    if(APE_STREQ(name, "this"))
+                    {
+                        return NULL;// "this" is reserved
+                    }
+                    symbol_type = this->outer == NULL ? SYMBOL_MODULE_GLOBAL : SYMBOL_LOCAL;
+                    ix = this->nextIndex();
+                    symbol = Symbol::make(this->alloc, name, symbol_type, ix, assignable);
+                    if(!symbol)
+                    {
+                        return NULL;
+                    }
+                    global_symbol_added = false;
+                    ok = false;
+                    if(symbol_type == SYMBOL_MODULE_GLOBAL && this->block_scopes->count() == 1)
+                    {
+                        global_symbol_copy = symbol->copy();
+                        if(!global_symbol_copy)
+                        {
+                            symbol->destroy();
+                            return NULL;
+                        }
+                        ok = this->module_global_symbols->add(global_symbol_copy);
+                        if(!ok)
+                        {
+                            global_symbol_copy->destroy();
+                            symbol->destroy();
+                            return NULL;
+                        }
+                        global_symbol_added = true;
+                    }
+
+                    ok = this->set(symbol);
+                    if(!ok)
+                    {
+                        if(global_symbol_added)
+                        {
+                            global_symbol_copy = (Symbol*)this->module_global_symbols->pop();
+                            global_symbol_copy->destroy();
+                        }
+                        symbol->destroy();
+                        return NULL;
+                    }
+                    top_scope = (BlockScope*)this->block_scopes->top();
+                    top_scope->num_definitions++;
+                    definitions_count = this->defCount();
+                    if(definitions_count > this->max_num_definitions)
+                    {
+                        this->max_num_definitions = definitions_count;
+                    }
+
+                    return symbol;
+                }
+
+                const Symbol* defineFree(const Symbol* original)
+                {
+                    bool ok;
+                    Symbol* symbol;
+                    Symbol* copy;
+                    copy = Symbol::make(this->alloc, original->name, original->type, original->index, original->assignable);
+                    if(!copy)
+                    {
+                        return NULL;
+                    }
+                    ok = this->free_symbols->add(copy);
+                    if(!ok)
+                    {
+                        copy->destroy();
+                        return NULL;
+                    }
+
+                    symbol = Symbol::make(this->alloc, original->name, SYMBOL_FREE, this->free_symbols->count() - 1, original->assignable);
+                    if(!symbol)
+                    {
+                        return NULL;
+                    }
+
+                    ok = this->set(symbol);
+                    if(!ok)
+                    {
+                        symbol->destroy();
+                        return NULL;
+                    }
+
+                    return symbol;
+                }
+
+                const Symbol* defineFunctionName(const char* name, bool assignable)
+                {
+                    bool ok;
+                    Symbol* symbol;
+                    if(strchr(name, ':'))
+                    {
+                        return NULL;// module symbol
+                    }
+                    symbol = Symbol::make(this->alloc, name, SYMBOL_FUNCTION, 0, assignable);
+                    if(!symbol)
+                    {
+                        return NULL;
+                    }
+                    ok = this->set(symbol);
+                    if(!ok)
+                    {
+                        symbol->destroy();
+                        return NULL;
+                    }
+
+                    return symbol;
+                }
+
+                const Symbol* defineThis()
+                {
+                    bool ok;
+                    Symbol* symbol;
+                    symbol = Symbol::make(this->alloc, "this", SYMBOL_THIS, 0, false);
+                    if(!symbol)
+                    {
+                        return NULL;
+                    }
+                    ok = this->set(symbol);
+                    if(!ok)
+                    {
+                        symbol->destroy();
+                        return NULL;
+                    }
+                    return symbol;
+                }
+
+                const Symbol* resolve(const char* name)
+                {
+                    int i;
+                    const Symbol* symbol;
+                    BlockScope* scope;
+                    scope = NULL;
+                    symbol = global_store_get_symbol(this->global_store, name);
+                    if(symbol)
+                    {
+                        return symbol;
+                    }
+                    for(i = this->block_scopes->count() - 1; i >= 0; i--)
+                    {
+                        scope = (BlockScope*)this->block_scopes->get(i);
+                        symbol = (Symbol*)scope->store->get(name);
+                        if(symbol)
+                        {
+                            break;
+                        }
+                    }
+                    if(symbol && symbol->type == SYMBOL_THIS)
+                    {
+                        symbol = this->defineFree(symbol);
+                    }
+
+                    if(!symbol && this->outer)
+                    {
+                        symbol = this->outer->resolve(name);
+                        if(!symbol)
+                        {
+                            return NULL;
+                        }
+                        if(symbol->type == SYMBOL_MODULE_GLOBAL || symbol->type == SYMBOL_APE_GLOBAL)
+                        {
+                            return symbol;
+                        }
+                        symbol = this->defineFree(symbol);
+                    }
+                    return symbol;
+                }
+
+                bool isDefined(const char* name)
+                {
+                    BlockScope* top_scope;
+                    const Symbol* symbol;
+                    // todo: rename to something more obvious
+                    symbol = global_store_get_symbol(this->global_store, name);
+                    if(symbol)
+                    {
+                        return true;
+                    }
+                    top_scope = (BlockScope*)this->block_scopes->top();
+                    symbol = (Symbol*)top_scope->store->get(name);
+                    if(symbol)
+                    {
+                        return true;
+                    }
+                    return false;
+                }
+
+                bool pushBlockScope()
+                {
+                    bool ok;
+                    int block_scope_offset;
+                    BlockScope* prev_block_scope;
+                    BlockScope* new_scope;
+                    block_scope_offset = 0;
+                    prev_block_scope = (BlockScope*)this->block_scopes->top();
+                    if(prev_block_scope)
+                    {
+                        block_scope_offset = this->module_global_offset + prev_block_scope->offset + prev_block_scope->num_definitions;
+                    }
+                    else
+                    {
+                        block_scope_offset = this->module_global_offset;
+                    }
+
+                    new_scope = block_scope_make(this->alloc, block_scope_offset);
+                    if(!new_scope)
+                    {
+                        return false;
+                    }
+                    ok = this->block_scopes->push(new_scope);
+                    if(!ok)
+                    {
+                        block_scope_destroy(new_scope);
+                        return false;
+                    }
+                    return true;
+                }
+
+                void popBlockScope()
+                {
+                    BlockScope* top_scope;
+                    top_scope = (BlockScope*)this->block_scopes->top();
+                    this->block_scopes->pop();
+                    block_scope_destroy(top_scope);
+                }
+
+                BlockScope* getBlockScope()
+                {
+                    BlockScope* top_scope;
+                    top_scope = (BlockScope*)this->block_scopes->top();
+                    return top_scope;
+                }
+
+                bool isModuleGlobalScope()
+                {
+                    return this->outer == NULL;
+                }
+
+                bool isTopBlockScope()
+                {
+                    return this->block_scopes->count() == 1;
+                }
+
+                bool isTopGlobalScope()
+                {
+                    return this->isModuleGlobalScope() && this->isTopBlockScope();
+                }
+
+                int getModuleGlobalSymbolCount()
+                {
+                    return this->module_global_symbols->count();
+                }
+
+                const Symbol* getModuleGlobalSymbolAt(int ix)
+                {
+                    return (Symbol*)this->module_global_symbols->get(ix);
+                }
+
+
+        };
+
+
+
+    public:
+        static Symbol* make(Allocator* alloc, const char* name, SymbolType type, int index, bool assignable)
+        {
+            Symbol* symbol;
+            symbol = (Symbol*)allocator_malloc(alloc, sizeof(Symbol));
+            if(!symbol)
+            {
+                return NULL;
+            }
+            memset(symbol, 0, sizeof(Symbol));
+            symbol->alloc = alloc;
+            symbol->name = ape_strdup(alloc, name);
+            if(!symbol->name)
+            {
+                allocator_free(alloc, symbol);
+                return NULL;
+            }
+            symbol->type = type;
+            symbol->index = index;
+            symbol->assignable = assignable;
+            return symbol;
+        }
+
+        static void callback_destroy(Symbol* sym)
+        {
+            sym->destroy();
+        }
+
+        static Symbol* callback_copy(Symbol* sym)
+        {
+            return sym->copy();
+        }
+
+    public:
+        Allocator* alloc;
+        SymbolType type;
+        char* name;
+        int index;
+        bool assignable;
+
+    public:
+        void destroy()
+        {
+            allocator_free(this->alloc, this->name);
+            allocator_free(this->alloc, this);
+        }
+
+        Symbol* copy()
+        {
+            return Symbol::make(this->alloc, this->name, this->type, this->index, this->assignable);
+        }
+};
+
 struct GlobalStore
 {
     Allocator* alloc;
@@ -2804,27 +3264,2363 @@ struct Module
 
 struct FileScope
 {
-    Allocator* alloc;
-    Parser* parser;
-    SymbolTable* symbol_table;
-    CompiledFile* file;
-    PtrArray * loaded_module_names;
+    public:
+        Allocator* alloc;
+        Parser* parser;
+        Symbol::Table* symbol_table;
+        CompiledFile* file;
+        PtrArray * loaded_module_names;
+
+    public:
+        void destroy()
+        {
+            for(int i = 0; i < this->loaded_module_names->count(); i++)
+            {
+                void* name = this->loaded_module_names->get(i);
+                allocator_free(this->alloc, name);
+            }
+            this->loaded_module_names->destroy();
+            parser_destroy(this->parser);
+            allocator_free(this->alloc, this);
+        }
+
 };
+
+
+static const Position src_pos_invalid = { NULL, -1, -1 };
+static const Position src_pos_zero = { NULL, 0, 0 };
 
 struct Compiler
 {
-    Allocator* alloc;
-    const Config* config;
-    GCMemory* mem;
-    ErrorList* errors;
-    PtrArray * files;
-    GlobalStore* global_store;
-    Array * constants;
-    CompilationScope* compilation_scope;
-    PtrArray * file_scopes;
-    Array * src_positions_stack;
-    Dictionary * modules;
-    Dictionary * string_constants_positions;
+    public:
+        static Compiler* make(Allocator* alloc, const Config* config, GCMemory* mem, ErrorList* errors, PtrArray * files, GlobalStore* global_store)
+        {
+            bool ok;
+            Compiler* comp;
+            comp = (Compiler*)allocator_malloc(alloc, sizeof(Compiler));
+            if(!comp)
+            {
+                return NULL;
+            }
+            ok = comp->init(alloc, config, mem, errors, files, global_store);
+            if(!ok)
+            {
+                allocator_free(alloc, comp);
+                return NULL;
+            }
+            return comp;
+        }
+
+        static bool makeShallowCopy(Compiler* copy, Compiler* src)
+        {
+            int i;
+            bool ok;
+            int* val;
+            int* val_copy;
+            const char* key;
+            const char* loaded_name;
+            char* loaded_name_copy;
+            Symbol::Table* src_st;
+            Symbol::Table* src_st_copy;
+            Symbol::Table* copy_st;
+            Dictionary* modules_copy;
+            Array* constants_copy;
+            FileScope* src_file_scope;
+            FileScope* copy_file_scope;
+            PtrArray* src_loaded_module_names;
+            PtrArray* copy_loaded_module_names;
+
+            ok = copy->init(src->alloc, src->config, src->mem, src->errors, src->files, src->global_store);
+            if(!ok)
+            {
+                return false;
+            }
+            src_st = src->getSymbolTable();
+            APE_ASSERT(src->file_scopes->count() == 1);
+            APE_ASSERT(src_st->outer == NULL);
+            src_st_copy = src_st->copy();
+            if(!src_st_copy)
+            {
+                goto err;
+            }
+            copy_st = copy->getSymbolTable();
+            copy_st->destroy();
+            copy_st = NULL;
+            copy->setSymbolTable(src_st_copy);
+            modules_copy = src->modules->copyWithItems();
+            if(!modules_copy)
+            {
+                goto err;
+            }
+            copy->modules->destroyWithItems();
+            copy->modules = modules_copy;
+            constants_copy = Array::copy(src->constants);
+            if(!constants_copy)
+            {
+                goto err;
+            }
+            Array::destroy(copy->constants);
+            copy->constants = constants_copy;
+            for(i = 0; i < src->string_constants_positions->count(); i++)
+            {
+                key = (const char*)src->string_constants_positions->getKeyAt(i);
+                val = (int*)src->string_constants_positions->getValueAt( i);
+                val_copy = (int*)allocator_malloc(src->alloc, sizeof(int));
+                if(!val_copy)
+                {
+                    goto err;
+                }
+                *val_copy = *val;
+                ok = copy->string_constants_positions->set(key, val_copy);
+                if(!ok)
+                {
+                    allocator_free(src->alloc, val_copy);
+                    goto err;
+                }
+            }
+            src_file_scope = (FileScope*)src->file_scopes->top();
+            copy_file_scope = (FileScope*)copy->file_scopes->top();
+            src_loaded_module_names = src_file_scope->loaded_module_names;
+            copy_loaded_module_names = copy_file_scope->loaded_module_names;
+            for(i = 0; i < src_loaded_module_names->count(); i++)
+            {
+
+                loaded_name = (const char*)src_loaded_module_names->get(i);
+                loaded_name_copy = ape_strdup(copy->alloc, loaded_name);
+                if(!loaded_name_copy)
+                {
+                    goto err;
+                }
+                ok = copy_loaded_module_names->add(loaded_name_copy);
+                if(!ok)
+                {
+                    allocator_free(copy->alloc, loaded_name_copy);
+                    goto err;
+                }
+            }
+
+            return true;
+        err:
+            copy->deinit();
+            return false;
+        }
+
+    public:
+        Allocator* alloc;
+        const Config* config;
+        GCMemory* mem;
+        ErrorList* errors;
+        PtrArray * files;
+        GlobalStore* global_store;
+        Array * constants;
+        CompilationScope* compilation_scope;
+        PtrArray * file_scopes;
+        Array * src_positions_stack;
+        Dictionary * modules;
+        Dictionary * string_constants_positions;
+
+    public:
+        const Symbol* define(Position pos, const char* name, bool assignable, bool can_shadow)
+        {
+            Symbol::Table* symbol_table;
+            const Symbol* current_symbol;
+            const Symbol* symbol;
+            symbol_table = this->getSymbolTable();
+            if(!can_shadow && !symbol_table->isTopGlobalScope())
+            {
+                current_symbol = symbol_table->resolve(name);
+                if(current_symbol)
+                {
+                    errors_add_errorf(this->errors, APE_ERROR_COMPILATION, pos, "Symbol \"%s\" is already defined", name);
+                    return NULL;
+                }
+            }
+            symbol = symbol_table->define(name, assignable);
+            if(!symbol)
+            {
+                errors_add_errorf(this->errors, APE_ERROR_COMPILATION, pos, "Cannot define symbol \"%s\"", name);
+                return NULL;
+            }
+            return symbol;
+        }
+
+        void destroy()
+        {
+            Allocator* alloc;
+            if(!this)
+            {
+                return;
+            }
+            alloc = this->alloc;
+            this->deinit();
+            allocator_free(alloc, this);
+        }
+
+        template<typename... ArgsT>
+        int emit(opcode_t op, int operands_count, ArgsT&&... operargs)
+        {
+            int i;
+            int ip;
+            int len;
+            bool ok;
+            Position* src_pos;
+            CompilationScope* compilation_scope;
+            uint64_t operands[] = { static_cast<uint64_t>(operargs)... };
+            ip = this->getIP();
+            len = code_make(op, operands_count, operands, this->getBytecode());
+            if(len == 0)
+            {
+                return -1;
+            }
+            for(i = 0; i < len; i++)
+            {
+                src_pos = (Position*)this->src_positions_stack->top();
+                APE_ASSERT(src_pos->line >= 0);
+                APE_ASSERT(src_pos->column >= 0);
+                ok = this->getSourcePositions()->add(src_pos);
+                if(!ok)
+                {
+                    return -1;
+                }
+            }
+            compilation_scope = this->getCompilationScope();
+            compilation_scope->last_opcode = op;
+            return ip;
+        }
+
+        CompilationResult* compileSource(const char* code)
+        {
+            bool ok;
+            Compiler comp_shallow_copy;
+            CompilationScope* compilation_scope;
+            CompilationResult* res;
+            compilation_scope = this->getCompilationScope();
+            APE_ASSERT(this->src_positions_stack->count() == 0);
+            APE_ASSERT(compilation_scope->bytecode->count() == 0);
+            APE_ASSERT(compilation_scope->break_ip_stack->count() == 0);
+            APE_ASSERT(compilation_scope->continue_ip_stack->count() == 0);
+            this->src_positions_stack->clear();
+            compilation_scope->bytecode->clear();
+            compilation_scope->src_positions->clear();
+            compilation_scope->break_ip_stack->clear();
+            compilation_scope->continue_ip_stack->clear();
+            ok = Compiler::makeShallowCopy(&comp_shallow_copy, this);
+            if(!ok)
+            {
+                return NULL;
+            }
+            ok = this->compileCode(code);
+            if(!ok)
+            {
+                goto err;
+            }
+            compilation_scope = this->getCompilationScope();// might've changed
+            APE_ASSERT(compilation_scope->outer == NULL);
+            compilation_scope = this->getCompilationScope();
+            res = compilation_scope_orphan_result(compilation_scope);
+            if(!res)
+            {
+                goto err;
+            }
+            comp_shallow_copy.deinit();
+            return res;
+        err:
+            this->deinit();
+            *this = comp_shallow_copy;
+            return NULL;
+        }
+
+        CompilationResult* compileFile(const char* path)
+        {
+            bool ok;
+            char* code;
+            CompiledFile* file;
+            CompilationResult* res;
+            FileScope* file_scope;
+            CompiledFile* prev_file;
+            code = NULL;
+            file = NULL;
+            res = NULL;
+            if(!this->config->fileio.read_file.read_file)
+            {// todo: read code function
+                errors_add_error(this->errors, APE_ERROR_COMPILATION, src_pos_invalid, "File read function not configured");
+                goto err;
+            }
+            code = this->config->fileio.read_file.read_file(this->config->fileio.read_file.context, path);
+            if(!code)
+            {
+                errors_add_errorf(this->errors, APE_ERROR_COMPILATION, src_pos_invalid, "Reading file \"%s\" failed", path);
+                goto err;
+            }
+            file = compiled_file_make(this->alloc, path);
+            if(!file)
+            {
+                goto err;
+            }
+            ok = this->files->add(file);
+            if(!ok)
+            {
+                compiled_file_destroy(file);
+                goto err;
+            }
+            APE_ASSERT(this->file_scopes->count() == 1);
+            file_scope = (FileScope*)this->file_scopes->top();
+            if(!file_scope)
+            {
+                goto err;
+            }
+            prev_file = file_scope->file;// todo: push file scope instead?
+            file_scope->file = file;
+            res = this->compileSource(code);
+            if(!res)
+            {
+                file_scope->file = prev_file;
+                goto err;
+            }
+            file_scope->file = prev_file;
+            allocator_free(this->alloc, code);
+            return res;
+        err:
+            allocator_free(this->alloc, code);
+            return NULL;
+        }
+
+        Symbol::Table* getSymbolTable()
+        {
+            FileScope* file_scope;
+            file_scope = (FileScope*)this->file_scopes->top();
+            if(!file_scope)
+            {
+                APE_ASSERT(false);
+                return NULL;
+            }
+            return file_scope->symbol_table;
+        }
+
+        void setSymbolTable(Symbol::Table* table)
+        {
+            FileScope* file_scope;
+            file_scope = (FileScope*)this->file_scopes->top();
+            if(!file_scope)
+            {
+                APE_ASSERT(false);
+                return;
+            }
+            file_scope->symbol_table = table;
+        }
+
+        Array* getConstants()
+        {
+            return this->constants;
+        }
+
+
+        bool init(Allocator* alloc,
+                                  const Config* config,
+                                  GCMemory* mem,
+                                  ErrorList* errors,
+                                  PtrArray * files,
+                                  GlobalStore* global_store)
+        {
+            bool ok;
+            memset(this, 0, sizeof(Compiler));
+            this->alloc = alloc;
+            this->config = config;
+            this->mem = mem;
+            this->errors = errors;
+            this->files = files;
+            this->global_store = global_store;
+            this->file_scopes = PtrArray::make(alloc);
+            if(!this->file_scopes)
+            {
+                goto err;
+            }
+            this->constants = Array::make<Object>(alloc);
+            if(!this->constants)
+            {
+                goto err;
+            }
+            this->src_positions_stack = Array::make<Position>(alloc);
+            if(!this->src_positions_stack)
+            {
+                goto err;
+            }
+            this->modules = Dictionary::make(alloc, module_copy, module_destroy);
+            if(!this->modules)
+            {
+                goto err;
+            }
+            ok = this->pushCompilationScope();
+            if(!ok)
+            {
+                goto err;
+            }
+            ok = this->pushFileScope("none");
+            if(!ok)
+            {
+                goto err;
+            }
+            this->string_constants_positions = Dictionary::make(this->alloc, NULL, NULL);
+            if(!this->string_constants_positions)
+            {
+                goto err;
+            }
+
+            return true;
+        err:
+            this->deinit();
+            return false;
+        }
+
+        void deinit()
+        {
+            int i;
+            int* val;
+            if(!this)
+            {
+                return;
+            }
+            for(i = 0; i < this->string_constants_positions->count(); i++)
+            {
+                val = (int*)this->string_constants_positions->getValueAt(i);
+                allocator_free(this->alloc, val);
+            }
+            this->string_constants_positions->destroy();
+            while(this->file_scopes->count() > 0)
+            {
+                this->popFileScope();
+            }
+            while(this->getCompilationScope())
+            {
+                this->popCompilationScope();
+            }
+            this->modules->destroyWithItems();
+            Array::destroy(this->src_positions_stack);
+            Array::destroy(this->constants);
+            this->file_scopes->destroy();
+            memset(this, 0, sizeof(Compiler));
+        }
+
+        CompilationScope* getCompilationScope()
+        {
+            return this->compilation_scope;
+        }
+
+        bool pushCompilationScope()
+        {
+            CompilationScope* current_scope;
+            CompilationScope* new_scope;
+            current_scope = this->getCompilationScope();
+            new_scope = compilation_scope_make(this->alloc, current_scope);
+            if(!new_scope)
+            {
+                return false;
+            }
+            this->setCompilationScope(new_scope);
+            return true;
+        }
+
+        void popCompilationScope()
+        {
+            CompilationScope* current_scope;
+            current_scope = this->getCompilationScope();
+            APE_ASSERT(current_scope);
+            this->setCompilationScope(current_scope->outer);
+            compilation_scope_destroy(current_scope);
+        }
+
+        bool pushSymbolTable(int global_offset)
+        {
+            FileScope* file_scope;
+            file_scope = (FileScope*)this->file_scopes->top();
+            if(!file_scope)
+            {
+                APE_ASSERT(false);
+                return false;
+            }
+            Symbol::Table* current_table = file_scope->symbol_table;
+            file_scope->symbol_table = Symbol::Table::make(this->alloc, current_table, this->global_store, global_offset);
+            if(!file_scope->symbol_table)
+            {
+                file_scope->symbol_table = current_table;
+                return false;
+            }
+            return true;
+        }
+
+        void popSymbolTable()
+        {
+            FileScope* file_scope;
+            Symbol::Table* current_table;
+            file_scope = (FileScope*)this->file_scopes->top();
+            if(!file_scope)
+            {
+                APE_ASSERT(false);
+                return;
+            }
+            current_table = file_scope->symbol_table;
+            if(!current_table)
+            {
+                APE_ASSERT(false);
+                return;
+            }
+            file_scope->symbol_table = current_table->outer;
+            current_table->destroy();
+        }
+
+        opcode_t getLastOpcode()
+        {
+            CompilationScope* current_scope;
+            current_scope = this->getCompilationScope();
+            return current_scope->last_opcode;
+        }
+
+        bool compileCode(const char* code)
+        {
+            bool ok;
+            FileScope* file_scope;
+            PtrArray* statements;
+            file_scope = (FileScope*)this->file_scopes->top();
+            APE_ASSERT(file_scope);
+            statements = parser_parse_all(file_scope->parser, code, file_scope->file);
+            if(!statements)
+            {
+                // errors are added by parser
+                return false;
+            }
+            ok = this->compileStatements(statements);
+            statements->destroyWithItems(statement_destroy);
+
+            // Left for debugging purposes
+            //    if (ok) {
+            //        StringBuffer *buf = strbuf_make(NULL);
+            //        code_to_string(this->compilation_scope->bytecode->data(),
+            //                       this->compilation_scope->src_positions->data(),
+            //                       this->compilation_scope->bytecode->count(), buf);
+            //        puts(strbuf_get_string(buf));
+            //        strbuf_destroy(buf);
+            //    }
+
+            return ok;
+        }
+
+        bool compileStatements(PtrArray * statements)
+        {
+            int i;
+            bool ok;
+            const Expression* stmt;
+            ok = true;
+            for(i = 0; i < statements->count(); i++)
+            {
+                stmt = (const Expression*)statements->get(i);
+                ok = this->compileStatement(stmt);
+                if(!ok)
+                {
+                    break;
+                }
+            }
+            return ok;
+        }
+
+        bool importModule(const Expression* import_stmt)
+        {
+            // todo: split into smaller functions
+            int i;
+            bool ok;
+            bool result;
+            char* filepath;
+            char* code;
+            char* name_copy;
+            const char* loaded_name;
+            const char* module_path;
+            const char* module_name;
+            const char* filepath_non_canonicalised;
+            FileScope* file_scope;
+            StringBuffer* filepath_buf;
+            Symbol::Table* symbol_table;
+            FileScope* fs;
+            Module* module;
+            Symbol::Table* st;
+            Symbol* symbol;
+            result = false;
+            filepath = NULL;
+            code = NULL;
+            file_scope = (FileScope*)this->file_scopes->top();
+            module_path = import_stmt->import.path;
+            module_name = get_module_name(module_path);
+            for(i = 0; i < file_scope->loaded_module_names->count(); i++)
+            {
+                loaded_name = (const char*)file_scope->loaded_module_names->get(i);
+                if(kg_streq(loaded_name, module_name))
+                {
+                    errors_add_errorf(this->errors, APE_ERROR_COMPILATION, import_stmt->pos, "Module \"%s\" was already imported", module_name);
+                    result = false;
+                    goto end;
+                }
+            }
+            filepath_buf = strbuf_make(this->alloc);
+            if(!filepath_buf)
+            {
+                result = false;
+                goto end;
+            }
+            if(kg_is_path_absolute(module_path))
+            {
+                strbuf_appendf(filepath_buf, "%s.ape", module_path);
+            }
+            else
+            {
+                strbuf_appendf(filepath_buf, "%s%s.ape", file_scope->file->dir_path, module_path);
+            }
+            if(strbuf_failed(filepath_buf))
+            {
+                strbuf_destroy(filepath_buf);
+                result = false;
+                goto end;
+            }
+            filepath_non_canonicalised = strbuf_get_string(filepath_buf);
+            filepath = kg_canonicalise_path(this->alloc, filepath_non_canonicalised);
+            strbuf_destroy(filepath_buf);
+            if(!filepath)
+            {
+                result = false;
+                goto end;
+            }
+            symbol_table = this->getSymbolTable();
+            if(symbol_table->outer != NULL || symbol_table->block_scopes->count() > 1)
+            {
+                errors_add_error(this->errors, APE_ERROR_COMPILATION, import_stmt->pos, "Modules can only be imported in global scope");
+                result = false;
+                goto end;
+            }
+            for(i = 0; i < this->file_scopes->count(); i++)
+            {
+                fs = (FileScope*)this->file_scopes->get(i);
+                if(APE_STREQ(fs->file->path, filepath))
+                {
+                    errors_add_errorf(this->errors, APE_ERROR_COMPILATION, import_stmt->pos, "Cyclic reference of file \"%s\"", filepath);
+                    result = false;
+                    goto end;
+                }
+            }
+            module = (Module*)this->modules->get(filepath);
+            if(!module)
+            {
+                // todo: create new module function
+                if(!this->config->fileio.read_file.read_file)
+                {
+                    errors_add_errorf(this->errors, APE_ERROR_COMPILATION, import_stmt->pos,
+                                      "Cannot import module \"%s\", file read function not configured", filepath);
+                    result = false;
+                    goto end;
+                }
+                code = this->config->fileio.read_file.read_file(this->config->fileio.read_file.context, filepath);
+                if(!code)
+                {
+                    errors_add_errorf(this->errors, APE_ERROR_COMPILATION, import_stmt->pos, "Reading module file \"%s\" failed", filepath);
+                    result = false;
+                    goto end;
+                }
+                module = module_make(this->alloc, module_name);
+                if(!module)
+                {
+                    result = false;
+                    goto end;
+                }
+                ok = this->pushFileScope(filepath);
+                if(!ok)
+                {
+                    module_destroy(module);
+                    result = false;
+                    goto end;
+                }
+                ok = this->compileCode(code);
+                if(!ok)
+                {
+                    module_destroy(module);
+                    result = false;
+                    goto end;
+                }
+                st = this->getSymbolTable();
+                for(i = 0; i < st->getModuleGlobalSymbolCount(); i++)
+                {
+                    symbol = (Symbol*)st->getModuleGlobalSymbolAt(i);
+                    module_add_symbol(module, symbol);
+                }
+                this->popFileScope();
+                ok = this->modules->set( filepath, module);
+                if(!ok)
+                {
+                    module_destroy(module);
+                    result = false;
+                    goto end;
+                }
+            }
+            for(i = 0; i < module->symbols->count(); i++)
+            {
+                symbol = (Symbol*)module->symbols->get(i);
+                ok = symbol_table->addModuleSymbol(symbol);
+                if(!ok)
+                {
+                    result = false;
+                    goto end;
+                }
+            }
+            name_copy = ape_strdup(this->alloc, module_name);
+            if(!name_copy)
+            {
+                result = false;
+                goto end;
+            }
+            ok = file_scope->loaded_module_names->add(name_copy);
+            if(!ok)
+            {
+                allocator_free(this->alloc, name_copy);
+                result = false;
+                goto end;
+            }
+            result = true;
+        end:
+            allocator_free(this->alloc, filepath);
+            allocator_free(this->alloc, code);
+            return result;
+        }
+
+        bool compileStatement(const Expression* stmt)
+        {
+            int i;
+            int ip;
+            int next_case_jump_ip;
+            int after_alt_ip;
+            int after_elif_ip;
+            int* pos;
+            int jump_to_end_ip;
+            int before_test_ip;
+            int after_test_ip;
+            int jump_to_after_body_ip;
+            int after_body_ip;
+            bool ok;
+
+            const WhileLoopStmt* loop;
+            CompilationScope* compilation_scope;
+            Symbol::Table* symbol_table;
+            const Symbol* symbol;
+            const IfStmt* if_stmt;
+            Array* jump_to_end_ips;
+            IfCase* if_case;
+            ok = false;
+            ip = -1;
+            ok = this->src_positions_stack->push(&stmt->pos);
+            if(!ok)
+            {
+                return false;
+            }
+            compilation_scope = this->getCompilationScope();
+            symbol_table = this->getSymbolTable();
+            switch(stmt->type)
+            {
+                case EXPRESSION_EXPRESSION:
+                    {
+                        ok = this->compileExpression(stmt->expression);
+                        if(!ok)
+                        {
+                            return false;
+                        }
+                        ip = this->emit(OPCODE_POP, 0);
+                        if(ip < 0)
+                        {
+                            return false;
+                        }
+                    }
+                    break;
+
+                case EXPRESSION_DEFINE:
+                    {
+                        ok = this->compileExpression(stmt->define.value);
+                        if(!ok)
+                        {
+                            return false;
+                        }
+                        symbol = this->define(stmt->define.name->pos, stmt->define.name->value, stmt->define.assignable, false);
+                        if(!symbol)
+                        {
+                            return false;
+                        }
+                        ok = this->writeSymbol(symbol, true);
+                        if(!ok)
+                        {
+                            return false;
+                        }
+                    }
+                    break;
+
+                case EXPRESSION_IF:
+                    {
+                        if_stmt = &stmt->if_statement;
+                        jump_to_end_ips = Array::make<int>(this->alloc);
+                        if(!jump_to_end_ips)
+                        {
+                            goto statement_if_error;
+                        }
+                        for(i = 0; i < if_stmt->cases->count(); i++)
+                        {
+                            if_case = (IfCase*)if_stmt->cases->get(i);
+                            ok = this->compileExpression(if_case->test);
+                            if(!ok)
+                            {
+                                goto statement_if_error;
+                            }
+                            next_case_jump_ip = this->emit(OPCODE_JUMP_IF_FALSE, 1, (uint64_t)(0xbeef));
+                            ok = this->compileCodeBlock(if_case->consequence);
+                            if(!ok)
+                            {
+                                goto statement_if_error;
+                            }
+                            // don't emit jump for the last statement
+                            if(i < (if_stmt->cases->count() - 1) || if_stmt->alternative)
+                            {
+
+                                jump_to_end_ip = this->emit(OPCODE_JUMP, 1, (uint64_t)(0xbeef));
+                                ok = jump_to_end_ips->add(&jump_to_end_ip);
+                                if(!ok)
+                                {
+                                    goto statement_if_error;
+                                }
+                            }
+                            after_elif_ip = this->getIP();
+                            this->changeUint16Operand(next_case_jump_ip + 1, after_elif_ip);
+                        }
+                        if(if_stmt->alternative)
+                        {
+                            ok = this->compileCodeBlock(if_stmt->alternative);
+                            if(!ok)
+                            {
+                                goto statement_if_error;
+                            }
+                        }
+                        after_alt_ip = this->getIP();
+                        for(i = 0; i < jump_to_end_ips->count(); i++)
+                        {
+                            pos = (int*)jump_to_end_ips->get(i);
+                            this->changeUint16Operand(*pos + 1, after_alt_ip);
+                        }
+                        Array::destroy(jump_to_end_ips);
+
+                        break;
+                    statement_if_error:
+                        Array::destroy(jump_to_end_ips);
+                        return false;
+                    }
+                    break;
+                case EXPRESSION_RETURN_VALUE:
+                    {
+                        if(compilation_scope->outer == NULL)
+                        {
+                            errors_add_errorf(this->errors, APE_ERROR_COMPILATION, stmt->pos, "Nothing to return from");
+                            return false;
+                        }
+                        ip = -1;
+                        if(stmt->return_value)
+                        {
+                            ok = this->compileExpression(stmt->return_value);
+                            if(!ok)
+                            {
+                                return false;
+                            }
+                            ip = this->emit(OPCODE_RETURN_VALUE, 0);
+                        }
+                        else
+                        {
+                            ip = this->emit(OPCODE_RETURN, 0);
+                        }
+                        if(ip < 0)
+                        {
+                            return false;
+                        }
+                    }
+                    break;
+                case EXPRESSION_WHILE_LOOP:
+                    {
+                        loop = &stmt->while_loop;
+                        before_test_ip = this->getIP();
+                        ok = this->compileExpression(loop->test);
+                        if(!ok)
+                        {
+                            return false;
+                        }
+                        after_test_ip = this->getIP();
+                        ip = this->emit(OPCODE_JUMP_IF_TRUE, 1, (uint64_t)(after_test_ip + 6));
+                        if(ip < 0)
+                        {
+                            return false;
+                        }
+                        jump_to_after_body_ip = this->emit(OPCODE_JUMP, 1, (uint64_t)0xdead);
+                        if(jump_to_after_body_ip < 0)
+                        {
+                            return false;
+                        }
+                        ok = this->pushContinueIP(before_test_ip);
+                        if(!ok)
+                        {
+                            return false;
+                        }
+                        ok = this->pushBreakIP(jump_to_after_body_ip);
+                        if(!ok)
+                        {
+                            return false;
+                        }
+                        ok = this->compileCodeBlock(loop->body);
+                        if(!ok)
+                        {
+                            return false;
+                        }
+                        this->popBreakIP();
+                        this->popContinueIP();
+                        ip = this->emit(OPCODE_JUMP, 1, (uint64_t)before_test_ip);
+                        if(ip < 0)
+                        {
+                            return false;
+                        }
+                        after_body_ip = this->getIP();
+                        this->changeUint16Operand(jump_to_after_body_ip + 1, after_body_ip);
+                    }
+                    break;
+
+                case EXPRESSION_BREAK:
+                {
+                    int break_ip = this->getBreakIP();
+                    if(break_ip < 0)
+                    {
+                        errors_add_errorf(this->errors, APE_ERROR_COMPILATION, stmt->pos, "Nothing to break from.");
+                        return false;
+                    }
+                    ip = this->emit(OPCODE_JUMP, 1, (uint64_t)break_ip);
+                    if(ip < 0)
+                    {
+                        return false;
+                    }
+                    break;
+                }
+                case EXPRESSION_CONTINUE:
+                {
+                    int continue_ip = this->getContinueIP();
+                    if(continue_ip < 0)
+                    {
+                        errors_add_errorf(this->errors, APE_ERROR_COMPILATION, stmt->pos, "Nothing to continue from.");
+                        return false;
+                    }
+                    ip = this->emit(OPCODE_JUMP, 1, (uint64_t)continue_ip);
+                    if(ip < 0)
+                    {
+                        return false;
+                    }
+                    break;
+                }
+                case EXPRESSION_FOREACH:
+                {
+                    const ForeachStmt* foreach = &stmt->foreach;
+                    ok = symbol_table->pushBlockScope();
+                    if(!ok)
+                    {
+                        return false;
+                    }
+
+                    // Init
+                    const Symbol* index_symbol = this->define(stmt->pos, "@i", false, true);
+                    if(!index_symbol)
+                    {
+                        return false;
+                    }
+
+                    ip = this->emit(OPCODE_NUMBER, 1, (uint64_t)0);
+                    if(ip < 0)
+                    {
+                        return false;
+                    }
+
+                    ok = this->writeSymbol(index_symbol, true);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+
+                    const Symbol* source_symbol = NULL;
+                    if(foreach->source->type == EXPRESSION_IDENT)
+                    {
+                        source_symbol = symbol_table->resolve(foreach->source->ident->value);
+                        if(!source_symbol)
+                        {
+                            errors_add_errorf(this->errors, APE_ERROR_COMPILATION, foreach->source->pos,
+                                              "Symbol \"%s\" could not be resolved", foreach->source->ident->value);
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        ok = this->compileExpression(foreach->source);
+                        if(!ok)
+                        {
+                            return false;
+                        }
+                        source_symbol = this->define(foreach->source->pos, "@source", false, true);
+                        if(!source_symbol)
+                        {
+                            return false;
+                        }
+                        ok = this->writeSymbol(source_symbol, true);
+                        if(!ok)
+                        {
+                            return false;
+                        }
+                    }
+
+                    // Update
+                    int jump_to_after_update_ip = this->emit(OPCODE_JUMP, 1, (uint64_t)0xbeef);
+                    if(jump_to_after_update_ip < 0)
+                    {
+                        return false;
+                    }
+
+                    int update_ip = this->getIP();
+                    ok = this->readSymbol(index_symbol);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+
+                    ip = this->emit(OPCODE_NUMBER, 1, (uint64_t)ape_double_to_uint64(1));
+                    if(ip < 0)
+                    {
+                        return false;
+                    }
+
+                    ip = this->emit(OPCODE_ADD, 0);
+                    if(ip < 0)
+                    {
+                        return false;
+                    }
+
+                    ok = this->writeSymbol(index_symbol, false);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+
+                    int after_update_ip = this->getIP();
+                    this->changeUint16Operand(jump_to_after_update_ip + 1, after_update_ip);
+
+                    // Test
+                    ok = this->src_positions_stack->push(&foreach->source->pos);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+
+                    ok = this->readSymbol(source_symbol);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+
+                    ip = this->emit(OPCODE_LEN, 0);
+                    if(ip < 0)
+                    {
+                        return false;
+                    }
+
+                    this->src_positions_stack->pop(NULL);
+                    ok = this->readSymbol(index_symbol);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+
+                    ip = this->emit(OPCODE_COMPARE, 0);
+                    if(ip < 0)
+                    {
+                        return false;
+                    }
+
+                    ip = this->emit(OPCODE_EQUAL, 0);
+                    if(ip < 0)
+                    {
+                        return false;
+                    }
+
+                    int after_test_ip = this->getIP();
+                    ip = this->emit(OPCODE_JUMP_IF_FALSE, 1, (uint64_t)(after_test_ip + 6));
+                    if(ip < 0)
+                    {
+                        return false;
+                    }
+
+                    int jump_to_after_body_ip = this->emit(OPCODE_JUMP, 1, (uint64_t)0xdead);
+                    if(jump_to_after_body_ip < 0)
+                    {
+                        return false;
+                    }
+
+                    ok = this->readSymbol(source_symbol);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+
+                    ok = this->readSymbol(index_symbol);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+
+                    ip = this->emit(OPCODE_GET_VALUE_AT, 0);
+                    if(ip < 0)
+                    {
+                        return false;
+                    }
+
+                    const Symbol* iter_symbol = this->define(foreach->iterator->pos, foreach->iterator->value, false, false);
+                    if(!iter_symbol)
+                    {
+                        return false;
+                    }
+
+                    ok = this->writeSymbol(iter_symbol, true);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+
+                    // Body
+                    ok = this->pushContinueIP(update_ip);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+
+                    ok = this->pushBreakIP(jump_to_after_body_ip);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+
+                    ok = this->compileCodeBlock(foreach->body);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+
+                    this->popBreakIP();
+                    this->popContinueIP();
+
+                    ip = this->emit(OPCODE_JUMP, 1, (uint64_t)update_ip);
+                    if(ip < 0)
+                    {
+                        return false;
+                    }
+
+                    int after_body_ip = this->getIP();
+                    this->changeUint16Operand(jump_to_after_body_ip + 1, after_body_ip);
+
+                    symbol_table->popBlockScope();
+                    break;
+                }
+                case EXPRESSION_FOR_LOOP:
+                {
+                    const ForLoopStmt* loop = &stmt->for_loop;
+
+                    ok = symbol_table->pushBlockScope();
+                    if(!ok)
+                    {
+                        return false;
+                    }
+
+                    // Init
+                    int jump_to_after_update_ip = 0;
+                    bool ok = false;
+                    if(loop->init)
+                    {
+                        ok = this->compileStatement(loop->init);
+                        if(!ok)
+                        {
+                            return false;
+                        }
+                        jump_to_after_update_ip = this->emit(OPCODE_JUMP, 1, (uint64_t)0xbeef);
+                        if(jump_to_after_update_ip < 0)
+                        {
+                            return false;
+                        }
+                    }
+
+                    // Update
+                    int update_ip = this->getIP();
+                    if(loop->update)
+                    {
+                        ok = this->compileExpression(loop->update);
+                        if(!ok)
+                        {
+                            return false;
+                        }
+                        ip = this->emit(OPCODE_POP, 0);
+                        if(ip < 0)
+                        {
+                            return false;
+                        }
+                    }
+
+                    if(loop->init)
+                    {
+                        int after_update_ip = this->getIP();
+                        this->changeUint16Operand(jump_to_after_update_ip + 1, after_update_ip);
+                    }
+
+                    // Test
+                    if(loop->test)
+                    {
+                        ok = this->compileExpression(loop->test);
+                        if(!ok)
+                        {
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        ip = this->emit(OPCODE_TRUE, 0);
+                        if(ip < 0)
+                        {
+                            return false;
+                        }
+                    }
+                    int after_test_ip = this->getIP();
+
+                    ip = this->emit(OPCODE_JUMP_IF_TRUE, 1, (uint64_t)(after_test_ip + 6));
+                    if(ip < 0)
+                    {
+                        return false;
+                    }
+                    int jmp_to_after_body_ip = this->emit(OPCODE_JUMP, 1, (uint64_t)0xdead);
+                    if(jmp_to_after_body_ip < 0)
+                    {
+                        return false;
+                    }
+
+                    // Body
+                    ok = this->pushContinueIP(update_ip);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+
+                    ok = this->pushBreakIP(jmp_to_after_body_ip);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+
+                    ok = this->compileCodeBlock(loop->body);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+
+                    this->popBreakIP();
+                    this->popContinueIP();
+
+                    ip = this->emit(OPCODE_JUMP, 1, (uint64_t)update_ip);
+                    if(ip < 0)
+                    {
+                        return false;
+                    }
+
+                    int after_body_ip = this->getIP();
+                    this->changeUint16Operand(jmp_to_after_body_ip + 1, after_body_ip);
+
+                    symbol_table->popBlockScope();
+                    break;
+                }
+                case EXPRESSION_BLOCK:
+                {
+                    ok = this->compileCodeBlock(stmt->block);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+                    break;
+                }
+                case EXPRESSION_IMPORT:
+                {
+                    ok = this->importModule(stmt);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+                    break;
+                }
+                case EXPRESSION_RECOVER:
+                {
+                    const RecoverStmt* recover = &stmt->recover;
+
+                    if(symbol_table->isModuleGlobalScope())
+                    {
+                        errors_add_error(this->errors, APE_ERROR_COMPILATION, stmt->pos, "Recover statement cannot be defined in global scope");
+                        return false;
+                    }
+
+                    if(!symbol_table->isTopBlockScope())
+                    {
+                        errors_add_error(this->errors, APE_ERROR_COMPILATION, stmt->pos,
+                                         "Recover statement cannot be defined within other statements");
+                        return false;
+                    }
+
+                    int recover_ip = this->emit(OPCODE_SET_RECOVER, 1, (uint64_t)0xbeef);
+                    if(recover_ip < 0)
+                    {
+                        return false;
+                    }
+
+                    int jump_to_after_recover_ip = this->emit(OPCODE_JUMP, 1, (uint64_t)0xbeef);
+                    if(jump_to_after_recover_ip < 0)
+                    {
+                        return false;
+                    }
+
+                    int after_jump_to_recover_ip = this->getIP();
+                    this->changeUint16Operand(recover_ip + 1, after_jump_to_recover_ip);
+
+                    ok = symbol_table->pushBlockScope();
+                    if(!ok)
+                    {
+                        return false;
+                    }
+
+                    const Symbol* error_symbol = this->define(recover->error_ident->pos, recover->error_ident->value, false, false);
+                    if(!error_symbol)
+                    {
+                        return false;
+                    }
+
+                    ok = this->writeSymbol(error_symbol, true);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+
+                    ok = this->compileCodeBlock(recover->body);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+
+                    if(!this->lastOpcodeIs(OPCODE_RETURN) && !this->lastOpcodeIs(OPCODE_RETURN_VALUE))
+                    {
+                        errors_add_error(this->errors, APE_ERROR_COMPILATION, stmt->pos, "Recover body must end with a return statement");
+                        return false;
+                    }
+
+                    symbol_table->popBlockScope();
+
+                    int after_recover_ip = this->getIP();
+                    this->changeUint16Operand(jump_to_after_recover_ip + 1, after_recover_ip);
+
+                    break;
+                }
+                default:
+                {
+                    APE_ASSERT(false);
+                    return false;
+                }
+            }
+            this->src_positions_stack->pop(NULL);
+            return true;
+        }
+
+        bool compileExpression(Expression* expr)
+        {
+            bool ok = false;
+            int ip = -1;
+
+            Expression* expr_optimised = optimise_expression(expr);
+            if(expr_optimised)
+            {
+                expr = expr_optimised;
+            }
+
+            ok = this->src_positions_stack->push(&expr->pos);
+            if(!ok)
+            {
+                return false;
+            }
+
+            CompilationScope* compilation_scope = this->getCompilationScope();
+            Symbol::Table* symbol_table = this->getSymbolTable();
+
+            bool res = false;
+
+            switch(expr->type)
+            {
+                case EXPRESSION_INFIX:
+                {
+                    bool rearrange = false;
+
+                    opcode_t op = OPCODE_NONE;
+                    switch(expr->infix.op)
+                    {
+                        case OPERATOR_PLUS:
+                            op = OPCODE_ADD;
+                            break;
+                        case OPERATOR_MINUS:
+                            op = OPCODE_SUB;
+                            break;
+                        case OPERATOR_ASTERISK:
+                            op = OPCODE_MUL;
+                            break;
+                        case OPERATOR_SLASH:
+                            op = OPCODE_DIV;
+                            break;
+                        case OPERATOR_MODULUS:
+                            op = OPCODE_MOD;
+                            break;
+                        case OPERATOR_EQ:
+                            op = OPCODE_EQUAL;
+                            break;
+                        case OPERATOR_NOT_EQ:
+                            op = OPCODE_NOT_EQUAL;
+                            break;
+                        case OPERATOR_GT:
+                            op = OPCODE_GREATER_THAN;
+                            break;
+                        case OPERATOR_GTE:
+                            op = OPCODE_GREATER_THAN_EQUAL;
+                            break;
+                        case OPERATOR_LT:
+                            op = OPCODE_GREATER_THAN;
+                            rearrange = true;
+                            break;
+                        case OPERATOR_LTE:
+                            op = OPCODE_GREATER_THAN_EQUAL;
+                            rearrange = true;
+                            break;
+                        case OPERATOR_BIT_OR:
+                            op = OPCODE_OR;
+                            break;
+                        case OPERATOR_BIT_XOR:
+                            op = OPCODE_XOR;
+                            break;
+                        case OPERATOR_BIT_AND:
+                            op = OPCODE_AND;
+                            break;
+                        case OPERATOR_LSHIFT:
+                            op = OPCODE_LSHIFT;
+                            break;
+                        case OPERATOR_RSHIFT:
+                            op = OPCODE_RSHIFT;
+                            break;
+                        default:
+                        {
+                            errors_add_errorf(this->errors, APE_ERROR_COMPILATION, expr->pos, "Unknown infix operator");
+                            goto error;
+                        }
+                    }
+
+                    Expression* left = rearrange ? expr->infix.right : expr->infix.left;
+                    Expression* right = rearrange ? expr->infix.left : expr->infix.right;
+
+                    ok = this->compileExpression(left);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+
+                    ok = this->compileExpression(right);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+
+                    switch(expr->infix.op)
+                    {
+                        case OPERATOR_EQ:
+                        case OPERATOR_NOT_EQ:
+                        {
+                            ip = this->emit(OPCODE_COMPARE_EQ, 0);
+                            if(ip < 0)
+                            {
+                                goto error;
+                            }
+                            break;
+                        }
+                        case OPERATOR_GT:
+                        case OPERATOR_GTE:
+                        case OPERATOR_LT:
+                        case OPERATOR_LTE:
+                        {
+                            ip = this->emit(OPCODE_COMPARE, 0);
+                            if(ip < 0)
+                            {
+                                goto error;
+                            }
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+
+                    ip = this->emit(op, 0);
+                    if(ip < 0)
+                    {
+                        goto error;
+                    }
+
+                    break;
+                }
+                case EXPRESSION_NUMBER_LITERAL:
+                {
+                    double number = expr->number_literal;
+                    ip = this->emit(OPCODE_NUMBER, 1, (uint64_t)ape_double_to_uint64(number));
+                    if(ip < 0)
+                    {
+                        goto error;
+                    }
+
+                    break;
+                }
+                case EXPRESSION_STRING_LITERAL:
+                {
+                    int pos = 0;
+                    int* current_pos = (int*)this->string_constants_positions->get(expr->string_literal);
+                    if(current_pos)
+                    {
+                        pos = *current_pos;
+                    }
+                    else
+                    {
+                        Object obj = object_make_string(this->mem, expr->string_literal);
+                        if(object_is_null(obj))
+                        {
+                            goto error;
+                        }
+
+                        pos = this->addConstant(obj);
+                        if(pos < 0)
+                        {
+                            goto error;
+                        }
+
+                        int* pos_val = (int*)allocator_malloc(this->alloc, sizeof(int));
+                        if(!pos_val)
+                        {
+                            goto error;
+                        }
+
+                        *pos_val = pos;
+                        ok = this->string_constants_positions->set(expr->string_literal, pos_val);
+                        if(!ok)
+                        {
+                            allocator_free(this->alloc, pos_val);
+                            goto error;
+                        }
+                    }
+
+                    ip = this->emit(OPCODE_CONSTANT, 1, (uint64_t)pos);
+                    if(ip < 0)
+                    {
+                        goto error;
+                    }
+
+                    break;
+                }
+                case EXPRESSION_NULL_LITERAL:
+                {
+                    ip = this->emit(OPCODE_NULL, 0);
+                    if(ip < 0)
+                    {
+                        goto error;
+                    }
+                    break;
+                }
+                case EXPRESSION_BOOL_LITERAL:
+                {
+                    ip = this->emit(expr->bool_literal ? OPCODE_TRUE : OPCODE_FALSE, 0);
+                    if(ip < 0)
+                    {
+                        goto error;
+                    }
+                    break;
+                }
+                case EXPRESSION_ARRAY_LITERAL:
+                {
+                    for(int i = 0; i < expr->array->count(); i++)
+                    {
+                        ok = this->compileExpression((Expression*)expr->array->get(i));
+                        if(!ok)
+                        {
+                            goto error;
+                        }
+                    }
+                    ip = this->emit(OPCODE_ARRAY, 1, (uint64_t)expr->array->count());
+                    if(ip < 0)
+                    {
+                        goto error;
+                    }
+                    break;
+                }
+                case EXPRESSION_MAP_LITERAL:
+                {
+                    const MapLiteral* map = &expr->map;
+                    int len = map->keys->count();
+                    ip = this->emit(OPCODE_MAP_START, 1, (uint64_t)len);
+                    if(ip < 0)
+                    {
+                        goto error;
+                    }
+
+                    for(int i = 0; i < len; i++)
+                    {
+                        Expression* key = (Expression*)map->keys->get(i);
+                        Expression* val = (Expression*)map->values->get(i);
+
+                        ok = this->compileExpression(key);
+                        if(!ok)
+                        {
+                            goto error;
+                        }
+
+                        ok = this->compileExpression(val);
+                        if(!ok)
+                        {
+                            goto error;
+                        }
+                    }
+
+                    ip = this->emit(OPCODE_MAP_END, 1, (uint64_t)len);
+                    if(ip < 0)
+                    {
+                        goto error;
+                    }
+
+                    break;
+                }
+                case EXPRESSION_PREFIX:
+                {
+                    ok = this->compileExpression(expr->prefix.right);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+
+                    opcode_t op = OPCODE_NONE;
+                    switch(expr->prefix.op)
+                    {
+                        case OPERATOR_MINUS:
+                            op = OPCODE_MINUS;
+                            break;
+                        case OPERATOR_BANG:
+                            op = OPCODE_BANG;
+                            break;
+                        default:
+                        {
+                            errors_add_errorf(this->errors, APE_ERROR_COMPILATION, expr->pos, "Unknown prefix operator.");
+                            goto error;
+                        }
+                    }
+                    ip = this->emit(op, 0);
+                    if(ip < 0)
+                    {
+                        goto error;
+                    }
+
+                    break;
+                }
+                case EXPRESSION_IDENT:
+                {
+                    const Ident* ident = expr->ident;
+                    const Symbol* symbol = symbol_table->resolve(ident->value);
+                    if(!symbol)
+                    {
+                        errors_add_errorf(this->errors, APE_ERROR_COMPILATION, ident->pos, "Symbol \"%s\" could not be resolved",
+                                          ident->value);
+                        goto error;
+                    }
+                    ok = this->readSymbol(symbol);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+
+                    break;
+                }
+                case EXPRESSION_INDEX:
+                {
+                    const IndexExpr* index = &expr->index_expr;
+                    ok = this->compileExpression(index->left);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+                    ok = this->compileExpression(index->index);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+                    ip = this->emit(OPCODE_GET_INDEX, 0);
+                    if(ip < 0)
+                    {
+                        goto error;
+                    }
+
+                    break;
+                }
+                case EXPRESSION_FUNCTION_LITERAL:
+                {
+                    const FnLiteral* fn = &expr->fn_literal;
+
+                    ok = this->pushCompilationScope();
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+
+                    ok = this->pushSymbolTable(0);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+
+                    compilation_scope = this->getCompilationScope();
+                    symbol_table = this->getSymbolTable();
+
+                    if(fn->name)
+                    {
+                        const Symbol* fn_symbol = symbol_table->defineFunctionName(fn->name, false);
+                        if(!fn_symbol)
+                        {
+                            errors_add_errorf(this->errors, APE_ERROR_COMPILATION, expr->pos, "Cannot define symbol \"%s\"", fn->name);
+                            goto error;
+                        }
+                    }
+
+                    const Symbol* this_symbol = symbol_table->defineThis();
+                    if(!this_symbol)
+                    {
+                        errors_add_error(this->errors, APE_ERROR_COMPILATION, expr->pos, "Cannot define \"this\" symbol");
+                        goto error;
+                    }
+
+                    for(int i = 0; i < expr->fn_literal.params->count(); i++)
+                    {
+                        Ident* param = (Ident*)expr->fn_literal.params->get(i);
+                        const Symbol* param_symbol = this->define(param->pos, param->value, true, false);
+                        if(!param_symbol)
+                        {
+                            goto error;
+                        }
+                    }
+
+                    ok = this->compileStatements(fn->body->statements);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+
+                    if(!this->lastOpcodeIs(OPCODE_RETURN_VALUE) && !this->lastOpcodeIs(OPCODE_RETURN))
+                    {
+                        ip = this->emit(OPCODE_RETURN, 0);
+                        if(ip < 0)
+                        {
+                            goto error;
+                        }
+                    }
+
+                    PtrArray* free_symbols = symbol_table->free_symbols;
+                    symbol_table->free_symbols = NULL;// because it gets destroyed with compiler_pop_compilation_scope()
+
+                    int num_locals = symbol_table->max_num_definitions;
+
+                    CompilationResult* comp_res = compilation_scope_orphan_result(compilation_scope);
+                    if(!comp_res)
+                    {
+                        free_symbols->destroyWithItems(Symbol::callback_destroy);
+                        goto error;
+                    }
+                    this->popSymbolTable();
+                    this->popCompilationScope();
+                    compilation_scope = this->getCompilationScope();
+                    symbol_table = this->getSymbolTable();
+
+                    Object obj = object_make_function(this->mem, fn->name, comp_res, true, num_locals, fn->params->count(), 0);
+
+                    if(object_is_null(obj))
+                    {
+                        free_symbols->destroyWithItems(Symbol::callback_destroy);
+                        compilation_result_destroy(comp_res);
+                        goto error;
+                    }
+
+                    for(int i = 0; i < free_symbols->count(); i++)
+                    {
+                        Symbol* symbol = (Symbol*)free_symbols->get(i);
+                        ok = this->readSymbol(symbol);
+                        if(!ok)
+                        {
+                            free_symbols->destroyWithItems(Symbol::callback_destroy);
+                            goto error;
+                        }
+                    }
+
+                    int pos = this->addConstant(obj);
+                    if(pos < 0)
+                    {
+                        free_symbols->destroyWithItems(Symbol::callback_destroy);
+                        goto error;
+                    }
+
+                    ip = this->emit(OPCODE_FUNCTION, 2, (uint64_t)pos, (uint64_t)free_symbols->count());
+                    if(ip < 0)
+                    {
+                        free_symbols->destroyWithItems(Symbol::callback_destroy);
+                        goto error;
+                    }
+
+                    free_symbols->destroyWithItems(Symbol::callback_destroy);
+
+                    break;
+                }
+                case EXPRESSION_CALL:
+                {
+                    ok = this->compileExpression(expr->call_expr.function);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+
+                    for(int i = 0; i < expr->call_expr.args->count(); i++)
+                    {
+                        Expression* arg_expr = (Expression*)expr->call_expr.args->get(i);
+                        ok = this->compileExpression(arg_expr);
+                        if(!ok)
+                        {
+                            goto error;
+                        }
+                    }
+
+                    ip = this->emit(OPCODE_CALL, 1, (uint64_t)expr->call_expr.args->count());
+                    if(ip < 0)
+                    {
+                        goto error;
+                    }
+
+                    break;
+                }
+                case EXPRESSION_ASSIGN:
+                {
+                    const AssignExpr* assign = &expr->assign;
+                    if(assign->dest->type != EXPRESSION_IDENT && assign->dest->type != EXPRESSION_INDEX)
+                    {
+                        errors_add_errorf(this->errors, APE_ERROR_COMPILATION, assign->dest->pos, "Expression is not assignable.");
+                        goto error;
+                    }
+
+                    if(assign->is_postfix)
+                    {
+                        ok = this->compileExpression(assign->dest);
+                        if(!ok)
+                        {
+                            goto error;
+                        }
+                    }
+
+                    ok = this->compileExpression(assign->source);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+
+                    ip = this->emit(OPCODE_DUP, 0);
+                    if(ip < 0)
+                    {
+                        goto error;
+                    }
+
+                    ok = this->src_positions_stack->push(&assign->dest->pos);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+
+                    if(assign->dest->type == EXPRESSION_IDENT)
+                    {
+                        const Ident* ident = assign->dest->ident;
+                        const Symbol* symbol = symbol_table->resolve(ident->value);
+                        if(!symbol)
+                        {
+                            //errors_add_errorf(this->errors, APE_ERROR_COMPILATION, assign->dest->pos, "Symbol \"%s\" could not be resolved", ident->value);
+                            //goto error;
+                            symbol = symbol_table->define(ident->value, true);
+                        }
+                        if(!symbol->assignable)
+                        {
+                            errors_add_errorf(this->errors, APE_ERROR_COMPILATION, assign->dest->pos,
+                                              "Symbol \"%s\" is not assignable", ident->value);
+                            goto error;
+                        }
+                        ok = this->writeSymbol(symbol, false);
+                        if(!ok)
+                        {
+                            goto error;
+                        }
+                    }
+                    else if(assign->dest->type == EXPRESSION_INDEX)
+                    {
+                        const IndexExpr* index = &assign->dest->index_expr;
+                        ok = this->compileExpression(index->left);
+                        if(!ok)
+                        {
+                            goto error;
+                        }
+                        ok = this->compileExpression(index->index);
+                        if(!ok)
+                        {
+                            goto error;
+                        }
+                        ip = this->emit(OPCODE_SET_INDEX, 0);
+                        if(ip < 0)
+                        {
+                            goto error;
+                        }
+                    }
+
+                    if(assign->is_postfix)
+                    {
+                        ip = this->emit(OPCODE_POP, 0);
+                        if(ip < 0)
+                        {
+                            goto error;
+                        }
+                    }
+
+                    this->src_positions_stack->pop(NULL);
+                    break;
+                }
+                case EXPRESSION_LOGICAL:
+                {
+                    const LogicalExpr* logi = &expr->logical;
+
+                    ok = this->compileExpression(logi->left);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+
+                    ip = this->emit(OPCODE_DUP, 0);
+                    if(ip < 0)
+                    {
+                        goto error;
+                    }
+
+                    int after_left_jump_ip = 0;
+                    if(logi->op == OPERATOR_LOGICAL_AND)
+                    {
+                        after_left_jump_ip = this->emit(OPCODE_JUMP_IF_FALSE, 1, (uint64_t)0xbeef);
+                    }
+                    else
+                    {
+                        after_left_jump_ip = this->emit(OPCODE_JUMP_IF_TRUE, 1, (uint64_t)0xbeef);
+                    }
+
+                    if(after_left_jump_ip < 0)
+                    {
+                        goto error;
+                    }
+
+                    ip = this->emit(OPCODE_POP, 0);
+                    if(ip < 0)
+                    {
+                        goto error;
+                    }
+
+                    ok = this->compileExpression(logi->right);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+
+                    int after_right_ip = this->getIP();
+                    this->changeUint16Operand(after_left_jump_ip + 1, after_right_ip);
+
+                    break;
+                }
+                case EXPRESSION_TERNARY:
+                {
+                    const TernaryExpr* ternary = &expr->ternary;
+
+                    ok = this->compileExpression(ternary->test);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+
+                    int else_jump_ip = this->emit(OPCODE_JUMP_IF_FALSE, 1, (uint64_t)0xbeef);
+
+                    ok = this->compileExpression(ternary->if_true);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+
+                    int end_jump_ip = this->emit(OPCODE_JUMP, 1, (uint64_t)0xbeef);
+
+                    int else_ip = this->getIP();
+                    this->changeUint16Operand(else_jump_ip + 1, else_ip);
+
+                    ok = this->compileExpression(ternary->if_false);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+
+                    int end_ip = this->getIP();
+                    this->changeUint16Operand(end_jump_ip + 1, end_ip);
+
+                    break;
+                }
+                default:
+                {
+                    APE_ASSERT(false);
+                    break;
+                }
+            }
+            res = true;
+            goto end;
+        error:
+            res = false;
+        end:
+            this->src_positions_stack->pop(NULL);
+            expression_destroy(expr_optimised);
+            return res;
+        }
+
+        bool compileCodeBlock(const Codeblock* block)
+        {
+            Symbol::Table* symbol_table = this->getSymbolTable();
+            if(!symbol_table)
+            {
+                return false;
+            }
+
+            bool ok = symbol_table->pushBlockScope();
+            if(!ok)
+            {
+                return false;
+            }
+
+            if(block->statements->count() == 0)
+            {
+                int ip = this->emit(OPCODE_NULL, 0);
+                if(ip < 0)
+                {
+                    return false;
+                }
+                ip = this->emit(OPCODE_POP, 0);
+                if(ip < 0)
+                {
+                    return false;
+                }
+            }
+
+            for(int i = 0; i < block->statements->count(); i++)
+            {
+                const Expression* stmt = (Expression*)block->statements->get(i);
+                bool ok = this->compileStatement(stmt);
+                if(!ok)
+                {
+                    return false;
+                }
+            }
+            symbol_table->popBlockScope();
+            return true;
+        }
+
+        int addConstant(Object obj)
+        {
+            bool ok = this->constants->add(&obj);
+            if(!ok)
+            {
+                return -1;
+            }
+            int pos = this->constants->count() - 1;
+            return pos;
+        }
+
+        void changeUint16Operand(int ip, uint16_t operand)
+        {
+            Array* bytecode = this->getBytecode();
+            if((ip + 1) >= bytecode->count())
+            {
+                APE_ASSERT(false);
+                return;
+            }
+            uint8_t hi = (uint8_t)(operand >> 8);
+            bytecode->set(ip, &hi);
+            uint8_t lo = (uint8_t)(operand);
+            bytecode->set(ip + 1, &lo);
+        }
+
+        bool lastOpcodeIs(opcode_t op)
+        {
+            opcode_t last_opcode = this->getLastOpcode();
+            return last_opcode == op;
+        }
+
+        bool readSymbol(const Symbol* symbol)
+        {
+            int ip = -1;
+            if(symbol->type == SYMBOL_MODULE_GLOBAL)
+            {
+                ip = this->emit(OPCODE_GET_MODULE_GLOBAL, 1, (uint64_t)(symbol->index));
+            }
+            else if(symbol->type == SYMBOL_APE_GLOBAL)
+            {
+                ip = this->emit(OPCODE_GET_APE_GLOBAL, 1, (uint64_t)(symbol->index));
+            }
+            else if(symbol->type == SYMBOL_LOCAL)
+            {
+                ip = this->emit(OPCODE_GET_LOCAL, 1, (uint64_t)(symbol->index));
+            }
+            else if(symbol->type == SYMBOL_FREE)
+            {
+                ip = this->emit(OPCODE_GET_FREE, 1, (uint64_t)(symbol->index));
+            }
+            else if(symbol->type == SYMBOL_FUNCTION)
+            {
+                ip = this->emit(OPCODE_CURRENT_FUNCTION, 0);
+            }
+            else if(symbol->type == SYMBOL_THIS)
+            {
+                ip = this->emit(OPCODE_GET_THIS, 0);
+            }
+            return ip >= 0;
+        }
+
+        bool writeSymbol(const Symbol* symbol, bool define)
+        {
+            int ip = -1;
+            if(symbol->type == SYMBOL_MODULE_GLOBAL)
+            {
+                if(define)
+                {
+                    ip = this->emit(OPCODE_DEFINE_MODULE_GLOBAL, 1, (uint64_t)(symbol->index));
+                }
+                else
+                {
+                    ip = this->emit(OPCODE_SET_MODULE_GLOBAL, 1, (uint64_t)(symbol->index));
+                }
+            }
+            else if(symbol->type == SYMBOL_LOCAL)
+            {
+                if(define)
+                {
+                    ip = this->emit(OPCODE_DEFINE_LOCAL, 1, (uint64_t)(symbol->index));
+                }
+                else
+                {
+                    ip = this->emit(OPCODE_SET_LOCAL, 1, (uint64_t)(symbol->index));
+                }
+            }
+            else if(symbol->type == SYMBOL_FREE)
+            {
+                ip = this->emit(OPCODE_SET_FREE, 1, (uint64_t)(symbol->index));
+            }
+            return ip >= 0;
+        }
+
+        bool pushBreakIP(int ip)
+        {
+            CompilationScope* comp_scope = this->getCompilationScope();
+            return comp_scope->break_ip_stack->push(&ip);
+        }
+
+        void popBreakIP()
+        {
+            CompilationScope* comp_scope = this->getCompilationScope();
+            if(comp_scope->break_ip_stack->count() == 0)
+            {
+                APE_ASSERT(false);
+                return;
+            }
+            comp_scope->break_ip_stack->pop(NULL);
+        }
+
+        int getBreakIP()
+        {
+            CompilationScope* comp_scope = this->getCompilationScope();
+            if(comp_scope->break_ip_stack->count() == 0)
+            {
+                return -1;
+            }
+            int* res = (int*)comp_scope->break_ip_stack->top();
+            return *res;
+        }
+
+        bool pushContinueIP(int ip)
+        {
+            CompilationScope* comp_scope = this->getCompilationScope();
+            return comp_scope->continue_ip_stack->push(&ip);
+        }
+
+        void popContinueIP()
+        {
+            CompilationScope* comp_scope = this->getCompilationScope();
+            if(comp_scope->continue_ip_stack->count() == 0)
+            {
+                APE_ASSERT(false);
+                return;
+            }
+            comp_scope->continue_ip_stack->pop(NULL);
+        }
+
+        int getContinueIP()
+        {
+            CompilationScope* comp_scope = this->getCompilationScope();
+            if(comp_scope->continue_ip_stack->count() == 0)
+            {
+                APE_ASSERT(false);
+                return -1;
+            }
+            int* res = (int*)comp_scope->continue_ip_stack->top();
+            return *res;
+        }
+
+        int getIP()
+        {
+            CompilationScope* compilation_scope = this->getCompilationScope();
+            return compilation_scope->bytecode->count();
+        }
+
+        Array * getSourcePositions()
+        {
+            CompilationScope* compilation_scope = this->getCompilationScope();
+            return compilation_scope->src_positions;
+        }
+
+        Array * getBytecode()
+        {
+            CompilationScope* compilation_scope = this->getCompilationScope();
+            return compilation_scope->bytecode;
+        }
+
+        FileScope* makeFileScope(CompiledFile* file)
+        {
+            FileScope* file_scope = (FileScope*)allocator_malloc(this->alloc, sizeof(FileScope));
+            if(!file_scope)
+            {
+                return NULL;
+            }
+            memset(file_scope, 0, sizeof(FileScope));
+            file_scope->alloc = this->alloc;
+            file_scope->parser = parser_make(this->alloc, this->config, this->errors);
+            if(!file_scope->parser)
+            {
+                goto err;
+            }
+            file_scope->symbol_table = NULL;
+            file_scope->file = file;
+            file_scope->loaded_module_names = PtrArray::make(this->alloc);
+            if(!file_scope->loaded_module_names)
+            {
+                goto err;
+            }
+            return file_scope;
+        err:
+            file_scope->destroy();
+            return NULL;
+        }
+
+        bool pushFileScope(const char* filepath)
+        {
+            Symbol::Table* prev_st = NULL;
+            if(this->file_scopes->count() > 0)
+            {
+                prev_st = this->getSymbolTable();
+            }
+
+            CompiledFile* file = compiled_file_make(this->alloc, filepath);
+            if(!file)
+            {
+                return false;
+            }
+
+            bool ok = this->files->add(file);
+            if(!ok)
+            {
+                compiled_file_destroy(file);
+                return false;
+            }
+
+            FileScope* file_scope = this->makeFileScope(file);
+            if(!file_scope)
+            {
+                return false;
+            }
+
+            ok = this->file_scopes->push(file_scope);
+            if(!ok)
+            {
+                file_scope->destroy();
+                return false;
+            }
+
+            int global_offset = 0;
+            if(prev_st)
+            {
+                BlockScope* prev_st_top_scope = prev_st->getBlockScope();
+                global_offset = prev_st_top_scope->offset + prev_st_top_scope->num_definitions;
+            }
+
+            ok = this->pushSymbolTable(global_offset);
+            if(!ok)
+            {
+                this->file_scopes->pop();
+                file_scope->destroy();
+                return false;
+            }
+
+            return true;
+        }
+
+        void popFileScope()
+        {
+            Symbol::Table* popped_st = this->getSymbolTable();
+            BlockScope* popped_st_top_scope = popped_st->getBlockScope();
+            int popped_num_defs = popped_st_top_scope->num_definitions;
+
+            while(this->getSymbolTable())
+            {
+                this->popSymbolTable();
+            }
+            FileScope* scope = (FileScope*)this->file_scopes->top();
+            if(!scope)
+            {
+                APE_ASSERT(false);
+                return;
+            }
+            scope->destroy();
+
+            this->file_scopes->pop();
+
+            if(this->file_scopes->count() > 0)
+            {
+                Symbol::Table* current_st = this->getSymbolTable();
+                BlockScope* current_st_top_scope = current_st->getBlockScope();
+                current_st_top_scope->num_definitions += popped_num_defs;
+            }
+        }
+
+        void setCompilationScope(CompilationScope* scope)
+        {
+            this->compilation_scope = scope;
+        }
+
+
 };
 
 
@@ -2847,8 +5643,6 @@ struct Context
     Allocator custom_allocator;
 };
 
-static const Position src_pos_invalid = { NULL, -1, -1 };
-static const Position src_pos_zero = { NULL, 0, 0 };
 
 
 static Position src_pos_make(const CompiledFile* file, int line, int column)
@@ -6653,2372 +9447,11 @@ static Expression* wrap_expression_in_function_call(Allocator* alloc, Expression
     return call_expr;
 }
 
-template<typename... ArgsT>
-int emit(Compiler *comp, opcode_t op, int operands_count, ArgsT&&... operands);
-static const Symbol *define_symbol(Compiler *comp, Position pos, const char *name, bool assignable, bool can_shadow);
-static void compiler_set_symbol_table(Compiler *comp, SymbolTable *table);
-static CompilationScope *get_compilation_scope(Compiler *comp);
-static bool push_compilation_scope(Compiler *comp);
-static void pop_compilation_scope(Compiler *comp);
-static bool push_symbol_table(Compiler *comp, int global_offset);
-static void pop_symbol_table(Compiler *comp);
-static opcode_t get_last_opcode(Compiler *comp);
-static bool compile_code(Compiler *comp, const char *code);
-static bool compile_statements(Compiler *comp, PtrArray *statements);
-static bool import_module(Compiler *comp, const Expression *import_stmt);
-static bool compile_statement(Compiler *comp, const Expression *stmt);
-static bool compile_expression(Compiler *comp, Expression *expr);
-static bool compile_code_block(Compiler *comp, const Codeblock *block);
-static int add_constant(Compiler *comp, Object obj);
-static void change_uint16_operand(Compiler *comp, int ip, uint16_t operand);
-static bool last_opcode_is(Compiler *comp, opcode_t op);
-static bool read_symbol(Compiler *comp, const Symbol *symbol);
-static bool write_symbol(Compiler *comp, const Symbol *symbol, bool define);
-static bool push_break_ip(Compiler *comp, int ip);
-static void pop_break_ip(Compiler *comp);
-static int get_break_ip(Compiler *comp);
-static bool push_continue_ip(Compiler *comp, int ip);
-static void pop_continue_ip(Compiler *comp);
-static int get_continue_ip(Compiler *comp);
-static int get_ip(Compiler *comp);
-static Array *get_src_positions(Compiler *comp);
-static Array *get_bytecode(Compiler *comp);
-static FileScope *file_scope_make(Compiler *comp, CompiledFile *file);
-static void file_scope_destroy(FileScope *scope);
-static bool push_file_scope(Compiler *comp, const char *filepath);
-static void pop_file_scope(Compiler *comp);
-static void set_compilation_scope(Compiler *comp, CompilationScope *scope);
 
 
-static const Symbol* define_symbol(Compiler* comp, Position pos, const char* name, bool assignable, bool can_shadow)
-{
-    SymbolTable* symbol_table;
-    const Symbol* current_symbol;
-    const Symbol* symbol;
-    symbol_table = compiler_get_symbol_table(comp);
-    if(!can_shadow && !symbol_table_is_top_global_scope(symbol_table))
-    {
-        current_symbol = symbol_table_resolve(symbol_table, name);
-        if(current_symbol)
-        {
-            errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, pos, "Symbol \"%s\" is already defined", name);
-            return NULL;
-        }
-    }
-    symbol = symbol_table_define(symbol_table, name, assignable);
-    if(!symbol)
-    {
-        errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, pos, "Cannot define symbol \"%s\"", name);
-        return NULL;
-    }
-    return symbol;
-}
-
-
-Compiler*
-compiler_make(Allocator* alloc, const Config* config, GCMemory* mem, ErrorList* errors, PtrArray * files, GlobalStore* global_store)
-{
-    bool ok;
-    Compiler* comp;
-    comp = (Compiler*)allocator_malloc(alloc, sizeof(Compiler));
-    if(!comp)
-    {
-        return NULL;
-    }
-    ok = compiler_init(comp, alloc, config, mem, errors, files, global_store);
-    if(!ok)
-    {
-        allocator_free(alloc, comp);
-        return NULL;
-    }
-    return comp;
-}
-
-
-void compiler_destroy(Compiler* comp)
-{
-    Allocator* alloc;
-    if(!comp)
-    {
-        return;
-    }
-    alloc = comp->alloc;
-    compiler_deinit(comp);
-    allocator_free(alloc, comp);
-}
-
-CompilationResult* compiler_compile(Compiler* comp, const char* code)
-{
-    bool ok;
-    Compiler comp_shallow_copy;
-    CompilationScope* compilation_scope;
-    CompilationResult* res;
-    compilation_scope = get_compilation_scope(comp);
-    APE_ASSERT(comp->src_positions_stack->count() == 0);
-    APE_ASSERT(compilation_scope->bytecode->count() == 0);
-    APE_ASSERT(compilation_scope->break_ip_stack->count() == 0);
-    APE_ASSERT(compilation_scope->continue_ip_stack->count() == 0);
-    comp->src_positions_stack->clear();
-    compilation_scope->bytecode->clear();
-    compilation_scope->src_positions->clear();
-    compilation_scope->break_ip_stack->clear();
-    compilation_scope->continue_ip_stack->clear();
-    ok = compiler_init_shallow_copy(&comp_shallow_copy, comp);
-    if(!ok)
-    {
-        return NULL;
-    }
-    ok = compile_code(comp, code);
-    if(!ok)
-    {
-        goto err;
-    }
-    compilation_scope = get_compilation_scope(comp);// might've changed
-    APE_ASSERT(compilation_scope->outer == NULL);
-    compilation_scope = get_compilation_scope(comp);
-    res = compilation_scope_orphan_result(compilation_scope);
-    if(!res)
-    {
-        goto err;
-    }
-    compiler_deinit(&comp_shallow_copy);
-    return res;
-err:
-    compiler_deinit(comp);
-    *comp = comp_shallow_copy;
-    return NULL;
-}
-
-CompilationResult* compiler_compile_file(Compiler* comp, const char* path)
-{
-    bool ok;
-    char* code;
-    CompiledFile* file;
-    CompilationResult* res;
-    FileScope* file_scope;
-    CompiledFile* prev_file;
-    code = NULL;
-    file = NULL;
-    res = NULL;
-    if(!comp->config->fileio.read_file.read_file)
-    {// todo: read code function
-        errors_add_error(comp->errors, APE_ERROR_COMPILATION, src_pos_invalid, "File read function not configured");
-        goto err;
-    }
-    code = comp->config->fileio.read_file.read_file(comp->config->fileio.read_file.context, path);
-    if(!code)
-    {
-        errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, src_pos_invalid, "Reading file \"%s\" failed", path);
-        goto err;
-    }
-    file = compiled_file_make(comp->alloc, path);
-    if(!file)
-    {
-        goto err;
-    }
-    ok = comp->files->add(file);
-    if(!ok)
-    {
-        compiled_file_destroy(file);
-        goto err;
-    }
-    APE_ASSERT(comp->file_scopes->count() == 1);
-    file_scope = (FileScope*)comp->file_scopes->top();
-    if(!file_scope)
-    {
-        goto err;
-    }
-    prev_file = file_scope->file;// todo: push file scope instead?
-    file_scope->file = file;
-    res = compiler_compile(comp, code);
-    if(!res)
-    {
-        file_scope->file = prev_file;
-        goto err;
-    }
-    file_scope->file = prev_file;
-    allocator_free(comp->alloc, code);
-    return res;
-err:
-    allocator_free(comp->alloc, code);
-    return NULL;
-}
-
-SymbolTable* compiler_get_symbol_table(Compiler* comp)
-{
-    FileScope* file_scope;
-    file_scope = (FileScope*)comp->file_scopes->top();
-    if(!file_scope)
-    {
-        APE_ASSERT(false);
-        return NULL;
-    }
-    return file_scope->symbol_table;
-}
-
-static void compiler_set_symbol_table(Compiler* comp, SymbolTable* table)
-{
-    FileScope* file_scope;
-    file_scope = (FileScope*)comp->file_scopes->top();
-    if(!file_scope)
-    {
-        APE_ASSERT(false);
-        return;
-    }
-    file_scope->symbol_table = table;
-}
-
-Array* compiler_get_constants(const Compiler* comp)
-{
-    return comp->constants;
-}
 
 // INTERNAL
-bool compiler_init(Compiler* comp,
-                          Allocator* alloc,
-                          const Config* config,
-                          GCMemory* mem,
-                          ErrorList* errors,
-                          PtrArray * files,
-                          GlobalStore* global_store)
-{
-    bool ok;
-    memset(comp, 0, sizeof(Compiler));
-    comp->alloc = alloc;
-    comp->config = config;
-    comp->mem = mem;
-    comp->errors = errors;
-    comp->files = files;
-    comp->global_store = global_store;
-    comp->file_scopes = PtrArray::make(alloc);
-    if(!comp->file_scopes)
-    {
-        goto err;
-    }
-    comp->constants = Array::make<Object>(alloc);
-    if(!comp->constants)
-    {
-        goto err;
-    }
-    comp->src_positions_stack = Array::make<Position>(alloc);
-    if(!comp->src_positions_stack)
-    {
-        goto err;
-    }
-    comp->modules = Dictionary::make(alloc, module_copy, module_destroy);
-    if(!comp->modules)
-    {
-        goto err;
-    }
-    ok = push_compilation_scope(comp);
-    if(!ok)
-    {
-        goto err;
-    }
-    ok = push_file_scope(comp, "none");
-    if(!ok)
-    {
-        goto err;
-    }
-    comp->string_constants_positions = Dictionary::make(comp->alloc, NULL, NULL);
-    if(!comp->string_constants_positions)
-    {
-        goto err;
-    }
 
-    return true;
-err:
-    compiler_deinit(comp);
-    return false;
-}
-
-void compiler_deinit(Compiler* comp)
-{
-    int i;
-    int* val;
-    if(!comp)
-    {
-        return;
-    }
-    for(i = 0; i < comp->string_constants_positions->count(); i++)
-    {
-        val = (int*)comp->string_constants_positions->getValueAt(i);
-        allocator_free(comp->alloc, val);
-    }
-    comp->string_constants_positions->destroy();
-    while(comp->file_scopes->count() > 0)
-    {
-        pop_file_scope(comp);
-    }
-    while(get_compilation_scope(comp))
-    {
-        pop_compilation_scope(comp);
-    }
-    comp->modules->destroyWithItems();
-    Array::destroy(comp->src_positions_stack);
-    Array::destroy(comp->constants);
-    comp->file_scopes->destroy();
-    memset(comp, 0, sizeof(Compiler));
-}
-
-bool compiler_init_shallow_copy(Compiler* copy, Compiler* src)
-{
-    int i;
-    bool ok;
-    int* val;
-    int* val_copy;
-    const char* key;
-    const char* loaded_name;
-    char* loaded_name_copy;
-    SymbolTable* src_st;
-    SymbolTable* src_st_copy;
-    SymbolTable* copy_st;
-    Dictionary* modules_copy;
-    Array* constants_copy;
-    FileScope* src_file_scope;
-    FileScope* copy_file_scope;
-    PtrArray* src_loaded_module_names;
-    PtrArray* copy_loaded_module_names;
-
-    ok = compiler_init(copy, src->alloc, src->config, src->mem, src->errors, src->files, src->global_store);
-    if(!ok)
-    {
-        return false;
-    }
-    src_st = compiler_get_symbol_table(src);
-    APE_ASSERT(src->file_scopes->count() == 1);
-    APE_ASSERT(src_st->outer == NULL);
-    src_st_copy = symbol_table_copy(src_st);
-    if(!src_st_copy)
-    {
-        goto err;
-    }
-    copy_st = compiler_get_symbol_table(copy);
-    symbol_table_destroy(copy_st);
-    copy_st = NULL;
-    compiler_set_symbol_table(copy, src_st_copy);
-    modules_copy = src->modules->copyWithItems();
-    if(!modules_copy)
-    {
-        goto err;
-    }
-    copy->modules->destroyWithItems();
-    copy->modules = modules_copy;
-    constants_copy = Array::copy(src->constants);
-    if(!constants_copy)
-    {
-        goto err;
-    }
-    Array::destroy(copy->constants);
-    copy->constants = constants_copy;
-    for(i = 0; i < src->string_constants_positions->count(); i++)
-    {
-        key = (const char*)src->string_constants_positions->getKeyAt(i);
-        val = (int*)src->string_constants_positions->getValueAt( i);
-        val_copy = (int*)allocator_malloc(src->alloc, sizeof(int));
-        if(!val_copy)
-        {
-            goto err;
-        }
-        *val_copy = *val;
-        ok = copy->string_constants_positions->set(key, val_copy);
-        if(!ok)
-        {
-            allocator_free(src->alloc, val_copy);
-            goto err;
-        }
-    }
-    src_file_scope = (FileScope*)src->file_scopes->top();
-    copy_file_scope = (FileScope*)copy->file_scopes->top();
-    src_loaded_module_names = src_file_scope->loaded_module_names;
-    copy_loaded_module_names = copy_file_scope->loaded_module_names;
-    for(i = 0; i < src_loaded_module_names->count(); i++)
-    {
-
-        loaded_name = (const char*)src_loaded_module_names->get(i);
-        loaded_name_copy = ape_strdup(copy->alloc, loaded_name);
-        if(!loaded_name_copy)
-        {
-            goto err;
-        }
-        ok = copy_loaded_module_names->add(loaded_name_copy);
-        if(!ok)
-        {
-            allocator_free(copy->alloc, loaded_name_copy);
-            goto err;
-        }
-    }
-
-    return true;
-err:
-    compiler_deinit(copy);
-    return false;
-}
-
-template<typename... ArgsT>
-int emit(Compiler *comp, opcode_t op, int operands_count, ArgsT&&... operargs)
-{
-    int i;
-    int ip;
-    int len;
-    bool ok;
-    Position* src_pos;
-    CompilationScope* compilation_scope;
-    uint64_t operands[] = { static_cast<uint64_t>(operargs)... };
-    ip = get_ip(comp);
-    len = code_make(op, operands_count, operands, get_bytecode(comp));
-    if(len == 0)
-    {
-        return -1;
-    }
-    for(i = 0; i < len; i++)
-    {
-        src_pos = (Position*)comp->src_positions_stack->top();
-        APE_ASSERT(src_pos->line >= 0);
-        APE_ASSERT(src_pos->column >= 0);
-        ok = get_src_positions(comp)->add(src_pos);
-        if(!ok)
-        {
-            return -1;
-        }
-    }
-    compilation_scope = get_compilation_scope(comp);
-    compilation_scope->last_opcode = op;
-    return ip;
-}
-
-static CompilationScope* get_compilation_scope(Compiler* comp)
-{
-    return comp->compilation_scope;
-}
-
-static bool push_compilation_scope(Compiler* comp)
-{
-    CompilationScope* current_scope;
-    CompilationScope* new_scope;
-    current_scope = get_compilation_scope(comp);
-    new_scope = compilation_scope_make(comp->alloc, current_scope);
-    if(!new_scope)
-    {
-        return false;
-    }
-    set_compilation_scope(comp, new_scope);
-    return true;
-}
-
-static void pop_compilation_scope(Compiler* comp)
-{
-    CompilationScope* current_scope;
-    current_scope = get_compilation_scope(comp);
-    APE_ASSERT(current_scope);
-    set_compilation_scope(comp, current_scope->outer);
-    compilation_scope_destroy(current_scope);
-}
-
-static bool push_symbol_table(Compiler* comp, int global_offset)
-{
-    FileScope* file_scope;
-    file_scope = (FileScope*)comp->file_scopes->top();
-    if(!file_scope)
-    {
-        APE_ASSERT(false);
-        return false;
-    }
-    SymbolTable* current_table = file_scope->symbol_table;
-    file_scope->symbol_table = symbol_table_make(comp->alloc, current_table, comp->global_store, global_offset);
-    if(!file_scope->symbol_table)
-    {
-        file_scope->symbol_table = current_table;
-        return false;
-    }
-    return true;
-}
-
-static void pop_symbol_table(Compiler* comp)
-{
-    FileScope* file_scope;
-    SymbolTable* current_table;
-    file_scope = (FileScope*)comp->file_scopes->top();
-    if(!file_scope)
-    {
-        APE_ASSERT(false);
-        return;
-    }
-    current_table = file_scope->symbol_table;
-    if(!current_table)
-    {
-        APE_ASSERT(false);
-        return;
-    }
-    file_scope->symbol_table = current_table->outer;
-    symbol_table_destroy(current_table);
-}
-
-static opcode_t get_last_opcode(Compiler* comp)
-{
-    CompilationScope* current_scope;
-    current_scope = get_compilation_scope(comp);
-    return current_scope->last_opcode;
-}
-
-static bool compile_code(Compiler* comp, const char* code)
-{
-    bool ok;
-    FileScope* file_scope;
-    PtrArray* statements;
-    file_scope = (FileScope*)comp->file_scopes->top();
-    APE_ASSERT(file_scope);
-    statements = parser_parse_all(file_scope->parser, code, file_scope->file);
-    if(!statements)
-    {
-        // errors are added by parser
-        return false;
-    }
-    ok = compile_statements(comp, statements);
-    statements->destroyWithItems(statement_destroy);
-
-    // Left for debugging purposes
-    //    if (ok) {
-    //        StringBuffer *buf = strbuf_make(NULL);
-    //        code_to_string(comp->compilation_scope->bytecode->data(),
-    //                       comp->compilation_scope->src_positions->data(),
-    //                       comp->compilation_scope->bytecode->count(), buf);
-    //        puts(strbuf_get_string(buf));
-    //        strbuf_destroy(buf);
-    //    }
-
-    return ok;
-}
-
-static bool compile_statements(Compiler* comp, PtrArray * statements)
-{
-    int i;
-    bool ok;
-    const Expression* stmt;
-    ok = true;
-    for(i = 0; i < statements->count(); i++)
-    {
-        stmt = (const Expression*)statements->get(i);
-        ok = compile_statement(comp, stmt);
-        if(!ok)
-        {
-            break;
-        }
-    }
-    return ok;
-}
-
-static bool import_module(Compiler* comp, const Expression* import_stmt)
-{
-    // todo: split into smaller functions
-    int i;
-    bool ok;
-    bool result;
-    char* filepath;
-    char* code;
-    char* name_copy;
-    const char* loaded_name;
-    const char* module_path;
-    const char* module_name;
-    const char* filepath_non_canonicalised;
-    FileScope* file_scope;
-    StringBuffer* filepath_buf;
-    SymbolTable* symbol_table;
-    FileScope* fs;
-    Module* module;
-    SymbolTable* st;
-    Symbol* symbol;
-    result = false;
-    filepath = NULL;
-    code = NULL;
-    file_scope = (FileScope*)comp->file_scopes->top();
-    module_path = import_stmt->import.path;
-    module_name = get_module_name(module_path);
-    for(i = 0; i < file_scope->loaded_module_names->count(); i++)
-    {
-        loaded_name = (const char*)file_scope->loaded_module_names->get(i);
-        if(kg_streq(loaded_name, module_name))
-        {
-            errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos, "Module \"%s\" was already imported", module_name);
-            result = false;
-            goto end;
-        }
-    }
-    filepath_buf = strbuf_make(comp->alloc);
-    if(!filepath_buf)
-    {
-        result = false;
-        goto end;
-    }
-    if(kg_is_path_absolute(module_path))
-    {
-        strbuf_appendf(filepath_buf, "%s.ape", module_path);
-    }
-    else
-    {
-        strbuf_appendf(filepath_buf, "%s%s.ape", file_scope->file->dir_path, module_path);
-    }
-    if(strbuf_failed(filepath_buf))
-    {
-        strbuf_destroy(filepath_buf);
-        result = false;
-        goto end;
-    }
-    filepath_non_canonicalised = strbuf_get_string(filepath_buf);
-    filepath = kg_canonicalise_path(comp->alloc, filepath_non_canonicalised);
-    strbuf_destroy(filepath_buf);
-    if(!filepath)
-    {
-        result = false;
-        goto end;
-    }
-    symbol_table = compiler_get_symbol_table(comp);
-    if(symbol_table->outer != NULL || symbol_table->block_scopes->count() > 1)
-    {
-        errors_add_error(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos, "Modules can only be imported in global scope");
-        result = false;
-        goto end;
-    }
-    for(i = 0; i < comp->file_scopes->count(); i++)
-    {
-        fs = (FileScope*)comp->file_scopes->get(i);
-        if(APE_STREQ(fs->file->path, filepath))
-        {
-            errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos, "Cyclic reference of file \"%s\"", filepath);
-            result = false;
-            goto end;
-        }
-    }
-    module = (Module*)comp->modules->get(filepath);
-    if(!module)
-    {
-        // todo: create new module function
-        if(!comp->config->fileio.read_file.read_file)
-        {
-            errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos,
-                              "Cannot import module \"%s\", file read function not configured", filepath);
-            result = false;
-            goto end;
-        }
-        code = comp->config->fileio.read_file.read_file(comp->config->fileio.read_file.context, filepath);
-        if(!code)
-        {
-            errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos, "Reading module file \"%s\" failed", filepath);
-            result = false;
-            goto end;
-        }
-        module = module_make(comp->alloc, module_name);
-        if(!module)
-        {
-            result = false;
-            goto end;
-        }
-        ok = push_file_scope(comp, filepath);
-        if(!ok)
-        {
-            module_destroy(module);
-            result = false;
-            goto end;
-        }
-        ok = compile_code(comp, code);
-        if(!ok)
-        {
-            module_destroy(module);
-            result = false;
-            goto end;
-        }
-        st = compiler_get_symbol_table(comp);
-        for(i = 0; i < symbol_table_get_module_global_symbol_count(st); i++)
-        {
-            symbol = (Symbol*)symbol_table_get_module_global_symbol_at(st, i);
-            module_add_symbol(module, symbol);
-        }
-        pop_file_scope(comp);
-        ok = comp->modules->set( filepath, module);
-        if(!ok)
-        {
-            module_destroy(module);
-            result = false;
-            goto end;
-        }
-    }
-    for(i = 0; i < module->symbols->count(); i++)
-    {
-        symbol = (Symbol*)module->symbols->get(i);
-        ok = symbol_table_add_module_symbol(symbol_table, symbol);
-        if(!ok)
-        {
-            result = false;
-            goto end;
-        }
-    }
-    name_copy = ape_strdup(comp->alloc, module_name);
-    if(!name_copy)
-    {
-        result = false;
-        goto end;
-    }
-    ok = file_scope->loaded_module_names->add(name_copy);
-    if(!ok)
-    {
-        allocator_free(comp->alloc, name_copy);
-        result = false;
-        goto end;
-    }
-    result = true;
-end:
-    allocator_free(comp->alloc, filepath);
-    allocator_free(comp->alloc, code);
-    return result;
-}
-
-static bool compile_statement(Compiler* comp, const Expression* stmt)
-{
-    int i;
-    int ip;
-    int next_case_jump_ip;
-    int after_alt_ip;
-    int after_elif_ip;
-    int* pos;
-    int jump_to_end_ip;
-    int before_test_ip;
-    int after_test_ip;
-    int jump_to_after_body_ip;
-    int after_body_ip;
-    bool ok;
-
-    const WhileLoopStmt* loop;
-    CompilationScope* compilation_scope;
-    SymbolTable* symbol_table;
-    const Symbol* symbol;
-    const IfStmt* if_stmt;
-    Array* jump_to_end_ips;
-    IfCase* if_case;
-    ok = false;
-    ip = -1;
-    ok = comp->src_positions_stack->push(&stmt->pos);
-    if(!ok)
-    {
-        return false;
-    }
-    compilation_scope = get_compilation_scope(comp);
-    symbol_table = compiler_get_symbol_table(comp);
-    switch(stmt->type)
-    {
-        case EXPRESSION_EXPRESSION:
-            {
-                ok = compile_expression(comp, stmt->expression);
-                if(!ok)
-                {
-                    return false;
-                }
-                ip = emit(comp, OPCODE_POP, 0);
-                if(ip < 0)
-                {
-                    return false;
-                }
-            }
-            break;
-
-        case EXPRESSION_DEFINE:
-            {
-                ok = compile_expression(comp, stmt->define.value);
-                if(!ok)
-                {
-                    return false;
-                }
-                symbol = define_symbol(comp, stmt->define.name->pos, stmt->define.name->value, stmt->define.assignable, false);
-                if(!symbol)
-                {
-                    return false;
-                }
-                ok = write_symbol(comp, symbol, true);
-                if(!ok)
-                {
-                    return false;
-                }
-            }
-            break;
-
-        case EXPRESSION_IF:
-            {
-                if_stmt = &stmt->if_statement;
-                jump_to_end_ips = Array::make<int>(comp->alloc);
-                if(!jump_to_end_ips)
-                {
-                    goto statement_if_error;
-                }
-                for(i = 0; i < if_stmt->cases->count(); i++)
-                {
-                    if_case = (IfCase*)if_stmt->cases->get(i);
-                    ok = compile_expression(comp, if_case->test);
-                    if(!ok)
-                    {
-                        goto statement_if_error;
-                    }
-                    next_case_jump_ip = emit(comp, OPCODE_JUMP_IF_FALSE, 1, (uint64_t)(0xbeef));
-                    ok = compile_code_block(comp, if_case->consequence);
-                    if(!ok)
-                    {
-                        goto statement_if_error;
-                    }
-                    // don't emit jump for the last statement
-                    if(i < (if_stmt->cases->count() - 1) || if_stmt->alternative)
-                    {
-
-                        jump_to_end_ip = emit(comp, OPCODE_JUMP, 1, (uint64_t)(0xbeef));
-                        ok = jump_to_end_ips->add(&jump_to_end_ip);
-                        if(!ok)
-                        {
-                            goto statement_if_error;
-                        }
-                    }
-                    after_elif_ip = get_ip(comp);
-                    change_uint16_operand(comp, next_case_jump_ip + 1, after_elif_ip);
-                }
-                if(if_stmt->alternative)
-                {
-                    ok = compile_code_block(comp, if_stmt->alternative);
-                    if(!ok)
-                    {
-                        goto statement_if_error;
-                    }
-                }
-                after_alt_ip = get_ip(comp);
-                for(i = 0; i < jump_to_end_ips->count(); i++)
-                {
-                    pos = (int*)jump_to_end_ips->get(i);
-                    change_uint16_operand(comp, *pos + 1, after_alt_ip);
-                }
-                Array::destroy(jump_to_end_ips);
-
-                break;
-            statement_if_error:
-                Array::destroy(jump_to_end_ips);
-                return false;
-            }
-            break;
-        case EXPRESSION_RETURN_VALUE:
-            {
-                if(compilation_scope->outer == NULL)
-                {
-                    errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "Nothing to return from");
-                    return false;
-                }
-                ip = -1;
-                if(stmt->return_value)
-                {
-                    ok = compile_expression(comp, stmt->return_value);
-                    if(!ok)
-                    {
-                        return false;
-                    }
-                    ip = emit(comp, OPCODE_RETURN_VALUE, 0);
-                }
-                else
-                {
-                    ip = emit(comp, OPCODE_RETURN, 0);
-                }
-                if(ip < 0)
-                {
-                    return false;
-                }
-            }
-            break;
-        case EXPRESSION_WHILE_LOOP:
-            {
-                loop = &stmt->while_loop;
-                before_test_ip = get_ip(comp);
-                ok = compile_expression(comp, loop->test);
-                if(!ok)
-                {
-                    return false;
-                }
-                after_test_ip = get_ip(comp);
-                ip = emit(comp, OPCODE_JUMP_IF_TRUE, 1, (uint64_t)(after_test_ip + 6));
-                if(ip < 0)
-                {
-                    return false;
-                }
-                jump_to_after_body_ip = emit(comp, OPCODE_JUMP, 1, (uint64_t)0xdead);
-                if(jump_to_after_body_ip < 0)
-                {
-                    return false;
-                }
-                ok = push_continue_ip(comp, before_test_ip);
-                if(!ok)
-                {
-                    return false;
-                }
-                ok = push_break_ip(comp, jump_to_after_body_ip);
-                if(!ok)
-                {
-                    return false;
-                }
-                ok = compile_code_block(comp, loop->body);
-                if(!ok)
-                {
-                    return false;
-                }
-                pop_break_ip(comp);
-                pop_continue_ip(comp);
-                ip = emit(comp, OPCODE_JUMP, 1, (uint64_t)before_test_ip);
-                if(ip < 0)
-                {
-                    return false;
-                }
-                after_body_ip = get_ip(comp);
-                change_uint16_operand(comp, jump_to_after_body_ip + 1, after_body_ip);
-            }
-            break;
-
-        case EXPRESSION_BREAK:
-        {
-            int break_ip = get_break_ip(comp);
-            if(break_ip < 0)
-            {
-                errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "Nothing to break from.");
-                return false;
-            }
-            ip = emit(comp, OPCODE_JUMP, 1, (uint64_t)break_ip);
-            if(ip < 0)
-            {
-                return false;
-            }
-            break;
-        }
-        case EXPRESSION_CONTINUE:
-        {
-            int continue_ip = get_continue_ip(comp);
-            if(continue_ip < 0)
-            {
-                errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "Nothing to continue from.");
-                return false;
-            }
-            ip = emit(comp, OPCODE_JUMP, 1, (uint64_t)continue_ip);
-            if(ip < 0)
-            {
-                return false;
-            }
-            break;
-        }
-        case EXPRESSION_FOREACH:
-        {
-            const ForeachStmt* foreach = &stmt->foreach;
-            ok = symbol_table_push_block_scope(symbol_table);
-            if(!ok)
-            {
-                return false;
-            }
-
-            // Init
-            const Symbol* index_symbol = define_symbol(comp, stmt->pos, "@i", false, true);
-            if(!index_symbol)
-            {
-                return false;
-            }
-
-            ip = emit(comp, OPCODE_NUMBER, 1, (uint64_t)0);
-            if(ip < 0)
-            {
-                return false;
-            }
-
-            ok = write_symbol(comp, index_symbol, true);
-            if(!ok)
-            {
-                return false;
-            }
-
-            const Symbol* source_symbol = NULL;
-            if(foreach->source->type == EXPRESSION_IDENT)
-            {
-                source_symbol = symbol_table_resolve(symbol_table, foreach->source->ident->value);
-                if(!source_symbol)
-                {
-                    errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, foreach->source->pos,
-                                      "Symbol \"%s\" could not be resolved", foreach->source->ident->value);
-                    return false;
-                }
-            }
-            else
-            {
-                ok = compile_expression(comp, foreach->source);
-                if(!ok)
-                {
-                    return false;
-                }
-                source_symbol = define_symbol(comp, foreach->source->pos, "@source", false, true);
-                if(!source_symbol)
-                {
-                    return false;
-                }
-                ok = write_symbol(comp, source_symbol, true);
-                if(!ok)
-                {
-                    return false;
-                }
-            }
-
-            // Update
-            int jump_to_after_update_ip = emit(comp, OPCODE_JUMP, 1, (uint64_t)0xbeef);
-            if(jump_to_after_update_ip < 0)
-            {
-                return false;
-            }
-
-            int update_ip = get_ip(comp);
-            ok = read_symbol(comp, index_symbol);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ip = emit(comp, OPCODE_NUMBER, 1, (uint64_t)ape_double_to_uint64(1));
-            if(ip < 0)
-            {
-                return false;
-            }
-
-            ip = emit(comp, OPCODE_ADD, 0);
-            if(ip < 0)
-            {
-                return false;
-            }
-
-            ok = write_symbol(comp, index_symbol, false);
-            if(!ok)
-            {
-                return false;
-            }
-
-            int after_update_ip = get_ip(comp);
-            change_uint16_operand(comp, jump_to_after_update_ip + 1, after_update_ip);
-
-            // Test
-            ok = comp->src_positions_stack->push(&foreach->source->pos);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ok = read_symbol(comp, source_symbol);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ip = emit(comp, OPCODE_LEN, 0);
-            if(ip < 0)
-            {
-                return false;
-            }
-
-            comp->src_positions_stack->pop(NULL);
-            ok = read_symbol(comp, index_symbol);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ip = emit(comp, OPCODE_COMPARE, 0);
-            if(ip < 0)
-            {
-                return false;
-            }
-
-            ip = emit(comp, OPCODE_EQUAL, 0);
-            if(ip < 0)
-            {
-                return false;
-            }
-
-            int after_test_ip = get_ip(comp);
-            ip = emit(comp, OPCODE_JUMP_IF_FALSE, 1, (uint64_t)(after_test_ip + 6));
-            if(ip < 0)
-            {
-                return false;
-            }
-
-            int jump_to_after_body_ip = emit(comp, OPCODE_JUMP, 1, (uint64_t)0xdead);
-            if(jump_to_after_body_ip < 0)
-            {
-                return false;
-            }
-
-            ok = read_symbol(comp, source_symbol);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ok = read_symbol(comp, index_symbol);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ip = emit(comp, OPCODE_GET_VALUE_AT, 0);
-            if(ip < 0)
-            {
-                return false;
-            }
-
-            const Symbol* iter_symbol = define_symbol(comp, foreach->iterator->pos, foreach->iterator->value, false, false);
-            if(!iter_symbol)
-            {
-                return false;
-            }
-
-            ok = write_symbol(comp, iter_symbol, true);
-            if(!ok)
-            {
-                return false;
-            }
-
-            // Body
-            ok = push_continue_ip(comp, update_ip);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ok = push_break_ip(comp, jump_to_after_body_ip);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ok = compile_code_block(comp, foreach->body);
-            if(!ok)
-            {
-                return false;
-            }
-
-            pop_break_ip(comp);
-            pop_continue_ip(comp);
-
-            ip = emit(comp, OPCODE_JUMP, 1, (uint64_t)update_ip);
-            if(ip < 0)
-            {
-                return false;
-            }
-
-            int after_body_ip = get_ip(comp);
-            change_uint16_operand(comp, jump_to_after_body_ip + 1, after_body_ip);
-
-            symbol_table_pop_block_scope(symbol_table);
-            break;
-        }
-        case EXPRESSION_FOR_LOOP:
-        {
-            const ForLoopStmt* loop = &stmt->for_loop;
-
-            ok = symbol_table_push_block_scope(symbol_table);
-            if(!ok)
-            {
-                return false;
-            }
-
-            // Init
-            int jump_to_after_update_ip = 0;
-            bool ok = false;
-            if(loop->init)
-            {
-                ok = compile_statement(comp, loop->init);
-                if(!ok)
-                {
-                    return false;
-                }
-                jump_to_after_update_ip = emit(comp, OPCODE_JUMP, 1, (uint64_t)0xbeef);
-                if(jump_to_after_update_ip < 0)
-                {
-                    return false;
-                }
-            }
-
-            // Update
-            int update_ip = get_ip(comp);
-            if(loop->update)
-            {
-                ok = compile_expression(comp, loop->update);
-                if(!ok)
-                {
-                    return false;
-                }
-                ip = emit(comp, OPCODE_POP, 0);
-                if(ip < 0)
-                {
-                    return false;
-                }
-            }
-
-            if(loop->init)
-            {
-                int after_update_ip = get_ip(comp);
-                change_uint16_operand(comp, jump_to_after_update_ip + 1, after_update_ip);
-            }
-
-            // Test
-            if(loop->test)
-            {
-                ok = compile_expression(comp, loop->test);
-                if(!ok)
-                {
-                    return false;
-                }
-            }
-            else
-            {
-                ip = emit(comp, OPCODE_TRUE, 0);
-                if(ip < 0)
-                {
-                    return false;
-                }
-            }
-            int after_test_ip = get_ip(comp);
-
-            ip = emit(comp, OPCODE_JUMP_IF_TRUE, 1, (uint64_t)(after_test_ip + 6));
-            if(ip < 0)
-            {
-                return false;
-            }
-            int jmp_to_after_body_ip = emit(comp, OPCODE_JUMP, 1, (uint64_t)0xdead);
-            if(jmp_to_after_body_ip < 0)
-            {
-                return false;
-            }
-
-            // Body
-            ok = push_continue_ip(comp, update_ip);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ok = push_break_ip(comp, jmp_to_after_body_ip);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ok = compile_code_block(comp, loop->body);
-            if(!ok)
-            {
-                return false;
-            }
-
-            pop_break_ip(comp);
-            pop_continue_ip(comp);
-
-            ip = emit(comp, OPCODE_JUMP, 1, (uint64_t)update_ip);
-            if(ip < 0)
-            {
-                return false;
-            }
-
-            int after_body_ip = get_ip(comp);
-            change_uint16_operand(comp, jmp_to_after_body_ip + 1, after_body_ip);
-
-            symbol_table_pop_block_scope(symbol_table);
-            break;
-        }
-        case EXPRESSION_BLOCK:
-        {
-            ok = compile_code_block(comp, stmt->block);
-            if(!ok)
-            {
-                return false;
-            }
-            break;
-        }
-        case EXPRESSION_IMPORT:
-        {
-            ok = import_module(comp, stmt);
-            if(!ok)
-            {
-                return false;
-            }
-            break;
-        }
-        case EXPRESSION_RECOVER:
-        {
-            const RecoverStmt* recover = &stmt->recover;
-
-            if(symbol_table_is_module_global_scope(symbol_table))
-            {
-                errors_add_error(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "Recover statement cannot be defined in global scope");
-                return false;
-            }
-
-            if(!symbol_table_is_top_block_scope(symbol_table))
-            {
-                errors_add_error(comp->errors, APE_ERROR_COMPILATION, stmt->pos,
-                                 "Recover statement cannot be defined within other statements");
-                return false;
-            }
-
-            int recover_ip = emit(comp, OPCODE_SET_RECOVER, 1, (uint64_t)0xbeef);
-            if(recover_ip < 0)
-            {
-                return false;
-            }
-
-            int jump_to_after_recover_ip = emit(comp, OPCODE_JUMP, 1, (uint64_t)0xbeef);
-            if(jump_to_after_recover_ip < 0)
-            {
-                return false;
-            }
-
-            int after_jump_to_recover_ip = get_ip(comp);
-            change_uint16_operand(comp, recover_ip + 1, after_jump_to_recover_ip);
-
-            ok = symbol_table_push_block_scope(symbol_table);
-            if(!ok)
-            {
-                return false;
-            }
-
-            const Symbol* error_symbol
-            = define_symbol(comp, recover->error_ident->pos, recover->error_ident->value, false, false);
-            if(!error_symbol)
-            {
-                return false;
-            }
-
-            ok = write_symbol(comp, error_symbol, true);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ok = compile_code_block(comp, recover->body);
-            if(!ok)
-            {
-                return false;
-            }
-
-            if(!last_opcode_is(comp, OPCODE_RETURN) && !last_opcode_is(comp, OPCODE_RETURN_VALUE))
-            {
-                errors_add_error(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "Recover body must end with a return statement");
-                return false;
-            }
-
-            symbol_table_pop_block_scope(symbol_table);
-
-            int after_recover_ip = get_ip(comp);
-            change_uint16_operand(comp, jump_to_after_recover_ip + 1, after_recover_ip);
-
-            break;
-        }
-        default:
-        {
-            APE_ASSERT(false);
-            return false;
-        }
-    }
-    comp->src_positions_stack->pop(NULL);
-    return true;
-}
-
-static bool compile_expression(Compiler* comp, Expression* expr)
-{
-    bool ok = false;
-    int ip = -1;
-
-    Expression* expr_optimised = optimise_expression(expr);
-    if(expr_optimised)
-    {
-        expr = expr_optimised;
-    }
-
-    ok = comp->src_positions_stack->push(&expr->pos);
-    if(!ok)
-    {
-        return false;
-    }
-
-    CompilationScope* compilation_scope = get_compilation_scope(comp);
-    SymbolTable* symbol_table = compiler_get_symbol_table(comp);
-
-    bool res = false;
-
-    switch(expr->type)
-    {
-        case EXPRESSION_INFIX:
-        {
-            bool rearrange = false;
-
-            opcode_t op = OPCODE_NONE;
-            switch(expr->infix.op)
-            {
-                case OPERATOR_PLUS:
-                    op = OPCODE_ADD;
-                    break;
-                case OPERATOR_MINUS:
-                    op = OPCODE_SUB;
-                    break;
-                case OPERATOR_ASTERISK:
-                    op = OPCODE_MUL;
-                    break;
-                case OPERATOR_SLASH:
-                    op = OPCODE_DIV;
-                    break;
-                case OPERATOR_MODULUS:
-                    op = OPCODE_MOD;
-                    break;
-                case OPERATOR_EQ:
-                    op = OPCODE_EQUAL;
-                    break;
-                case OPERATOR_NOT_EQ:
-                    op = OPCODE_NOT_EQUAL;
-                    break;
-                case OPERATOR_GT:
-                    op = OPCODE_GREATER_THAN;
-                    break;
-                case OPERATOR_GTE:
-                    op = OPCODE_GREATER_THAN_EQUAL;
-                    break;
-                case OPERATOR_LT:
-                    op = OPCODE_GREATER_THAN;
-                    rearrange = true;
-                    break;
-                case OPERATOR_LTE:
-                    op = OPCODE_GREATER_THAN_EQUAL;
-                    rearrange = true;
-                    break;
-                case OPERATOR_BIT_OR:
-                    op = OPCODE_OR;
-                    break;
-                case OPERATOR_BIT_XOR:
-                    op = OPCODE_XOR;
-                    break;
-                case OPERATOR_BIT_AND:
-                    op = OPCODE_AND;
-                    break;
-                case OPERATOR_LSHIFT:
-                    op = OPCODE_LSHIFT;
-                    break;
-                case OPERATOR_RSHIFT:
-                    op = OPCODE_RSHIFT;
-                    break;
-                default:
-                {
-                    errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, expr->pos, "Unknown infix operator");
-                    goto error;
-                }
-            }
-
-            Expression* left = rearrange ? expr->infix.right : expr->infix.left;
-            Expression* right = rearrange ? expr->infix.left : expr->infix.right;
-
-            ok = compile_expression(comp, left);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            ok = compile_expression(comp, right);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            switch(expr->infix.op)
-            {
-                case OPERATOR_EQ:
-                case OPERATOR_NOT_EQ:
-                {
-                    ip = emit(comp, OPCODE_COMPARE_EQ, 0);
-                    if(ip < 0)
-                    {
-                        goto error;
-                    }
-                    break;
-                }
-                case OPERATOR_GT:
-                case OPERATOR_GTE:
-                case OPERATOR_LT:
-                case OPERATOR_LTE:
-                {
-                    ip = emit(comp, OPCODE_COMPARE, 0);
-                    if(ip < 0)
-                    {
-                        goto error;
-                    }
-                    break;
-                }
-                default:
-                    break;
-            }
-
-            ip = emit(comp, op, 0);
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            break;
-        }
-        case EXPRESSION_NUMBER_LITERAL:
-        {
-            double number = expr->number_literal;
-            ip = emit(comp, OPCODE_NUMBER, 1, (uint64_t)ape_double_to_uint64(number));
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            break;
-        }
-        case EXPRESSION_STRING_LITERAL:
-        {
-            int pos = 0;
-            int* current_pos = (int*)comp->string_constants_positions->get(expr->string_literal);
-            if(current_pos)
-            {
-                pos = *current_pos;
-            }
-            else
-            {
-                Object obj = object_make_string(comp->mem, expr->string_literal);
-                if(object_is_null(obj))
-                {
-                    goto error;
-                }
-
-                pos = add_constant(comp, obj);
-                if(pos < 0)
-                {
-                    goto error;
-                }
-
-                int* pos_val = (int*)allocator_malloc(comp->alloc, sizeof(int));
-                if(!pos_val)
-                {
-                    goto error;
-                }
-
-                *pos_val = pos;
-                ok = comp->string_constants_positions->set(expr->string_literal, pos_val);
-                if(!ok)
-                {
-                    allocator_free(comp->alloc, pos_val);
-                    goto error;
-                }
-            }
-
-            ip = emit(comp, OPCODE_CONSTANT, 1, (uint64_t)pos);
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            break;
-        }
-        case EXPRESSION_NULL_LITERAL:
-        {
-            ip = emit(comp, OPCODE_NULL, 0);
-            if(ip < 0)
-            {
-                goto error;
-            }
-            break;
-        }
-        case EXPRESSION_BOOL_LITERAL:
-        {
-            ip = emit(comp, expr->bool_literal ? OPCODE_TRUE : OPCODE_FALSE, 0);
-            if(ip < 0)
-            {
-                goto error;
-            }
-            break;
-        }
-        case EXPRESSION_ARRAY_LITERAL:
-        {
-            for(int i = 0; i < expr->array->count(); i++)
-            {
-                ok = compile_expression(comp, (Expression*)expr->array->get(i));
-                if(!ok)
-                {
-                    goto error;
-                }
-            }
-            ip = emit(comp, OPCODE_ARRAY, 1, (uint64_t)expr->array->count());
-            if(ip < 0)
-            {
-                goto error;
-            }
-            break;
-        }
-        case EXPRESSION_MAP_LITERAL:
-        {
-            const MapLiteral* map = &expr->map;
-            int len = map->keys->count();
-            ip = emit(comp, OPCODE_MAP_START, 1, (uint64_t)len);
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            for(int i = 0; i < len; i++)
-            {
-                Expression* key = (Expression*)map->keys->get(i);
-                Expression* val = (Expression*)map->values->get(i);
-
-                ok = compile_expression(comp, key);
-                if(!ok)
-                {
-                    goto error;
-                }
-
-                ok = compile_expression(comp, val);
-                if(!ok)
-                {
-                    goto error;
-                }
-            }
-
-            ip = emit(comp, OPCODE_MAP_END, 1, (uint64_t)len);
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            break;
-        }
-        case EXPRESSION_PREFIX:
-        {
-            ok = compile_expression(comp, expr->prefix.right);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            opcode_t op = OPCODE_NONE;
-            switch(expr->prefix.op)
-            {
-                case OPERATOR_MINUS:
-                    op = OPCODE_MINUS;
-                    break;
-                case OPERATOR_BANG:
-                    op = OPCODE_BANG;
-                    break;
-                default:
-                {
-                    errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, expr->pos, "Unknown prefix operator.");
-                    goto error;
-                }
-            }
-            ip = emit(comp, op, 0);
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            break;
-        }
-        case EXPRESSION_IDENT:
-        {
-            const Ident* ident = expr->ident;
-            const Symbol* symbol = symbol_table_resolve(symbol_table, ident->value);
-            if(!symbol)
-            {
-                errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, ident->pos, "Symbol \"%s\" could not be resolved",
-                                  ident->value);
-                goto error;
-            }
-            ok = read_symbol(comp, symbol);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            break;
-        }
-        case EXPRESSION_INDEX:
-        {
-            const IndexExpr* index = &expr->index_expr;
-            ok = compile_expression(comp, index->left);
-            if(!ok)
-            {
-                goto error;
-            }
-            ok = compile_expression(comp, index->index);
-            if(!ok)
-            {
-                goto error;
-            }
-            ip = emit(comp, OPCODE_GET_INDEX, 0);
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            break;
-        }
-        case EXPRESSION_FUNCTION_LITERAL:
-        {
-            const FnLiteral* fn = &expr->fn_literal;
-
-            ok = push_compilation_scope(comp);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            ok = push_symbol_table(comp, 0);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            compilation_scope = get_compilation_scope(comp);
-            symbol_table = compiler_get_symbol_table(comp);
-
-            if(fn->name)
-            {
-                const Symbol* fn_symbol = symbol_table_define_function_name(symbol_table, fn->name, false);
-                if(!fn_symbol)
-                {
-                    errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, expr->pos, "Cannot define symbol \"%s\"", fn->name);
-                    goto error;
-                }
-            }
-
-            const Symbol* this_symbol = symbol_table_define_this(symbol_table);
-            if(!this_symbol)
-            {
-                errors_add_error(comp->errors, APE_ERROR_COMPILATION, expr->pos, "Cannot define \"this\" symbol");
-                goto error;
-            }
-
-            for(int i = 0; i < expr->fn_literal.params->count(); i++)
-            {
-                Ident* param = (Ident*)expr->fn_literal.params->get(i);
-                const Symbol* param_symbol = define_symbol(comp, param->pos, param->value, true, false);
-                if(!param_symbol)
-                {
-                    goto error;
-                }
-            }
-
-            ok = compile_statements(comp, fn->body->statements);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            if(!last_opcode_is(comp, OPCODE_RETURN_VALUE) && !last_opcode_is(comp, OPCODE_RETURN))
-            {
-                ip = emit(comp, OPCODE_RETURN, 0);
-                if(ip < 0)
-                {
-                    goto error;
-                }
-            }
-
-            PtrArray* free_symbols = symbol_table->free_symbols;
-            symbol_table->free_symbols = NULL;// because it gets destroyed with compiler_pop_compilation_scope()
-
-            int num_locals = symbol_table->max_num_definitions;
-
-            CompilationResult* comp_res = compilation_scope_orphan_result(compilation_scope);
-            if(!comp_res)
-            {
-                free_symbols->destroyWithItems(symbol_destroy);
-                goto error;
-            }
-            pop_symbol_table(comp);
-            pop_compilation_scope(comp);
-            compilation_scope = get_compilation_scope(comp);
-            symbol_table = compiler_get_symbol_table(comp);
-
-            Object obj = object_make_function(comp->mem, fn->name, comp_res, true, num_locals, fn->params->count(), 0);
-
-            if(object_is_null(obj))
-            {
-                free_symbols->destroyWithItems(symbol_destroy);
-                compilation_result_destroy(comp_res);
-                goto error;
-            }
-
-            for(int i = 0; i < free_symbols->count(); i++)
-            {
-                Symbol* symbol = (Symbol*)free_symbols->get(i);
-                ok = read_symbol(comp, symbol);
-                if(!ok)
-                {
-                    free_symbols->destroyWithItems(symbol_destroy);
-                    goto error;
-                }
-            }
-
-            int pos = add_constant(comp, obj);
-            if(pos < 0)
-            {
-                free_symbols->destroyWithItems(symbol_destroy);
-                goto error;
-            }
-
-            ip = emit(comp, OPCODE_FUNCTION, 2, (uint64_t)pos, (uint64_t)free_symbols->count());
-            if(ip < 0)
-            {
-                free_symbols->destroyWithItems(symbol_destroy);
-                goto error;
-            }
-
-            free_symbols->destroyWithItems(symbol_destroy);
-
-            break;
-        }
-        case EXPRESSION_CALL:
-        {
-            ok = compile_expression(comp, expr->call_expr.function);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            for(int i = 0; i < expr->call_expr.args->count(); i++)
-            {
-                Expression* arg_expr = (Expression*)expr->call_expr.args->get(i);
-                ok = compile_expression(comp, arg_expr);
-                if(!ok)
-                {
-                    goto error;
-                }
-            }
-
-            ip = emit(comp, OPCODE_CALL, 1, (uint64_t)expr->call_expr.args->count());
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            break;
-        }
-        case EXPRESSION_ASSIGN:
-        {
-            const AssignExpr* assign = &expr->assign;
-            if(assign->dest->type != EXPRESSION_IDENT && assign->dest->type != EXPRESSION_INDEX)
-            {
-                errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos, "Expression is not assignable.");
-                goto error;
-            }
-
-            if(assign->is_postfix)
-            {
-                ok = compile_expression(comp, assign->dest);
-                if(!ok)
-                {
-                    goto error;
-                }
-            }
-
-            ok = compile_expression(comp, assign->source);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            ip = emit(comp, OPCODE_DUP, 0);
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            ok = comp->src_positions_stack->push(&assign->dest->pos);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            if(assign->dest->type == EXPRESSION_IDENT)
-            {
-                const Ident* ident = assign->dest->ident;
-                const Symbol* symbol = symbol_table_resolve(symbol_table, ident->value);
-                if(!symbol)
-                {
-                    //errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos, "Symbol \"%s\" could not be resolved", ident->value);
-                    //goto error;
-                    //symbol_table_define(SymbolTable* table, const char* name, bool assignable)
-                    symbol = symbol_table_define(symbol_table, ident->value, true);
-                }
-                if(!symbol->assignable)
-                {
-                    errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos,
-                                      "Symbol \"%s\" is not assignable", ident->value);
-                    goto error;
-                }
-                ok = write_symbol(comp, symbol, false);
-                if(!ok)
-                {
-                    goto error;
-                }
-            }
-            else if(assign->dest->type == EXPRESSION_INDEX)
-            {
-                const IndexExpr* index = &assign->dest->index_expr;
-                ok = compile_expression(comp, index->left);
-                if(!ok)
-                {
-                    goto error;
-                }
-                ok = compile_expression(comp, index->index);
-                if(!ok)
-                {
-                    goto error;
-                }
-                ip = emit(comp, OPCODE_SET_INDEX, 0);
-                if(ip < 0)
-                {
-                    goto error;
-                }
-            }
-
-            if(assign->is_postfix)
-            {
-                ip = emit(comp, OPCODE_POP, 0);
-                if(ip < 0)
-                {
-                    goto error;
-                }
-            }
-
-            comp->src_positions_stack->pop(NULL);
-            break;
-        }
-        case EXPRESSION_LOGICAL:
-        {
-            const LogicalExpr* logi = &expr->logical;
-
-            ok = compile_expression(comp, logi->left);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            ip = emit(comp, OPCODE_DUP, 0);
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            int after_left_jump_ip = 0;
-            if(logi->op == OPERATOR_LOGICAL_AND)
-            {
-                after_left_jump_ip = emit(comp, OPCODE_JUMP_IF_FALSE, 1, (uint64_t)0xbeef);
-            }
-            else
-            {
-                after_left_jump_ip = emit(comp, OPCODE_JUMP_IF_TRUE, 1, (uint64_t)0xbeef);
-            }
-
-            if(after_left_jump_ip < 0)
-            {
-                goto error;
-            }
-
-            ip = emit(comp, OPCODE_POP, 0);
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            ok = compile_expression(comp, logi->right);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            int after_right_ip = get_ip(comp);
-            change_uint16_operand(comp, after_left_jump_ip + 1, after_right_ip);
-
-            break;
-        }
-        case EXPRESSION_TERNARY:
-        {
-            const TernaryExpr* ternary = &expr->ternary;
-
-            ok = compile_expression(comp, ternary->test);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            int else_jump_ip = emit(comp, OPCODE_JUMP_IF_FALSE, 1, (uint64_t)0xbeef);
-
-            ok = compile_expression(comp, ternary->if_true);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            int end_jump_ip = emit(comp, OPCODE_JUMP, 1, (uint64_t)0xbeef);
-
-            int else_ip = get_ip(comp);
-            change_uint16_operand(comp, else_jump_ip + 1, else_ip);
-
-            ok = compile_expression(comp, ternary->if_false);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            int end_ip = get_ip(comp);
-            change_uint16_operand(comp, end_jump_ip + 1, end_ip);
-
-            break;
-        }
-        default:
-        {
-            APE_ASSERT(false);
-            break;
-        }
-    }
-    res = true;
-    goto end;
-error:
-    res = false;
-end:
-    comp->src_positions_stack->pop(NULL);
-    expression_destroy(expr_optimised);
-    return res;
-}
-
-static bool compile_code_block(Compiler* comp, const Codeblock* block)
-{
-    SymbolTable* symbol_table = compiler_get_symbol_table(comp);
-    if(!symbol_table)
-    {
-        return false;
-    }
-
-    bool ok = symbol_table_push_block_scope(symbol_table);
-    if(!ok)
-    {
-        return false;
-    }
-
-    if(block->statements->count() == 0)
-    {
-        int ip = emit(comp, OPCODE_NULL, 0);
-        if(ip < 0)
-        {
-            return false;
-        }
-        ip = emit(comp, OPCODE_POP, 0);
-        if(ip < 0)
-        {
-            return false;
-        }
-    }
-
-    for(int i = 0; i < block->statements->count(); i++)
-    {
-        const Expression* stmt = (Expression*)block->statements->get(i);
-        bool ok = compile_statement(comp, stmt);
-        if(!ok)
-        {
-            return false;
-        }
-    }
-    symbol_table_pop_block_scope(symbol_table);
-    return true;
-}
-
-static int add_constant(Compiler* comp, Object obj)
-{
-    bool ok = comp->constants->add(&obj);
-    if(!ok)
-    {
-        return -1;
-    }
-    int pos = comp->constants->count() - 1;
-    return pos;
-}
-
-static void change_uint16_operand(Compiler* comp, int ip, uint16_t operand)
-{
-    Array* bytecode = get_bytecode(comp);
-    if((ip + 1) >= bytecode->count())
-    {
-        APE_ASSERT(false);
-        return;
-    }
-    uint8_t hi = (uint8_t)(operand >> 8);
-    bytecode->set(ip, &hi);
-    uint8_t lo = (uint8_t)(operand);
-    bytecode->set(ip + 1, &lo);
-}
-
-static bool last_opcode_is(Compiler* comp, opcode_t op)
-{
-    opcode_t last_opcode = get_last_opcode(comp);
-    return last_opcode == op;
-}
-
-static bool read_symbol(Compiler* comp, const Symbol* symbol)
-{
-    int ip = -1;
-    if(symbol->type == SYMBOL_MODULE_GLOBAL)
-    {
-        ip = emit(comp, OPCODE_GET_MODULE_GLOBAL, 1, (uint64_t)(symbol->index));
-    }
-    else if(symbol->type == SYMBOL_APE_GLOBAL)
-    {
-        ip = emit(comp, OPCODE_GET_APE_GLOBAL, 1, (uint64_t)(symbol->index));
-    }
-    else if(symbol->type == SYMBOL_LOCAL)
-    {
-        ip = emit(comp, OPCODE_GET_LOCAL, 1, (uint64_t)(symbol->index));
-    }
-    else if(symbol->type == SYMBOL_FREE)
-    {
-        ip = emit(comp, OPCODE_GET_FREE, 1, (uint64_t)(symbol->index));
-    }
-    else if(symbol->type == SYMBOL_FUNCTION)
-    {
-        ip = emit(comp, OPCODE_CURRENT_FUNCTION, 0);
-    }
-    else if(symbol->type == SYMBOL_THIS)
-    {
-        ip = emit(comp, OPCODE_GET_THIS, 0);
-    }
-    return ip >= 0;
-}
-
-static bool write_symbol(Compiler* comp, const Symbol* symbol, bool define)
-{
-    int ip = -1;
-    if(symbol->type == SYMBOL_MODULE_GLOBAL)
-    {
-        if(define)
-        {
-            ip = emit(comp, OPCODE_DEFINE_MODULE_GLOBAL, 1, (uint64_t)(symbol->index));
-        }
-        else
-        {
-            ip = emit(comp, OPCODE_SET_MODULE_GLOBAL, 1, (uint64_t)(symbol->index));
-        }
-    }
-    else if(symbol->type == SYMBOL_LOCAL)
-    {
-        if(define)
-        {
-            ip = emit(comp, OPCODE_DEFINE_LOCAL, 1, (uint64_t)(symbol->index));
-        }
-        else
-        {
-            ip = emit(comp, OPCODE_SET_LOCAL, 1, (uint64_t)(symbol->index));
-        }
-    }
-    else if(symbol->type == SYMBOL_FREE)
-    {
-        ip = emit(comp, OPCODE_SET_FREE, 1, (uint64_t)(symbol->index));
-    }
-    return ip >= 0;
-}
-
-static bool push_break_ip(Compiler* comp, int ip)
-{
-    CompilationScope* comp_scope = get_compilation_scope(comp);
-    return comp_scope->break_ip_stack->push(&ip);
-}
-
-static void pop_break_ip(Compiler* comp)
-{
-    CompilationScope* comp_scope = get_compilation_scope(comp);
-    if(comp_scope->break_ip_stack->count() == 0)
-    {
-        APE_ASSERT(false);
-        return;
-    }
-    comp_scope->break_ip_stack->pop(NULL);
-}
-
-static int get_break_ip(Compiler* comp)
-{
-    CompilationScope* comp_scope = get_compilation_scope(comp);
-    if(comp_scope->break_ip_stack->count() == 0)
-    {
-        return -1;
-    }
-    int* res = (int*)comp_scope->break_ip_stack->top();
-    return *res;
-}
-
-static bool push_continue_ip(Compiler* comp, int ip)
-{
-    CompilationScope* comp_scope = get_compilation_scope(comp);
-    return comp_scope->continue_ip_stack->push(&ip);
-}
-
-static void pop_continue_ip(Compiler* comp)
-{
-    CompilationScope* comp_scope = get_compilation_scope(comp);
-    if(comp_scope->continue_ip_stack->count() == 0)
-    {
-        APE_ASSERT(false);
-        return;
-    }
-    comp_scope->continue_ip_stack->pop(NULL);
-}
-
-static int get_continue_ip(Compiler* comp)
-{
-    CompilationScope* comp_scope = get_compilation_scope(comp);
-    if(comp_scope->continue_ip_stack->count() == 0)
-    {
-        APE_ASSERT(false);
-        return -1;
-    }
-    int* res = (int*)comp_scope->continue_ip_stack->top();
-    return *res;
-}
-
-static int get_ip(Compiler* comp)
-{
-    CompilationScope* compilation_scope = get_compilation_scope(comp);
-    return compilation_scope->bytecode->count();
-}
-
-static Array * get_src_positions(Compiler* comp)
-{
-    CompilationScope* compilation_scope = get_compilation_scope(comp);
-    return compilation_scope->src_positions;
-}
-
-static Array * get_bytecode(Compiler* comp)
-{
-    CompilationScope* compilation_scope = get_compilation_scope(comp);
-    return compilation_scope->bytecode;
-}
-
-static FileScope* file_scope_make(Compiler* comp, CompiledFile* file)
-{
-    FileScope* file_scope = (FileScope*)allocator_malloc(comp->alloc, sizeof(FileScope));
-    if(!file_scope)
-    {
-        return NULL;
-    }
-    memset(file_scope, 0, sizeof(FileScope));
-    file_scope->alloc = comp->alloc;
-    file_scope->parser = parser_make(comp->alloc, comp->config, comp->errors);
-    if(!file_scope->parser)
-    {
-        goto err;
-    }
-    file_scope->symbol_table = NULL;
-    file_scope->file = file;
-    file_scope->loaded_module_names = PtrArray::make(comp->alloc);
-    if(!file_scope->loaded_module_names)
-    {
-        goto err;
-    }
-    return file_scope;
-err:
-    file_scope_destroy(file_scope);
-    return NULL;
-}
-
-static void file_scope_destroy(FileScope* scope)
-{
-    for(int i = 0; i < scope->loaded_module_names->count(); i++)
-    {
-        void* name = scope->loaded_module_names->get(i);
-        allocator_free(scope->alloc, name);
-    }
-    scope->loaded_module_names->destroy();
-    parser_destroy(scope->parser);
-    allocator_free(scope->alloc, scope);
-}
-
-static bool push_file_scope(Compiler* comp, const char* filepath)
-{
-    SymbolTable* prev_st = NULL;
-    if(comp->file_scopes->count() > 0)
-    {
-        prev_st = compiler_get_symbol_table(comp);
-    }
-
-    CompiledFile* file = compiled_file_make(comp->alloc, filepath);
-    if(!file)
-    {
-        return false;
-    }
-
-    bool ok = comp->files->add(file);
-    if(!ok)
-    {
-        compiled_file_destroy(file);
-        return false;
-    }
-
-    FileScope* file_scope = file_scope_make(comp, file);
-    if(!file_scope)
-    {
-        return false;
-    }
-
-    ok = comp->file_scopes->push(file_scope);
-    if(!ok)
-    {
-        file_scope_destroy(file_scope);
-        return false;
-    }
-
-    int global_offset = 0;
-    if(prev_st)
-    {
-        BlockScope* prev_st_top_scope = symbol_table_get_block_scope(prev_st);
-        global_offset = prev_st_top_scope->offset + prev_st_top_scope->num_definitions;
-    }
-
-    ok = push_symbol_table(comp, global_offset);
-    if(!ok)
-    {
-        comp->file_scopes->pop();
-        file_scope_destroy(file_scope);
-        return false;
-    }
-
-    return true;
-}
-
-static void pop_file_scope(Compiler* comp)
-{
-    SymbolTable* popped_st = compiler_get_symbol_table(comp);
-    BlockScope* popped_st_top_scope = symbol_table_get_block_scope(popped_st);
-    int popped_num_defs = popped_st_top_scope->num_definitions;
-
-    while(compiler_get_symbol_table(comp))
-    {
-        pop_symbol_table(comp);
-    }
-    FileScope* scope = (FileScope*)comp->file_scopes->top();
-    if(!scope)
-    {
-        APE_ASSERT(false);
-        return;
-    }
-    file_scope_destroy(scope);
-
-    comp->file_scopes->pop();
-
-    if(comp->file_scopes->count() > 0)
-    {
-        SymbolTable* current_st = compiler_get_symbol_table(comp);
-        BlockScope* current_st_top_scope = symbol_table_get_block_scope(current_st);
-        current_st_top_scope->num_definitions += popped_num_defs;
-    }
-}
-
-static void set_compilation_scope(Compiler* comp, CompilationScope* scope)
-{
-    comp->compilation_scope = scope;
-}
 
 
 static const char* g_type_names[] = {
@@ -10545,7 +10978,7 @@ GlobalStore* global_store_make(Allocator* alloc, GCMemory* mem)
     }
     memset(store, 0, sizeof(GlobalStore));
     store->alloc = alloc;
-    store->symbols = Dictionary::make(alloc, symbol_copy, symbol_destroy);
+    store->symbols = Dictionary::make(alloc, Symbol::callback_copy, Symbol::callback_destroy);
     if(!store->symbols)
     {
         goto err;
@@ -10626,7 +11059,7 @@ bool global_store_set(GlobalStore* store, const char* name, Object object)
     {
         return false;
     }
-    symbol = symbol_make(store->alloc, name, SYMBOL_APE_GLOBAL, ix, false);
+    symbol = Symbol::make(store->alloc, name, SYMBOL_APE_GLOBAL, ix, false);
     if(!symbol)
     {
         goto err;
@@ -10634,7 +11067,7 @@ bool global_store_set(GlobalStore* store, const char* name, Object object)
     ok = store->symbols->set(name, symbol);
     if(!ok)
     {
-        symbol_destroy(symbol);
+        symbol->destroy();
         goto err;
     }
     return true;
@@ -10672,443 +11105,6 @@ int global_store_get_object_count(GlobalStore* store)
 }
 
 
-Symbol* symbol_make(Allocator* alloc, const char* name, SymbolType type, int index, bool assignable)
-{
-    Symbol* symbol;
-    symbol = (Symbol*)allocator_malloc(alloc, sizeof(Symbol));
-    if(!symbol)
-    {
-        return NULL;
-    }
-    memset(symbol, 0, sizeof(Symbol));
-    symbol->alloc = alloc;
-    symbol->name = ape_strdup(alloc, name);
-    if(!symbol->name)
-    {
-        allocator_free(alloc, symbol);
-        return NULL;
-    }
-    symbol->type = type;
-    symbol->index = index;
-    symbol->assignable = assignable;
-    return symbol;
-}
-
-void symbol_destroy(Symbol* symbol)
-{
-    if(!symbol)
-    {
-        return;
-    }
-    allocator_free(symbol->alloc, symbol->name);
-    allocator_free(symbol->alloc, symbol);
-}
-
-Symbol* symbol_copy(Symbol* symbol)
-{
-    return symbol_make(symbol->alloc, symbol->name, symbol->type, symbol->index, symbol->assignable);
-}
-
-SymbolTable* symbol_table_make(Allocator* alloc, SymbolTable* outer, GlobalStore* global_store, int module_global_offset)
-{
-    bool ok;
-    SymbolTable* table;
-    table = (SymbolTable*)allocator_malloc(alloc, sizeof(SymbolTable));
-    if(!table)
-    {
-        return NULL;
-    }
-    memset(table, 0, sizeof(SymbolTable));
-    table->alloc = alloc;
-    table->max_num_definitions = 0;
-    table->outer = outer;
-    table->global_store = global_store;
-    table->module_global_offset = module_global_offset;
-    table->block_scopes = PtrArray::make(alloc);
-    if(!table->block_scopes)
-    {
-        goto err;
-    }
-    table->free_symbols = PtrArray::make(alloc);
-    if(!table->free_symbols)
-    {
-        goto err;
-    }
-    table->module_global_symbols = PtrArray::make(alloc);
-    if(!table->module_global_symbols)
-    {
-        goto err;
-    }
-    ok = symbol_table_push_block_scope(table);
-    if(!ok)
-    {
-        goto err;
-    }
-    return table;
-err:
-    symbol_table_destroy(table);
-    return NULL;
-}
-
-void symbol_table_destroy(SymbolTable* table)
-{
-    Allocator* alloc;
-    if(!table)
-    {
-        return;
-    }
-
-    while(table->block_scopes->count() > 0)
-    {
-        symbol_table_pop_block_scope(table);
-    }
-    table->block_scopes->destroy();
-    table->module_global_symbols->destroyWithItems(symbol_destroy);
-    table->free_symbols->destroyWithItems(symbol_destroy);
-    alloc = table->alloc;
-    memset(table, 0, sizeof(SymbolTable));
-    allocator_free(alloc, table);
-}
-
-SymbolTable* symbol_table_copy(SymbolTable* table)
-{
-    SymbolTable* copy;
-    copy = (SymbolTable*)allocator_malloc(table->alloc, sizeof(SymbolTable));
-    if(!copy)
-    {
-        return NULL;
-    }
-    memset(copy, 0, sizeof(SymbolTable));
-    copy->alloc = table->alloc;
-    copy->outer = table->outer;
-    copy->global_store = table->global_store;
-    copy->block_scopes = table->block_scopes->copyWithItems(block_scope_copy, block_scope_destroy);
-    if(!copy->block_scopes)
-    {
-        goto err;
-    }
-    copy->free_symbols = table->free_symbols->copyWithItems(symbol_copy, symbol_destroy);
-    if(!copy->free_symbols)
-    {
-        goto err;
-    }
-    copy->module_global_symbols = table->module_global_symbols->copyWithItems(symbol_copy, symbol_destroy);
-    if(!copy->module_global_symbols)
-    {
-        goto err;
-    }
-    copy->max_num_definitions = table->max_num_definitions;
-    copy->module_global_offset = table->module_global_offset;
-    return copy;
-err:
-    symbol_table_destroy(copy);
-    return NULL;
-}
-
-bool symbol_table_add_module_symbol(SymbolTable* st, Symbol* symbol)
-{
-    bool ok;
-    if(symbol->type != SYMBOL_MODULE_GLOBAL)
-    {
-        APE_ASSERT(false);
-        return false;
-    }
-    if(symbol_table_symbol_is_defined(st, symbol->name))
-    {
-        return true;// todo: make sure it should be true in this case
-    }
-    Symbol* copy = symbol_copy(symbol);
-    if(!copy)
-    {
-        return false;
-    }
-    ok = set_symbol(st, copy);
-    if(!ok)
-    {
-        symbol_destroy(copy);
-        return false;
-    }
-    return true;
-}
-
-const Symbol* symbol_table_define(SymbolTable* table, const char* name, bool assignable)
-{
-    
-    bool ok;
-    bool global_symbol_added;
-    int ix;
-    int definitions_count;
-    BlockScope* top_scope;
-    SymbolType symbol_type;
-    Symbol* symbol;
-    Symbol* global_symbol_copy;
-    const Symbol* global_symbol;
-    global_symbol = global_store_get_symbol(table->global_store, name);
-    if(global_symbol)
-    {
-        return NULL;
-    }
-    if(strchr(name, ':'))
-    {
-        return NULL;// module symbol
-    }
-    if(APE_STREQ(name, "this"))
-    {
-        return NULL;// "this" is reserved
-    }
-    symbol_type = table->outer == NULL ? SYMBOL_MODULE_GLOBAL : SYMBOL_LOCAL;
-    ix = next_symbol_index(table);
-    symbol = symbol_make(table->alloc, name, symbol_type, ix, assignable);
-    if(!symbol)
-    {
-        return NULL;
-    }
-    global_symbol_added = false;
-    ok = false;
-    if(symbol_type == SYMBOL_MODULE_GLOBAL && table->block_scopes->count() == 1)
-    {
-        global_symbol_copy = symbol_copy(symbol);
-        if(!global_symbol_copy)
-        {
-            symbol_destroy(symbol);
-            return NULL;
-        }
-        ok = table->module_global_symbols->add(global_symbol_copy);
-        if(!ok)
-        {
-            symbol_destroy(global_symbol_copy);
-            symbol_destroy(symbol);
-            return NULL;
-        }
-        global_symbol_added = true;
-    }
-
-    ok = set_symbol(table, symbol);
-    if(!ok)
-    {
-        if(global_symbol_added)
-        {
-            global_symbol_copy = (Symbol*)table->module_global_symbols->pop();
-            symbol_destroy(global_symbol_copy);
-        }
-        symbol_destroy(symbol);
-        return NULL;
-    }
-    top_scope = (BlockScope*)table->block_scopes->top();
-    top_scope->num_definitions++;
-    definitions_count = count_num_definitions(table);
-    if(definitions_count > table->max_num_definitions)
-    {
-        table->max_num_definitions = definitions_count;
-    }
-
-    return symbol;
-}
-
-const Symbol* symbol_table_define_free(SymbolTable* st, const Symbol* original)
-{
-    bool ok;
-    Symbol* symbol;
-    Symbol* copy;
-    copy = symbol_make(st->alloc, original->name, original->type, original->index, original->assignable);
-    if(!copy)
-    {
-        return NULL;
-    }
-    ok = st->free_symbols->add(copy);
-    if(!ok)
-    {
-        symbol_destroy(copy);
-        return NULL;
-    }
-
-    symbol = symbol_make(st->alloc, original->name, SYMBOL_FREE, st->free_symbols->count() - 1, original->assignable);
-    if(!symbol)
-    {
-        return NULL;
-    }
-
-    ok = set_symbol(st, symbol);
-    if(!ok)
-    {
-        symbol_destroy(symbol);
-        return NULL;
-    }
-
-    return symbol;
-}
-
-const Symbol* symbol_table_define_function_name(SymbolTable* st, const char* name, bool assignable)
-{
-    bool ok;
-    Symbol* symbol;
-    if(strchr(name, ':'))
-    {
-        return NULL;// module symbol
-    }
-    symbol = symbol_make(st->alloc, name, SYMBOL_FUNCTION, 0, assignable);
-    if(!symbol)
-    {
-        return NULL;
-    }
-    ok = set_symbol(st, symbol);
-    if(!ok)
-    {
-        symbol_destroy(symbol);
-        return NULL;
-    }
-
-    return symbol;
-}
-
-const Symbol* symbol_table_define_this(SymbolTable* st)
-{
-    bool ok;
-    Symbol* symbol;
-    symbol = symbol_make(st->alloc, "this", SYMBOL_THIS, 0, false);
-    if(!symbol)
-    {
-        return NULL;
-    }
-    ok = set_symbol(st, symbol);
-    if(!ok)
-    {
-        symbol_destroy(symbol);
-        return NULL;
-    }
-    return symbol;
-}
-
-const Symbol* symbol_table_resolve(SymbolTable* table, const char* name)
-{
-    int i;
-    const Symbol* symbol;
-    BlockScope* scope;
-    scope = NULL;
-    symbol = global_store_get_symbol(table->global_store, name);
-    if(symbol)
-    {
-        return symbol;
-    }
-    for(i = table->block_scopes->count() - 1; i >= 0; i--)
-    {
-        scope = (BlockScope*)table->block_scopes->get(i);
-        symbol = (Symbol*)scope->store->get(name);
-        if(symbol)
-        {
-            break;
-        }
-    }
-    if(symbol && symbol->type == SYMBOL_THIS)
-    {
-        symbol = symbol_table_define_free(table, symbol);
-    }
-
-    if(!symbol && table->outer)
-    {
-        symbol = symbol_table_resolve(table->outer, name);
-        if(!symbol)
-        {
-            return NULL;
-        }
-        if(symbol->type == SYMBOL_MODULE_GLOBAL || symbol->type == SYMBOL_APE_GLOBAL)
-        {
-            return symbol;
-        }
-        symbol = symbol_table_define_free(table, symbol);
-    }
-    return symbol;
-}
-
-bool symbol_table_symbol_is_defined(SymbolTable* table, const char* name)
-{
-    BlockScope* top_scope;
-    const Symbol* symbol;
-    // todo: rename to something more obvious
-    symbol = global_store_get_symbol(table->global_store, name);
-    if(symbol)
-    {
-        return true;
-    }
-    top_scope = (BlockScope*)table->block_scopes->top();
-    symbol = (Symbol*)top_scope->store->get(name);
-    if(symbol)
-    {
-        return true;
-    }
-    return false;
-}
-
-bool symbol_table_push_block_scope(SymbolTable* table)
-{
-    bool ok;
-    int block_scope_offset;
-    BlockScope* prev_block_scope;
-    BlockScope* new_scope;
-    block_scope_offset = 0;
-    prev_block_scope = (BlockScope*)table->block_scopes->top();
-    if(prev_block_scope)
-    {
-        block_scope_offset = table->module_global_offset + prev_block_scope->offset + prev_block_scope->num_definitions;
-    }
-    else
-    {
-        block_scope_offset = table->module_global_offset;
-    }
-
-    new_scope = block_scope_make(table->alloc, block_scope_offset);
-    if(!new_scope)
-    {
-        return false;
-    }
-    ok = table->block_scopes->push(new_scope);
-    if(!ok)
-    {
-        block_scope_destroy(new_scope);
-        return false;
-    }
-    return true;
-}
-
-void symbol_table_pop_block_scope(SymbolTable* table)
-{
-    BlockScope* top_scope;
-    top_scope = (BlockScope*)table->block_scopes->top();
-    table->block_scopes->pop();
-    block_scope_destroy(top_scope);
-}
-
-BlockScope* symbol_table_get_block_scope(SymbolTable* table)
-{
-    BlockScope* top_scope;
-    top_scope = (BlockScope*)table->block_scopes->top();
-    return top_scope;
-}
-
-bool symbol_table_is_module_global_scope(SymbolTable* table)
-{
-    return table->outer == NULL;
-}
-
-bool symbol_table_is_top_block_scope(SymbolTable* table)
-{
-    return table->block_scopes->count() == 1;
-}
-
-bool symbol_table_is_top_global_scope(SymbolTable* table)
-{
-    return symbol_table_is_module_global_scope(table) && symbol_table_is_top_block_scope(table);
-}
-
-int symbol_table_get_module_global_symbol_count(const SymbolTable* table)
-{
-    return table->module_global_symbols->count();
-}
-
-const Symbol* symbol_table_get_module_global_symbol_at(const SymbolTable* table, int ix)
-{
-    return (Symbol*)table->module_global_symbols->get(ix);
-}
 
 // INTERNAL
 BlockScope* block_scope_make(Allocator* alloc, int offset)
@@ -11121,7 +11117,7 @@ BlockScope* block_scope_make(Allocator* alloc, int offset)
     }
     memset(new_scope, 0, sizeof(BlockScope));
     new_scope->alloc = alloc;
-    new_scope->store = Dictionary::make(alloc, symbol_copy, symbol_destroy);
+    new_scope->store = Dictionary::make(alloc, Symbol::callback_copy, Symbol::callback_destroy);
     if(!new_scope->store)
     {
         block_scope_destroy(new_scope);
@@ -11159,41 +11155,6 @@ BlockScope* block_scope_copy(BlockScope* scope)
     return copy;
 }
 
-static bool set_symbol(SymbolTable* table, Symbol* symbol)
-{
-    BlockScope* top_scope;
-    Symbol* existing;
-    top_scope = (BlockScope*)table->block_scopes->top();
-    existing= (Symbol*)top_scope->store->get(symbol->name);
-    if(existing)
-    {
-        symbol_destroy(existing);
-    }
-    return top_scope->store->set(symbol->name, symbol);
-}
-
-static int next_symbol_index(SymbolTable* table)
-{
-    int ix;
-    BlockScope* top_scope;
-    top_scope = (BlockScope*)table->block_scopes->top();
-    ix = top_scope->offset + top_scope->num_definitions;
-    return ix;
-}
-
-static int count_num_definitions(SymbolTable* table)
-{
-    int i;
-    int cn;
-    BlockScope* scope;
-    cn = 0;
-    for(i = table->block_scopes->count() - 1; i >= 0; i--)
-    {
-        scope = (BlockScope*)table->block_scopes->get(i);
-        cn += scope->num_definitions;
-    }
-    return cn;
-}
 
 
 OpcodeDefinition* opcode_lookup(opcode_t op)
@@ -11607,7 +11568,7 @@ void module_destroy(Module* module)
         return;
     }
     allocator_free(module->alloc, module->name);
-    module->symbols->destroyWithItems(symbol_destroy);
+    module->symbols->destroyWithItems(Symbol::callback_destroy);
     allocator_free(module->alloc, module);
 }
 
@@ -11626,7 +11587,7 @@ Module* module_copy(Module* src)
         module_destroy(copy);
         return NULL;
     }
-    copy->symbols = src->symbols->copyWithItems(symbol_copy, symbol_destroy);
+    copy->symbols = src->symbols->copyWithItems(Symbol::callback_copy, Symbol::callback_destroy);
     if(!copy->symbols)
     {
         module_destroy(copy);
@@ -11658,7 +11619,7 @@ bool module_add_symbol(Module* module, const Symbol* symbol)
         strbuf_destroy(name_buf);
         return false;
     }
-    Symbol* module_symbol = symbol_make(module->alloc, strbuf_get_string(name_buf), SYMBOL_MODULE_GLOBAL, symbol->index, false);
+    Symbol* module_symbol = Symbol::make(module->alloc, strbuf_get_string(name_buf), SYMBOL_MODULE_GLOBAL, symbol->index, false);
     strbuf_destroy(name_buf);
     if(!module_symbol)
     {
@@ -11667,7 +11628,7 @@ bool module_add_symbol(Module* module, const Symbol* symbol)
     ok = module->symbols->add(module_symbol);
     if(!ok)
     {
-        symbol_destroy(module_symbol);
+        module_symbol->destroy();
         return false;
     }
     return true;
@@ -15122,7 +15083,7 @@ Context* ape_make_ex(MallocFNCallback malloc_fn, FreeFNCallback free_fn, void* c
         goto err;
     }
 
-    ape->compiler = compiler_make(&ape->alloc, &ape->config, ape->mem, &ape->errors, ape->files, ape->global_store);
+    ape->compiler = Compiler::make(&ape->alloc, &ape->config, ape->mem, &ape->errors, ape->files, ape->global_store);
     if(!ape->compiler)
     {
         goto err;
@@ -15221,12 +15182,12 @@ Object ape_execute(Context* ape, const char* code)
     Object res;
     CompilationResult* comp_res;
     reset_state(ape);
-    comp_res = compiler_compile(ape->compiler, code);
+    comp_res = ape->compiler->compileSource(code);
     if(!comp_res || errors_get_count(&ape->errors) > 0)
     {
         goto err;
     }
-    ok = vm_run(ape->vm, comp_res, compiler_get_constants(ape->compiler));
+    ok = vm_run(ape->vm, comp_res, ape->compiler->getConstants());
     if(!ok || errors_get_count(&ape->errors) > 0)
     {
         goto err;
@@ -15251,12 +15212,12 @@ Object ape_execute_file(Context* ape, const char* path)
     Object res;
     CompilationResult* comp_res;
     reset_state(ape);
-    comp_res = compiler_compile_file(ape->compiler, path);
+    comp_res = ape->compiler->compileFile(path);
     if(!comp_res || errors_get_count(&ape->errors) > 0)
     {
         goto err;
     }
-    ok = vm_run(ape->vm, comp_res, compiler_get_constants(ape->compiler));
+    ok = vm_run(ape->vm, comp_res, ape->compiler->getConstants());
     if(!ok || errors_get_count(&ape->errors) > 0)
     {
         goto err;
@@ -15315,8 +15276,8 @@ bool ape_set_global_constant(Context* ape, const char* name, Object obj)
 
 Object ape_get_object(Context* ape, const char* name)
 {
-    SymbolTable* st = compiler_get_symbol_table(ape->compiler);
-    const Symbol* symbol = symbol_table_resolve(st, name);
+    Symbol::Table* st = ape->compiler->getSymbolTable();
+    const Symbol* symbol = st->resolve(name);
     if(!symbol)
     {
         errors_add_errorf(&ape->errors, APE_ERROR_USER, src_pos_invalid, "Symbol \"%s\" is not defined", name);
@@ -15778,7 +15739,7 @@ const char* ape_traceback_get_function_name(const Traceback* ape_traceback, int 
 void ape_deinit(Context* ape)
 {
     vm_destroy(ape->vm);
-    compiler_destroy(ape->compiler);
+    ape->compiler->destroy();
     global_store_destroy(ape->global_store);
     gcmem_destroy(ape->mem);
     ape->files->destroyWithItems(compiled_file_destroy);
