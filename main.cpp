@@ -402,34 +402,33 @@ struct /**/ErrorList;
 struct /**/Token;
 struct /**/CompiledFile;
 struct /**/Lexer;
-struct /**/Codeblock;
+struct /**/StmtBlock;
 struct /**/MapLiteral;
-struct /**/PrefixExpr;
-struct /**/InfixExpr;
-struct /**/IfCase;
-struct /**/FnLiteral;
-struct /**/CallExpr;
-struct /**/IndexExpr;
-struct /**/AssignExpr;
-struct /**/LogicalExpr;
-struct /**/TernaryExpr;
+struct /**/StmtPrefix;
+struct /**/StmtInfix;
+struct /**/StmtFuncDef;
+struct /**/StmtCall;
+struct /**/StmtIndex;
+struct /**/StmtAssign;
+struct /**/StmtLogical;
+struct /**/StmtTernary;
 struct /**/Ident;
 struct /**/Expression;
-struct /**/DefineStmt;
-struct /**/IfStmt;
-struct /**/WhileLoopStmt;
-struct /**/ForeachStmt;
-struct /**/ForLoopStmt;
-struct /**/ImportStmt;
-struct /**/RecoverStmt;
+struct /**/StmtDefine;
+struct /**/StmtIfClause;
+struct /**/StmtWhileLoop;
+struct /**/StmtForeach;
+struct /**/StmtForLoop;
+struct /**/StmtImport;
+struct /**/StmtRecover;
 struct /**/Expression;
 struct /**/Parser;
 struct /**/Object;
-struct /**/FunctionObject;
+struct /**/ScriptFunction;
 struct /**/NativeFunction;
 struct /**/ExternalData;
 struct /**/ObjectError;
-struct /**/ObjectString;
+struct /**/String;
 struct /**/ObjectData;
 struct /**/Symbol;
 struct /**/BlockScope;
@@ -506,18 +505,6 @@ unsigned long collections_hash(const void *ptr, size_t len);
 Allocator allocator_make(AllocatorMallocFNCallback malloc_fn, AllocatorFreeFNCallback free_fn, void *ctx);
 void *allocator_malloc(Allocator *allocator, size_t size);
 void allocator_free(Allocator *allocator, void *ptr);
-
-StringBuffer *strbuf_make(Allocator *alloc);
-StringBuffer *strbuf_make_with_capacity(Allocator *alloc, unsigned int capacity);
-void strbuf_destroy(StringBuffer *buf);
-void strbuf_clear(StringBuffer *buf);
-bool strbuf_append(StringBuffer *buf, const char *str);
-bool strbuf_appendf(StringBuffer *buf, const char *fmt, ...);
-const char *strbuf_get_string(const StringBuffer *buf);
-size_t strbuf_get_length(const StringBuffer *buf);
-char *strbuf_get_string_and_destroy(StringBuffer *buf);
-bool strbuf_failed(StringBuffer *buf);
-bool strbuf_grow(StringBuffer *buf, size_t new_capacity);
 
 PtrArray *kg_split_string(Allocator *alloc, const char *str, const char *delimiter);
 char *kg_join(Allocator *alloc, PtrArray *items, const char *with);
@@ -608,7 +595,7 @@ int object_get_string_capacity(Object object);
 char *object_get_mutable_string(Object object);
 bool object_string_append(Object obj, const char *src, int len);
 unsigned long object_get_string_hash(Object obj);
-FunctionObject *object_get_function(Object object);
+ScriptFunction *object_get_function(Object object);
 NativeFunction *object_get_native_function(Object obj);
 ObjectType object_get_type(Object obj);
 bool object_is_numeric(Object obj);
@@ -777,7 +764,7 @@ Expression *expression_make_array_literal(Allocator *alloc, PtrArray *values);
 Expression *expression_make_map_literal(Allocator *alloc, PtrArray *keys, PtrArray *values);
 Expression *expression_make_prefix(Allocator *alloc, Operator op, Expression *right);
 Expression *expression_make_infix(Allocator *alloc, Operator op, Expression *left, Expression *right);
-Expression *expression_make_fn_literal(Allocator *alloc, PtrArray *params, Codeblock *body);
+Expression *expression_make_fn_literal(Allocator *alloc, PtrArray *params, StmtBlock *body);
 Expression *expression_make_call(Allocator *alloc, Expression *function, PtrArray *args);
 Expression *expression_make_index(Allocator *alloc, Expression *left, Expression *index);
 Expression *expression_make_assign(Allocator *alloc, Expression *dest, Expression *source, bool is_postfix);
@@ -786,26 +773,25 @@ Expression *expression_make_ternary(Allocator *alloc, Expression *test, Expressi
 void expression_destroy(Expression *expr);
 Expression *expression_copy(Expression *expr);
 Expression *statement_make_define(Allocator *alloc, Ident *name, Expression *value, bool assignable);
-Expression *statement_make_if(Allocator *alloc, PtrArray *cases, Codeblock *alternative);
+Expression *statement_make_if(Allocator *alloc, PtrArray *cases, StmtBlock *alternative);
 Expression *statement_make_return(Allocator *alloc, Expression *value);
 Expression *statement_make_expression(Allocator *alloc, Expression *value);
-Expression *statement_make_while_loop(Allocator *alloc, Expression *test, Codeblock *body);
+Expression *statement_make_while_loop(Allocator *alloc, Expression *test, StmtBlock *body);
 Expression *statement_make_break(Allocator *alloc);
-Expression *statement_make_foreach(Allocator *alloc, Ident *iterator, Expression *source, Codeblock *body);
-Expression *statement_make_for_loop(Allocator *alloc, Expression *init, Expression *test, Expression *update, Codeblock *body);
+Expression *statement_make_foreach(Allocator *alloc, Ident *iterator, Expression *source, StmtBlock *body);
+Expression *statement_make_for_loop(Allocator *alloc, Expression *init, Expression *test, Expression *update, StmtBlock *body);
 Expression *statement_make_continue(Allocator *alloc);
-Expression *statement_make_block(Allocator *alloc, Codeblock *block);
+Expression *statement_make_block(Allocator *alloc, StmtBlock *block);
 Expression *statement_make_import(Allocator *alloc, char *path);
-Expression *statement_make_recover(Allocator *alloc, Ident *error_ident, Codeblock *body);
+Expression *statement_make_recover(Allocator *alloc, Ident *error_ident, StmtBlock *body);
 void statement_destroy(Expression *stmt);
 Expression *statement_copy(const Expression *stmt);
-Codeblock *code_block_make(Allocator *alloc, PtrArray *statements);
-void code_block_destroy(Codeblock *block);
-Codeblock *code_block_copy(Codeblock *block);
+StmtBlock *code_block_make(Allocator *alloc, PtrArray *statements);
+void code_block_destroy(StmtBlock *block);
+StmtBlock *code_block_copy(StmtBlock *block);
 void ident_destroy(Ident *ident);
-IfCase *if_case_make(Allocator *alloc, Expression *test, Codeblock *consequence);
-void if_case_destroy(IfCase *cond);
-IfCase *if_case_copy(IfCase *if_case);
+
+
 Expression *expression_make(Allocator *alloc, Expr_type type);
 Expression *statement_make(Allocator *alloc, Expr_type type);
 Parser *parser_make(Allocator *alloc, const Config *config, ErrorList *errors);
@@ -826,7 +812,7 @@ Expression *parse_for_loop_statement(Parser *p);
 Expression *parse_foreach(Parser *p);
 Expression *parse_classic_for_loop(Parser *p);
 Expression *parse_function_statement(Parser *p);
-Codeblock *parse_code_block(Parser *p);
+StmtBlock *parse_code_block(Parser *p);
 Expression *parse_expression(Parser *p, Precedence prec);
 Expression *parse_identifier(Parser *p);
 Expression *parse_number_literal(Parser *p);
@@ -854,7 +840,7 @@ Expression *parse_dot_expression(Parser *p, Expression *left);
 char *statements_to_string(Allocator *alloc, PtrArray *statements);
 void statement_to_string(const Expression *stmt, StringBuffer *buf);
 void expression_to_string(Expression *expr, StringBuffer *buf);
-void code_block_to_string(const Codeblock *stmt, StringBuffer *buf);
+void code_block_to_string(const StmtBlock *stmt, StringBuffer *buf);
 const char *operator_to_string(Operator op);
 const char *expression_type_to_string(Expr_type type);
 void code_to_string(uint8_t *code, Position *source_positions, size_t code_size, StringBuffer *res);
@@ -883,7 +869,7 @@ static void errors_deinit(ErrorList *errors);
 static const Error *errors_getc(const ErrorList *errors, int ix);
 
 static uint64_t get_type_tag(ObjectType type);
-static bool freevals_are_allocated(FunctionObject *fun);
+static bool freevals_are_allocated(ScriptFunction *fun);
 static void set_sp(VM *vm, int new_sp);
 static void this_stack_push(VM *vm, Object obj);
 static Object this_stack_pop(VM *vm);
@@ -999,7 +985,7 @@ struct Lexer
     int line;
     int column;
     CompiledFile* file;
-    bool failed;
+    bool m_failed;
     bool continue_template_string;
     struct
     {
@@ -1014,7 +1000,7 @@ struct Lexer
     Token peek_token;
 };
 
-struct Codeblock
+struct StmtBlock
 {
     Allocator* alloc;
     PtrArray * statements;
@@ -1026,60 +1012,54 @@ struct MapLiteral
     PtrArray * values;
 };
 
-struct PrefixExpr
+struct StmtPrefix
 {
     Operator op;
     Expression* right;
 };
 
-struct InfixExpr
+struct StmtInfix
 {
     Operator op;
     Expression* left;
     Expression* right;
 };
 
-struct IfCase
-{
-    Allocator* alloc;
-    Expression* test;
-    Codeblock* consequence;
-};
 
-struct FnLiteral
+struct StmtFuncDef
 {
     char* name;
     PtrArray * params;
-    Codeblock* body;
+    StmtBlock* body;
 };
 
-struct CallExpr
+struct StmtCall
 {
     Expression* function;
     PtrArray * args;
 };
 
-struct IndexExpr
+struct StmtIndex
 {
     Expression* left;
     Expression* index;
 };
 
-struct AssignExpr
+struct StmtAssign
 {
     Expression* dest;
     Expression* source;
     bool is_postfix;
 };
 
-struct LogicalExpr
+struct StmtLogical
 {
     Operator op;
     Expression* left;
     Expression* right;
 };
 
-struct TernaryExpr
+struct StmtTernary
 {
     Expression* test;
     Expression* if_true;
@@ -1093,49 +1073,128 @@ struct Ident
     Position pos;
 };
 
-struct DefineStmt
+struct StmtDefine
 {
     Ident* name;
     Expression* value;
     bool assignable;
 };
 
-struct IfStmt
+struct StmtIfClause
 {
-    PtrArray * cases;
-    Codeblock* alternative;
+    public:
+        struct Case
+        {
+            public:
+                static Case* make(Allocator* alloc, Expression* test, StmtBlock* consequence)
+                {
+                    Case* res = (Case*)allocator_malloc(alloc, sizeof(Case));
+                    if(!res)
+                    {
+                        return NULL;
+                    }
+                    res->alloc = alloc;
+                    res->test = test;
+                    res->consequence = consequence;
+                    return res;
+                }
+
+                static void destroy_callback(Case* cs)
+                {
+                    cs->destroy();
+                }
+
+                static Case* copy_callback(Case* cs)
+                {
+                    return cs->copy();
+                }
+
+            public:
+                Allocator* alloc;
+                Expression* test;
+                StmtBlock* consequence;
+
+            public:
+                void destroy()
+                {
+                    if(!this)
+                    {
+                        return;
+                    }
+                    expression_destroy(this->test);
+                    code_block_destroy(this->consequence);
+                    allocator_free(this->alloc, this);
+                }
+
+                Case* copy()
+                {
+                    if(!this)
+                    {
+                        return NULL;
+                    }
+                    Expression* test_copy = NULL;
+                    StmtBlock* consequence_copy = NULL;
+                    Case* if_case_copy = NULL;
+                    test_copy = expression_copy(this->test);
+                    if(!test_copy)
+                    {
+                        goto err;
+                    }
+                    consequence_copy = code_block_copy(this->consequence);
+                    if(!test_copy || !consequence_copy)
+                    {
+                        goto err;
+                    }
+                    if_case_copy = Case::make(this->alloc, test_copy, consequence_copy);
+                    if(!if_case_copy)
+                    {
+                        goto err;
+                    }
+                    return if_case_copy;
+                err:
+                    expression_destroy(test_copy);
+                    code_block_destroy(consequence_copy);
+                    if_case_copy->destroy();
+                    return NULL;
+                }
+
+        };
+
+    public:
+        PtrArray * cases;
+        StmtBlock* alternative;
 };
 
-struct WhileLoopStmt
+struct StmtWhileLoop
 {
     Expression* test;
-    Codeblock* body;
+    StmtBlock* body;
 };
 
-struct ForeachStmt
+struct StmtForeach
 {
     Ident* iterator;
     Expression* source;
-    Codeblock* body;
+    StmtBlock* body;
 };
 
-struct ForLoopStmt
+struct StmtForLoop
 {
     Expression* init;
     Expression* test;
     Expression* update;
-    Codeblock* body;
+    StmtBlock* body;
 };
 
-struct ImportStmt
+struct StmtImport
 {
     char* path;
 };
 
-struct RecoverStmt
+struct StmtRecover
 {
     Ident* error_ident;
-    Codeblock* body;
+    StmtBlock* body;
 };
 
 struct Expression
@@ -1150,24 +1209,24 @@ struct Expression
         char* string_literal;
         PtrArray * array;
         MapLiteral map;
-        PrefixExpr prefix;
-        InfixExpr infix;
-        FnLiteral fn_literal;
-        CallExpr call_expr;
-        IndexExpr index_expr;
-        AssignExpr assign;
-        LogicalExpr logical;
-        TernaryExpr ternary;
-        DefineStmt define;
-        IfStmt if_statement;
+        StmtPrefix prefix;
+        StmtInfix infix;
+        StmtFuncDef fn_literal;
+        StmtCall call_expr;
+        StmtIndex index_expr;
+        StmtAssign assign;
+        StmtLogical logical;
+        StmtTernary ternary;
+        StmtDefine define;
+        StmtIfClause if_statement;
         Expression* return_value;
         Expression* expression;
-        WhileLoopStmt while_loop;
-        ForeachStmt foreach;
-        ForLoopStmt for_loop;
-        Codeblock* block;
-        ImportStmt import;
-        RecoverStmt recover;
+        StmtWhileLoop while_loop;
+        StmtForeach foreach;
+        StmtForLoop for_loop;
+        StmtBlock* block;
+        StmtImport import;
+        StmtRecover recover;
     };
     Position pos;
 };
@@ -1195,7 +1254,7 @@ struct Object
     };
 };
 
-struct FunctionObject
+struct ScriptFunction
 {
     union
     {
@@ -1228,7 +1287,7 @@ struct ObjectError
     Traceback* traceback;
 };
 
-struct ObjectString
+struct String
 {
     union
     {
@@ -1262,11 +1321,11 @@ struct ObjectData
     GCMemory* mem;
     union
     {
-        ObjectString string;
+        String string;
         ObjectError error;
         Array* array;
         ValDictionary * map;
-        FunctionObject function;
+        ScriptFunction function;
         NativeFunction native_function;
         ExternalData external;
     };
@@ -2733,11 +2792,176 @@ struct PtrArray
 
 struct StringBuffer
 {
-    Allocator* alloc;
-    bool failed;
-    char* stringdata;
-    size_t capacity;
-    size_t len;
+    public:
+        static StringBuffer* make(Allocator* alloc)
+        {
+            return make(alloc, 1);
+        }
+
+        static StringBuffer* make(Allocator* alloc, unsigned int capacity)
+        {
+            StringBuffer* buf = (StringBuffer*)allocator_malloc(alloc, sizeof(StringBuffer));
+            if(buf == NULL)
+            {
+                return NULL;
+            }
+            memset(buf, 0, sizeof(StringBuffer));
+            buf->alloc = alloc;
+            buf->m_failed = false;
+            buf->stringdata = (char*)allocator_malloc(alloc, capacity);
+            if(buf->stringdata == NULL)
+            {
+                allocator_free(alloc, buf);
+                return NULL;
+            }
+            buf->capacity = capacity;
+            buf->len = 0;
+            buf->stringdata[0] = '\0';
+            return buf;
+        }
+
+    public:
+        Allocator* alloc;
+        bool m_failed;
+        char* stringdata;
+        size_t capacity;
+        size_t len;
+
+    public:
+        void destroy()
+        {
+            if(this == NULL)
+            {
+                return;
+            }
+            allocator_free(this->alloc, this->stringdata);
+            allocator_free(this->alloc, this);
+        }
+
+        void clear()
+        {
+            if(this->m_failed)
+            {
+                return;
+            }
+            this->len = 0;
+            this->stringdata[0] = '\0';
+        }
+
+        bool append(const char* str)
+        {
+            if(this->m_failed)
+            {
+                return false;
+            }
+            size_t str_len = strlen(str);
+            if(str_len == 0)
+            {
+                return true;
+            }
+            size_t required_capacity = this->len + str_len + 1;
+            if(required_capacity > this->capacity)
+            {
+                bool ok = this->grow(required_capacity * 2);
+                if(!ok)
+                {
+                    return false;
+                }
+            }
+            memcpy(this->stringdata + this->len, str, str_len);
+            this->len = this->len + str_len;
+            this->stringdata[this->len] = '\0';
+            return true;
+        }
+
+        bool appendFormat(const char* fmt, ...)
+        {
+            if(this->m_failed)
+            {
+                return false;
+            }
+            va_list args;
+            va_start(args, fmt);
+            int to_write = vsnprintf(NULL, 0, fmt, args);
+            va_end(args);
+            if(to_write == 0)
+            {
+                return true;
+            }
+            size_t required_capacity = this->len + to_write + 1;
+            if(required_capacity > this->capacity)
+            {
+                bool ok = this->grow(required_capacity * 2);
+                if(!ok)
+                {
+                    return false;
+                }
+            }
+            va_start(args, fmt);
+            int written = vsprintf(this->stringdata + this->len, fmt, args);
+            (void)written;
+            va_end(args);
+            if(written != to_write)
+            {
+                return false;
+            }
+            this->len = this->len + to_write;
+            this->stringdata[this->len] = '\0';
+            return true;
+        }
+
+        const char* string() const
+        {
+            if(this->m_failed)
+            {
+                return NULL;
+            }
+            return this->stringdata;
+        }
+
+        size_t length() const
+        {
+            if(this->m_failed)
+            {
+                return 0;
+            }
+            return this->len;
+        }
+
+        char* getStringAndDestroy()
+        {
+            if(this->m_failed)
+            {
+                this->destroy();
+                return NULL;
+            }
+            char* res = this->stringdata;
+            this->stringdata = NULL;
+            this->destroy();
+            return res;
+        }
+
+        bool failed()
+        {
+            return this->m_failed;
+        }
+
+        bool grow(size_t new_capacity)
+        {
+            char* new_data = (char*)allocator_malloc(this->alloc, new_capacity);
+            if(new_data == NULL)
+            {
+                this->m_failed = true;
+                return false;
+            }
+            memcpy(new_data, this->stringdata, this->len);
+            new_data[this->len] = '\0';
+            allocator_free(this->alloc, this->stringdata);
+            this->stringdata = new_data;
+            this->capacity = new_capacity;
+            return true;
+        }
+
 };
 
 
@@ -3793,12 +4017,12 @@ struct Compiler
 
             // Left for debugging purposes
             //    if (ok) {
-            //        StringBuffer *buf = strbuf_make(NULL);
+            //        StringBuffer *buf = StringBuffer::make(NULL);
             //        code_to_string(this->compilation_scope->bytecode->data(),
             //                       this->compilation_scope->src_positions->data(),
             //                       this->compilation_scope->bytecode->count(), buf);
-            //        puts(strbuf_get_string(buf));
-            //        strbuf_destroy(buf);
+            //        puts(buf->string());
+            //        buf->destroy();
             //    }
 
             return ok;
@@ -3858,7 +4082,7 @@ struct Compiler
                     goto end;
                 }
             }
-            filepath_buf = strbuf_make(this->alloc);
+            filepath_buf = StringBuffer::make(this->alloc);
             if(!filepath_buf)
             {
                 result = false;
@@ -3866,21 +4090,21 @@ struct Compiler
             }
             if(kg_is_path_absolute(module_path))
             {
-                strbuf_appendf(filepath_buf, "%s.ape", module_path);
+                filepath_buf->appendFormat("%s.ape", module_path);
             }
             else
             {
-                strbuf_appendf(filepath_buf, "%s%s.ape", file_scope->file->dir_path, module_path);
+                filepath_buf->appendFormat("%s%s.ape", file_scope->file->dir_path, module_path);
             }
-            if(strbuf_failed(filepath_buf))
+            if(filepath_buf->failed())
             {
-                strbuf_destroy(filepath_buf);
+                filepath_buf->destroy();
                 result = false;
                 goto end;
             }
-            filepath_non_canonicalised = strbuf_get_string(filepath_buf);
+            filepath_non_canonicalised = filepath_buf->string();
             filepath = kg_canonicalise_path(this->alloc, filepath_non_canonicalised);
-            strbuf_destroy(filepath_buf);
+            filepath_buf->destroy();
             if(!filepath)
             {
                 result = false;
@@ -4001,13 +4225,13 @@ struct Compiler
             int after_body_ip;
             bool ok;
 
-            const WhileLoopStmt* loop;
+            const StmtWhileLoop* loop;
             CompilationScope* compilation_scope;
             Symbol::Table* symbol_table;
             const Symbol* symbol;
-            const IfStmt* if_stmt;
+            const StmtIfClause* if_stmt;
             Array* jump_to_end_ips;
-            IfCase* if_case;
+            StmtIfClause::Case* if_case;
             ok = false;
             ip = -1;
             ok = this->src_positions_stack->push(&stmt->pos);
@@ -4064,7 +4288,7 @@ struct Compiler
                         }
                         for(i = 0; i < if_stmt->cases->count(); i++)
                         {
-                            if_case = (IfCase*)if_stmt->cases->get(i);
+                            if_case = (StmtIfClause::Case*)if_stmt->cases->get(i);
                             ok = this->compileExpression(if_case->test);
                             if(!ok)
                             {
@@ -4218,7 +4442,7 @@ struct Compiler
                 }
                 case EXPRESSION_FOREACH:
                 {
-                    const ForeachStmt* foreach = &stmt->foreach;
+                    const StmtForeach* foreach = &stmt->foreach;
                     ok = symbol_table->pushBlockScope();
                     if(!ok)
                     {
@@ -4426,7 +4650,7 @@ struct Compiler
                 }
                 case EXPRESSION_FOR_LOOP:
                 {
-                    const ForLoopStmt* loop = &stmt->for_loop;
+                    const StmtForLoop* loop = &stmt->for_loop;
 
                     ok = symbol_table->pushBlockScope();
                     if(!ok)
@@ -4557,7 +4781,7 @@ struct Compiler
                 }
                 case EXPRESSION_RECOVER:
                 {
-                    const RecoverStmt* recover = &stmt->recover;
+                    const StmtRecover* recover = &stmt->recover;
 
                     if(symbol_table->isModuleGlobalScope())
                     {
@@ -4951,7 +5175,7 @@ struct Compiler
                 }
                 case EXPRESSION_INDEX:
                 {
-                    const IndexExpr* index = &expr->index_expr;
+                    const StmtIndex* index = &expr->index_expr;
                     ok = this->compileExpression(index->left);
                     if(!ok)
                     {
@@ -4972,7 +5196,7 @@ struct Compiler
                 }
                 case EXPRESSION_FUNCTION_LITERAL:
                 {
-                    const FnLiteral* fn = &expr->fn_literal;
+                    const StmtFuncDef* fn = &expr->fn_literal;
 
                     ok = this->pushCompilationScope();
                     if(!ok)
@@ -5113,7 +5337,7 @@ struct Compiler
                 }
                 case EXPRESSION_ASSIGN:
                 {
-                    const AssignExpr* assign = &expr->assign;
+                    const StmtAssign* assign = &expr->assign;
                     if(assign->dest->type != EXPRESSION_IDENT && assign->dest->type != EXPRESSION_INDEX)
                     {
                         errors_add_errorf(this->errors, APE_ERROR_COMPILATION, assign->dest->pos, "Expression is not assignable.");
@@ -5171,7 +5395,7 @@ struct Compiler
                     }
                     else if(assign->dest->type == EXPRESSION_INDEX)
                     {
-                        const IndexExpr* index = &assign->dest->index_expr;
+                        const StmtIndex* index = &assign->dest->index_expr;
                         ok = this->compileExpression(index->left);
                         if(!ok)
                         {
@@ -5203,7 +5427,7 @@ struct Compiler
                 }
                 case EXPRESSION_LOGICAL:
                 {
-                    const LogicalExpr* logi = &expr->logical;
+                    const StmtLogical* logi = &expr->logical;
 
                     ok = this->compileExpression(logi->left);
                     if(!ok)
@@ -5251,7 +5475,7 @@ struct Compiler
                 }
                 case EXPRESSION_TERNARY:
                 {
-                    const TernaryExpr* ternary = &expr->ternary;
+                    const StmtTernary* ternary = &expr->ternary;
 
                     ok = this->compileExpression(ternary->test);
                     if(!ok)
@@ -5299,7 +5523,7 @@ struct Compiler
             return res;
         }
 
-        bool compileCodeBlock(const Codeblock* block)
+        bool compileCodeBlock(const StmtBlock* block)
         {
             Symbol::Table* symbol_table = this->getSymbolTable();
             if(!symbol_table)
@@ -5696,7 +5920,7 @@ bool lexer_init(Lexer* lex, Allocator* alloc, ErrorList* errs, const char* input
     {
         return false;
     }
-    lex->failed = false;
+    lex->m_failed = false;
     lex->continue_template_string = false;
 
     memset(&lex->prev_token_state, 0, sizeof(lex->prev_token_state));
@@ -5709,7 +5933,7 @@ bool lexer_init(Lexer* lex, Allocator* alloc, ErrorList* errs, const char* input
 
 bool lexer_failed(Lexer* lex)
 {
-    return lex->failed;
+    return lex->m_failed;
 }
 
 void lexer_continue_template_string(Lexer* lex)
@@ -5732,7 +5956,7 @@ bool lexer_next_token(Lexer* lex)
     lex->prev_token = lex->cur_token;
     lex->cur_token = lex->peek_token;
     lex->peek_token = lexer_next_token_internal(lex);
-    return !lex->failed;
+    return !lex->m_failed;
 }
 
 bool lexer_previous_token(Lexer* lex)
@@ -6160,7 +6384,7 @@ static bool read_char(Lexer* lex)
         bool ok = add_line(lex, lex->next_position);
         if(!ok)
         {
-            lex->failed = true;
+            lex->m_failed = true;
             return false;
         }
     }
@@ -6343,13 +6567,13 @@ static bool add_line(Lexer* lex, int offset)
     }
     if(!line)
     {
-        lex->failed = true;
+        lex->m_failed = true;
         return false;
     }
     bool ok = lex->file->lines->add(line);
     if(!ok)
     {
-        lex->failed = true;
+        lex->m_failed = true;
         allocator_free(lex->alloc, line);
         return false;
     }
@@ -6502,7 +6726,7 @@ Expression* expression_make_infix(Allocator* alloc, Operator op, Expression* lef
     return res;
 }
 
-Expression* expression_make_fn_literal(Allocator* alloc, PtrArray * params, Codeblock* body)
+Expression* expression_make_fn_literal(Allocator* alloc, PtrArray * params, StmtBlock* body)
 {
     Expression* res = expression_make(alloc, EXPRESSION_FUNCTION_LITERAL);
     if(!res)
@@ -6635,7 +6859,7 @@ void expression_destroy(Expression* expr)
         }
         case EXPRESSION_FUNCTION_LITERAL:
         {
-            FnLiteral* fn = &expr->fn_literal;
+            StmtFuncDef* fn = &expr->fn_literal;
             allocator_free(expr->alloc, fn->name);
             fn->params->destroyWithItems(ident_destroy);
             code_block_destroy(fn->body);
@@ -6806,7 +7030,7 @@ Expression* expression_copy(Expression* expr)
         case EXPRESSION_FUNCTION_LITERAL:
         {
             PtrArray* params_copy = expr->fn_literal.params->copyWithItems(ident_copy, ident_destroy);
-            Codeblock* body_copy = code_block_copy(expr->fn_literal.body);
+            StmtBlock* body_copy = code_block_copy(expr->fn_literal.body);
             char* name_copy = ape_strdup(expr->alloc, expr->fn_literal.name);
             if(!params_copy || !body_copy)
             {
@@ -6946,7 +7170,7 @@ Expression* statement_make_define(Allocator* alloc, Ident* name, Expression* val
     return res;
 }
 
-Expression* statement_make_if(Allocator* alloc, PtrArray * cases, Codeblock* alternative)
+Expression* statement_make_if(Allocator* alloc, PtrArray * cases, StmtBlock* alternative)
 {
     Expression* res = statement_make(alloc, EXPRESSION_IF);
     if(!res)
@@ -6980,7 +7204,7 @@ Expression* statement_make_expression(Allocator* alloc, Expression* value)
     return res;
 }
 
-Expression* statement_make_while_loop(Allocator* alloc, Expression* test, Codeblock* body)
+Expression* statement_make_while_loop(Allocator* alloc, Expression* test, StmtBlock* body)
 {
     Expression* res = statement_make(alloc, EXPRESSION_WHILE_LOOP);
     if(!res)
@@ -7002,7 +7226,7 @@ Expression* statement_make_break(Allocator* alloc)
     return res;
 }
 
-Expression* statement_make_foreach(Allocator* alloc, Ident* iterator, Expression* source, Codeblock* body)
+Expression* statement_make_foreach(Allocator* alloc, Ident* iterator, Expression* source, StmtBlock* body)
 {
     Expression* res = statement_make(alloc, EXPRESSION_FOREACH);
     if(!res)
@@ -7015,7 +7239,7 @@ Expression* statement_make_foreach(Allocator* alloc, Ident* iterator, Expression
     return res;
 }
 
-Expression* statement_make_for_loop(Allocator* alloc, Expression* init, Expression* test, Expression* update, Codeblock* body)
+Expression* statement_make_for_loop(Allocator* alloc, Expression* init, Expression* test, Expression* update, StmtBlock* body)
 {
     Expression* res = statement_make(alloc, EXPRESSION_FOR_LOOP);
     if(!res)
@@ -7039,7 +7263,7 @@ Expression* statement_make_continue(Allocator* alloc)
     return res;
 }
 
-Expression* statement_make_block(Allocator* alloc, Codeblock* block)
+Expression* statement_make_block(Allocator* alloc, StmtBlock* block)
 {
     Expression* res = statement_make(alloc, EXPRESSION_BLOCK);
     if(!res)
@@ -7061,7 +7285,7 @@ Expression* statement_make_import(Allocator* alloc, char* path)
     return res;
 }
 
-Expression* statement_make_recover(Allocator* alloc, Ident* error_ident, Codeblock* body)
+Expression* statement_make_recover(Allocator* alloc, Ident* error_ident, StmtBlock* body)
 {
     Expression* res = statement_make(alloc, EXPRESSION_RECOVER);
     if(!res)
@@ -7094,7 +7318,7 @@ void statement_destroy(Expression* stmt)
         }
         case EXPRESSION_IF:
         {
-            stmt->if_statement.cases->destroyWithItems(if_case_destroy);
+            stmt->if_statement.cases->destroyWithItems(StmtIfClause::Case::destroy_callback);
             code_block_destroy(stmt->if_statement.alternative);
             break;
         }
@@ -7188,18 +7412,18 @@ Expression* statement_copy(const Expression* stmt)
         }
         case EXPRESSION_IF:
         {
-            PtrArray* cases_copy = stmt->if_statement.cases->copyWithItems(if_case_copy, if_case_destroy);
-            Codeblock* alternative_copy = code_block_copy(stmt->if_statement.alternative);
+            PtrArray* cases_copy = stmt->if_statement.cases->copyWithItems(StmtIfClause::Case::copy_callback, StmtIfClause::Case::destroy_callback);
+            StmtBlock* alternative_copy = code_block_copy(stmt->if_statement.alternative);
             if(!cases_copy || !alternative_copy)
             {
-                cases_copy->destroyWithItems(if_case_destroy);
+                cases_copy->destroyWithItems(StmtIfClause::Case::destroy_callback);
                 code_block_destroy(alternative_copy);
                 return NULL;
             }
             res = statement_make_if(stmt->alloc, cases_copy, alternative_copy);
             if(res)
             {
-                cases_copy->destroyWithItems(if_case_destroy);
+                cases_copy->destroyWithItems(StmtIfClause::Case::destroy_callback);
                 code_block_destroy(alternative_copy);
                 return NULL;
             }
@@ -7238,7 +7462,7 @@ Expression* statement_copy(const Expression* stmt)
         case EXPRESSION_WHILE_LOOP:
         {
             Expression* test_copy = expression_copy(stmt->while_loop.test);
-            Codeblock* body_copy = code_block_copy(stmt->while_loop.body);
+            StmtBlock* body_copy = code_block_copy(stmt->while_loop.body);
             if(!test_copy || !body_copy)
             {
                 expression_destroy(test_copy);
@@ -7267,7 +7491,7 @@ Expression* statement_copy(const Expression* stmt)
         case EXPRESSION_FOREACH:
         {
             Expression* source_copy = expression_copy(stmt->foreach.source);
-            Codeblock* body_copy = code_block_copy(stmt->foreach.body);
+            StmtBlock* body_copy = code_block_copy(stmt->foreach.body);
             if(!source_copy || !body_copy)
             {
                 expression_destroy(source_copy);
@@ -7288,7 +7512,7 @@ Expression* statement_copy(const Expression* stmt)
             Expression* init_copy = statement_copy(stmt->for_loop.init);
             Expression* test_copy = expression_copy(stmt->for_loop.test);
             Expression* update_copy = expression_copy(stmt->for_loop.update);
-            Codeblock* body_copy = code_block_copy(stmt->for_loop.body);
+            StmtBlock* body_copy = code_block_copy(stmt->for_loop.body);
             if(!init_copy || !test_copy || !update_copy || !body_copy)
             {
                 statement_destroy(init_copy);
@@ -7310,7 +7534,7 @@ Expression* statement_copy(const Expression* stmt)
         }
         case EXPRESSION_BLOCK:
         {
-            Codeblock* block_copy = code_block_copy(stmt->block);
+            StmtBlock* block_copy = code_block_copy(stmt->block);
             if(!block_copy)
             {
                 return NULL;
@@ -7340,7 +7564,7 @@ Expression* statement_copy(const Expression* stmt)
         }
         case EXPRESSION_RECOVER:
         {
-            Codeblock* body_copy = code_block_copy(stmt->recover.body);
+            StmtBlock* body_copy = code_block_copy(stmt->recover.body);
             Ident* error_ident_copy = ident_copy(stmt->recover.error_ident);
             if(!body_copy || !error_ident_copy)
             {
@@ -7366,9 +7590,9 @@ Expression* statement_copy(const Expression* stmt)
     return res;
 }
 
-Codeblock* code_block_make(Allocator* alloc, PtrArray * statements)
+StmtBlock* code_block_make(Allocator* alloc, PtrArray * statements)
 {
-    Codeblock* block = (Codeblock*)allocator_malloc(alloc, sizeof(Codeblock));
+    StmtBlock* block = (StmtBlock*)allocator_malloc(alloc, sizeof(StmtBlock));
     if(!block)
     {
         return NULL;
@@ -7378,7 +7602,7 @@ Codeblock* code_block_make(Allocator* alloc, PtrArray * statements)
     return block;
 }
 
-void code_block_destroy(Codeblock* block)
+void code_block_destroy(StmtBlock* block)
 {
     if(!block)
     {
@@ -7388,7 +7612,7 @@ void code_block_destroy(Codeblock* block)
     allocator_free(block->alloc, block);
 }
 
-Codeblock* code_block_copy(Codeblock* block)
+StmtBlock* code_block_copy(StmtBlock* block)
 {
     if(!block)
     {
@@ -7399,7 +7623,7 @@ Codeblock* code_block_copy(Codeblock* block)
     {
         return NULL;
     }
-    Codeblock* res = code_block_make(block->alloc, statements_copy);
+    StmtBlock* res = code_block_make(block->alloc, statements_copy);
     if(!res)
     {
         statements_copy->destroyWithItems(statement_destroy);
@@ -7425,62 +7649,7 @@ void ident_destroy(Ident* ident)
     allocator_free(ident->alloc, ident);
 }
 
-IfCase* if_case_make(Allocator* alloc, Expression* test, Codeblock* consequence)
-{
-    IfCase* res = (IfCase*)allocator_malloc(alloc, sizeof(IfCase));
-    if(!res)
-    {
-        return NULL;
-    }
-    res->alloc = alloc;
-    res->test = test;
-    res->consequence = consequence;
-    return res;
-}
 
-void if_case_destroy(IfCase* cond)
-{
-    if(!cond)
-    {
-        return;
-    }
-    expression_destroy(cond->test);
-    code_block_destroy(cond->consequence);
-    allocator_free(cond->alloc, cond);
-}
-
-IfCase* if_case_copy(IfCase* if_case)
-{
-    if(!if_case)
-    {
-        return NULL;
-    }
-    Expression* test_copy = NULL;
-    Codeblock* consequence_copy = NULL;
-    IfCase* if_case_copy = NULL;
-
-    test_copy = expression_copy(if_case->test);
-    if(!test_copy)
-    {
-        goto err;
-    }
-    consequence_copy = code_block_copy(if_case->consequence);
-    if(!test_copy || !consequence_copy)
-    {
-        goto err;
-    }
-    if_case_copy = if_case_make(if_case->alloc, test_copy, consequence_copy);
-    if(!if_case_copy)
-    {
-        goto err;
-    }
-    return if_case_copy;
-err:
-    expression_destroy(test_copy);
-    code_block_destroy(consequence_copy);
-    if_case_destroy(if_case_copy);
-    return NULL;
-}
 
 // INTERNAL
 Expression* expression_make(Allocator* alloc, Expr_type type)
@@ -7783,10 +7952,10 @@ Expression* parse_if_statement(Parser* p)
 {
     bool ok;
     PtrArray* cases;
-    Codeblock* alternative;
-    IfCase* elif;
+    StmtBlock* alternative;
+    StmtIfClause::Case* elif;
     Expression* res;
-    IfCase* cond;
+    StmtIfClause::Case* cond;
     cases = NULL;
     alternative = NULL;
     cases = PtrArray::make(p->alloc);
@@ -7800,7 +7969,7 @@ Expression* parse_if_statement(Parser* p)
         goto err;
     }
     lexer_next_token(&p->lexer);
-    cond = if_case_make(p->alloc, NULL, NULL);
+    cond = StmtIfClause::Case::make(p->alloc, NULL, NULL);
     if(!cond)
     {
         goto err;
@@ -7808,7 +7977,7 @@ Expression* parse_if_statement(Parser* p)
     ok = cases->add(cond);
     if(!ok)
     {
-        if_case_destroy(cond);
+        cond->destroy();
         goto err;
     }
     cond->test = parse_expression(p, PRECEDENCE_LOWEST);
@@ -7837,7 +8006,7 @@ Expression* parse_if_statement(Parser* p)
                 goto err;
             }
             lexer_next_token(&p->lexer);
-            elif = if_case_make(p->alloc, NULL, NULL);
+            elif = StmtIfClause::Case::make(p->alloc, NULL, NULL);
             if(!elif)
             {
                 goto err;
@@ -7845,7 +8014,7 @@ Expression* parse_if_statement(Parser* p)
             ok = cases->add(elif);
             if(!ok)
             {
-                if_case_destroy(elif);
+                elif->destroy();
                 goto err;
             }
             elif->test = parse_expression(p, PRECEDENCE_LOWEST);
@@ -7880,7 +8049,7 @@ Expression* parse_if_statement(Parser* p)
     }
     return res;
 err:
-    cases->destroyWithItems(if_case_destroy);
+    cases->destroyWithItems(StmtIfClause::Case::destroy_callback);
     code_block_destroy(alternative);
     return NULL;
 }
@@ -7938,7 +8107,7 @@ Expression* parse_expression_statement(Parser* p)
 Expression* parse_while_loop_statement(Parser* p)
 {
     Expression* test;
-    Codeblock* body;
+    StmtBlock* body;
     Expression* res;
     test = NULL;
     body = NULL;
@@ -7989,7 +8158,7 @@ Expression* parse_continue_statement(Parser* p)
 
 Expression* parse_block_statement(Parser* p)
 {
-    Codeblock* block;
+    StmtBlock* block;
     Expression* res;
     block = parse_code_block(p);
     if(!block)
@@ -8033,7 +8202,7 @@ Expression* parse_import_statement(Parser* p)
 Expression* parse_recover_statement(Parser* p)
 {
     Ident* error_ident;
-    Codeblock* body;
+    StmtBlock* body;
     Expression* res;
     error_ident = NULL;
     body = NULL;
@@ -8096,7 +8265,7 @@ Expression* parse_for_loop_statement(Parser* p)
 Expression* parse_foreach(Parser* p)
 {
     Expression* source;
-    Codeblock* body;
+    StmtBlock* body;
     Ident* iterator_ident;
     Expression* res;
     source = NULL;
@@ -8145,7 +8314,7 @@ Expression* parse_classic_for_loop(Parser* p)
     Expression* init;
     Expression* test;
     Expression* update;
-    Codeblock* body;
+    StmtBlock* body;
     Expression* res;
 
     init = NULL;
@@ -8260,12 +8429,12 @@ err:
     return NULL;
 }
 
-Codeblock* parse_code_block(Parser* p)
+StmtBlock* parse_code_block(Parser* p)
 {
     bool ok;
     PtrArray* statements;
     Expression* stmt;
-    Codeblock* res;
+    StmtBlock* res;
     if(!lexer_expect_current(&p->lexer, TOKEN_LBRACE))
     {
         return NULL;
@@ -8721,7 +8890,7 @@ Expression* parse_function_literal(Parser* p)
 {
     bool ok;
     PtrArray* params;
-    Codeblock* body;
+    StmtBlock* body;
     Expression* res;
     p->depth++;
     params = NULL;
@@ -9533,7 +9702,7 @@ char* statements_to_string(Allocator* alloc, PtrArray * statements)
     int cn;
     const Expression* stmt;
     StringBuffer* buf;
-    buf = strbuf_make(alloc);
+    buf = StringBuffer::make(alloc);
     if(!buf)
     {
         return NULL;
@@ -9545,18 +9714,18 @@ char* statements_to_string(Allocator* alloc, PtrArray * statements)
         statement_to_string(stmt, buf);
         if(i < (cn - 1))
         {
-            strbuf_append(buf, "\n");
+            buf->append("\n");
         }
     }
-    return strbuf_get_string_and_destroy(buf);
+    return buf->getStringAndDestroy();
 }
 
 void statement_to_string(const Expression* stmt, StringBuffer* buf)
 {
     int i;
-    const DefineStmt* def_stmt;
-    IfCase* if_case;
-    IfCase* elif_case;
+    const StmtDefine* def_stmt;
+    StmtIfClause::Case* if_case;
+    StmtIfClause::Case* elif_case;
     switch(stmt->type)
     {
         case EXPRESSION_DEFINE:
@@ -9564,14 +9733,14 @@ void statement_to_string(const Expression* stmt, StringBuffer* buf)
             def_stmt = &stmt->define;
             if(stmt->define.assignable)
             {
-                strbuf_append(buf, "var ");
+                buf->append("var ");
             }
             else
             {
-                strbuf_append(buf, "const ");
+                buf->append("const ");
             }
-            strbuf_append(buf, def_stmt->name->value);
-            strbuf_append(buf, " = ");
+            buf->append(def_stmt->name->value);
+            buf->append(" = ");
 
             if(def_stmt->value)
             {
@@ -9582,29 +9751,29 @@ void statement_to_string(const Expression* stmt, StringBuffer* buf)
         }
         case EXPRESSION_IF:
         {
-            if_case = (IfCase*)stmt->if_statement.cases->get(0);
-            strbuf_append(buf, "if (");
+            if_case = (StmtIfClause::Case*)stmt->if_statement.cases->get(0);
+            buf->append("if (");
             expression_to_string(if_case->test, buf);
-            strbuf_append(buf, ") ");
+            buf->append(") ");
             code_block_to_string(if_case->consequence, buf);
             for(i = 1; i < stmt->if_statement.cases->count(); i++)
             {
-                elif_case = (IfCase*)stmt->if_statement.cases->get(i);
-                strbuf_append(buf, " elif (");
+                elif_case = (StmtIfClause::Case*)stmt->if_statement.cases->get(i);
+                buf->append(" elif (");
                 expression_to_string(elif_case->test, buf);
-                strbuf_append(buf, ") ");
+                buf->append(") ");
                 code_block_to_string(elif_case->consequence, buf);
             }
             if(stmt->if_statement.alternative)
             {
-                strbuf_append(buf, " else ");
+                buf->append(" else ");
                 code_block_to_string(stmt->if_statement.alternative, buf);
             }
             break;
         }
         case EXPRESSION_RETURN_VALUE:
         {
-            strbuf_append(buf, "return ");
+            buf->append("return ");
             if(stmt->return_value)
             {
                 expression_to_string(stmt->return_value, buf);
@@ -9621,48 +9790,48 @@ void statement_to_string(const Expression* stmt, StringBuffer* buf)
         }
         case EXPRESSION_WHILE_LOOP:
         {
-            strbuf_append(buf, "while (");
+            buf->append("while (");
             expression_to_string(stmt->while_loop.test, buf);
-            strbuf_append(buf, ")");
+            buf->append(")");
             code_block_to_string(stmt->while_loop.body, buf);
             break;
         }
         case EXPRESSION_FOR_LOOP:
         {
-            strbuf_append(buf, "for (");
+            buf->append("for (");
             if(stmt->for_loop.init)
             {
                 statement_to_string(stmt->for_loop.init, buf);
-                strbuf_append(buf, " ");
+                buf->append(" ");
             }
             else
             {
-                strbuf_append(buf, ";");
+                buf->append(";");
             }
             if(stmt->for_loop.test)
             {
                 expression_to_string(stmt->for_loop.test, buf);
-                strbuf_append(buf, "; ");
+                buf->append("; ");
             }
             else
             {
-                strbuf_append(buf, ";");
+                buf->append(";");
             }
             if(stmt->for_loop.update)
             {
                 expression_to_string(stmt->for_loop.test, buf);
             }
-            strbuf_append(buf, ")");
+            buf->append(")");
             code_block_to_string(stmt->for_loop.body, buf);
             break;
         }
         case EXPRESSION_FOREACH:
         {
-            strbuf_append(buf, "for (");
-            strbuf_appendf(buf, "%s", stmt->foreach.iterator->value);
-            strbuf_append(buf, " in ");
+            buf->append("for (");
+            buf->appendFormat("%s", stmt->foreach.iterator->value);
+            buf->append(" in ");
             expression_to_string(stmt->foreach.source, buf);
-            strbuf_append(buf, ")");
+            buf->append(")");
             code_block_to_string(stmt->foreach.body, buf);
             break;
         }
@@ -9673,27 +9842,27 @@ void statement_to_string(const Expression* stmt, StringBuffer* buf)
         }
         case EXPRESSION_BREAK:
         {
-            strbuf_append(buf, "break");
+            buf->append("break");
             break;
         }
         case EXPRESSION_CONTINUE:
         {
-            strbuf_append(buf, "continue");
+            buf->append("continue");
             break;
         }
         case EXPRESSION_IMPORT:
         {
-            strbuf_appendf(buf, "import \"%s\"", stmt->import.path);
+            buf->appendFormat("import \"%s\"", stmt->import.path);
             break;
         }
         case EXPRESSION_NONE:
         {
-            strbuf_append(buf, "EXPRESSION_NONE");
+            buf->append("EXPRESSION_NONE");
             break;
         }
         case EXPRESSION_RECOVER:
         {
-            strbuf_appendf(buf, "recover (%s)", stmt->recover.error_ident->value);
+            buf->appendFormat("recover (%s)", stmt->recover.error_ident->value);
             code_block_to_string(stmt->recover.body, buf);
             break;
         }
@@ -9709,99 +9878,99 @@ void expression_to_string(Expression* expr, StringBuffer* buf)
     {
         case EXPRESSION_IDENT:
         {
-            strbuf_append(buf, expr->ident->value);
+            buf->append(expr->ident->value);
             break;
         }
         case EXPRESSION_NUMBER_LITERAL:
         {
-            strbuf_appendf(buf, "%1.17g", expr->number_literal);
+            buf->appendFormat("%1.17g", expr->number_literal);
             break;
         }
         case EXPRESSION_BOOL_LITERAL:
         {
-            strbuf_appendf(buf, "%s", expr->bool_literal ? "true" : "false");
+            buf->appendFormat("%s", expr->bool_literal ? "true" : "false");
             break;
         }
         case EXPRESSION_STRING_LITERAL:
         {
-            strbuf_appendf(buf, "\"%s\"", expr->string_literal);
+            buf->appendFormat("\"%s\"", expr->string_literal);
             break;
         }
         case EXPRESSION_NULL_LITERAL:
         {
-            strbuf_append(buf, "null");
+            buf->append("null");
             break;
         }
         case EXPRESSION_ARRAY_LITERAL:
         {
-            strbuf_append(buf, "[");
+            buf->append("[");
             for(i = 0; i < expr->array->count(); i++)
             {
                 arr_expr = (Expression*)expr->array->get(i);
                 expression_to_string(arr_expr, buf);
                 if(i < (expr->array->count() - 1))
                 {
-                    strbuf_append(buf, ", ");
+                    buf->append(", ");
                 }
             }
-            strbuf_append(buf, "]");
+            buf->append("]");
             break;
         }
         case EXPRESSION_MAP_LITERAL:
         {
             map = &expr->map;
-            strbuf_append(buf, "{");
+            buf->append("{");
             for(i = 0; i < map->keys->count(); i++)
             {
                 Expression* key_expr = (Expression*)map->keys->get(i);
                 Expression* val_expr = (Expression*)map->values->get(i);
                 expression_to_string(key_expr, buf);
-                strbuf_append(buf, " : ");
+                buf->append(" : ");
                 expression_to_string(val_expr, buf);
                 if(i < (map->keys->count() - 1))
                 {
-                    strbuf_append(buf, ", ");
+                    buf->append(", ");
                 }
             }
-            strbuf_append(buf, "}");
+            buf->append("}");
             break;
         }
         case EXPRESSION_PREFIX:
         {
-            strbuf_append(buf, "(");
-            strbuf_append(buf, operator_to_string(expr->infix.op));
+            buf->append("(");
+            buf->append(operator_to_string(expr->infix.op));
             expression_to_string(expr->prefix.right, buf);
-            strbuf_append(buf, ")");
+            buf->append(")");
             break;
         }
         case EXPRESSION_INFIX:
         {
-            strbuf_append(buf, "(");
+            buf->append("(");
             expression_to_string(expr->infix.left, buf);
-            strbuf_append(buf, " ");
-            strbuf_append(buf, operator_to_string(expr->infix.op));
-            strbuf_append(buf, " ");
+            buf->append(" ");
+            buf->append(operator_to_string(expr->infix.op));
+            buf->append(" ");
             expression_to_string(expr->infix.right, buf);
-            strbuf_append(buf, ")");
+            buf->append(")");
             break;
         }
         case EXPRESSION_FUNCTION_LITERAL:
         {
-            FnLiteral* fn = &expr->fn_literal;
+            StmtFuncDef* fn = &expr->fn_literal;
 
-            strbuf_append(buf, "fn");
+            buf->append("fn");
 
-            strbuf_append(buf, "(");
+            buf->append("(");
             for(i = 0; i < fn->params->count(); i++)
             {
                 Ident* param = (Ident*)fn->params->get(i);
-                strbuf_append(buf, param->value);
+                buf->append(param->value);
                 if(i < (fn->params->count() - 1))
                 {
-                    strbuf_append(buf, ", ");
+                    buf->append(", ");
                 }
             }
-            strbuf_append(buf, ") ");
+            buf->append(") ");
 
             code_block_to_string(fn->body, buf);
 
@@ -9809,78 +9978,78 @@ void expression_to_string(Expression* expr, StringBuffer* buf)
         }
         case EXPRESSION_CALL:
         {
-            CallExpr* call_expr = &expr->call_expr;
+            StmtCall* call_expr = &expr->call_expr;
 
             expression_to_string(call_expr->function, buf);
 
-            strbuf_append(buf, "(");
+            buf->append("(");
             for(int i = 0; i < call_expr->args->count(); i++)
             {
                 Expression* arg = (Expression*)call_expr->args->get(i);
                 expression_to_string(arg, buf);
                 if(i < (call_expr->args->count() - 1))
                 {
-                    strbuf_append(buf, ", ");
+                    buf->append(", ");
                 }
             }
-            strbuf_append(buf, ")");
+            buf->append(")");
 
             break;
         }
         case EXPRESSION_INDEX:
         {
-            strbuf_append(buf, "(");
+            buf->append("(");
             expression_to_string(expr->index_expr.left, buf);
-            strbuf_append(buf, "[");
+            buf->append("[");
             expression_to_string(expr->index_expr.index, buf);
-            strbuf_append(buf, "])");
+            buf->append("])");
             break;
         }
         case EXPRESSION_ASSIGN:
         {
             expression_to_string(expr->assign.dest, buf);
-            strbuf_append(buf, " = ");
+            buf->append(" = ");
             expression_to_string(expr->assign.source, buf);
             break;
         }
         case EXPRESSION_LOGICAL:
         {
             expression_to_string(expr->logical.left, buf);
-            strbuf_append(buf, " ");
-            strbuf_append(buf, operator_to_string(expr->infix.op));
-            strbuf_append(buf, " ");
+            buf->append(" ");
+            buf->append(operator_to_string(expr->infix.op));
+            buf->append(" ");
             expression_to_string(expr->logical.right, buf);
             break;
         }
         case EXPRESSION_TERNARY:
         {
             expression_to_string(expr->ternary.test, buf);
-            strbuf_append(buf, " ? ");
+            buf->append(" ? ");
             expression_to_string(expr->ternary.if_true, buf);
-            strbuf_append(buf, " : ");
+            buf->append(" : ");
             expression_to_string(expr->ternary.if_false, buf);
             break;
         }
         case EXPRESSION_NONE:
         {
-            strbuf_append(buf, "EXPRESSION_NONE");
+            buf->append("EXPRESSION_NONE");
             break;
         }
     }
 }
 
-void code_block_to_string(const Codeblock* stmt, StringBuffer* buf)
+void code_block_to_string(const StmtBlock* stmt, StringBuffer* buf)
 {
     int i;
     Expression* istmt;
-    strbuf_append(buf, "{ ");
+    buf->append("{ ");
     for(i = 0; i < stmt->statements->count(); i++)
     {
         istmt = (Expression*)stmt->statements->get(i);
         statement_to_string(istmt, buf);
-        strbuf_append(buf, "\n");
+        buf->append("\n");
     }
-    strbuf_append(buf, " }");
+    buf->append(" }");
 }
 
 const char* operator_to_string(Operator op)
@@ -9980,11 +10149,11 @@ void code_to_string(uint8_t* code, Position* source_positions, size_t code_size,
         if(source_positions)
         {
             Position src_pos = source_positions[pos];
-            strbuf_appendf(res, "%d:%-4d\t%04d\t%s", src_pos.line, src_pos.column, pos, def->name);
+            res->appendFormat("%d:%-4d\t%04d\t%s", src_pos.line, src_pos.column, pos, def->name);
         }
         else
         {
-            strbuf_appendf(res, "%04d %s", pos, def->name);
+            res->appendFormat("%04d %s", pos, def->name);
         }
         pos++;
 
@@ -9999,15 +10168,15 @@ void code_to_string(uint8_t* code, Position* source_positions, size_t code_size,
             if(op == OPCODE_NUMBER)
             {
                 double val_double = ape_uint64_to_double(operands[i]);
-                strbuf_appendf(res, " %1.17g", val_double);
+                res->appendFormat(" %1.17g", val_double);
             }
             else
             {
-                strbuf_appendf(res, " %llu", (long long unsigned int)operands[i]);
+                res->appendFormat(" %llu", (long long unsigned int)operands[i]);
             }
             pos += def->operand_widths[i];
         }
-        strbuf_append(res, "\n");
+        res->append("\n");
     }
     return;
 }
@@ -10021,23 +10190,23 @@ void object_to_string(Object obj, StringBuffer* buf, bool quote_str)
     {
         case APE_OBJECT_FREED:
         {
-            strbuf_append(buf, "FREED");
+            buf->append("FREED");
             break;
         }
         case APE_OBJECT_NONE:
         {
-            strbuf_append(buf, "NONE");
+            buf->append("NONE");
             break;
         }
         case APE_OBJECT_NUMBER:
         {
             double number = object_get_number(obj);
-            strbuf_appendf(buf, "%1.10g", number);
+            buf->appendFormat("%1.10g", number);
             break;
         }
         case APE_OBJECT_BOOL:
         {
-            strbuf_append(buf, object_get_bool(obj) ? "true" : "false");
+            buf->append(object_get_bool(obj) ? "true" : "false");
             break;
         }
         case APE_OBJECT_STRING:
@@ -10045,80 +10214,80 @@ void object_to_string(Object obj, StringBuffer* buf, bool quote_str)
                 const char* string = object_get_string(obj);
                 if(quote_str)
                 {
-                    strbuf_appendf(buf, "\"%s\"", string);
+                    buf->appendFormat("\"%s\"", string);
                 }
                 else
                 {
-                    strbuf_append(buf, string);
+                    buf->append(string);
                 }
             }
             break;
         case APE_OBJECT_NULL:
             {
-                strbuf_append(buf, "null");
+                buf->append("null");
             }
             break;
 
         case APE_OBJECT_FUNCTION:
             {
-                const FunctionObject* function = object_get_function(obj);
-                strbuf_appendf(buf, "CompiledFunction: %s\n", object_get_function_name(obj));
+                const ScriptFunction* function = object_get_function(obj);
+                buf->appendFormat("CompiledFunction: %s\n", object_get_function_name(obj));
                 code_to_string(function->comp_result->bytecode, function->comp_result->src_positions, function->comp_result->m_count, buf);
             }
             break;
 
         case APE_OBJECT_ARRAY:
             {
-                strbuf_append(buf, "[");
+                buf->append("[");
                 for(i = 0; i < object_get_array_length(obj); i++)
                 {
                     Object iobj = object_get_array_value(obj, i);
                     object_to_string(iobj, buf, true);
                     if(i < (object_get_array_length(obj) - 1))
                     {
-                        strbuf_append(buf, ", ");
+                        buf->append(", ");
                     }
                 }
-                strbuf_append(buf, "]");
+                buf->append("]");
             }
             break;
         case APE_OBJECT_MAP:
             {
-                strbuf_append(buf, "{");
+                buf->append("{");
                 for(i = 0; i < object_get_map_length(obj); i++)
                 {
                     Object key = object_get_map_key_at(obj, i);
                     Object val = object_get_map_value_at(obj, i);
                     object_to_string(key, buf, true);
-                    strbuf_append(buf, ": ");
+                    buf->append(": ");
                     object_to_string(val, buf, true);
                     if(i < (object_get_map_length(obj) - 1))
                     {
-                        strbuf_append(buf, ", ");
+                        buf->append(", ");
                     }
                 }
-                strbuf_append(buf, "}");
+                buf->append("}");
             }
             break;
         case APE_OBJECT_NATIVE_FUNCTION:
             {
-                strbuf_append(buf, "NATIVE_FUNCTION");
+                buf->append("NATIVE_FUNCTION");
             }
             break;
         case APE_OBJECT_EXTERNAL:
             {
-                strbuf_append(buf, "EXTERNAL");
+                buf->append("EXTERNAL");
             }
             break;
 
         case APE_OBJECT_ERROR:
             {
-                strbuf_appendf(buf, "ERROR: %s\n", object_get_error_message(obj));
+                buf->appendFormat("ERROR: %s\n", object_get_error_message(obj));
                 Traceback* traceback = object_get_error_traceback(obj);
                 APE_ASSERT(traceback);
                 if(traceback)
                 {
-                    strbuf_append(buf, "Traceback:\n");
+                    buf->append("Traceback:\n");
                     traceback_to_string(traceback, buf);
                 }
             }
@@ -10142,14 +10311,14 @@ bool traceback_to_string(const Traceback* traceback, StringBuffer* buf)
         const char* filename = traceback_item_get_filepath(item);
         if(item->pos.line >= 0 && item->pos.column >= 0)
         {
-            strbuf_appendf(buf, "%s in %s on %d:%d\n", item->function_name, filename, item->pos.line, item->pos.column);
+            buf->appendFormat("%s in %s on %d:%d\n", item->function_name, filename, item->pos.line, item->pos.column);
         }
         else
         {
-            strbuf_appendf(buf, "%s\n", item->function_name);
+            buf->appendFormat("%s\n", item->function_name);
         }
     }
-    return !strbuf_failed(buf);
+    return !buf->failed();
 }
 
 const char* ape_error_type_to_string(ErrorType type)
@@ -10493,172 +10662,6 @@ void allocator_free(Allocator* allocator, void* ptr)
 
 
 //-----------------------------------------------------------------------------
-// String buffer
-//-----------------------------------------------------------------------------
-
-
-StringBuffer* strbuf_make(Allocator* alloc)
-{
-    return strbuf_make_with_capacity(alloc, 1);
-}
-
-StringBuffer* strbuf_make_with_capacity(Allocator* alloc, unsigned int capacity)
-{
-    StringBuffer* buf = (StringBuffer*)allocator_malloc(alloc, sizeof(StringBuffer));
-    if(buf == NULL)
-    {
-        return NULL;
-    }
-    memset(buf, 0, sizeof(StringBuffer));
-    buf->alloc = alloc;
-    buf->failed = false;
-    buf->stringdata = (char*)allocator_malloc(alloc, capacity);
-    if(buf->stringdata == NULL)
-    {
-        allocator_free(alloc, buf);
-        return NULL;
-    }
-    buf->capacity = capacity;
-    buf->len = 0;
-    buf->stringdata[0] = '\0';
-    return buf;
-}
-
-void strbuf_destroy(StringBuffer* buf)
-{
-    if(buf == NULL)
-    {
-        return;
-    }
-    allocator_free(buf->alloc, buf->stringdata);
-    allocator_free(buf->alloc, buf);
-}
-
-void strbuf_clear(StringBuffer* buf)
-{
-    if(buf->failed)
-    {
-        return;
-    }
-    buf->len = 0;
-    buf->stringdata[0] = '\0';
-}
-
-bool strbuf_append(StringBuffer* buf, const char* str)
-{
-    if(buf->failed)
-    {
-        return false;
-    }
-    size_t str_len = strlen(str);
-    if(str_len == 0)
-    {
-        return true;
-    }
-    size_t required_capacity = buf->len + str_len + 1;
-    if(required_capacity > buf->capacity)
-    {
-        bool ok = strbuf_grow(buf, required_capacity * 2);
-        if(!ok)
-        {
-            return false;
-        }
-    }
-    memcpy(buf->stringdata + buf->len, str, str_len);
-    buf->len = buf->len + str_len;
-    buf->stringdata[buf->len] = '\0';
-    return true;
-}
-
-bool strbuf_appendf(StringBuffer* buf, const char* fmt, ...)
-{
-    if(buf->failed)
-    {
-        return false;
-    }
-    va_list args;
-    va_start(args, fmt);
-    int to_write = vsnprintf(NULL, 0, fmt, args);
-    va_end(args);
-    if(to_write == 0)
-    {
-        return true;
-    }
-    size_t required_capacity = buf->len + to_write + 1;
-    if(required_capacity > buf->capacity)
-    {
-        bool ok = strbuf_grow(buf, required_capacity * 2);
-        if(!ok)
-        {
-            return false;
-        }
-    }
-    va_start(args, fmt);
-    int written = vsprintf(buf->stringdata + buf->len, fmt, args);
-    (void)written;
-    va_end(args);
-    if(written != to_write)
-    {
-        return false;
-    }
-    buf->len = buf->len + to_write;
-    buf->stringdata[buf->len] = '\0';
-    return true;
-}
-
-const char* strbuf_get_string(const StringBuffer* buf)
-{
-    if(buf->failed)
-    {
-        return NULL;
-    }
-    return buf->stringdata;
-}
-
-size_t strbuf_get_length(const StringBuffer* buf)
-{
-    if(buf->failed)
-    {
-        return 0;
-    }
-    return buf->len;
-}
-
-char* strbuf_get_string_and_destroy(StringBuffer* buf)
-{
-    if(buf->failed)
-    {
-        strbuf_destroy(buf);
-        return NULL;
-    }
-    char* res = buf->stringdata;
-    buf->stringdata = NULL;
-    strbuf_destroy(buf);
-    return res;
-}
-
-bool strbuf_failed(StringBuffer* buf)
-{
-    return buf->failed;
-}
-
-bool strbuf_grow(StringBuffer* buf, size_t new_capacity)
-{
-    char* new_data = (char*)allocator_malloc(buf->alloc, new_capacity);
-    if(new_data == NULL)
-    {
-        buf->failed = true;
-        return false;
-    }
-    memcpy(new_data, buf->stringdata, buf->len);
-    new_data[buf->len] = '\0';
-    allocator_free(buf->alloc, buf->stringdata);
-    buf->stringdata = new_data;
-    buf->capacity = new_capacity;
-    return true;
-}
-
-//-----------------------------------------------------------------------------
 // Utils
 //-----------------------------------------------------------------------------
 
@@ -10729,7 +10732,7 @@ char* kg_join(Allocator* alloc, PtrArray * items, const char* with)
     int i;
     char* item;
     StringBuffer* res;
-    res = strbuf_make(alloc);
+    res = StringBuffer::make(alloc);
     if(!res)
     {
         return NULL;
@@ -10737,13 +10740,13 @@ char* kg_join(Allocator* alloc, PtrArray * items, const char* with)
     for(i = 0; i < items->count(); i++)
     {
         item = (char*)items->get(i);
-        strbuf_append(res, item);
+        res->append(item);
         if(i < (items->count() - 1))
         {
-            strbuf_append(res, with);
+            res->append(with);
         }
     }
-    return strbuf_get_string_and_destroy(res);
+    return res->getStringAndDestroy();
 }
 
 char* kg_canonicalise_path(Allocator* alloc, const char* path)
@@ -11608,19 +11611,19 @@ const char* get_module_name(const char* path)
 
 bool module_add_symbol(Module* module, const Symbol* symbol)
 {
-    StringBuffer* name_buf = strbuf_make(module->alloc);
+    StringBuffer* name_buf = StringBuffer::make(module->alloc);
     if(!name_buf)
     {
         return false;
     }
-    bool ok = strbuf_appendf(name_buf, "%s::%s", module->name, symbol->name);
+    bool ok = name_buf->appendFormat("%s::%s", module->name, symbol->name);
     if(!ok)
     {
-        strbuf_destroy(name_buf);
+        name_buf->destroy();
         return false;
     }
-    Symbol* module_symbol = Symbol::make(module->alloc, strbuf_get_string(name_buf), SYMBOL_MODULE_GLOBAL, symbol->index, false);
-    strbuf_destroy(name_buf);
+    Symbol* module_symbol = Symbol::make(module->alloc, name_buf->string(), SYMBOL_MODULE_GLOBAL, symbol->index, false);
+    name_buf->destroy();
     if(!module_symbol)
     {
         return false;
@@ -12066,7 +12069,7 @@ char* object_get_type_union_name(Allocator* alloc, const ObjectType type)
     {
         return ape_strdup(alloc, object_get_type_name(type));
     }
-    StringBuffer* res = strbuf_make(alloc);
+    StringBuffer* res = StringBuffer::make(alloc);
     if(!res)
     {
         return NULL;
@@ -12079,9 +12082,9 @@ char* object_get_type_union_name(Allocator* alloc, const ObjectType type)
         {                                                \
             if(in_between)                               \
             {                                            \
-                strbuf_append(res, "|");                 \
+                res->append("|");                 \
             }                                            \
-            strbuf_append(res, object_get_type_name(t)); \
+            res->append(object_get_type_name(t)); \
             in_between = true;                           \
         }                                                \
     } while(0)
@@ -12097,7 +12100,7 @@ char* object_get_type_union_name(Allocator* alloc, const ObjectType type)
     CHECK_TYPE(APE_OBJECT_EXTERNAL);
     CHECK_TYPE(APE_OBJECT_ERROR);
 
-    return strbuf_get_string_and_destroy(res);
+    return res->getStringAndDestroy();
 }
 
 char* object_serialize(Allocator* alloc, Object object, size_t* lendest)
@@ -12105,14 +12108,14 @@ char* object_serialize(Allocator* alloc, Object object, size_t* lendest)
     size_t l;
     char* string;
     StringBuffer* buf;
-    buf = strbuf_make(alloc);
+    buf = StringBuffer::make(alloc);
     if(!buf)
     {
         return NULL;
     }
     object_to_string(object, buf, true);
     l = buf->len;
-    string = strbuf_get_string_and_destroy(buf);
+    string = buf->getStringAndDestroy();
     if(lendest != NULL)
     {
         *lendest = l;
@@ -12369,7 +12372,7 @@ bool object_string_append(Object obj, const char* src, int len)
 {
     APE_ASSERT(object_get_type(obj) == APE_OBJECT_STRING);
     ObjectData* data = object_get_allocated_data(obj);
-    ObjectString* string = &data->string;
+    String* string = &data->string;
     char* str_buf = object_get_mutable_string(obj);
     int current_len = string->length;
     int capacity = string->capacity;
@@ -12399,7 +12402,7 @@ unsigned long object_get_string_hash(Object obj)
     return data->string.hash;
 }
 
-FunctionObject* object_get_function(Object object)
+ScriptFunction* object_get_function(Object object)
 {
     APE_ASSERT(object_get_type(object) == APE_OBJECT_FUNCTION);
     ObjectData* data = object_get_allocated_data(object);
@@ -12483,7 +12486,7 @@ Object object_get_function_free_val(Object obj, int ix)
     {
         return object_make_null();
     }
-    FunctionObject* fun = &data->function;
+    ScriptFunction* fun = &data->function;
     APE_ASSERT(ix >= 0 && ix < fun->free_vals_count);
     if(ix < 0 || ix >= fun->free_vals_count)
     {
@@ -12508,7 +12511,7 @@ void object_set_function_free_val(Object obj, int ix, Object val)
     {
         return;
     }
-    FunctionObject* fun = &data->function;
+    ScriptFunction* fun = &data->function;
     APE_ASSERT(ix >= 0 && ix < fun->free_vals_count);
     if(ix < 0 || ix >= fun->free_vals_count)
     {
@@ -12534,7 +12537,7 @@ Object* object_get_function_free_vals(Object obj)
     {
         return NULL;
     }
-    FunctionObject* fun = &data->function;
+    ScriptFunction* fun = &data->function;
     if(freevals_are_allocated(fun))
     {
         return fun->free_vals_allocated;
@@ -12792,7 +12795,7 @@ Object object_deep_copy_internal(GCMemory* mem, Object obj, ValDictionary * copi
 
         case APE_OBJECT_FUNCTION:
             {
-                FunctionObject* function = object_get_function(obj);
+                ScriptFunction* function = object_get_function(obj);
                 uint8_t* bytecode_copy = NULL;
                 Position* src_positions_copy = NULL;
                 CompilationResult* comp_res_copy = NULL;
@@ -12835,7 +12838,7 @@ Object object_deep_copy_internal(GCMemory* mem, Object obj, ValDictionary * copi
                     return object_make_null();
                 }
 
-                FunctionObject* function_copy = object_get_function(copy);
+                ScriptFunction* function_copy = object_get_function(copy);
                 if(freevals_are_allocated(function))
                 {
                     function_copy->free_vals_allocated = (Object*)allocator_malloc(mem->alloc, sizeof(Object) * function->free_vals_count);
@@ -13026,7 +13029,7 @@ static uint64_t get_type_tag(ObjectType type)
     }
 }
 
-static bool freevals_are_allocated(FunctionObject* fun)
+static bool freevals_are_allocated(ScriptFunction* fun)
 {
     return fun->free_vals_count >= APE_ARRAY_LEN(fun->free_vals_buf);
 }
@@ -13048,7 +13051,7 @@ bool object_data_string_reserve_capacity(ObjectData* data, int capacity)
 {
     APE_ASSERT(capacity >= 0);
 
-    ObjectString* string = &data->string;
+    String* string = &data->string;
 
     string->length = 0;
     string->hash = 0;
@@ -13316,7 +13319,7 @@ void gc_mark_object(Object obj)
         }
         case APE_OBJECT_FUNCTION:
         {
-            FunctionObject* function = object_get_function(obj);
+            ScriptFunction* function = object_get_function(obj);
             for(int i = 0; i < function->free_vals_count; i++)
             {
                 Object free_val = object_get_function_free_val(obj, i);
@@ -13575,7 +13578,7 @@ bool frame_init(Frame* frame, Object function_obj, int base_pointer)
     {
         return false;
     }
-    FunctionObject* function = object_get_function(function_obj);
+    ScriptFunction* function = object_get_function(function_obj);
     frame->function = function_obj;
     frame->ip = 0;
     frame->base_pointer = base_pointer;
@@ -13778,7 +13781,7 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
         return false;
     }
 
-    FunctionObject* function_function = object_get_function(function);// naming is hard
+    ScriptFunction* function_function = object_get_function(function);// naming is hard
     Frame new_frame;
     bool ok = false;
     ok = frame_init(&new_frame, function, vm->sp - function_function->num_args);
@@ -14454,7 +14457,7 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
                         goto err;
                     }
 
-                    const FunctionObject* constant_function = object_get_function(*constant);
+                    const ScriptFunction* constant_function = object_get_function(*constant);
                     Object function_obj
                     = object_make_function(vm->mem, object_get_function_name(*constant), constant_function->comp_result,
                                            false, constant_function->num_locals, constant_function->num_args, num_free);
@@ -14749,7 +14752,7 @@ void stack_push(VM* vm, Object obj)
     if(vm->current_frame)
     {
         Frame* frame = vm->current_frame;
-        FunctionObject* current_function = object_get_function(frame->function);
+        ScriptFunction* current_function = object_get_function(frame->function);
         int num_locals = current_function->num_locals;
         APE_ASSERT(vm->sp >= (frame->base_pointer + num_locals));
     }
@@ -14770,7 +14773,7 @@ Object stack_pop(VM* vm)
     if(vm->current_frame)
     {
         Frame* frame = vm->current_frame;
-        FunctionObject* current_function = object_get_function(frame->function);
+        ScriptFunction* current_function = object_get_function(frame->function);
         int num_locals = current_function->num_locals;
         APE_ASSERT((vm->sp - 1) >= (frame->base_pointer + num_locals));
     }
@@ -14847,7 +14850,7 @@ bool push_frame(VM* vm, Frame frame)
     vm->frames[vm->frames_count] = frame;
     vm->current_frame = &vm->frames[vm->frames_count];
     vm->frames_count++;
-    FunctionObject* frame_function = object_get_function(frame.function);
+    ScriptFunction* frame_function = object_get_function(frame.function);
     set_sp(vm, frame.base_pointer + frame_function->num_locals);
     return true;
 }
@@ -14894,7 +14897,7 @@ bool call_object(VM* vm, Object callee, int num_args)
     ObjectType callee_type = object_get_type(callee);
     if(callee_type == APE_OBJECT_FUNCTION)
     {
-        FunctionObject* callee_function = object_get_function(callee);
+        ScriptFunction* callee_function = object_get_function(callee);
         if(num_args != callee_function->num_args)
         {
             errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
@@ -15627,37 +15630,37 @@ char* ape_error_serialize(Context* ape, const Error* err)
     const char* line = ape_error_get_line(err);
     int line_num = ape_error_get_line_number(err);
     int col_num = ape_error_get_column_number(err);
-    StringBuffer* buf = strbuf_make(&ape->alloc);
+    StringBuffer* buf = StringBuffer::make(&ape->alloc);
     if(!buf)
     {
         return NULL;
     }
     if(line)
     {
-        strbuf_append(buf, line);
-        strbuf_append(buf, "\n");
+        buf->append(line);
+        buf->append("\n");
         if(col_num >= 0)
         {
             for(int j = 0; j < (col_num - 1); j++)
             {
-                strbuf_append(buf, " ");
+                buf->append(" ");
             }
-            strbuf_append(buf, "^\n");
+            buf->append("^\n");
         }
     }
-    strbuf_appendf(buf, "%s ERROR in \"%s\" on %d:%d: %s\n", type_str, filename, line_num, col_num, ape_error_get_message(err));
+    buf->appendFormat("%s ERROR in \"%s\" on %d:%d: %s\n", type_str, filename, line_num, col_num, ape_error_get_message(err));
     const Traceback* traceback = ape_error_get_traceback(err);
     if(traceback)
     {
-        strbuf_appendf(buf, "Traceback:\n");
+        buf->appendFormat("Traceback:\n");
         traceback_to_string((const Traceback*)ape_error_get_traceback(err), buf);
     }
-    if(strbuf_failed(buf))
+    if(buf->failed())
     {
-        strbuf_destroy(buf);
+        buf->destroy();
         return NULL;
     }
-    return strbuf_get_string_and_destroy(buf);
+    return buf->getStringAndDestroy();
 }
 
 const Traceback* ape_error_get_traceback(const Error* ae)
@@ -16191,7 +16194,7 @@ static Object cfn_println(VM* vm, void* data, int argc, Object* args)
         return object_make_null();// todo: runtime error?
     }
 
-    StringBuffer* buf = strbuf_make(vm->alloc);
+    StringBuffer* buf = StringBuffer::make(vm->alloc);
     if(!buf)
     {
         return object_make_null();
@@ -16201,14 +16204,14 @@ static Object cfn_println(VM* vm, void* data, int argc, Object* args)
         Object arg = args[i];
         object_to_string(arg, buf, false);
     }
-    strbuf_append(buf, "\n");
-    if(strbuf_failed(buf))
+    buf->append("\n");
+    if(buf->failed())
     {
-        strbuf_destroy(buf);
+        buf->destroy();
         return object_make_null();
     }
-    config->stdio.write.write(config->stdio.write.context, strbuf_get_string(buf), strbuf_get_length(buf));
-    strbuf_destroy(buf);
+    config->stdio.write.write(config->stdio.write.context, buf->string(), buf->length());
+    buf->destroy();
     return object_make_null();
 }
 
@@ -16222,7 +16225,7 @@ static Object cfn_print(VM* vm, void* data, int argc, Object* args)
         return object_make_null();// todo: runtime error?
     }
 
-    StringBuffer* buf = strbuf_make(vm->alloc);
+    StringBuffer* buf = StringBuffer::make(vm->alloc);
     if(!buf)
     {
         return object_make_null();
@@ -16232,13 +16235,13 @@ static Object cfn_print(VM* vm, void* data, int argc, Object* args)
         Object arg = args[i];
         object_to_string(arg, buf, false);
     }
-    if(strbuf_failed(buf))
+    if(buf->failed())
     {
-        strbuf_destroy(buf);
+        buf->destroy();
         return object_make_null();
     }
-    config->stdio.write.write(config->stdio.write.context, strbuf_get_string(buf), strbuf_get_length(buf));
-    strbuf_destroy(buf);
+    config->stdio.write.write(config->stdio.write.context, buf->string(), buf->length());
+    buf->destroy();
     return object_make_null();
 }
 
@@ -16250,19 +16253,19 @@ static Object cfn_to_str(VM* vm, void* data, int argc, Object* args)
         return object_make_null();
     }
     Object arg = args[0];
-    StringBuffer* buf = strbuf_make(vm->alloc);
+    StringBuffer* buf = StringBuffer::make(vm->alloc);
     if(!buf)
     {
         return object_make_null();
     }
     object_to_string(arg, buf, false);
-    if(strbuf_failed(buf))
+    if(buf->failed())
     {
-        strbuf_destroy(buf);
+        buf->destroy();
         return object_make_null();
     }
-    Object res = object_make_string(vm->mem, strbuf_get_string(buf));
-    strbuf_destroy(buf);
+    Object res = object_make_string(vm->mem, buf->string());
+    buf->destroy();
     return res;
 }
 
