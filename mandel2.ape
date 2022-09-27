@@ -1,34 +1,34 @@
 
 // this file also conveniently tests recursive calls
 
-fn do_add(x, y)
+function do_add(x, y)
 {
     return x + y
 }
 
-fn do_sub(x, y)
+function do_sub(x, y)
 {
     return x - y
 }
 
-fn do_mul(x, y)
+function do_mul(x, y)
 {
     t = x * y
     return (t + 8192 / 2) / 8192
 }
 
-fn do_div(x, y)
+function do_div(x, y)
 {
     t = x * 8192
     return (t + y / 2) / y
 }
 
-fn of_int(x)
+function of_int(x)
 {
     return x * 8192
 }
 
-fn iter(n, a, b, xn, yn)
+function iter(n, a, b, xn, yn)
 {
     if(n == 100)
     {
@@ -43,12 +43,12 @@ fn iter(n, a, b, xn, yn)
     return iter(n + 1, a, b, do_add(do_sub(xn2, yn2), a), do_add(do_mul(of_int(2), do_mul(xn, yn)), b))
 }
 
-fn inside(x, y)
+function inside(x, y)
 {
     return iter(0, x, y, of_int(0), of_int(0))
 }
 
-fn run()
+function run()
 {
     steps = 30
     xmin = of_int(-2)
