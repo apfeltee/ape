@@ -502,9 +502,6 @@ double ape_timer_get_elapsed_ms(const Timer *timer);
 char *collections_strndup(Allocator *alloc, const char *string, size_t n);
 char *collections_strdup(Allocator *alloc, const char *string);
 unsigned long collections_hash(const void *ptr, size_t len);
-Allocator allocator_make(AllocatorMallocFNCallback malloc_fn, AllocatorFreeFNCallback free_fn, void *ctx);
-void *allocator_malloc(Allocator *allocator, size_t size);
-void allocator_free(Allocator *allocator, void *ptr);
 
 PtrArray *kg_split_string(Allocator *alloc, const char *str, const char *delimiter);
 char *kg_join(Allocator *alloc, PtrArray *items, const char *with);
@@ -553,29 +550,9 @@ Module *module_copy(Module *src);
 const char *get_module_name(const char *path);
 bool module_add_symbol(Module *module, const Symbol *symbol);
 
-Object object_make_from_data(ObjectType type, ObjectData *data);
-Object object_make_number(double val);
-Object object_make_bool(bool val);
-Object object_make_null(void);
-Object object_make_string_len(GCMemory *mem, const char *string, size_t len);
-Object object_make_string(GCMemory *mem, const char *string);
-Object object_make_string_with_capacity(GCMemory *mem, int capacity);
-Object object_make_stringf(GCMemory *mem, const char *fmt, ...);
-Object object_make_native_function_memory(GCMemory *mem, const char *name, NativeFNCallback fn, void *data, int data_len);
-Object object_make_array(GCMemory *mem);
-Object object_make_array_with_capacity(GCMemory *mem, unsigned capacity);
-Object object_make_map(GCMemory *mem);
-Object object_make_map_with_capacity(GCMemory *mem, unsigned capacity);
-Object object_make_error(GCMemory *mem, const char *error);
-Object object_make_error_no_copy(GCMemory *mem, char *error);
-Object object_make_errorf(GCMemory *mem, const char *fmt, ...);
-Object object_make_function(GCMemory *mem, const char *name, CompilationResult *comp_res, bool owns_data, int num_locals, int num_args, int free_vals_count);
-Object object_make_external(GCMemory *mem, void *data);
-void object_deinit(Object obj);
+
 void object_data_deinit(ObjectData *data);
-bool object_is_allocated(Object object);
-GCMemory *object_get_mem(Object obj);
-bool object_is_hashable(Object obj);
+
 const char *object_get_type_name(const ObjectType type);
 char *object_get_type_union_name(Allocator *alloc, const ObjectType type);
 char *object_serialize(Allocator *alloc, Object object, size_t *lendest);
@@ -585,7 +562,7 @@ double object_compare(Object a, Object b, bool *out_ok);
 bool object_equals(Object a, Object b);
 ExternalData *object_get_external_data(Object object);
 bool object_set_external_destroy_function(Object object, ExternalDataDestroyFNCallback destroy_fn);
-ObjectData *object_get_allocated_data(Object object);
+
 bool object_get_bool(Object obj);
 double object_get_number(Object obj);
 const char *object_get_string(Object object);
@@ -597,10 +574,7 @@ bool object_string_append(Object obj, const char *src, int len);
 unsigned long object_get_string_hash(Object obj);
 ScriptFunction *object_get_function(Object object);
 NativeFunction *object_get_native_function(Object obj);
-ObjectType object_get_type(Object obj);
-bool object_is_numeric(Object obj);
-bool object_is_null(Object obj);
-bool object_is_callable(Object obj);
+
 const char *object_get_function_name(Object obj);
 Object object_get_function_free_val(Object obj, int ix);
 void object_set_function_free_val(Object obj, int ix, Object val);
@@ -629,23 +603,13 @@ unsigned long object_hash(Object *obj_ptr);
 unsigned long object_hash_string(const char *str);
 unsigned long object_hash_double(double val);
 Array *object_get_allocated_array(Object object);
-bool object_is_number(Object o);
+
 char *object_data_get_string(ObjectData *data);
 bool object_data_string_reserve_capacity(ObjectData *data, int capacity);
-GCMemory *gcmem_make(Allocator *alloc);
-void gcmem_destroy(GCMemory *mem);
-ObjectData *gcmem_alloc_object_data(GCMemory *mem, ObjectType type);
-ObjectData *gcmem_get_object_data_from_pool(GCMemory *mem, ObjectType type);
-void gc_unmark_all(GCMemory *mem);
-void gc_mark_objects(Object *objects, int cn);
-void gc_mark_object(Object obj);
-void gc_sweep(GCMemory *mem);
-bool gc_disable_on_object(Object obj);
-void gc_enable_on_object(Object obj);
-int gc_should_sweep(GCMemory *mem);
-ObjectDataPool *get_pool_for_type(GCMemory *mem, ObjectType type);
-bool can_data_be_put_in_pool(GCMemory *mem, ObjectData *data);
+
+
 Traceback *traceback_make(Allocator *alloc);
+
 void traceback_destroy(Traceback *traceback);
 bool traceback_append(Traceback *traceback, const char *function_name, Position pos);
 bool traceback_append_from_vm(Traceback *traceback, VM *vm);
@@ -817,6 +781,46 @@ static char *read_file_default(void *ctx, const char *filename);
 static size_t write_file_default(void *ctx, const char *path, const char *string, size_t string_size);
 static size_t stdout_write_default(void *ctx, const void *data, size_t size);
 
+struct Allocator
+{
+    public:
+        static Allocator make(AllocatorMallocFNCallback malloc_fn, AllocatorFreeFNCallback free_fn, void* ctx)
+        {
+            Allocator alloc;
+            alloc.m_allocfn = malloc_fn;
+            alloc.m_freefn = free_fn;
+            alloc.ctx = ctx;
+            return alloc;
+        }
+
+    public:
+        AllocatorMallocFNCallback m_allocfn;
+        AllocatorFreeFNCallback m_freefn;
+        void* ctx;
+
+    public:
+
+        void* allocate(size_t size)
+        {
+            if(!this || !this->m_allocfn)
+            {
+                return ::malloc(size);
+            }
+            return this->m_allocfn(this->ctx, size);
+        }
+
+        void release(void* ptr)
+        {
+            if(!this || !this->m_freefn)
+            {
+                ::free(ptr);
+                return;
+            }
+            this->m_freefn(this->ctx, ptr);
+        }
+};
+
+
 
 struct NatFunc_t
 {
@@ -888,7 +892,7 @@ struct ValDictionary
             bool ok;
             ValDictionary* dict;
             unsigned int capacity;
-            dict = (ValDictionary*)allocator_malloc(alloc, sizeof(ValDictionary));
+            dict = (ValDictionary*)alloc->allocate(sizeof(ValDictionary));
             capacity = upper_power_of_two(min_capacity * 2);
             if(!dict)
             {
@@ -897,7 +901,7 @@ struct ValDictionary
             ok = dict->init(alloc, key_size, val_size, capacity);
             if(!ok)
             {
-                allocator_free(alloc, dict);
+                alloc->release(dict);
                 return NULL;
             }
             return dict;
@@ -927,7 +931,7 @@ struct ValDictionary
             }
             Allocator* alloc = this->alloc;
             this->deinit();
-            allocator_free(alloc, this);
+            alloc->release(this);
         }
 
         void setHashFunction(CollectionsHashFNCallback hash_fn)
@@ -1096,11 +1100,11 @@ struct ValDictionary
             this->item_capacity = (unsigned int)(initial_capacity * 0.7f);
             this->_keys_equals = NULL;
             this->_hash_key = NULL;
-            this->cells = (unsigned int*)allocator_malloc(this->alloc, this->cell_capacity * sizeof(*this->cells));
-            this->keys = allocator_malloc(this->alloc, this->item_capacity * key_size);
-            this->values = allocator_malloc(this->alloc, this->item_capacity * val_size);
-            this->cell_ixs = (unsigned int*)allocator_malloc(this->alloc, this->item_capacity * sizeof(*this->cell_ixs));
-            this->hashes = (long unsigned int*)allocator_malloc(this->alloc, this->item_capacity * sizeof(*this->hashes));
+            this->cells = (unsigned int*)this->alloc->allocate(this->cell_capacity * sizeof(*this->cells));
+            this->keys = this->alloc->allocate(this->item_capacity * key_size);
+            this->values = this->alloc->allocate(this->item_capacity * val_size);
+            this->cell_ixs = (unsigned int*)this->alloc->allocate(this->item_capacity * sizeof(*this->cell_ixs));
+            this->hashes = (long unsigned int*)this->alloc->allocate(this->item_capacity * sizeof(*this->hashes));
             if(this->cells == NULL || this->keys == NULL || this->values == NULL || this->cell_ixs == NULL || this->hashes == NULL)
             {
                 goto error;
@@ -1111,11 +1115,11 @@ struct ValDictionary
             }
             return true;
         error:
-            allocator_free(this->alloc, this->cells);
-            allocator_free(this->alloc, this->keys);
-            allocator_free(this->alloc, this->values);
-            allocator_free(this->alloc, this->cell_ixs);
-            allocator_free(this->alloc, this->hashes);
+            this->alloc->release(this->cells);
+            this->alloc->release(this->keys);
+            this->alloc->release(this->values);
+            this->alloc->release(this->cell_ixs);
+            this->alloc->release(this->hashes);
             return false;
         }
 
@@ -1127,11 +1131,11 @@ struct ValDictionary
             this->item_capacity = 0;
             this->cell_capacity = 0;
 
-            allocator_free(this->alloc, this->cells);
-            allocator_free(this->alloc, this->keys);
-            allocator_free(this->alloc, this->values);
-            allocator_free(this->alloc, this->cell_ixs);
-            allocator_free(this->alloc, this->hashes);
+            this->alloc->release(this->cells);
+            this->alloc->release(this->keys);
+            this->alloc->release(this->values);
+            this->alloc->release(this->cell_ixs);
+            this->alloc->release(this->hashes);
 
             this->cells = NULL;
             this->keys = NULL;
@@ -1254,7 +1258,7 @@ struct Dictionary
         template<typename TypeFNCopy, typename TypeFNDestroy>
         static Dictionary* make(Allocator* alloc, TypeFNCopy copy_fn, TypeFNDestroy destroy_fn)
         {
-            Dictionary* dict = (Dictionary*)allocator_malloc(alloc, sizeof(Dictionary));
+            Dictionary* dict = (Dictionary*)alloc->allocate(sizeof(Dictionary));
             if(dict == NULL)
             {
                 return NULL;
@@ -1262,7 +1266,7 @@ struct Dictionary
             bool ok = dict->init(alloc, DICT_INITIAL_SIZE, (DictItemCopyFNCallback)copy_fn, (DictItemDestroyFNCallback)destroy_fn);
             if(!ok)
             {
-                allocator_free(alloc, dict);
+                alloc->release(dict);
                 return NULL;
             }
             return dict;
@@ -1301,7 +1305,7 @@ struct Dictionary
             }
             Allocator* alloc = this->alloc;
             this->deinit(true);
-            allocator_free(alloc, this);
+            alloc->release(this);
         }
 
         void destroyWithItems()
@@ -1421,11 +1425,11 @@ struct Dictionary
             this->item_capacity = (unsigned int)(initial_capacity * 0.7f);
             this->copy_fn = copy_fn;
             this->destroy_fn = destroy_fn;
-            this->cells = (unsigned int*)allocator_malloc(alloc, this->cell_capacity * sizeof(*this->cells));
-            this->keys = (char**)allocator_malloc(alloc, this->item_capacity * sizeof(*this->keys));
-            this->values = (void**)allocator_malloc(alloc, this->item_capacity * sizeof(*this->values));
-            this->cell_ixs = (unsigned int*)allocator_malloc(alloc, this->item_capacity * sizeof(*this->cell_ixs));
-            this->hashes = (long unsigned int*)allocator_malloc(alloc, this->item_capacity * sizeof(*this->hashes));
+            this->cells = (unsigned int*)alloc->allocate(this->cell_capacity * sizeof(*this->cells));
+            this->keys = (char**)alloc->allocate(this->item_capacity * sizeof(*this->keys));
+            this->values = (void**)alloc->allocate(this->item_capacity * sizeof(*this->values));
+            this->cell_ixs = (unsigned int*)alloc->allocate(this->item_capacity * sizeof(*this->cell_ixs));
+            this->hashes = (long unsigned int*)alloc->allocate(this->item_capacity * sizeof(*this->hashes));
             if(this->cells == NULL || this->keys == NULL || this->values == NULL || this->cell_ixs == NULL || this->hashes == NULL)
             {
                 goto error;
@@ -1436,11 +1440,11 @@ struct Dictionary
             }
             return true;
         error:
-            allocator_free(this->alloc, this->cells);
-            allocator_free(this->alloc, this->keys);
-            allocator_free(this->alloc, this->values);
-            allocator_free(this->alloc, this->cell_ixs);
-            allocator_free(this->alloc, this->hashes);
+            this->alloc->release(this->cells);
+            this->alloc->release(this->keys);
+            this->alloc->release(this->values);
+            this->alloc->release(this->cell_ixs);
+            this->alloc->release(this->hashes);
             return false;
         }
 
@@ -1450,17 +1454,17 @@ struct Dictionary
             {
                 for(unsigned int i = 0; i < this->m_count; i++)
                 {
-                    allocator_free(this->alloc, this->keys[i]);
+                    this->alloc->release(this->keys[i]);
                 }
             }
             this->m_count = 0;
             this->item_capacity = 0;
             this->cell_capacity = 0;
-            allocator_free(this->alloc, this->cells);
-            allocator_free(this->alloc, this->keys);
-            allocator_free(this->alloc, this->values);
-            allocator_free(this->alloc, this->cell_ixs);
-            allocator_free(this->alloc, this->hashes);
+            this->alloc->release(this->cells);
+            this->alloc->release(this->keys);
+            this->alloc->release(this->values);
+            this->alloc->release(this->cell_ixs);
+            this->alloc->release(this->hashes);
             this->cells = NULL;
             this->keys = NULL;
             this->values = NULL;
@@ -1574,7 +1578,7 @@ struct Array
 
         static Array* make(Allocator* alloc, unsigned int capacity, size_t element_size)
         {
-            Array* arr = (Array*)allocator_malloc(alloc, sizeof(Array));
+            Array* arr = (Array*)alloc->allocate(sizeof(Array));
             if(!arr)
             {
                 return NULL;
@@ -1583,7 +1587,7 @@ struct Array
             bool ok = arr->init(alloc, capacity, element_size);
             if(!ok)
             {
-                allocator_free(alloc, arr);
+                alloc->release(arr);
                 return NULL;
             }
             return arr;
@@ -1597,7 +1601,7 @@ struct Array
             }
             Allocator* alloc = arr->alloc;
             arr->deinit();
-            allocator_free(alloc, arr);
+            alloc->release(arr);
         }
 
         static void destroy(Array* arr, ArrayItemDeinitFNCallback deinit_fn)
@@ -1614,7 +1618,7 @@ struct Array
 
         static Array* copy(const Array* arr)
         {
-            Array* copy = (Array*)allocator_malloc(arr->alloc, sizeof(Array));
+            Array* copy = (Array*)arr->alloc->allocate(sizeof(Array));
             if(!copy)
             {
                 return NULL;
@@ -1626,10 +1630,10 @@ struct Array
             copy->lock_capacity = arr->lock_capacity;
             if(arr->data_allocated)
             {
-                copy->data_allocated = (unsigned char*)allocator_malloc(arr->alloc, arr->capacity * arr->element_size);
+                copy->data_allocated = (unsigned char*)arr->alloc->allocate(arr->capacity * arr->element_size);
                 if(!copy->data_allocated)
                 {
-                    allocator_free(arr->alloc, copy);
+                    arr->alloc->release(copy);
                     return NULL;
                 }
                 copy->arraydata = copy->data_allocated;
@@ -1665,13 +1669,13 @@ struct Array
                     return false;
                 }
                 unsigned int new_capacity = this->capacity > 0 ? this->capacity * 2 : 1;
-                unsigned char* new_data = (unsigned char*)allocator_malloc(this->alloc, new_capacity * this->element_size);
+                unsigned char* new_data = (unsigned char*)this->alloc->allocate(new_capacity * this->element_size);
                 if(!new_data)
                 {
                     return false;
                 }
                 memcpy(new_data, this->arraydata, this->m_count * this->element_size);
-                allocator_free(this->alloc, this->data_allocated);
+                this->alloc->release(this->data_allocated);
                 this->data_allocated = new_data;
                 this->arraydata = this->data_allocated;
                 this->capacity = new_capacity;
@@ -1934,7 +1938,7 @@ struct Array
             {
                 return true;
             }
-            void* temp = (void*)allocator_malloc(this->alloc, this->element_size);
+            void* temp = (void*)this->alloc->allocate(this->element_size);
             if(!temp)
             {
                 return false;
@@ -1948,7 +1952,7 @@ struct Array
                 this->set(a_ix, b);// no need for check because it will be within range
                 this->set(b_ix, temp);
             }
-            allocator_free(this->alloc, temp);
+            this->alloc->release(temp);
             return true;
         }
 
@@ -1957,7 +1961,7 @@ struct Array
             this->alloc = alloc;
             if(capacity > 0)
             {
-                this->data_allocated = (unsigned char*)allocator_malloc(this->alloc, capacity * element_size);
+                this->data_allocated = (unsigned char*)this->alloc->allocate(capacity * element_size);
                 this->arraydata = this->data_allocated;
                 if(!this->data_allocated)
                 {
@@ -1978,7 +1982,7 @@ struct Array
 
         void deinit()
         {
-            allocator_free(this->alloc, this->data_allocated);
+            this->alloc->release(this->data_allocated);
         }
 
 };
@@ -1993,7 +1997,7 @@ struct PtrArray
 
         static PtrArray* make(Allocator* alloc, unsigned int capacity)
         {
-            PtrArray* ptrarr = (PtrArray*)allocator_malloc(alloc, sizeof(PtrArray));
+            PtrArray* ptrarr = (PtrArray*)alloc->allocate(sizeof(PtrArray));
             if(!ptrarr)
             {
                 return NULL;
@@ -2002,7 +2006,7 @@ struct PtrArray
             bool ok = ptrarr->arr.init(alloc, capacity, sizeof(void*));
             if(!ok)
             {
-                allocator_free(alloc, ptrarr);
+                alloc->release(ptrarr);
                 return NULL;
             }
             return ptrarr;
@@ -2021,7 +2025,7 @@ struct PtrArray
                 return;
             }
             this->arr.deinit();
-            allocator_free(this->alloc, this);
+            this->alloc->release(this);
         }
 
         template<typename FnType>
@@ -2243,12 +2247,7 @@ struct Timer
     double start_time_ms;
 };
 
-struct Allocator
-{
-    AllocatorMallocFNCallback malloc;
-    AllocatorFreeFNCallback free;
-    void* ctx;
-};
+
 
 struct Error
 {
@@ -3010,7 +3009,7 @@ struct Lexer
             if(!ok)
             {
                 this->m_failed = true;
-                allocator_free(this->alloc, line);
+                this->alloc->release(line);
                 return false;
             }
             return true;
@@ -3090,7 +3089,7 @@ struct Ident
     public:
         static Ident* make(Allocator* alloc, Token tok)
         {
-            Ident* res = (Ident*)allocator_malloc(alloc, sizeof(Ident));
+            Ident* res = (Ident*)alloc->allocate(sizeof(Ident));
             if(!res)
             {
                 return NULL;
@@ -3099,7 +3098,7 @@ struct Ident
             res->value = tok.copyLiteral(alloc);
             if(!res->value)
             {
-                allocator_free(alloc, res);
+                alloc->release(res);
                 return NULL;
             }
             res->pos = tok.pos;
@@ -3108,7 +3107,7 @@ struct Ident
 
         static Ident* copy_callback(Ident* ident)
         {
-            Ident* res = (Ident*)allocator_malloc(ident->alloc, sizeof(Ident));
+            Ident* res = (Ident*)ident->alloc->allocate(sizeof(Ident));
             if(!res)
             {
                 return NULL;
@@ -3117,7 +3116,7 @@ struct Ident
             res->value = ape_strdup(ident->alloc, ident->value);
             if(!res->value)
             {
-                allocator_free(ident->alloc, res);
+                ident->alloc->release(res);
                 return NULL;
             }
             res->pos = ident->pos;
@@ -3148,7 +3147,7 @@ struct StmtIfClause
             public:
                 static Case* make(Allocator* alloc, Expression* test, StmtBlock* consequence)
                 {
-                    Case* res = (Case*)allocator_malloc(alloc, sizeof(Case));
+                    Case* res = (Case*)alloc->allocate(sizeof(Case));
                     if(!res)
                     {
                         return NULL;
@@ -3183,7 +3182,7 @@ struct StmtIfClause
                     }
                     expression_destroy(this->test);
                     code_block_destroy(this->consequence);
-                    allocator_free(this->alloc, this);
+                    this->alloc->release(this);
                 }
 
                 Case* copy()
@@ -3481,7 +3480,7 @@ struct Parser
             size_t in_i;
             size_t out_i;
             char* output;
-            output = (char*)allocator_malloc(alloc, len + 1);
+            output = (char*)alloc->allocate(len + 1);
             if(!output)
             {
                 return NULL;
@@ -3509,7 +3508,7 @@ struct Parser
             output[out_i] = '\0';
             return output;
         error:
-            allocator_free(alloc, output);
+            alloc->release(output);
             return NULL;
         }
 
@@ -3568,7 +3567,7 @@ struct Parser
         static Parser* make(Allocator* alloc, const Config* config, ErrorList* errors)
         {
             Parser* parser;
-            parser = (Parser*)allocator_malloc(alloc, sizeof(Parser));
+            parser = (Parser*)alloc->allocate( sizeof(Parser));
             if(!parser)
             {
                 return NULL;
@@ -3651,7 +3650,7 @@ struct Parser
             {
                 return;
             }
-            allocator_free(this->alloc, this);
+            this->alloc->release(this);
         }
 
         PtrArray* parseAll(const char* input, CompiledFile* file)
@@ -4088,7 +4087,7 @@ struct Parser
             res= statement_make_import(p->alloc, processed_name);
             if(!res)
             {
-                allocator_free(p->alloc, processed_name);
+                p->alloc->release(processed_name);
                 return NULL;
             }
             return res;
@@ -4395,7 +4394,7 @@ struct Parser
             {
                 literal = p->lexer.cur_token.copyLiteral(p->alloc);
                 errors_add_errorf(p->errors, APE_ERROR_PARSING, p->lexer.cur_token.pos, "No prefix parse function for \"%s\" found", literal);
-                allocator_free(p->alloc, literal);
+                p->alloc->release(literal);
                 return NULL;
             }
             left_expr = parse_right_assoc(p);
@@ -4457,7 +4456,7 @@ struct Parser
             {
                 literal = p->lexer.cur_token.copyLiteral(p->alloc);
                 errors_add_errorf(p->errors, APE_ERROR_PARSING, p->lexer.cur_token.pos, "Parsing number literal \"%s\" failed", literal);
-                allocator_free(p->alloc, literal);
+                p->alloc->release(literal);
                 return NULL;
             }
             p->lexer.nextToken();
@@ -4485,7 +4484,7 @@ struct Parser
             Expression* res = expression_make_string_literal(p->alloc, processed_literal);
             if(!res)
             {
-                allocator_free(p->alloc, processed_literal);
+                p->alloc->release(processed_literal);
                 return NULL;
             }
             return res;
@@ -4584,7 +4583,7 @@ struct Parser
             expression_destroy(to_str_call_expr);
             expression_destroy(template_expr);
             expression_destroy(left_string_expr);
-            allocator_free(p->alloc, processed_literal);
+            p->alloc->release(processed_literal);
             return NULL;
         }
 
@@ -4637,7 +4636,7 @@ struct Parser
                     key = expression_make_string_literal(p->alloc, str);
                     if(!key)
                     {
-                        allocator_free(p->alloc, str);
+                        p->alloc->release(str);
                         goto err;
                     }
                     key->pos = p->lexer.cur_token.pos;
@@ -5223,7 +5222,7 @@ struct Parser
             Expression* index = expression_make_string_literal(p->alloc, str);
             if(!index)
             {
-                allocator_free(p->alloc, str);
+                p->alloc->release(str);
                 return NULL;
             }
             index->pos = p->lexer.cur_token.pos;
@@ -5243,13 +5242,273 @@ struct Parser
 
 struct Object
 {
-    uint64_t _internal;
+    public:
+
+        static ObjectData* allocObjectData(GCMemory* mem, ObjectType t);
+        static ObjectData* objectDataFromPool(GCMemory* mem, ObjectType t);
+        static Allocator* getAllocator(GCMemory* mem);
+
+        static inline Object makeFromData(ObjectType type, ObjectData* data)
+        {
+            uint64_t type_tag;
+            Object object;
+            object.handle = OBJECT_PATTERN;
+            type_tag = get_type_tag(type) & 0x7;
+            object.handle |= (type_tag << 48);
+            object.handle |= (uintptr_t)data;// assumes no pointer exceeds 48 bits
+            return object;
+        }
+
+        static inline Object makeNumber(double val)
+        {
+            Object o = { .number = val };
+            if((o.handle & OBJECT_PATTERN) == OBJECT_PATTERN)
+            {
+                o.handle = 0x7ff8000000000000;
+            }
+            return o;
+        }
+
+        static inline Object makeBool(bool val)
+        {
+            return (Object){ .handle = OBJECT_BOOL_HEADER | val };
+        }
+
+        static inline Object makeNull()
+        {
+            return (Object){ .handle = OBJECT_NULL_PATTERN };
+        }
+
+        static Object makeString(GCMemory* mem, const char* string)
+        {
+            return Object::makeString(mem, string, strlen(string));
+        }
+
+        static Object makeString(GCMemory* mem, const char* string, size_t len)
+        {
+            Object res = Object::makeStringCapacity(mem, len);
+            if(res.isNull())
+            {
+                return res;
+            }
+            bool ok = object_string_append(res, string, len);
+            if(!ok)
+            {
+                return Object::makeNull();
+            }
+            return res;
+        }
+
+        static Object makeStringCapacity(GCMemory* mem, int capacity);
+
+        static Object makeStringFormat(GCMemory* mem, const char* fmt, ...)
+        {
+            va_list args;
+            va_start(args, fmt);
+            int to_write = vsnprintf(NULL, 0, fmt, args);
+            va_end(args);
+            va_start(args, fmt);
+            Object res = Object::makeStringCapacity(mem, to_write);
+            if(res.isNull())
+            {
+                return Object::makeNull();
+            }
+            char* res_buf = object_get_mutable_string(res);
+            int written = vsprintf(res_buf, fmt, args);
+            (void)written;
+            APE_ASSERT(written == to_write);
+            va_end(args);
+            object_set_string_length(res, to_write);
+            return res;
+        }
+
+        static Object makeNativeFunctionMemory(GCMemory* mem, const char* name, NativeFNCallback fn, void* data, int data_len);
+
+        static Object makeArray(GCMemory* mem)
+        {
+            return Object::makeArray(mem, 8);
+        }
+
+        static Object makeArray(GCMemory* mem, unsigned capacity);
+
+        static Object makeMap(GCMemory* mem)
+        {
+            return Object::makeMap(mem, 32);
+        }
+
+        static Object makeMap(GCMemory* mem, unsigned capacity);
+
+        static Object makeError(GCMemory* mem, const char* error)
+        {
+            char* error_str = ape_strdup(Object::getAllocator(mem), error);
+            if(!error_str)
+            {
+                return Object::makeNull();
+            }
+            Object res = Object::makeErrorNoCopy(mem, error_str);
+            if(res.isNull())
+            {
+                Object::getAllocator(mem)->release(error_str);
+                return Object::makeNull();
+            }
+            return res;
+        }
+
+        static Object makeErrorNoCopy(GCMemory* mem, char* error);
+
+        static Object makeErrorFormat(GCMemory* mem, const char* fmt, ...)
+        {
+            va_list args;
+            va_start(args, fmt);
+            int to_write = vsnprintf(NULL, 0, fmt, args);
+            va_end(args);
+            va_start(args, fmt);
+            char* res = (char*)Object::getAllocator(mem)->allocate(to_write + 1);
+            if(!res)
+            {
+                return Object::makeNull();
+            }
+            int written = vsprintf(res, fmt, args);
+            (void)written;
+            APE_ASSERT(written == to_write);
+            va_end(args);
+            Object res_obj = Object::makeErrorNoCopy(mem, res);
+            if(res_obj.isNull())
+            {
+                Object::getAllocator(mem)->release(res);
+                return Object::makeNull();
+            }
+            return res_obj;
+        }
+
+        static Object makeFunction(GCMemory* mem, const char* name, CompilationResult* comp_res, bool owns_data, int num_locals, int num_args, int free_vals_count);
+
+        static Object makeExternal(GCMemory* mem, void* data);
+
+        static void deinit(Object obj);
+
+    public:
+        uint64_t _internal;
+        union
+        {
+            uint64_t handle;
+            double number;
+        };
+
+    public:
+        static inline ObjectType typeFromData(ObjectData* data);
+
+        ObjectType type()
+        {
+            if(this->isNumber())
+            {
+                return APE_OBJECT_NUMBER;
+            }
+            uint64_t tag = (this->handle >> 48) & 0x7;
+            switch(tag)
+            {
+                case 0:
+                    {
+                        return APE_OBJECT_NONE;
+                    }
+                    break;
+                case 1:
+                    {
+                        return APE_OBJECT_BOOL;
+                    }
+                    break;
+                case 2:
+                    {
+                        return APE_OBJECT_NULL;
+                    }
+                    break;
+                case 4:
+                    {
+                        return Object::typeFromData(this->getAllocatedData());
+                    }
+                    break;
+                default:
+                    break;
+            }
+            return APE_OBJECT_NONE;
+        }
+
+        ObjectData* getAllocatedData()
+        {
+            APE_ASSERT(GCMemory::objectIsAllocated(*this) || this->type() == APE_OBJECT_NULL);
+            return (ObjectData*)(this->handle & ~OBJECT_HEADER_MASK);
+        }
+
+        bool isHashable()
+        {
+            ObjectType type = this->type();
+            switch(type)
+            {
+                case APE_OBJECT_STRING:
+                    return true;
+                case APE_OBJECT_NUMBER:
+                    return true;
+                case APE_OBJECT_BOOL:
+                    return true;
+                default:
+                    break;
+            }
+            return false;
+        }
+
+        bool isNumeric()
+        {
+            ObjectType type = this->type();
+            return type == APE_OBJECT_NUMBER || type == APE_OBJECT_BOOL;
+        }
+
+        bool isNull()
+        {
+            return this->type() == APE_OBJECT_NULL;
+        }
+
+        bool isCallable()
+        {
+            ObjectType type = this->type();
+            return type == APE_OBJECT_NATIVE_FUNCTION || type == APE_OBJECT_FUNCTION;
+        }
+
+        bool isNumber()
+        {
+            return (this->handle & OBJECT_PATTERN) != OBJECT_PATTERN;
+        }
+
+};
+
+
+struct String
+{
     union
     {
-        uint64_t handle;
-        double number;
+        char* value_allocated;
+        char value_buf[OBJECT_STRING_BUF_SIZE];
     };
+    unsigned long hash;
+    bool is_allocated;
+    int capacity;
+    int length;
 };
+
+struct NativeFunction
+{
+    char* name;
+    NativeFNCallback native_funcptr;
+    //uint8_t data[NATIVE_FN_MAX_DATA_LEN];
+    void* data;
+    int data_len;
+};
+
+struct NativeFuncWrapper
+{
+    UserFNCallback wrapped_funcptr;
+    Context* ape;
+    void* data;
+};       
 
 struct ScriptFunction
 {
@@ -5284,35 +5543,6 @@ struct ObjectError
     Traceback* traceback;
 };
 
-struct String
-{
-    union
-    {
-        char* value_allocated;
-        char value_buf[OBJECT_STRING_BUF_SIZE];
-    };
-    unsigned long hash;
-    bool is_allocated;
-    int capacity;
-    int length;
-};
-
-struct NativeFunction
-{
-    char* name;
-    NativeFNCallback native_funcptr;
-    //uint8_t data[NATIVE_FN_MAX_DATA_LEN];
-    void* data;
-    int data_len;
-};
-
-struct NativeFuncWrapper
-{
-    UserFNCallback wrapped_funcptr;
-    Context* ape;
-    void* data;
-};       
-
 struct ObjectData
 {
     GCMemory* mem;
@@ -5330,6 +5560,427 @@ struct ObjectData
     ObjectType type;
 };
 
+struct ObjectDataPool
+{
+    ObjectData* datapool[GCMEM_POOL_SIZE];
+    int m_count;
+};
+
+inline ObjectType Object::typeFromData(ObjectData* data)
+{
+    return data->type;
+}
+
+
+struct GCMemory
+{
+    public:
+        static void markObjects(Object* objects, int cn)
+        {
+            for(int i = 0; i < cn; i++)
+            {
+                Object obj = objects[i];
+                markObject(obj);
+            }
+        }
+
+        static void markObject(Object obj)
+        {
+            if(!objectIsAllocated(obj))
+            {
+                return;
+            }
+
+            ObjectData* data = obj.getAllocatedData();
+            if(data->gcmark)
+            {
+                return;
+            }
+
+            data->gcmark = true;
+            switch(data->type)
+            {
+                case APE_OBJECT_MAP:
+                {
+                    int len = object_get_map_length(obj);
+                    for(int i = 0; i < len; i++)
+                    {
+                        Object key = object_get_map_key_at(obj, i);
+                        if(objectIsAllocated(key))
+                        {
+                            ObjectData* key_data = key.getAllocatedData();
+                            if(!key_data->gcmark)
+                            {
+                                GCMemory::markObject(key);
+                            }
+                        }
+                        Object val = object_get_map_value_at(obj, i);
+                        if(objectIsAllocated(val))
+                        {
+                            ObjectData* val_data = val.getAllocatedData();
+                            if(!val_data->gcmark)
+                            {
+                                GCMemory::markObject(val);
+                            }
+                        }
+                    }
+                    break;
+                }
+                case APE_OBJECT_ARRAY:
+                {
+                    int len = object_get_array_length(obj);
+                    for(int i = 0; i < len; i++)
+                    {
+                        Object val = object_get_array_value(obj, i);
+                        if(objectIsAllocated(val))
+                        {
+                            ObjectData* val_data = val.getAllocatedData();
+                            if(!val_data->gcmark)
+                            {
+                                GCMemory::markObject(val);
+                            }
+                        }
+                    }
+                    break;
+                }
+                case APE_OBJECT_FUNCTION:
+                {
+                    ScriptFunction* function = object_get_function(obj);
+                    for(int i = 0; i < function->free_vals_count; i++)
+                    {
+                        Object free_val = object_get_function_free_val(obj, i);
+                        GCMemory::markObject(free_val);
+                        if(objectIsAllocated(free_val))
+                        {
+                            ObjectData* free_val_data = free_val.getAllocatedData();
+                            if(!free_val_data->gcmark)
+                            {
+                                GCMemory::markObject(free_val);
+                            }
+                        }
+                    }
+                    break;
+                }
+                default:
+                {
+                    break;
+                }
+            }
+        }
+
+        static bool objectIsAllocated(Object object)
+        {
+            return (object.handle & OBJECT_ALLOCATED_HEADER) == OBJECT_ALLOCATED_HEADER;
+        }
+
+        static GCMemory* objectGetMemory(Object obj)
+        {
+            ObjectData* data = obj.getAllocatedData();
+            return data->mem;
+        }
+
+        static bool disableFor(Object obj)
+        {
+            if(!objectIsAllocated(obj))
+            {
+                return false;
+            }
+            ObjectData* data = obj.getAllocatedData();
+            if(data->mem->objects_not_gced->contains(&obj))
+            {
+                return false;
+            }
+            bool ok = data->mem->objects_not_gced->add(&obj);
+            return ok;
+        }
+
+        static void enableFor(Object obj)
+        {
+            if(!objectIsAllocated(obj))
+            {
+                return;
+            }
+            ObjectData* data = obj.getAllocatedData();
+            data->mem->objects_not_gced->removeItem(&obj);
+        }
+
+        static GCMemory* make(Allocator* alloc)
+        {
+            int i;
+            GCMemory* mem = (GCMemory*)alloc->allocate(sizeof(GCMemory));
+            if(!mem)
+            {
+                return NULL;
+            }
+            memset(mem, 0, sizeof(GCMemory));
+            mem->alloc = alloc;
+            mem->objects = PtrArray::make(alloc);
+            if(!mem->objects)
+            {
+                goto error;
+            }
+            mem->objects_back = PtrArray::make(alloc);
+            if(!mem->objects_back)
+            {
+                goto error;
+            }
+            mem->objects_not_gced = Array::make<Object>(alloc);
+            if(!mem->objects_not_gced)
+            {
+                goto error;
+            }
+            mem->allocations_since_sweep = 0;
+            mem->data_only_pool.m_count = 0;
+            for(i = 0; i < GCMEM_POOLS_NUM; i++)
+            {
+                ObjectDataPool* pool = &mem->pools[i];
+                mem->pools[i].m_count = 0;
+                memset(pool, 0, sizeof(ObjectDataPool));
+            }
+
+            return mem;
+        error:
+            mem->destroy();
+            return NULL;
+        }
+
+
+    public:
+        Allocator* alloc;
+        int allocations_since_sweep;
+        PtrArray * objects;
+        PtrArray * objects_back;
+        Array * objects_not_gced;
+        ObjectDataPool data_only_pool;
+        ObjectDataPool pools[GCMEM_POOLS_NUM];
+
+    public:
+        void destroy()
+        {
+            if(!this)
+            {
+                return;
+            }
+
+            Array::destroy(this->objects_not_gced);
+            this->objects_back->destroy();
+
+            for(int i = 0; i < this->objects->count(); i++)
+            {
+                ObjectData* obj = (ObjectData*)this->objects->get(i);
+                object_data_deinit(obj);
+                this->alloc->release(obj);
+            }
+            this->objects->destroy();
+
+            for(int i = 0; i < GCMEM_POOLS_NUM; i++)
+            {
+                ObjectDataPool* pool = &this->pools[i];
+                for(int j = 0; j < pool->m_count; j++)
+                {
+                    ObjectData* data = pool->datapool[j];
+                    object_data_deinit(data);
+                    this->alloc->release(data);
+                }
+                memset(pool, 0, sizeof(ObjectDataPool));
+            }
+
+            for(int i = 0; i < this->data_only_pool.m_count; i++)
+            {
+                this->alloc->release(this->data_only_pool.datapool[i]);
+            }
+
+            this->alloc->release(this);
+        }
+
+        ObjectData* allocObjectData(ObjectType type)
+        {
+            ObjectData* data = NULL;
+            this->allocations_since_sweep++;
+            if(this->data_only_pool.m_count > 0)
+            {
+                data = this->data_only_pool.datapool[this->data_only_pool.m_count - 1];
+                this->data_only_pool.m_count--;
+            }
+            else
+            {
+                data = (ObjectData*)this->alloc->allocate(sizeof(ObjectData));
+                if(!data)
+                {
+                    return NULL;
+                }
+            }
+
+            memset(data, 0, sizeof(ObjectData));
+
+            APE_ASSERT(this->objects_back->count() >= this->objects->count());
+            // we want to make sure that appending to objects_back never fails in sweep
+            // so this only reserves space there.
+            bool ok = this->objects_back->add(data);
+            if(!ok)
+            {
+                this->alloc->release(data);
+                return NULL;
+            }
+            ok = this->objects->add(data);
+            if(!ok)
+            {
+                this->alloc->release(data);
+                return NULL;
+            }
+            data->mem = this;
+            data->type = type;
+            return data;
+        }
+
+        ObjectData* objectDataFromPool(ObjectType type)
+        {
+            ObjectDataPool* pool = this->getPoolByType(type);
+            if(!pool || pool->m_count <= 0)
+            {
+                return NULL;
+            }
+            ObjectData* data = pool->datapool[pool->m_count - 1];
+            APE_ASSERT(this->objects_back->count() >= this->objects->count());
+            // we want to make sure that appending to objects_back never fails in sweep
+            // so this only reserves space there.
+            bool ok = this->objects_back->add(data);
+            if(!ok)
+            {
+                return NULL;
+            }
+            ok = this->objects->add(data);
+            if(!ok)
+            {
+                return NULL;
+            }
+            pool->m_count--;
+            return data;
+        }
+
+        void unmarkAll()
+        {
+            for(int i = 0; i < this->objects->count(); i++)
+            {
+                ObjectData* data = (ObjectData*)this->objects->get(i);
+                data->gcmark = false;
+            }
+        }
+
+        void sweep()
+        {
+            int i;
+            bool ok;
+            GCMemory::markObjects((Object*)this->objects_not_gced->data(), this->objects_not_gced->count());
+
+            APE_ASSERT(this->objects_back->count() >= this->objects->count());
+
+            this->objects_back->clear();
+            for(i = 0; i < this->objects->count(); i++)
+            {
+                ObjectData* data = (ObjectData*)this->objects->get(i);
+                if(data->gcmark)
+                {
+                    // this should never fail because objects_back's size should be equal to objects
+                    ok = this->objects_back->add(data);
+                    (void)ok;
+                    APE_ASSERT(ok);
+                }
+                else
+                {
+                    if(this->canStoreInPool(data))
+                    {
+                        ObjectDataPool* pool = this->getPoolByType(data->type);
+                        pool->datapool[pool->m_count] = data;
+                        pool->m_count++;
+                    }
+                    else
+                    {
+                        object_data_deinit(data);
+                        if(this->data_only_pool.m_count < GCMEM_POOL_SIZE)
+                        {
+                            this->data_only_pool.datapool[this->data_only_pool.m_count] = data;
+                            this->data_only_pool.m_count++;
+                        }
+                        else
+                        {
+                            this->alloc->release(data);
+                        }
+                    }
+                }
+            }
+            PtrArray* objs_temp = this->objects;
+            this->objects = this->objects_back;
+            this->objects_back = objs_temp;
+            this->allocations_since_sweep = 0;
+        }
+
+        int shouldSweep()
+        {
+            return this->allocations_since_sweep > GCMEM_SWEEP_INTERVAL;
+        }
+
+        // INTERNAL
+        ObjectDataPool* getPoolByType(ObjectType type)
+        {
+            switch(type)
+            {
+                case APE_OBJECT_ARRAY:
+                    return &this->pools[0];
+                case APE_OBJECT_MAP:
+                    return &this->pools[1];
+                case APE_OBJECT_STRING:
+                    return &this->pools[2];
+                default:
+                    return NULL;
+            }
+        }
+
+        bool canStoreInPool(ObjectData* data)
+        {
+            Object obj = Object::makeFromData(data->type, data);
+
+            // this is to ensure that large objects won't be kept in pool indefinitely
+            switch(data->type)
+            {
+                case APE_OBJECT_ARRAY:
+                {
+                    if(object_get_array_length(obj) > 1024)
+                    {
+                        return false;
+                    }
+                    break;
+                }
+                case APE_OBJECT_MAP:
+                {
+                    if(object_get_map_length(obj) > 1024)
+                    {
+                        return false;
+                    }
+                    break;
+                }
+                case APE_OBJECT_STRING:
+                {
+                    if(!data->string.is_allocated || data->string.capacity > 4096)
+                    {
+                        return false;
+                    }
+                    break;
+                }
+                default:
+                    break;
+            }
+
+            ObjectDataPool* pool = this->getPoolByType(data->type);
+            if(!pool || pool->m_count >= GCMEM_POOL_SIZE)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+};
 
 struct BlockScope
 {
@@ -5366,22 +6017,6 @@ struct CompilationScope
     opcode_t last_opcode;
 };
 
-struct ObjectDataPool
-{
-    ObjectData* datapool[GCMEM_POOL_SIZE];
-    int m_count;
-};
-
-struct GCMemory
-{
-    Allocator* alloc;
-    int allocations_since_sweep;
-    PtrArray * objects;
-    PtrArray * objects_back;
-    Array * objects_not_gced;
-    ObjectDataPool data_only_pool;
-    ObjectDataPool pools[GCMEM_POOLS_NUM];
-};
 
 struct TracebackItem
 {
@@ -5440,7 +6075,7 @@ struct StringBuffer
 
         static StringBuffer* make(Allocator* alloc, unsigned int capacity)
         {
-            StringBuffer* buf = (StringBuffer*)allocator_malloc(alloc, sizeof(StringBuffer));
+            StringBuffer* buf = (StringBuffer*)alloc->allocate(sizeof(StringBuffer));
             if(buf == NULL)
             {
                 return NULL;
@@ -5448,10 +6083,10 @@ struct StringBuffer
             memset(buf, 0, sizeof(StringBuffer));
             buf->alloc = alloc;
             buf->m_failed = false;
-            buf->stringdata = (char*)allocator_malloc(alloc, capacity);
+            buf->stringdata = (char*)alloc->allocate(capacity);
             if(buf->stringdata == NULL)
             {
-                allocator_free(alloc, buf);
+                alloc->release(buf);
                 return NULL;
             }
             buf->capacity = capacity;
@@ -5474,8 +6109,8 @@ struct StringBuffer
             {
                 return;
             }
-            allocator_free(this->alloc, this->stringdata);
-            allocator_free(this->alloc, this);
+            this->alloc->release(this->stringdata);
+            this->alloc->release(this);
         }
 
         void clear()
@@ -5588,7 +6223,7 @@ struct StringBuffer
 
         bool grow(size_t new_capacity)
         {
-            char* new_data = (char*)allocator_malloc(this->alloc, new_capacity);
+            char* new_data = (char*)this->alloc->allocate(new_capacity);
             if(new_data == NULL)
             {
                 this->m_failed = true;
@@ -5596,7 +6231,7 @@ struct StringBuffer
             }
             memcpy(new_data, this->stringdata, this->len);
             new_data[this->len] = '\0';
-            allocator_free(this->alloc, this->stringdata);
+            this->alloc->release(this->stringdata);
             this->stringdata = new_data;
             this->capacity = new_capacity;
             return true;
@@ -5615,7 +6250,7 @@ struct Symbol
                 {
                     bool ok;
                     Table* table;
-                    table = (Table*)allocator_malloc(alloc, sizeof(Table));
+                    table = (Table*)alloc->allocate(sizeof(Table));
                     if(!table)
                     {
                         return NULL;
@@ -5675,13 +6310,13 @@ struct Symbol
                     this->free_symbols->destroyWithItems(Symbol::callback_destroy);
                     alloc = this->alloc;
                     memset(this, 0, sizeof(Table));
-                    allocator_free(alloc, this);
+                    alloc->release(this);
                 }
 
                 Table* copy()
                 {
                     Table* copy;
-                    copy = (Table*)allocator_malloc(this->alloc, sizeof(Table));
+                    copy = (Table*)this->alloc->allocate(sizeof(Table));
                     if(!copy)
                     {
                         return NULL;
@@ -6063,7 +6698,7 @@ struct Symbol
         static Symbol* make(Allocator* alloc, const char* name, SymbolType type, int index, bool assignable)
         {
             Symbol* symbol;
-            symbol = (Symbol*)allocator_malloc(alloc, sizeof(Symbol));
+            symbol = (Symbol*)alloc->allocate(sizeof(Symbol));
             if(!symbol)
             {
                 return NULL;
@@ -6073,7 +6708,7 @@ struct Symbol
             symbol->name = ape_strdup(alloc, name);
             if(!symbol->name)
             {
-                allocator_free(alloc, symbol);
+                alloc->release(symbol);
                 return NULL;
             }
             symbol->type = type;
@@ -6102,8 +6737,8 @@ struct Symbol
     public:
         void destroy()
         {
-            allocator_free(this->alloc, this->name);
-            allocator_free(this->alloc, this);
+            this->alloc->release(this->name);
+            this->alloc->release(this);
         }
 
         Symbol* copy()
@@ -6141,11 +6776,11 @@ struct FileScope
             for(int i = 0; i < this->loaded_module_names->count(); i++)
             {
                 void* name = this->loaded_module_names->get(i);
-                allocator_free(this->alloc, name);
+                this->alloc->release(name);
             }
             this->loaded_module_names->destroy();
             this->parser->destroy();
-            allocator_free(this->alloc, this);
+            this->alloc->release(this);
         }
 
 };
@@ -6161,7 +6796,7 @@ struct Compiler
         {
             bool ok;
             Compiler* comp;
-            comp = (Compiler*)allocator_malloc(alloc, sizeof(Compiler));
+            comp = (Compiler*)alloc->allocate(sizeof(Compiler));
             if(!comp)
             {
                 return NULL;
@@ -6169,7 +6804,7 @@ struct Compiler
             ok = comp->init(alloc, config, mem, errors, files, global_store);
             if(!ok)
             {
-                allocator_free(alloc, comp);
+                alloc->release(comp);
                 return NULL;
             }
             return comp;
@@ -6229,7 +6864,7 @@ struct Compiler
             {
                 key = (const char*)src->string_constants_positions->getKeyAt(i);
                 val = (int*)src->string_constants_positions->getValueAt( i);
-                val_copy = (int*)allocator_malloc(src->alloc, sizeof(int));
+                val_copy = (int*)src->alloc->allocate(sizeof(int));
                 if(!val_copy)
                 {
                     goto err;
@@ -6238,7 +6873,7 @@ struct Compiler
                 ok = copy->string_constants_positions->set(key, val_copy);
                 if(!ok)
                 {
-                    allocator_free(src->alloc, val_copy);
+                    src->alloc->release(val_copy);
                     goto err;
                 }
             }
@@ -6258,7 +6893,7 @@ struct Compiler
                 ok = copy_loaded_module_names->add(loaded_name_copy);
                 if(!ok)
                 {
-                    allocator_free(copy->alloc, loaded_name_copy);
+                    copy->alloc->release(loaded_name_copy);
                     goto err;
                 }
             }
@@ -6317,7 +6952,7 @@ struct Compiler
             }
             alloc = this->alloc;
             this->deinit();
-            allocator_free(alloc, this);
+            alloc->release(this);
         }
 
         template<typename... ArgsT>
@@ -6442,10 +7077,10 @@ struct Compiler
                 goto err;
             }
             file_scope->file = prev_file;
-            allocator_free(this->alloc, code);
+            this->alloc->release(code);
             return res;
         err:
-            allocator_free(this->alloc, code);
+            this->alloc->release(code);
             return NULL;
         }
 
@@ -6547,7 +7182,7 @@ struct Compiler
             for(i = 0; i < this->string_constants_positions->count(); i++)
             {
                 val = (int*)this->string_constants_positions->getValueAt(i);
-                allocator_free(this->alloc, val);
+                this->alloc->release(val);
             }
             this->string_constants_positions->destroy();
             while(this->file_scopes->count() > 0)
@@ -6848,14 +7483,14 @@ struct Compiler
             ok = file_scope->loaded_module_names->add(name_copy);
             if(!ok)
             {
-                allocator_free(this->alloc, name_copy);
+                this->alloc->release(name_copy);
                 result = false;
                 goto end;
             }
             result = true;
         end:
-            allocator_free(this->alloc, filepath);
-            allocator_free(this->alloc, code);
+            this->alloc->release(filepath);
+            this->alloc->release(code);
             return result;
         }
 
@@ -7667,8 +8302,8 @@ struct Compiler
                     }
                     else
                     {
-                        Object obj = object_make_string(this->mem, expr->string_literal);
-                        if(object_is_null(obj))
+                        Object obj = Object::makeString(this->mem, expr->string_literal);
+                        if(obj.isNull())
                         {
                             goto error;
                         }
@@ -7679,7 +8314,7 @@ struct Compiler
                             goto error;
                         }
 
-                        int* pos_val = (int*)allocator_malloc(this->alloc, sizeof(int));
+                        int* pos_val = (int*)this->alloc->allocate(sizeof(int));
                         if(!pos_val)
                         {
                             goto error;
@@ -7689,7 +8324,7 @@ struct Compiler
                         ok = this->string_constants_positions->set(expr->string_literal, pos_val);
                         if(!ok)
                         {
-                            allocator_free(this->alloc, pos_val);
+                            this->alloc->release(pos_val);
                             goto error;
                         }
                     }
@@ -7920,9 +8555,9 @@ struct Compiler
                     compilation_scope = this->getCompilationScope();
                     symbol_table = this->getSymbolTable();
 
-                    Object obj = object_make_function(this->mem, fn->name, comp_res, true, num_locals, fn->params->count(), 0);
+                    Object obj = Object::makeFunction(this->mem, fn->name, comp_res, true, num_locals, fn->params->count(), 0);
 
-                    if(object_is_null(obj))
+                    if(obj.isNull())
                     {
                         free_symbols->destroyWithItems(Symbol::callback_destroy);
                         compilation_result_destroy(comp_res);
@@ -8383,7 +9018,7 @@ struct Compiler
 
         FileScope* makeFileScope(CompiledFile* file)
         {
-            FileScope* file_scope = (FileScope*)allocator_malloc(this->alloc, sizeof(FileScope));
+            FileScope* file_scope = (FileScope*)this->alloc->allocate(sizeof(FileScope));
             if(!file_scope)
             {
                 return NULL;
@@ -8516,12 +9151,197 @@ struct Context
     Allocator custom_allocator;
 };
 
+//impl::object
+ObjectData* Object::allocObjectData(GCMemory* mem, ObjectType t)
+{
+    return mem->allocObjectData(t);
+}
+
+ObjectData* Object::objectDataFromPool(GCMemory* mem, ObjectType t)
+{
+    return mem->objectDataFromPool(t);
+}
+
+Allocator* Object::getAllocator(GCMemory* mem)
+{
+    return mem->alloc;
+}
 
 
+Object Object::makeExternal(GCMemory* mem, void* data)
+{
+    ObjectData* obj = Object::allocObjectData(mem, APE_OBJECT_EXTERNAL);
+    if(!obj)
+    {
+        return Object::makeNull();
+    }
+    obj->external.data = data;
+    obj->external.data_destroy_fn = NULL;
+    obj->external.data_copy_fn = NULL;
+    return Object::makeFromData(APE_OBJECT_EXTERNAL, obj);
+}
+
+Object Object::makeFunction(GCMemory* mem, const char* name, CompilationResult* comp_res, bool owns_data, int num_locals, int num_args, int free_vals_count)
+{
+    ObjectData* data;
+    Allocator* alloc;
+    alloc = Object::getAllocator(mem);
+    data = Object::allocObjectData(mem, APE_OBJECT_FUNCTION);
+    if(!data)
+    {
+        return Object::makeNull();
+    }
+    if(owns_data)
+    {
+        data->function.name = name ? ape_strdup(alloc, name) : ape_strdup(alloc, "anonymous");
+        if(!data->function.name)
+        {
+            return Object::makeNull();
+        }
+    }
+    else
+    {
+        data->function.const_name = name ? name : "anonymous";
+    }
+    data->function.comp_result = comp_res;
+    data->function.owns_data = owns_data;
+    data->function.num_locals = num_locals;
+    data->function.num_args = num_args;
+    if(free_vals_count >= APE_ARRAY_LEN(data->function.free_vals_buf))
+    {
+        data->function.free_vals_allocated = (Object*)Object::getAllocator(mem)->allocate(sizeof(Object) * free_vals_count);
+        if(!data->function.free_vals_allocated)
+        {
+            return Object::makeNull();
+        }
+    }
+    data->function.free_vals_count = free_vals_count;
+    return Object::makeFromData(APE_OBJECT_FUNCTION, data);
+}
+
+Object Object::makeErrorNoCopy(GCMemory* mem, char* error)
+{
+    ObjectData* data = Object::allocObjectData(mem, APE_OBJECT_ERROR);
+    if(!data)
+    {
+        return Object::makeNull();
+    }
+    data->error.message = error;
+    data->error.traceback = NULL;
+    return Object::makeFromData(APE_OBJECT_ERROR, data);
+}
+
+Object Object::makeMap(GCMemory* mem, unsigned capacity)
+{
+    ObjectData* data = Object::objectDataFromPool(mem, APE_OBJECT_MAP);
+    if(data)
+    {
+        data->map->clear();
+        return Object::makeFromData(APE_OBJECT_MAP, data);
+    }
+    data = Object::allocObjectData(mem, APE_OBJECT_MAP);
+    if(!data)
+    {
+        return Object::makeNull();
+    }
+    data->map = ValDictionary::makeWithCapacity(Object::getAllocator(mem), capacity, sizeof(Object), sizeof(Object));
+    if(!data->map)
+    {
+        return Object::makeNull();
+    }
+    data->map->setHashFunction((CollectionsHashFNCallback)object_hash);
+    data->map->setEqualsFunction((CollectionsEqualsFNCallback)object_equals_wrapped);
+    return Object::makeFromData(APE_OBJECT_MAP, data);
+}
+
+Object Object::makeArray(GCMemory* mem, unsigned capacity)
+{
+    ObjectData* data = Object::objectDataFromPool(mem, APE_OBJECT_ARRAY);
+    if(data)
+    {
+        data->array->clear();
+        return Object::makeFromData(APE_OBJECT_ARRAY, data);
+    }
+    data = Object::allocObjectData(mem, APE_OBJECT_ARRAY);
+    if(!data)
+    {
+        return Object::makeNull();
+    }
+    data->array = Array::make(Object::getAllocator(mem), capacity, sizeof(Object));
+    if(!data->array)
+    {
+        return Object::makeNull();
+    }
+    return Object::makeFromData(APE_OBJECT_ARRAY, data);
+}
+
+Object Object::makeNativeFunctionMemory(GCMemory* mem, const char* name, NativeFNCallback fn, void* data, int data_len)
+{
+    if(data_len > NATIVE_FN_MAX_DATA_LEN)
+    {
+        return Object::makeNull();
+    }
+    ObjectData* obj = Object::allocObjectData(mem, APE_OBJECT_NATIVE_FUNCTION);
+    if(!obj)
+    {
+        return Object::makeNull();
+    }
+    obj->native_function.name = ape_strdup(Object::getAllocator(mem), name);
+    if(!obj->native_function.name)
+    {
+        return Object::makeNull();
+    }
+    obj->native_function.native_funcptr = fn;
+    if(data)
+    {
+        //memcpy(obj->native_function.data, data, data_len);
+        obj->native_function.data = data;
+    }
+    obj->native_function.data_len = data_len;
+    return Object::makeFromData(APE_OBJECT_NATIVE_FUNCTION, obj);
+}
+
+Object Object::makeStringCapacity(GCMemory* mem, int capacity)
+{
+    ObjectData* data = Object::objectDataFromPool(mem, APE_OBJECT_STRING);
+    if(!data)
+    {
+        data = Object::allocObjectData(mem, APE_OBJECT_STRING);
+        if(!data)
+        {
+            return Object::makeNull();
+        }
+        data->string.capacity = OBJECT_STRING_BUF_SIZE - 1;
+        data->string.is_allocated = false;
+    }
+
+    data->string.length = 0;
+    data->string.hash = 0;
+
+    if(capacity > data->string.capacity)
+    {
+        bool ok = object_data_string_reserve_capacity(data, capacity);
+        if(!ok)
+        {
+            return Object::makeNull();
+        }
+    }
+
+    return Object::makeFromData(APE_OBJECT_STRING, data);
+}
+
+void Object::deinit(Object obj)
+{
+    if(GCMemory::objectIsAllocated(obj))
+    {
+        ObjectData* data = obj.getAllocatedData();
+        object_data_deinit(data);
+    }
+}
 
 Expression* statement_make(Allocator* alloc, Expr_type type)
 {
-    Expression* res = (Expression*)allocator_malloc(alloc, sizeof(Expression));
+    Expression* res = (Expression*)alloc->allocate(sizeof(Expression));
     if(!res)
     {
         return NULL;
@@ -8736,7 +9556,7 @@ void expression_destroy(Expression* expr)
         }
         case EXPRESSION_STRING_LITERAL:
         {
-            allocator_free(expr->alloc, expr->string_literal);
+            expr->alloc->release(expr->string_literal);
             break;
         }
         case EXPRESSION_NULL_LITERAL:
@@ -8768,7 +9588,7 @@ void expression_destroy(Expression* expr)
         case EXPRESSION_FUNCTION_LITERAL:
         {
             StmtFuncDef* fn = &expr->fn_literal;
-            allocator_free(expr->alloc, fn->name);
+            expr->alloc->release(fn->name);
             fn->params->destroyWithItems(ident_destroy);
             code_block_destroy(fn->body);
             break;
@@ -8805,7 +9625,7 @@ void expression_destroy(Expression* expr)
             break;
         }
     }
-    allocator_free(expr->alloc, expr);
+    expr->alloc->release(expr);
 }
 
 Expression* expression_copy(Expression* expr)
@@ -8857,7 +9677,7 @@ Expression* expression_copy(Expression* expr)
             res = expression_make_string_literal(expr->alloc, string_copy);
             if(!res)
             {
-                allocator_free(expr->alloc, string_copy);
+                expr->alloc->release(string_copy);
                 return NULL;
             }
             break;
@@ -8944,7 +9764,7 @@ Expression* expression_copy(Expression* expr)
             {
                 params_copy->destroyWithItems(ident_destroy);
                 code_block_destroy(body_copy);
-                allocator_free(expr->alloc, name_copy);
+                expr->alloc->release(name_copy);
                 return NULL;
             }
             res = expression_make_fn_literal(expr->alloc, params_copy, body_copy);
@@ -8952,7 +9772,7 @@ Expression* expression_copy(Expression* expr)
             {
                 params_copy->destroyWithItems(ident_destroy);
                 code_block_destroy(body_copy);
-                allocator_free(expr->alloc, name_copy);
+                expr->alloc->release(name_copy);
                 return NULL;
             }
             res->fn_literal.name = name_copy;
@@ -9276,7 +10096,7 @@ void statement_destroy(Expression* stmt)
         }
         case EXPRESSION_IMPORT:
         {
-            allocator_free(stmt->alloc, stmt->import.path);
+            stmt->alloc->release(stmt->import.path);
             break;
         }
         case EXPRESSION_RECOVER:
@@ -9286,7 +10106,7 @@ void statement_destroy(Expression* stmt)
             break;
         }
     }
-    allocator_free(stmt->alloc, stmt);
+    stmt->alloc->release(stmt);
 }
 
 Expression* statement_copy(const Expression* stmt)
@@ -9465,7 +10285,7 @@ Expression* statement_copy(const Expression* stmt)
             res = statement_make_import(stmt->alloc, path_copy);
             if(!res)
             {
-                allocator_free(stmt->alloc, path_copy);
+                stmt->alloc->release(path_copy);
                 return NULL;
             }
             break;
@@ -9500,7 +10320,7 @@ Expression* statement_copy(const Expression* stmt)
 
 StmtBlock* code_block_make(Allocator* alloc, PtrArray * statements)
 {
-    StmtBlock* block = (StmtBlock*)allocator_malloc(alloc, sizeof(StmtBlock));
+    StmtBlock* block = (StmtBlock*)alloc->allocate( sizeof(StmtBlock));
     if(!block)
     {
         return NULL;
@@ -9517,7 +10337,7 @@ void code_block_destroy(StmtBlock* block)
         return;
     }
     block->statements->destroyWithItems(statement_destroy);
-    allocator_free(block->alloc, block);
+    block->alloc->release(block);
 }
 
 StmtBlock* code_block_copy(StmtBlock* block)
@@ -9551,10 +10371,10 @@ void ident_destroy(Ident* ident)
     {
         return;
     }
-    allocator_free(ident->alloc, ident->value);
+    ident->alloc->release(ident->value);
     ident->value = NULL;
     ident->pos = src_pos_invalid;
-    allocator_free(ident->alloc, ident);
+    ident->alloc->release(ident);
 }
 
 
@@ -9562,7 +10382,7 @@ void ident_destroy(Ident* ident)
 // INTERNAL
 Expression* expression_make(Allocator* alloc, Expr_type type)
 {
-    Expression* res = (Expression*)allocator_malloc(alloc, sizeof(Expression));
+    Expression* res = (Expression*)alloc->allocate(sizeof(Expression));
     if(!res)
     {
         return NULL;
@@ -10117,7 +10937,7 @@ void object_to_string(Object obj, StringBuffer* buf, bool quote_str)
 {
     int i;
     ObjectType type;
-    type = object_get_type(obj);
+    type = obj.type();
     switch(type)
     {
         case APE_OBJECT_FREED:
@@ -10389,7 +11209,7 @@ char* ape_stringf(Allocator* alloc, const char* format, ...)
     int to_write = vsnprintf(NULL, 0, format, args);
     va_end(args);
     va_start(args, format);
-    char* res = (char*)allocator_malloc(alloc, to_write + 1);
+    char* res = (char*)alloc->allocate(to_write + 1);
     if(!res)
     {
         return NULL;
@@ -10419,7 +11239,7 @@ void ape_log(const char* file, int line, const char* format, ...)
 
 char* ape_strndup(Allocator* alloc, const char* string, size_t n)
 {
-    char* output_string = (char*)allocator_malloc(alloc, n + 1);
+    char* output_string = (char*)alloc->allocate(n + 1);
     if(!output_string)
     {
         return NULL;
@@ -10516,7 +11336,7 @@ double ape_timer_get_elapsed_ms(const Timer* timer)
 
 char* collections_strndup(Allocator* alloc, const char* string, size_t n)
 {
-    char* output_string = (char*)allocator_malloc(alloc, n + 1);
+    char* output_string = (char*)alloc->allocate(n + 1);
     if(!output_string)
     {
         return NULL;
@@ -10560,40 +11380,6 @@ static unsigned int upper_power_of_two(unsigned int v)
 }
 
 //-----------------------------------------------------------------------------
-// Allocator
-//-----------------------------------------------------------------------------
-
-Allocator allocator_make(AllocatorMallocFNCallback malloc_fn, AllocatorFreeFNCallback free_fn, void* ctx)
-{
-    Allocator alloc;
-    alloc.malloc = malloc_fn;
-    alloc.free = free_fn;
-    alloc.ctx = ctx;
-    return alloc;
-}
-
-void* allocator_malloc(Allocator* allocator, size_t size)
-{
-    if(!allocator || !allocator->malloc)
-    {
-        return malloc(size);
-    }
-    return allocator->malloc(allocator->ctx, size);
-}
-
-void allocator_free(Allocator* allocator, void* ptr)
-{
-    if(!allocator || !allocator->free)
-    {
-        free(ptr);
-        return;
-    }
-    allocator->free(allocator->ctx, ptr);
-}
-
-
-
-//-----------------------------------------------------------------------------
 // Utils
 //-----------------------------------------------------------------------------
 
@@ -10628,7 +11414,7 @@ PtrArray * kg_split_string(Allocator* alloc, const char* str, const char* delimi
         ok = res->add(line);
         if(!ok)
         {
-            allocator_free(alloc, line);
+            alloc->release(line);
             goto err;
         }
         line_start = line_end + 1;
@@ -10646,13 +11432,13 @@ PtrArray * kg_split_string(Allocator* alloc, const char* str, const char* delimi
     }
     return res;
 err:
-    allocator_free(alloc, rest);
+    alloc->release(rest);
     if(res)
     {
         for(i = 0; i < res->count(); i++)
         {
             line = (char*)res->get(i);
-            allocator_free(alloc, line);
+            alloc->release(line);
         }
     }
     res->destroy();
@@ -10701,15 +11487,15 @@ char* kg_canonicalise_path(Allocator* alloc, const char* path)
         char* next_item = (char*)split->get(i + 1);
         if(kg_streq(item, "."))
         {
-            allocator_free(alloc, item);
+            alloc->release(item);
             split->removeAt(i);
             i = -1;
             continue;
         }
         if(kg_streq(next_item, ".."))
         {
-            allocator_free(alloc, item);
-            allocator_free(alloc, next_item);
+            alloc->release(item);
+            alloc->release(next_item);
             split->removeAt(i);
             split->removeAt(i);
             i = -1;
@@ -10721,7 +11507,7 @@ char* kg_canonicalise_path(Allocator* alloc, const char* path)
     for(i = 0; i < split->count(); i++)
     {
         void* item = (void*)split->get(i);
-        allocator_free(alloc, item);
+        alloc->release(item);
     }
     split->destroy();
     return joined;
@@ -10844,7 +11630,7 @@ bool errors_has_errors(const ErrorList* errors)
 
 CompiledFile* compiled_file_make(Allocator* alloc, const char* path)
 {
-    CompiledFile* file = (CompiledFile*)allocator_malloc(alloc, sizeof(CompiledFile));
+    CompiledFile* file = (CompiledFile*)alloc->allocate(sizeof(CompiledFile));
     if(!file)
     {
         return NULL;
@@ -10891,12 +11677,12 @@ void compiled_file_destroy(CompiledFile* file)
     for(i = 0; i < file->lines->count(); i++)
     {
         void* item = (void*)file->lines->get(i);
-        allocator_free(file->alloc, item);
+        file->alloc->release(item);
     }
     file->lines->destroy();
-    allocator_free(file->alloc, file->dir_path);
-    allocator_free(file->alloc, file->path);
-    allocator_free(file->alloc, file);
+    file->alloc->release(file->dir_path);
+    file->alloc->release(file->path);
+    file->alloc->release(file);
 }
 
 GlobalStore* global_store_make(Allocator* alloc, GCMemory* mem)
@@ -10906,7 +11692,7 @@ GlobalStore* global_store_make(Allocator* alloc, GCMemory* mem)
     const char* name;
     Object builtin;
     GlobalStore* store;
-    store = (GlobalStore*)allocator_malloc(alloc, sizeof(GlobalStore));
+    store = (GlobalStore*)alloc->allocate(sizeof(GlobalStore));
     if(!store)
     {
         return NULL;
@@ -10929,8 +11715,8 @@ GlobalStore* global_store_make(Allocator* alloc, GCMemory* mem)
         for(i = 0; i < builtins_count(); i++)
         {
             name = builtins_get_name(i);
-            builtin = object_make_native_function_memory(mem, name, builtins_get_fn(i), NULL, 0);
-            if(object_is_null(builtin))
+            builtin = Object::makeNativeFunctionMemory(mem, name, builtins_get_fn(i), NULL, 0);
+            if(builtin.isNull())
             {
                 goto err;
             }
@@ -10956,7 +11742,7 @@ void global_store_destroy(GlobalStore* store)
     }
     store->symbols->destroyWithItems();
     Array::destroy(store->objects);
-    allocator_free(store->alloc, store);
+    store->alloc->release(store);
 }
 
 const Symbol* global_store_get_symbol(GlobalStore* store, const char* name)
@@ -10969,7 +11755,7 @@ Object global_store_get_object(GlobalStore* store, const char* name)
     const Symbol* symbol = global_store_get_symbol(store, name);
     if(!symbol)
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     APE_ASSERT(symbol->type == SYMBOL_APE_GLOBAL);
     Object* res = (Object*)store->objects->get(symbol->index);
@@ -11017,7 +11803,7 @@ Object global_store_get_object_at(GlobalStore* store, int ix, bool* out_ok)
     if(!res)
     {
         *out_ok = false;
-        return object_make_null();
+        return Object::makeNull();
     }
     *out_ok = true;
     return *res;
@@ -11045,7 +11831,7 @@ int global_store_get_object_count(GlobalStore* store)
 BlockScope* block_scope_make(Allocator* alloc, int offset)
 {
     BlockScope* new_scope;
-    new_scope = (BlockScope*)allocator_malloc(alloc, sizeof(BlockScope));
+    new_scope = (BlockScope*)alloc->allocate(sizeof(BlockScope));
     if(!new_scope)
     {
         return NULL;
@@ -11066,13 +11852,13 @@ BlockScope* block_scope_make(Allocator* alloc, int offset)
 void block_scope_destroy(BlockScope* scope)
 {
     scope->store->destroyWithItems();
-    allocator_free(scope->alloc, scope);
+    scope->alloc->release(scope);
 }
 
 BlockScope* block_scope_copy(BlockScope* scope)
 {
     BlockScope* copy;
-    copy = (BlockScope*)allocator_malloc(scope->alloc, sizeof(BlockScope));
+    copy = (BlockScope*)scope->alloc->allocate(sizeof(BlockScope));
     if(!copy)
     {
         return NULL;
@@ -11196,7 +11982,7 @@ int code_make(opcode_t op, int operands_count, uint64_t* operands, Array* res)
 
 CompilationScope* compilation_scope_make(Allocator* alloc, CompilationScope* outer)
 {
-    CompilationScope* scope = (CompilationScope*)allocator_malloc(alloc, sizeof(CompilationScope));
+    CompilationScope* scope = (CompilationScope*)alloc->allocate(sizeof(CompilationScope));
     if(!scope)
     {
         return NULL;
@@ -11236,7 +12022,7 @@ void compilation_scope_destroy(CompilationScope* scope)
     Array::destroy(scope->break_ip_stack);
     Array::destroy(scope->bytecode);
     Array::destroy(scope->src_positions);
-    allocator_free(scope->alloc, scope);
+    scope->alloc->release(scope);
 }
 
 CompilationResult* compilation_scope_orphan_result(CompilationScope* scope)
@@ -11259,7 +12045,7 @@ CompilationResult* compilation_scope_orphan_result(CompilationScope* scope)
 CompilationResult* compilation_result_make(Allocator* alloc, uint8_t* bytecode, Position* src_positions, int cn)
 {
     CompilationResult* res;
-    res = (CompilationResult*)allocator_malloc(alloc, sizeof(CompilationResult));
+    res = (CompilationResult*)alloc->allocate(sizeof(CompilationResult));
     if(!res)
     {
         return NULL;
@@ -11278,9 +12064,9 @@ void compilation_result_destroy(CompilationResult* res)
     {
         return;
     }
-    allocator_free(res->alloc, res->bytecode);
-    allocator_free(res->alloc, res->src_positions);
-    allocator_free(res->alloc, res);
+    res->alloc->release(res->bytecode);
+    res->alloc->release(res->src_positions);
+    res->alloc->release(res);
 }
 
 
@@ -11430,7 +12216,7 @@ Expression* optimise_infix_expression(Expression* expr)
             res = expression_make_string_literal(alloc, res_str);
             if(!res)
             {
-                allocator_free(alloc, res_str);
+                alloc->release(res_str);
             }
         }
     }
@@ -11474,7 +12260,7 @@ Expression* optimise_prefix_expression(Expression* expr)
 
 Module* module_make(Allocator* alloc, const char* name)
 {
-    Module* module = (Module*)allocator_malloc(alloc, sizeof(Module));
+    Module* module = (Module*)alloc->allocate(sizeof(Module));
     if(!module)
     {
         return NULL;
@@ -11502,14 +12288,14 @@ void module_destroy(Module* module)
     {
         return;
     }
-    allocator_free(module->alloc, module->name);
+    module->alloc->release(module->name);
     module->symbols->destroyWithItems(Symbol::callback_destroy);
-    allocator_free(module->alloc, module);
+    module->alloc->release(module);
 }
 
 Module* module_copy(Module* src)
 {
-    Module* copy = (Module*)allocator_malloc(src->alloc, sizeof(Module));
+    Module* copy = (Module*)src->alloc->allocate(sizeof(Module));
     if(!copy)
     {
         return NULL;
@@ -11571,299 +12357,7 @@ bool module_add_symbol(Module* module, const Symbol* symbol)
 
 
 
-Object object_make_from_data(ObjectType type, ObjectData* data)
-{
-    uint64_t type_tag;
-    Object object;
-    object.handle = OBJECT_PATTERN;
-    type_tag = get_type_tag(type) & 0x7;
-    object.handle |= (type_tag << 48);
-    object.handle |= (uintptr_t)data;// assumes no pointer exceeds 48 bits
-    return object;
-}
 
-Object object_make_number(double val)
-{
-    Object o = { .number = val };
-    if((o.handle & OBJECT_PATTERN) == OBJECT_PATTERN)
-    {
-        o.handle = 0x7ff8000000000000;
-    }
-    return o;
-}
-
-Object object_make_bool(bool val)
-{
-    return (Object){ .handle = OBJECT_BOOL_HEADER | val };
-}
-
-Object object_make_null()
-{
-    return (Object){ .handle = OBJECT_NULL_PATTERN };
-}
-
-
-Object object_make_string_len(GCMemory* mem, const char* string, size_t len)
-{
-    Object res = object_make_string_with_capacity(mem, len);
-    if(object_is_null(res))
-    {
-        return res;
-    }
-    bool ok = object_string_append(res, string, len);
-    if(!ok)
-    {
-        return object_make_null();
-    }
-    return res;
-}
-
-Object object_make_string(GCMemory* mem, const char* string)
-{
-    return object_make_string_len(mem, string, strlen(string));
-}
-
-
-Object object_make_string_with_capacity(GCMemory* mem, int capacity)
-{
-    ObjectData* data = gcmem_get_object_data_from_pool(mem, APE_OBJECT_STRING);
-    if(!data)
-    {
-        data = gcmem_alloc_object_data(mem, APE_OBJECT_STRING);
-        if(!data)
-        {
-            return object_make_null();
-        }
-        data->string.capacity = OBJECT_STRING_BUF_SIZE - 1;
-        data->string.is_allocated = false;
-    }
-
-    data->string.length = 0;
-    data->string.hash = 0;
-
-    if(capacity > data->string.capacity)
-    {
-        bool ok = object_data_string_reserve_capacity(data, capacity);
-        if(!ok)
-        {
-            return object_make_null();
-        }
-    }
-
-    return object_make_from_data(APE_OBJECT_STRING, data);
-}
-
-Object object_make_stringf(GCMemory* mem, const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    int to_write = vsnprintf(NULL, 0, fmt, args);
-    va_end(args);
-    va_start(args, fmt);
-    Object res = object_make_string_with_capacity(mem, to_write);
-    if(object_is_null(res))
-    {
-        return object_make_null();
-    }
-    char* res_buf = object_get_mutable_string(res);
-    int written = vsprintf(res_buf, fmt, args);
-    (void)written;
-    APE_ASSERT(written == to_write);
-    va_end(args);
-    object_set_string_length(res, to_write);
-    return res;
-}
-
-Object object_make_native_function_memory(GCMemory* mem, const char* name, NativeFNCallback fn, void* data, int data_len)
-{
-    if(data_len > NATIVE_FN_MAX_DATA_LEN)
-    {
-        return object_make_null();
-    }
-    ObjectData* obj = gcmem_alloc_object_data(mem, APE_OBJECT_NATIVE_FUNCTION);
-    if(!obj)
-    {
-        return object_make_null();
-    }
-    obj->native_function.name = ape_strdup(mem->alloc, name);
-    if(!obj->native_function.name)
-    {
-        return object_make_null();
-    }
-    obj->native_function.native_funcptr = fn;
-    if(data)
-    {
-        //memcpy(obj->native_function.data, data, data_len);
-        obj->native_function.data = data;
-    }
-    obj->native_function.data_len = data_len;
-    return object_make_from_data(APE_OBJECT_NATIVE_FUNCTION, obj);
-}
-
-Object object_make_array(GCMemory* mem)
-{
-    return object_make_array_with_capacity(mem, 8);
-}
-
-Object object_make_array_with_capacity(GCMemory* mem, unsigned capacity)
-{
-    ObjectData* data = gcmem_get_object_data_from_pool(mem, APE_OBJECT_ARRAY);
-    if(data)
-    {
-        data->array->clear();
-        return object_make_from_data(APE_OBJECT_ARRAY, data);
-    }
-    data = gcmem_alloc_object_data(mem, APE_OBJECT_ARRAY);
-    if(!data)
-    {
-        return object_make_null();
-    }
-    data->array = Array::make(mem->alloc, capacity, sizeof(Object));
-    if(!data->array)
-    {
-        return object_make_null();
-    }
-    return object_make_from_data(APE_OBJECT_ARRAY, data);
-}
-
-Object object_make_map(GCMemory* mem)
-{
-    return object_make_map_with_capacity(mem, 32);
-}
-
-Object object_make_map_with_capacity(GCMemory* mem, unsigned capacity)
-{
-    ObjectData* data = gcmem_get_object_data_from_pool(mem, APE_OBJECT_MAP);
-    if(data)
-    {
-        data->map->clear();
-        return object_make_from_data(APE_OBJECT_MAP, data);
-    }
-    data = gcmem_alloc_object_data(mem, APE_OBJECT_MAP);
-    if(!data)
-    {
-        return object_make_null();
-    }
-    data->map = ValDictionary::makeWithCapacity(mem->alloc, capacity, sizeof(Object), sizeof(Object));
-    if(!data->map)
-    {
-        return object_make_null();
-    }
-    data->map->setHashFunction((CollectionsHashFNCallback)object_hash);
-    data->map->setEqualsFunction((CollectionsEqualsFNCallback)object_equals_wrapped);
-    return object_make_from_data(APE_OBJECT_MAP, data);
-}
-
-Object object_make_error(GCMemory* mem, const char* error)
-{
-    char* error_str = ape_strdup(mem->alloc, error);
-    if(!error_str)
-    {
-        return object_make_null();
-    }
-    Object res = object_make_error_no_copy(mem, error_str);
-    if(object_is_null(res))
-    {
-        allocator_free(mem->alloc, error_str);
-        return object_make_null();
-    }
-    return res;
-}
-
-Object object_make_error_no_copy(GCMemory* mem, char* error)
-{
-    ObjectData* data = gcmem_alloc_object_data(mem, APE_OBJECT_ERROR);
-    if(!data)
-    {
-        return object_make_null();
-    }
-    data->error.message = error;
-    data->error.traceback = NULL;
-    return object_make_from_data(APE_OBJECT_ERROR, data);
-}
-
-Object object_make_errorf(GCMemory* mem, const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    int to_write = vsnprintf(NULL, 0, fmt, args);
-    va_end(args);
-    va_start(args, fmt);
-    char* res = (char*)allocator_malloc(mem->alloc, to_write + 1);
-    if(!res)
-    {
-        return object_make_null();
-    }
-    int written = vsprintf(res, fmt, args);
-    (void)written;
-    APE_ASSERT(written == to_write);
-    va_end(args);
-    Object res_obj = object_make_error_no_copy(mem, res);
-    if(object_is_null(res_obj))
-    {
-        allocator_free(mem->alloc, res);
-        return object_make_null();
-    }
-    return res_obj;
-}
-
-Object
-object_make_function(GCMemory* mem, const char* name, CompilationResult* comp_res, bool owns_data, int num_locals, int num_args, int free_vals_count)
-{
-    ObjectData* data = gcmem_alloc_object_data(mem, APE_OBJECT_FUNCTION);
-    if(!data)
-    {
-        return object_make_null();
-    }
-    if(owns_data)
-    {
-        data->function.name = name ? ape_strdup(mem->alloc, name) : ape_strdup(mem->alloc, "anonymous");
-        if(!data->function.name)
-        {
-            return object_make_null();
-        }
-    }
-    else
-    {
-        data->function.const_name = name ? name : "anonymous";
-    }
-    data->function.comp_result = comp_res;
-    data->function.owns_data = owns_data;
-    data->function.num_locals = num_locals;
-    data->function.num_args = num_args;
-    if(free_vals_count >= APE_ARRAY_LEN(data->function.free_vals_buf))
-    {
-        data->function.free_vals_allocated = (Object*)allocator_malloc(mem->alloc, sizeof(Object) * free_vals_count);
-        if(!data->function.free_vals_allocated)
-        {
-            return object_make_null();
-        }
-    }
-    data->function.free_vals_count = free_vals_count;
-    return object_make_from_data(APE_OBJECT_FUNCTION, data);
-}
-
-Object object_make_external(GCMemory* mem, void* data)
-{
-    ObjectData* obj = gcmem_alloc_object_data(mem, APE_OBJECT_EXTERNAL);
-    if(!obj)
-    {
-        return object_make_null();
-    }
-    obj->external.data = data;
-    obj->external.data_destroy_fn = NULL;
-    obj->external.data_copy_fn = NULL;
-    return object_make_from_data(APE_OBJECT_EXTERNAL, obj);
-}
-
-void object_deinit(Object obj)
-{
-    if(object_is_allocated(obj))
-    {
-        ObjectData* data = object_get_allocated_data(obj);
-        object_data_deinit(data);
-    }
-}
 
 void object_data_deinit(ObjectData* data)
 {
@@ -11878,7 +12372,7 @@ void object_data_deinit(ObjectData* data)
         {
             if(data->string.is_allocated)
             {
-                allocator_free(data->mem->alloc, data->string.value_allocated);
+                data->mem->alloc->release(data->string.value_allocated);
             }
             break;
         }
@@ -11886,12 +12380,12 @@ void object_data_deinit(ObjectData* data)
         {
             if(data->function.owns_data)
             {
-                allocator_free(data->mem->alloc, data->function.name);
+                data->mem->alloc->release(data->function.name);
                 compilation_result_destroy(data->function.comp_result);
             }
             if(freevals_are_allocated(&data->function))
             {
-                allocator_free(data->mem->alloc, data->function.free_vals_allocated);
+                data->mem->alloc->release(data->function.free_vals_allocated);
             }
             break;
         }
@@ -11907,7 +12401,7 @@ void object_data_deinit(ObjectData* data)
         }
         case APE_OBJECT_NATIVE_FUNCTION:
         {
-            allocator_free(data->mem->alloc, data->native_function.name);
+            data->mem->alloc->release(data->native_function.name);
             break;
         }
         case APE_OBJECT_EXTERNAL:
@@ -11920,7 +12414,7 @@ void object_data_deinit(ObjectData* data)
         }
         case APE_OBJECT_ERROR:
         {
-            allocator_free(data->mem->alloc, data->error.message);
+            data->mem->alloc->release(data->error.message);
             traceback_destroy(data->error.traceback);
             break;
         }
@@ -11932,32 +12426,6 @@ void object_data_deinit(ObjectData* data)
     data->type = APE_OBJECT_FREED;
 }
 
-bool object_is_allocated(Object object)
-{
-    return (object.handle & OBJECT_ALLOCATED_HEADER) == OBJECT_ALLOCATED_HEADER;
-}
-
-GCMemory* object_get_mem(Object obj)
-{
-    ObjectData* data = object_get_allocated_data(obj);
-    return data->mem;
-}
-
-bool object_is_hashable(Object obj)
-{
-    ObjectType type = object_get_type(obj);
-    switch(type)
-    {
-        case APE_OBJECT_STRING:
-            return true;
-        case APE_OBJECT_NUMBER:
-            return true;
-        case APE_OBJECT_BOOL:
-            return true;
-        default:
-            return false;
-    }
-}
 
 
 
@@ -12060,7 +12528,7 @@ Object object_deep_copy(GCMemory* mem, Object obj)
     ValDictionary* copies = ValDictionary::make<Object, Object>(mem->alloc);
     if(!copies)
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     Object res = object_deep_copy_internal(mem, obj, copies);
     copies->destroy();
@@ -12069,8 +12537,8 @@ Object object_deep_copy(GCMemory* mem, Object obj)
 
 Object object_copy(GCMemory* mem, Object obj)
 {
-    Object copy = object_make_null();
-    ObjectType type = object_get_type(obj);
+    Object copy = Object::makeNull();
+    ObjectType type = obj.type();
     switch(type)
     {
         case APE_OBJECT_ANY:
@@ -12078,7 +12546,7 @@ Object object_copy(GCMemory* mem, Object obj)
         case APE_OBJECT_NONE:
         {
             APE_ASSERT(false);
-            copy = object_make_null();
+            copy = Object::makeNull();
             break;
         }
         case APE_OBJECT_NUMBER:
@@ -12094,16 +12562,16 @@ Object object_copy(GCMemory* mem, Object obj)
         case APE_OBJECT_STRING:
         {
             const char* str = object_get_string(obj);
-            copy = object_make_string(mem, str);
+            copy = Object::makeString(mem, str);
             break;
         }
         case APE_OBJECT_ARRAY:
         {
             int len = object_get_array_length(obj);
-            copy = object_make_array_with_capacity(mem, len);
-            if(object_is_null(copy))
+            copy = Object::makeArray(mem, len);
+            if(copy.isNull())
             {
-                return object_make_null();
+                return Object::makeNull();
             }
             for(int i = 0; i < len; i++)
             {
@@ -12111,14 +12579,14 @@ Object object_copy(GCMemory* mem, Object obj)
                 bool ok = object_add_array_value(copy, item);
                 if(!ok)
                 {
-                    return object_make_null();
+                    return Object::makeNull();
                 }
             }
             break;
         }
         case APE_OBJECT_MAP:
         {
-            copy = object_make_map(mem);
+            copy = Object::makeMap(mem);
             for(int i = 0; i < object_get_map_length(obj); i++)
             {
                 Object key = (Object)object_get_map_key_at(obj, i);
@@ -12126,17 +12594,17 @@ Object object_copy(GCMemory* mem, Object obj)
                 bool ok = object_set_map_value_object(copy, key, val);
                 if(!ok)
                 {
-                    return object_make_null();
+                    return Object::makeNull();
                 }
             }
             break;
         }
         case APE_OBJECT_EXTERNAL:
         {
-            copy = object_make_external(mem, NULL);
-            if(object_is_null(copy))
+            copy = Object::makeExternal(mem, NULL);
+            if(copy.isNull())
             {
-                return object_make_null();
+                return Object::makeNull();
             }
             ExternalData* external = object_get_external_data(obj);
             void* data_copy = NULL;
@@ -12166,8 +12634,8 @@ double object_compare(Object a, Object b, bool* out_ok)
 
     *out_ok = true;
 
-    ObjectType a_type = object_get_type(a);
-    ObjectType b_type = object_get_type(b);
+    ObjectType a_type = a.type();
+    ObjectType b_type = b.type();
 
     if((a_type == APE_OBJECT_NUMBER || a_type == APE_OBJECT_BOOL || a_type == APE_OBJECT_NULL)
        && (b_type == APE_OBJECT_NUMBER || b_type == APE_OBJECT_BOOL || b_type == APE_OBJECT_NULL))
@@ -12194,10 +12662,10 @@ double object_compare(Object a, Object b, bool* out_ok)
         const char* b_string = object_get_string(b);
         return strcmp(a_string, b_string);
     }
-    else if((object_is_allocated(a) || object_is_null(a)) && (object_is_allocated(b) || object_is_null(b)))
+    else if((GCMemory::objectIsAllocated(a) || a.isNull()) && (GCMemory::objectIsAllocated(b) || b.isNull()))
     {
-        intptr_t a_data_val = (intptr_t)object_get_allocated_data(a);
-        intptr_t b_data_val = (intptr_t)object_get_allocated_data(b);
+        intptr_t a_data_val = (intptr_t)a.getAllocatedData();
+        intptr_t b_data_val = (intptr_t)b.getAllocatedData();
         return (double)(a_data_val - b_data_val);
     }
     else
@@ -12209,8 +12677,8 @@ double object_compare(Object a, Object b, bool* out_ok)
 
 bool object_equals(Object a, Object b)
 {
-    ObjectType a_type = object_get_type(a);
-    ObjectType b_type = object_get_type(b);
+    ObjectType a_type = a.type();
+    ObjectType b_type = b.type();
 
     if(a_type != b_type)
     {
@@ -12223,14 +12691,14 @@ bool object_equals(Object a, Object b)
 
 ExternalData* object_get_external_data(Object object)
 {
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_EXTERNAL);
-    ObjectData* data = object_get_allocated_data(object);
+    APE_ASSERT(object.type() == APE_OBJECT_EXTERNAL);
+    ObjectData* data = object.getAllocatedData();
     return &data->external;
 }
 
 bool object_set_external_destroy_function(Object object, ExternalDataDestroyFNCallback destroy_fn)
 {
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_EXTERNAL);
+    APE_ASSERT(object.type() == APE_OBJECT_EXTERNAL);
     ExternalData* data = object_get_external_data(object);
     if(!data)
     {
@@ -12240,15 +12708,11 @@ bool object_set_external_destroy_function(Object object, ExternalDataDestroyFNCa
     return true;
 }
 
-ObjectData* object_get_allocated_data(Object object)
-{
-    APE_ASSERT(object_is_allocated(object) || object_get_type(object) == APE_OBJECT_NULL);
-    return (ObjectData*)(object.handle & ~OBJECT_HEADER_MASK);
-}
+
 
 bool object_get_bool(Object obj)
 {
-    if(object_is_number(obj))
+    if(obj.isNumber())
     {
         return obj.handle;
     }
@@ -12257,7 +12721,7 @@ bool object_get_bool(Object obj)
 
 double object_get_number(Object obj)
 {
-    if(object_is_number(obj))
+    if(obj.isNumber())
     {// todo: optimise? always return number?
         return obj.number;
     }
@@ -12266,44 +12730,44 @@ double object_get_number(Object obj)
 
 const char* object_get_string(Object object)
 {
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_STRING);
-    ObjectData* data = object_get_allocated_data(object);
+    APE_ASSERT(object.type() == APE_OBJECT_STRING);
+    ObjectData* data = object.getAllocatedData();
     return object_data_get_string(data);
 }
 
 int object_get_string_length(Object object)
 {
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_STRING);
-    ObjectData* data = object_get_allocated_data(object);
+    APE_ASSERT(object.type() == APE_OBJECT_STRING);
+    ObjectData* data = object.getAllocatedData();
     return data->string.length;
 }
 
 void object_set_string_length(Object object, int len)
 {
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_STRING);
-    ObjectData* data = object_get_allocated_data(object);
+    APE_ASSERT(object.type() == APE_OBJECT_STRING);
+    ObjectData* data = object.getAllocatedData();
     data->string.length = len;
 }
 
 
 int object_get_string_capacity(Object object)
 {
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_STRING);
-    ObjectData* data = object_get_allocated_data(object);
+    APE_ASSERT(object.type() == APE_OBJECT_STRING);
+    ObjectData* data = object.getAllocatedData();
     return data->string.capacity;
 }
 
 char* object_get_mutable_string(Object object)
 {
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_STRING);
-    ObjectData* data = object_get_allocated_data(object);
+    APE_ASSERT(object.type() == APE_OBJECT_STRING);
+    ObjectData* data = object.getAllocatedData();
     return object_data_get_string(data);
 }
 
 bool object_string_append(Object obj, const char* src, int len)
 {
-    APE_ASSERT(object_get_type(obj) == APE_OBJECT_STRING);
-    ObjectData* data = object_get_allocated_data(obj);
+    APE_ASSERT(obj.type() == APE_OBJECT_STRING);
+    ObjectData* data = obj.getAllocatedData();
     String* string = &data->string;
     char* str_buf = object_get_mutable_string(obj);
     int current_len = string->length;
@@ -12321,8 +12785,8 @@ bool object_string_append(Object obj, const char* src, int len)
 
 unsigned long object_get_string_hash(Object obj)
 {
-    APE_ASSERT(object_get_type(obj) == APE_OBJECT_STRING);
-    ObjectData* data = object_get_allocated_data(obj);
+    APE_ASSERT(obj.type() == APE_OBJECT_STRING);
+    ObjectData* data = obj.getAllocatedData();
     if(data->string.hash == 0)
     {
         data->string.hash = object_hash_string(object_get_string(obj));
@@ -12336,63 +12800,24 @@ unsigned long object_get_string_hash(Object obj)
 
 ScriptFunction* object_get_function(Object object)
 {
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_FUNCTION);
-    ObjectData* data = object_get_allocated_data(object);
+    APE_ASSERT(object.type() == APE_OBJECT_FUNCTION);
+    ObjectData* data = object.getAllocatedData();
     return &data->function;
 }
 
 NativeFunction* object_get_native_function(Object obj)
 {
-    ObjectData* data = object_get_allocated_data(obj);
+    ObjectData* data = obj.getAllocatedData();
     return &data->native_function;
 }
 
-ObjectType object_get_type(Object obj)
-{
-    if(object_is_number(obj))
-    {
-        return APE_OBJECT_NUMBER;
-    }
-    uint64_t tag = (obj.handle >> 48) & 0x7;
-    switch(tag)
-    {
-        case 0:
-            return APE_OBJECT_NONE;
-        case 1:
-            return APE_OBJECT_BOOL;
-        case 2:
-            return APE_OBJECT_NULL;
-        case 4:
-        {
-            ObjectData* data = object_get_allocated_data(obj);
-            return data->type;
-        }
-        default:
-            return APE_OBJECT_NONE;
-    }
-}
 
-bool object_is_numeric(Object obj)
-{
-    ObjectType type = object_get_type(obj);
-    return type == APE_OBJECT_NUMBER || type == APE_OBJECT_BOOL;
-}
 
-bool object_is_null(Object obj)
-{
-    return object_get_type(obj) == APE_OBJECT_NULL;
-}
-
-bool object_is_callable(Object obj)
-{
-    ObjectType type = object_get_type(obj);
-    return type == APE_OBJECT_NATIVE_FUNCTION || type == APE_OBJECT_FUNCTION;
-}
 
 const char* object_get_function_name(Object obj)
 {
-    APE_ASSERT(object_get_type(obj) == APE_OBJECT_FUNCTION);
-    ObjectData* data = object_get_allocated_data(obj);
+    APE_ASSERT(obj.type() == APE_OBJECT_FUNCTION);
+    ObjectData* data = obj.getAllocatedData();
     APE_ASSERT(data);
     if(!data)
     {
@@ -12411,18 +12836,18 @@ const char* object_get_function_name(Object obj)
 
 Object object_get_function_free_val(Object obj, int ix)
 {
-    APE_ASSERT(object_get_type(obj) == APE_OBJECT_FUNCTION);
-    ObjectData* data = object_get_allocated_data(obj);
+    APE_ASSERT(obj.type() == APE_OBJECT_FUNCTION);
+    ObjectData* data = obj.getAllocatedData();
     APE_ASSERT(data);
     if(!data)
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     ScriptFunction* fun = &data->function;
     APE_ASSERT(ix >= 0 && ix < fun->free_vals_count);
     if(ix < 0 || ix >= fun->free_vals_count)
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     if(freevals_are_allocated(fun))
     {
@@ -12436,8 +12861,8 @@ Object object_get_function_free_val(Object obj, int ix)
 
 void object_set_function_free_val(Object obj, int ix, Object val)
 {
-    APE_ASSERT(object_get_type(obj) == APE_OBJECT_FUNCTION);
-    ObjectData* data = object_get_allocated_data(obj);
+    APE_ASSERT(obj.type() == APE_OBJECT_FUNCTION);
+    ObjectData* data = obj.getAllocatedData();
     APE_ASSERT(data);
     if(!data)
     {
@@ -12462,8 +12887,8 @@ void object_set_function_free_val(Object obj, int ix, Object val)
 Object* object_get_function_free_vals(Object obj)
 {
     ObjectData* data;
-    APE_ASSERT(object_get_type(obj) == APE_OBJECT_FUNCTION);
-    data = object_get_allocated_data(obj);
+    APE_ASSERT(obj.type() == APE_OBJECT_FUNCTION);
+    data = obj.getAllocatedData();
     APE_ASSERT(data);
     if(!data)
     {
@@ -12483,19 +12908,19 @@ Object* object_get_function_free_vals(Object obj)
 const char* object_get_error_message(Object object)
 {
     ObjectData* data;
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_ERROR);
-    data = object_get_allocated_data(object);
+    APE_ASSERT(object.type() == APE_OBJECT_ERROR);
+    data = object.getAllocatedData();
     return data->error.message;
 }
 
 void object_set_error_traceback(Object object, Traceback* traceback)
 {
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_ERROR);
-    if(object_get_type(object) != APE_OBJECT_ERROR)
+    APE_ASSERT(object.type() == APE_OBJECT_ERROR);
+    if(object.type() != APE_OBJECT_ERROR)
     {
         return;
     }
-    ObjectData* data = object_get_allocated_data(object);
+    ObjectData* data = object.getAllocatedData();
     APE_ASSERT(data->error.traceback == NULL);
     data->error.traceback = traceback;
 }
@@ -12503,15 +12928,15 @@ void object_set_error_traceback(Object object, Traceback* traceback)
 Traceback* object_get_error_traceback(Object object)
 {
     ObjectData* data;
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_ERROR);
-    data = object_get_allocated_data(object);
+    APE_ASSERT(object.type() == APE_OBJECT_ERROR);
+    data = object.getAllocatedData();
     return data->error.traceback;
 }
 
 bool object_set_external_data(Object object, void* ext_data)
 {
     ExternalData* data;
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_EXTERNAL);
+    APE_ASSERT(object.type() == APE_OBJECT_EXTERNAL);
     data = object_get_external_data(object);
     if(!data)
     {
@@ -12524,7 +12949,7 @@ bool object_set_external_data(Object object, void* ext_data)
 bool object_set_external_copy_function(Object object, ExternalDataCopyFNCallback copy_fn)
 {
     ExternalData* data;
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_EXTERNAL);
+    APE_ASSERT(object.type() == APE_OBJECT_EXTERNAL);
     data = object_get_external_data(object);
     if(!data)
     {
@@ -12538,16 +12963,16 @@ Object object_get_array_value(Object object, int ix)
 {
     Object* res;
     Array* array;
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_ARRAY);
+    APE_ASSERT(object.type() == APE_OBJECT_ARRAY);
     array = object_get_allocated_array(object);
     if(ix < 0 || ix >= array->count())
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     res = (Object*)array->get(ix);
     if(!res)
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     return *res;
 }
@@ -12555,7 +12980,7 @@ Object object_get_array_value(Object object, int ix)
 bool object_set_array_value_at(Object object, int ix, Object val)
 {
     Array* array;
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_ARRAY);
+    APE_ASSERT(object.type() == APE_OBJECT_ARRAY);
     array = object_get_allocated_array(object);
     if(ix < 0 || ix >= array->count())
     {
@@ -12566,14 +12991,14 @@ bool object_set_array_value_at(Object object, int ix, Object val)
 
 bool object_add_array_value(Object object, Object val)
 {
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_ARRAY);
+    APE_ASSERT(object.type() == APE_OBJECT_ARRAY);
     Array* array = object_get_allocated_array(object);
     return array->add(&val);
 }
 
 int object_get_array_length(Object object)
 {
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_ARRAY);
+    APE_ASSERT(object.type() == APE_OBJECT_ARRAY);
     Array* array = object_get_allocated_array(object);
     return array->count();
 }
@@ -12586,73 +13011,73 @@ bool object_remove_array_value_at(Object object, int ix)
 
 int object_get_map_length(Object object)
 {
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_MAP);
-    ObjectData* data = object_get_allocated_data(object);
+    APE_ASSERT(object.type() == APE_OBJECT_MAP);
+    ObjectData* data = object.getAllocatedData();
     return data->map->count();
 }
 
 Object object_get_map_key_at(Object object, int ix)
 {
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_MAP);
-    ObjectData* data = object_get_allocated_data(object);
+    APE_ASSERT(object.type() == APE_OBJECT_MAP);
+    ObjectData* data = object.getAllocatedData();
     Object* res = (Object*)data->map->getKeyAt(ix);
     if(!res)
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     return *res;
 }
 
 Object object_get_map_value_at(Object object, int ix)
 {
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_MAP);
-    ObjectData* data = object_get_allocated_data(object);
+    APE_ASSERT(object.type() == APE_OBJECT_MAP);
+    ObjectData* data = object.getAllocatedData();
     Object* res = (Object*)data->map->getValueAt(ix);
     if(!res)
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     return *res;
 }
 
 bool object_set_map_value_at(Object object, int ix, Object val)
 {
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_MAP);
+    APE_ASSERT(object.type() == APE_OBJECT_MAP);
     if(ix >= object_get_map_length(object))
     {
         return false;
     }
-    ObjectData* data = object_get_allocated_data(object);
+    ObjectData* data = object.getAllocatedData();
     return data->map->setValueAt(ix, &val);
 }
 
 Object object_get_kv_pair_at(GCMemory* mem, Object object, int ix)
 {
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_MAP);
-    ObjectData* data = object_get_allocated_data(object);
+    APE_ASSERT(object.type() == APE_OBJECT_MAP);
+    ObjectData* data = object.getAllocatedData();
     if(ix >= data->map->count())
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     Object key = object_get_map_key_at(object, ix);
     Object val = object_get_map_value_at(object, ix);
-    Object res = object_make_map(mem);
-    if(object_is_null(res))
+    Object res = Object::makeMap(mem);
+    if(res.isNull())
     {
-        return object_make_null();
+        return Object::makeNull();
     }
 
-    Object key_obj = object_make_string(mem, "key");
-    if(object_is_null(key_obj))
+    Object key_obj = Object::makeString(mem, "key");
+    if(key_obj.isNull())
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     object_set_map_value_object(res, key_obj, key);
 
-    Object val_obj = object_make_string(mem, "value");
-    if(object_is_null(val_obj))
+    Object val_obj = Object::makeString(mem, "value");
+    if(val_obj.isNull())
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     object_set_map_value_object(res, val_obj, val);
 
@@ -12661,27 +13086,27 @@ Object object_get_kv_pair_at(GCMemory* mem, Object object, int ix)
 
 bool object_set_map_value_object(Object object, Object key, Object val)
 {
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_MAP);
-    ObjectData* data = object_get_allocated_data(object);
+    APE_ASSERT(object.type() == APE_OBJECT_MAP);
+    ObjectData* data = object.getAllocatedData();
     return data->map->set(&key, &val);
 }
 
 Object object_get_map_value_object(Object object, Object key)
 {
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_MAP);
-    ObjectData* data = object_get_allocated_data(object);
+    APE_ASSERT(object.type() == APE_OBJECT_MAP);
+    ObjectData* data = object.getAllocatedData();
     Object* res = (Object*)data->map->get(&key);
     if(!res)
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     return *res;
 }
 
 bool object_map_has_key_object(Object object, Object key)
 {
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_MAP);
-    ObjectData* data = object_get_allocated_data(object);
+    APE_ASSERT(object.type() == APE_OBJECT_MAP);
+    ObjectData* data = object.getAllocatedData();
     Object* res = (Object*)data->map->get( &key);
     return res != NULL;
 }
@@ -12695,9 +13120,9 @@ Object object_deep_copy_internal(GCMemory* mem, Object obj, ValDictionary * copi
         return *copy_ptr;
     }
 
-    Object copy = object_make_null();
+    Object copy = Object::makeNull();
 
-    ObjectType type = object_get_type(obj);
+    ObjectType type = obj.type();
     switch(type)
     {
         case APE_OBJECT_FREED:
@@ -12705,7 +13130,7 @@ Object object_deep_copy_internal(GCMemory* mem, Object obj, ValDictionary * copi
         case APE_OBJECT_NONE:
             {
                 APE_ASSERT(false);
-                copy = object_make_null();
+                copy = Object::makeNull();
             }
             break;
 
@@ -12721,7 +13146,7 @@ Object object_deep_copy_internal(GCMemory* mem, Object obj, ValDictionary * copi
         case APE_OBJECT_STRING:
             {
                 const char* str = object_get_string(obj);
-                copy = object_make_string(mem, str);
+                copy = Object::makeString(mem, str);
             }
             break;
 
@@ -12732,18 +13157,18 @@ Object object_deep_copy_internal(GCMemory* mem, Object obj, ValDictionary * copi
                 Position* src_positions_copy = NULL;
                 CompilationResult* comp_res_copy = NULL;
 
-                bytecode_copy = (uint8_t*)allocator_malloc(mem->alloc, sizeof(uint8_t) * function->comp_result->m_count);
+                bytecode_copy = (uint8_t*)mem->alloc->allocate(sizeof(uint8_t) * function->comp_result->m_count);
                 if(!bytecode_copy)
                 {
-                    return object_make_null();
+                    return Object::makeNull();
                 }
                 memcpy(bytecode_copy, function->comp_result->bytecode, sizeof(uint8_t) * function->comp_result->m_count);
 
-                src_positions_copy = (Position*)allocator_malloc(mem->alloc, sizeof(Position) * function->comp_result->m_count);
+                src_positions_copy = (Position*)mem->alloc->allocate(sizeof(Position) * function->comp_result->m_count);
                 if(!src_positions_copy)
                 {
-                    allocator_free(mem->alloc, bytecode_copy);
-                    return object_make_null();
+                    mem->alloc->release(bytecode_copy);
+                    return Object::makeNull();
                 }
                 memcpy(src_positions_copy, function->comp_result->src_positions, sizeof(Position) * function->comp_result->m_count);
 
@@ -12751,32 +13176,32 @@ Object object_deep_copy_internal(GCMemory* mem, Object obj, ValDictionary * copi
                                                         function->comp_result->m_count);// todo: add compilation result copy function
                 if(!comp_res_copy)
                 {
-                    allocator_free(mem->alloc, src_positions_copy);
-                    allocator_free(mem->alloc, bytecode_copy);
-                    return object_make_null();
+                    mem->alloc->release(src_positions_copy);
+                    mem->alloc->release(bytecode_copy);
+                    return Object::makeNull();
                 }
 
-                copy = object_make_function(mem, object_get_function_name(obj), comp_res_copy, true, function->num_locals,
+                copy = Object::makeFunction(mem, object_get_function_name(obj), comp_res_copy, true, function->num_locals,
                                             function->num_args, 0);
-                if(object_is_null(copy))
+                if(copy.isNull())
                 {
                     compilation_result_destroy(comp_res_copy);
-                    return object_make_null();
+                    return Object::makeNull();
                 }
 
                 bool ok = copies->set(&obj, &copy);
                 if(!ok)
                 {
-                    return object_make_null();
+                    return Object::makeNull();
                 }
 
                 ScriptFunction* function_copy = object_get_function(copy);
                 if(freevals_are_allocated(function))
                 {
-                    function_copy->free_vals_allocated = (Object*)allocator_malloc(mem->alloc, sizeof(Object) * function->free_vals_count);
+                    function_copy->free_vals_allocated = (Object*)mem->alloc->allocate(sizeof(Object) * function->free_vals_count);
                     if(!function_copy->free_vals_allocated)
                     {
-                        return object_make_null();
+                        return Object::makeNull();
                     }
                 }
 
@@ -12785,9 +13210,9 @@ Object object_deep_copy_internal(GCMemory* mem, Object obj, ValDictionary * copi
                 {
                     Object free_val = object_get_function_free_val(obj, i);
                     Object free_val_copy = object_deep_copy_internal(mem, free_val, copies);
-                    if(!object_is_null(free_val) && object_is_null(free_val_copy))
+                    if(!free_val.isNull() && free_val_copy.isNull())
                     {
-                        return object_make_null();
+                        return Object::makeNull();
                     }
                     object_set_function_free_val(copy, i, free_val_copy);
                 }
@@ -12797,28 +13222,28 @@ Object object_deep_copy_internal(GCMemory* mem, Object obj, ValDictionary * copi
         case APE_OBJECT_ARRAY:
             {
                 int len = object_get_array_length(obj);
-                copy = object_make_array_with_capacity(mem, len);
-                if(object_is_null(copy))
+                copy = Object::makeArray(mem, len);
+                if(copy.isNull())
                 {
-                    return object_make_null();
+                    return Object::makeNull();
                 }
                 bool ok = copies->set(&obj, &copy);
                 if(!ok)
                 {
-                    return object_make_null();
+                    return Object::makeNull();
                 }
                 for(int i = 0; i < len; i++)
                 {
                     Object item = object_get_array_value(obj, i);
                     Object item_copy = object_deep_copy_internal(mem, item, copies);
-                    if(!object_is_null(item) && object_is_null(item_copy))
+                    if(!item.isNull() && item_copy.isNull())
                     {
-                        return object_make_null();
+                        return Object::makeNull();
                     }
                     bool ok = object_add_array_value(copy, item_copy);
                     if(!ok)
                     {
-                        return object_make_null();
+                        return Object::makeNull();
                     }
                 }
             }
@@ -12826,15 +13251,15 @@ Object object_deep_copy_internal(GCMemory* mem, Object obj, ValDictionary * copi
 
         case APE_OBJECT_MAP:
             {
-                copy = object_make_map(mem);
-                if(object_is_null(copy))
+                copy = Object::makeMap(mem);
+                if(copy.isNull())
                 {
-                    return object_make_null();
+                    return Object::makeNull();
                 }
                 bool ok = copies->set( &obj, &copy);
                 if(!ok)
                 {
-                    return object_make_null();
+                    return Object::makeNull();
                 }
                 for(int i = 0; i < object_get_map_length(obj); i++)
                 {
@@ -12842,21 +13267,21 @@ Object object_deep_copy_internal(GCMemory* mem, Object obj, ValDictionary * copi
                     Object val = object_get_map_value_at(obj, i);
 
                     Object key_copy = object_deep_copy_internal(mem, key, copies);
-                    if(!object_is_null(key) && object_is_null(key_copy))
+                    if(!key.isNull() && key_copy.isNull())
                     {
-                        return object_make_null();
+                        return Object::makeNull();
                     }
 
                     Object val_copy = object_deep_copy_internal(mem, val, copies);
-                    if(!object_is_null(val) && object_is_null(val_copy))
+                    if(!val.isNull() && val_copy.isNull())
                     {
-                        return object_make_null();
+                        return Object::makeNull();
                     }
 
                     bool ok = object_set_map_value_object(copy, key_copy, val_copy);
                     if(!ok)
                     {
-                        return object_make_null();
+                        return Object::makeNull();
                     }
                 }
             }
@@ -12889,7 +13314,7 @@ bool object_equals_wrapped(const Object* a_ptr, const Object* b_ptr)
 unsigned long object_hash(Object* obj_ptr)
 {
     Object obj = *obj_ptr;
-    ObjectType type = object_get_type(obj);
+    ObjectType type = obj.type();
 
     switch(type)
     {
@@ -12936,15 +13361,12 @@ unsigned long object_hash_double(double val)
 
 Array * object_get_allocated_array(Object object)
 {
-    APE_ASSERT(object_get_type(object) == APE_OBJECT_ARRAY);
-    ObjectData* data = object_get_allocated_data(object);
+    APE_ASSERT(object.type() == APE_OBJECT_ARRAY);
+    ObjectData* data = object.getAllocatedData();
     return data->array;
 }
 
-bool object_is_number(Object o)
-{
-    return (o.handle & OBJECT_PATTERN) != OBJECT_PATTERN;
-}
+
 
 static uint64_t get_type_tag(ObjectType type)
 {
@@ -12998,14 +13420,14 @@ bool object_data_string_reserve_capacity(ObjectData* data, int capacity)
         if(string->is_allocated)
         {
             APE_ASSERT(false);// should never happen
-            allocator_free(data->mem->alloc, string->value_allocated);// just in case
+            data->mem->alloc->release(string->value_allocated);// just in case
         }
         string->capacity = OBJECT_STRING_BUF_SIZE - 1;
         string->is_allocated = false;
         return true;
     }
 
-    char* new_value = (char*)allocator_malloc(data->mem->alloc, capacity + 1);
+    char* new_value = (char*)data->mem->alloc->allocate(capacity + 1);
     if(!new_value)
     {
         return false;
@@ -13013,7 +13435,7 @@ bool object_data_string_reserve_capacity(ObjectData* data, int capacity)
 
     if(string->is_allocated)
     {
-        allocator_free(data->mem->alloc, string->value_allocated);
+        data->mem->alloc->release(string->value_allocated);
     }
 
     string->value_allocated = new_value;
@@ -13022,400 +13444,10 @@ bool object_data_string_reserve_capacity(ObjectData* data, int capacity)
     return true;
 }
 
-ObjectDataPool* get_pool_for_type(GCMemory* mem, ObjectType type);
-bool can_data_be_put_in_pool(GCMemory* mem, ObjectData* data);
-
-GCMemory* gcmem_make(Allocator* alloc)
-{
-    int i;
-    GCMemory* mem = (GCMemory*)allocator_malloc(alloc, sizeof(GCMemory));
-    if(!mem)
-    {
-        return NULL;
-    }
-    memset(mem, 0, sizeof(GCMemory));
-    mem->alloc = alloc;
-    mem->objects = PtrArray::make(alloc);
-    if(!mem->objects)
-    {
-        goto error;
-    }
-    mem->objects_back = PtrArray::make(alloc);
-    if(!mem->objects_back)
-    {
-        goto error;
-    }
-    mem->objects_not_gced = Array::make<Object>(alloc);
-    if(!mem->objects_not_gced)
-    {
-        goto error;
-    }
-    mem->allocations_since_sweep = 0;
-    mem->data_only_pool.m_count = 0;
-    for(i = 0; i < GCMEM_POOLS_NUM; i++)
-    {
-        ObjectDataPool* pool = &mem->pools[i];
-        mem->pools[i].m_count = 0;
-        memset(pool, 0, sizeof(ObjectDataPool));
-    }
-
-    return mem;
-error:
-    gcmem_destroy(mem);
-    return NULL;
-}
-
-void gcmem_destroy(GCMemory* mem)
-{
-    if(!mem)
-    {
-        return;
-    }
-
-    Array::destroy(mem->objects_not_gced);
-    mem->objects_back->destroy();
-
-    for(int i = 0; i < mem->objects->count(); i++)
-    {
-        ObjectData* obj = (ObjectData*)mem->objects->get(i);
-        object_data_deinit(obj);
-        allocator_free(mem->alloc, obj);
-    }
-    mem->objects->destroy();
-
-    for(int i = 0; i < GCMEM_POOLS_NUM; i++)
-    {
-        ObjectDataPool* pool = &mem->pools[i];
-        for(int j = 0; j < pool->m_count; j++)
-        {
-            ObjectData* data = pool->datapool[j];
-            object_data_deinit(data);
-            allocator_free(mem->alloc, data);
-        }
-        memset(pool, 0, sizeof(ObjectDataPool));
-    }
-
-    for(int i = 0; i < mem->data_only_pool.m_count; i++)
-    {
-        allocator_free(mem->alloc, mem->data_only_pool.datapool[i]);
-    }
-
-    allocator_free(mem->alloc, mem);
-}
-
-ObjectData* gcmem_alloc_object_data(GCMemory* mem, ObjectType type)
-{
-    ObjectData* data = NULL;
-    mem->allocations_since_sweep++;
-    if(mem->data_only_pool.m_count > 0)
-    {
-        data = mem->data_only_pool.datapool[mem->data_only_pool.m_count - 1];
-        mem->data_only_pool.m_count--;
-    }
-    else
-    {
-        data = (ObjectData*)allocator_malloc(mem->alloc, sizeof(ObjectData));
-        if(!data)
-        {
-            return NULL;
-        }
-    }
-
-    memset(data, 0, sizeof(ObjectData));
-
-    APE_ASSERT(mem->objects_back->count() >= mem->objects->count());
-    // we want to make sure that appending to objects_back never fails in sweep
-    // so this only reserves space there.
-    bool ok = mem->objects_back->add(data);
-    if(!ok)
-    {
-        allocator_free(mem->alloc, data);
-        return NULL;
-    }
-    ok = mem->objects->add(data);
-    if(!ok)
-    {
-        allocator_free(mem->alloc, data);
-        return NULL;
-    }
-    data->mem = mem;
-    data->type = type;
-    return data;
-}
-
-ObjectData* gcmem_get_object_data_from_pool(GCMemory* mem, ObjectType type)
-{
-    ObjectDataPool* pool = get_pool_for_type(mem, type);
-    if(!pool || pool->m_count <= 0)
-    {
-        return NULL;
-    }
-    ObjectData* data = pool->datapool[pool->m_count - 1];
-
-    APE_ASSERT(mem->objects_back->count() >= mem->objects->count());
-
-    // we want to make sure that appending to objects_back never fails in sweep
-    // so this only reserves space there.
-    bool ok = mem->objects_back->add(data);
-    if(!ok)
-    {
-        return NULL;
-    }
-    ok = mem->objects->add(data);
-    if(!ok)
-    {
-        return NULL;
-    }
-
-    pool->m_count--;
-
-    return data;
-}
-
-void gc_unmark_all(GCMemory* mem)
-{
-    for(int i = 0; i < mem->objects->count(); i++)
-    {
-        ObjectData* data = (ObjectData*)mem->objects->get(i);
-        data->gcmark = false;
-    }
-}
-
-void gc_mark_objects(Object* objects, int cn)
-{
-    for(int i = 0; i < cn; i++)
-    {
-        Object obj = objects[i];
-        gc_mark_object(obj);
-    }
-}
-
-void gc_mark_object(Object obj)
-{
-    if(!object_is_allocated(obj))
-    {
-        return;
-    }
-
-    ObjectData* data = object_get_allocated_data(obj);
-    if(data->gcmark)
-    {
-        return;
-    }
-
-    data->gcmark = true;
-    switch(data->type)
-    {
-        case APE_OBJECT_MAP:
-        {
-            int len = object_get_map_length(obj);
-            for(int i = 0; i < len; i++)
-            {
-                Object key = object_get_map_key_at(obj, i);
-                if(object_is_allocated(key))
-                {
-                    ObjectData* key_data = object_get_allocated_data(key);
-                    if(!key_data->gcmark)
-                    {
-                        gc_mark_object(key);
-                    }
-                }
-                Object val = object_get_map_value_at(obj, i);
-                if(object_is_allocated(val))
-                {
-                    ObjectData* val_data = object_get_allocated_data(val);
-                    if(!val_data->gcmark)
-                    {
-                        gc_mark_object(val);
-                    }
-                }
-            }
-            break;
-        }
-        case APE_OBJECT_ARRAY:
-        {
-            int len = object_get_array_length(obj);
-            for(int i = 0; i < len; i++)
-            {
-                Object val = object_get_array_value(obj, i);
-                if(object_is_allocated(val))
-                {
-                    ObjectData* val_data = object_get_allocated_data(val);
-                    if(!val_data->gcmark)
-                    {
-                        gc_mark_object(val);
-                    }
-                }
-            }
-            break;
-        }
-        case APE_OBJECT_FUNCTION:
-        {
-            ScriptFunction* function = object_get_function(obj);
-            for(int i = 0; i < function->free_vals_count; i++)
-            {
-                Object free_val = object_get_function_free_val(obj, i);
-                gc_mark_object(free_val);
-                if(object_is_allocated(free_val))
-                {
-                    ObjectData* free_val_data = object_get_allocated_data(free_val);
-                    if(!free_val_data->gcmark)
-                    {
-                        gc_mark_object(free_val);
-                    }
-                }
-            }
-            break;
-        }
-        default:
-        {
-            break;
-        }
-    }
-}
-
-void gc_sweep(GCMemory* mem)
-{
-    int i;
-    bool ok;
-    gc_mark_objects((Object*)mem->objects_not_gced->data(), mem->objects_not_gced->count());
-
-    APE_ASSERT(mem->objects_back->count() >= mem->objects->count());
-
-    mem->objects_back->clear();
-    for(i = 0; i < mem->objects->count(); i++)
-    {
-        ObjectData* data = (ObjectData*)mem->objects->get(i);
-        if(data->gcmark)
-        {
-            // this should never fail because objects_back's size should be equal to objects
-            ok = mem->objects_back->add(data);
-            (void)ok;
-            APE_ASSERT(ok);
-        }
-        else
-        {
-            if(can_data_be_put_in_pool(mem, data))
-            {
-                ObjectDataPool* pool = get_pool_for_type(mem, data->type);
-                pool->datapool[pool->m_count] = data;
-                pool->m_count++;
-            }
-            else
-            {
-                object_data_deinit(data);
-                if(mem->data_only_pool.m_count < GCMEM_POOL_SIZE)
-                {
-                    mem->data_only_pool.datapool[mem->data_only_pool.m_count] = data;
-                    mem->data_only_pool.m_count++;
-                }
-                else
-                {
-                    allocator_free(mem->alloc, data);
-                }
-            }
-        }
-    }
-    PtrArray* objs_temp = mem->objects;
-    mem->objects = mem->objects_back;
-    mem->objects_back = objs_temp;
-    mem->allocations_since_sweep = 0;
-}
-
-bool gc_disable_on_object(Object obj)
-{
-    if(!object_is_allocated(obj))
-    {
-        return false;
-    }
-    ObjectData* data = object_get_allocated_data(obj);
-    if(data->mem->objects_not_gced->contains(&obj))
-    {
-        return false;
-    }
-    bool ok = data->mem->objects_not_gced->add(&obj);
-    return ok;
-}
-
-void gc_enable_on_object(Object obj)
-{
-    if(!object_is_allocated(obj))
-    {
-        return;
-    }
-    ObjectData* data = object_get_allocated_data(obj);
-    data->mem->objects_not_gced->removeItem(&obj);
-}
-
-int gc_should_sweep(GCMemory* mem)
-{
-    return mem->allocations_since_sweep > GCMEM_SWEEP_INTERVAL;
-}
-
-// INTERNAL
-ObjectDataPool* get_pool_for_type(GCMemory* mem, ObjectType type)
-{
-    switch(type)
-    {
-        case APE_OBJECT_ARRAY:
-            return &mem->pools[0];
-        case APE_OBJECT_MAP:
-            return &mem->pools[1];
-        case APE_OBJECT_STRING:
-            return &mem->pools[2];
-        default:
-            return NULL;
-    }
-}
-
-bool can_data_be_put_in_pool(GCMemory* mem, ObjectData* data)
-{
-    Object obj = object_make_from_data(data->type, data);
-
-    // this is to ensure that large objects won't be kept in pool indefinitely
-    switch(data->type)
-    {
-        case APE_OBJECT_ARRAY:
-        {
-            if(object_get_array_length(obj) > 1024)
-            {
-                return false;
-            }
-            break;
-        }
-        case APE_OBJECT_MAP:
-        {
-            if(object_get_map_length(obj) > 1024)
-            {
-                return false;
-            }
-            break;
-        }
-        case APE_OBJECT_STRING:
-        {
-            if(!data->string.is_allocated || data->string.capacity > 4096)
-            {
-                return false;
-            }
-            break;
-        }
-        default:
-            break;
-    }
-
-    ObjectDataPool* pool = get_pool_for_type(mem, data->type);
-    if(!pool || pool->m_count >= GCMEM_POOL_SIZE)
-    {
-        return false;
-    }
-
-    return true;
-}
-
 
 Traceback* traceback_make(Allocator* alloc)
 {
-    Traceback* traceback = (Traceback*)allocator_malloc(alloc, sizeof(Traceback));
+    Traceback* traceback = (Traceback*)alloc->allocate(sizeof(Traceback));
     if(!traceback)
     {
         return NULL;
@@ -13440,10 +13472,10 @@ void traceback_destroy(Traceback* traceback)
     for(int i = 0; i < traceback->items->count(); i++)
     {
         TracebackItem* item = (TracebackItem*)traceback->items->get(i);
-        allocator_free(traceback->alloc, item->function_name);
+        traceback->alloc->release(item->function_name);
     }
     Array::destroy(traceback->items);
-    allocator_free(traceback->alloc, traceback);
+    traceback->alloc->release(traceback);
 }
 
 bool traceback_append(Traceback* traceback, const char* function_name, Position pos)
@@ -13458,7 +13490,7 @@ bool traceback_append(Traceback* traceback, const char* function_name, Position 
     bool ok = traceback->items->add(&item);
     if(!ok)
     {
-        allocator_free(traceback->alloc, item.function_name);
+        traceback->alloc->release(item.function_name);
         return false;
     }
     return true;
@@ -13506,7 +13538,7 @@ const char* traceback_item_get_filepath(TracebackItem* item)
 
 bool frame_init(Frame* frame, Object function_obj, int base_pointer)
 {
-    if(object_get_type(function_obj) != APE_OBJECT_FUNCTION)
+    if(function_obj.type() != APE_OBJECT_FUNCTION)
     {
         return false;
     }
@@ -13571,7 +13603,7 @@ Position frame_src_position(const Frame* frame)
 
 VM* vm_make(Allocator* alloc, const Config* config, GCMemory* mem, ErrorList* errors, GlobalStore* global_store)
 {
-    VM* vm = (VM*)allocator_malloc(alloc, sizeof(VM));
+    VM* vm = (VM*)alloc->allocate(sizeof(VM));
     if(!vm)
     {
         return NULL;
@@ -13586,18 +13618,18 @@ VM* vm_make(Allocator* alloc, const Config* config, GCMemory* mem, ErrorList* er
     vm->sp = 0;
     vm->this_sp = 0;
     vm->frames_count = 0;
-    vm->last_popped = object_make_null();
+    vm->last_popped = Object::makeNull();
     vm->running = false;
 
     for(int i = 0; i < OPCODE_MAX; i++)
     {
-        vm->operator_oveload_keys[i] = object_make_null();
+        vm->operator_oveload_keys[i] = Object::makeNull();
     }
 #define SET_OPERATOR_OVERLOAD_KEY(op, key)                   \
     do                                                       \
     {                                                        \
-        Object key_obj = object_make_string(vm->mem, key); \
-        if(object_is_null(key_obj))                          \
+        Object key_obj = Object::makeString(vm->mem, key); \
+        if(key_obj.isNull())                          \
         {                                                    \
             goto err;                                        \
         }                                                    \
@@ -13630,7 +13662,7 @@ void vm_destroy(VM* vm)
     {
         return;
     }
-    allocator_free(vm->alloc, vm);
+    vm->alloc->release(vm);
 }
 
 void vm_reset(VM* vm)
@@ -13650,8 +13682,8 @@ bool vm_run(VM* vm, CompilationResult* comp_res, Array * constants)
 #endif
     int old_this_sp = vm->this_sp;
     int old_frames_count = vm->frames_count;
-    Object main_fn = object_make_function(vm->mem, "main", comp_res, false, 0, 0, 0);
-    if(object_is_null(main_fn))
+    Object main_fn = Object::makeFunction(vm->mem, "main", comp_res, false, 0, 0, 0);
+    if(main_fn.isNull())
     {
         return false;
     }
@@ -13668,7 +13700,7 @@ bool vm_run(VM* vm, CompilationResult* comp_res, Array * constants)
 
 Object vm_call(VM* vm, Array * constants, Object callee, int argc, Object* args)
 {
-    ObjectType type = object_get_type(callee);
+    ObjectType type = callee.type();
     if(type == APE_OBJECT_FUNCTION)
     {
 #ifdef APE_DEBUG
@@ -13684,7 +13716,7 @@ Object vm_call(VM* vm, Array * constants, Object callee, int argc, Object* args)
         bool ok = vm_execute_function(vm, callee, constants);
         if(!ok)
         {
-            return object_make_null();
+            return Object::makeNull();
         }
         while(vm->frames_count > old_frames_count)
         {
@@ -13701,7 +13733,7 @@ Object vm_call(VM* vm, Array * constants, Object callee, int argc, Object* args)
     else
     {
         errors_add_error(vm->errors, APE_ERROR_USER, src_pos_invalid, "Object is not callable");
-        return object_make_null();
+        return Object::makeNull();
     }
 }
 
@@ -13729,7 +13761,7 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
     }
 
     vm->running = true;
-    vm->last_popped = object_make_null();
+    vm->last_popped = Object::makeNull();
 
     bool check_time = false;
     double max_exec_time_ms = 0;
@@ -13779,9 +13811,9 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
                 {
                     Object right = stack_pop(vm);
                     Object left = stack_pop(vm);
-                    ObjectType left_type = object_get_type(left);
-                    ObjectType right_type = object_get_type(right);
-                    if(object_is_numeric(left) && object_is_numeric(right))
+                    ObjectType left_type = left.type();
+                    ObjectType right_type = right.type();
+                    if(left.isNumeric() && right.isNumeric())
                     {
                         double right_val = object_get_number(right);
                         double left_val = object_get_number(left);
@@ -13826,7 +13858,7 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
                                 APE_ASSERT(false);
                                 break;
                         }
-                        stack_push(vm, object_make_number(res));
+                        stack_push(vm, Object::makeNumber(res));
                     }
                     else if(left_type == APE_OBJECT_STRING && right_type == APE_OBJECT_STRING && opcode == OPCODE_ADD)
                     {
@@ -13846,8 +13878,8 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
                             const char* left_val = object_get_string(left);
                             const char* right_val = object_get_string(right);
 
-                            Object res = object_make_string_with_capacity(vm->mem, left_len + right_len);
-                            if(object_is_null(res))
+                            Object res = Object::makeStringCapacity(vm->mem, left_len + right_len);
+                            if(res.isNull())
                             {
                                 goto err;
                             }
@@ -13901,13 +13933,13 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
 
             case OPCODE_TRUE:
                 {
-                    stack_push(vm, object_make_bool(true));
+                    stack_push(vm, Object::makeBool(true));
                 }
                 break;
 
             case OPCODE_FALSE:
             {
-                stack_push(vm, object_make_bool(false));
+                stack_push(vm, Object::makeBool(false));
                 break;
             }
             case OPCODE_COMPARE:
@@ -13926,13 +13958,13 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
                         double comparison_res = object_compare(left, right, &ok);
                         if(ok || opcode == OPCODE_COMPARE_EQ)
                         {
-                            Object res = object_make_number(comparison_res);
+                            Object res = Object::makeNumber(comparison_res);
                             stack_push(vm, res);
                         }
                         else
                         {
-                            const char* right_type_string = object_get_type_name(object_get_type(right));
-                            const char* left_type_string = object_get_type_name(object_get_type(left));
+                            const char* right_type_string = object_get_type_name(right.type());
+                            const char* left_type_string = object_get_type_name(left.type());
                             errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
                                               "Cannot compare %s and %s", left_type_string, right_type_string);
                             goto err;
@@ -13969,7 +14001,7 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
                             APE_ASSERT(false);
                             break;
                     }
-                    Object res = object_make_bool(res_val);
+                    Object res = Object::makeBool(res_val);
                     stack_push(vm, res);
                 }
                 break;
@@ -13977,17 +14009,17 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
             case OPCODE_MINUS:
                 {
                     Object operand = stack_pop(vm);
-                    ObjectType operand_type = object_get_type(operand);
+                    ObjectType operand_type = operand.type();
                     if(operand_type == APE_OBJECT_NUMBER)
                     {
                         double val = object_get_number(operand);
-                        Object res = object_make_number(-val);
+                        Object res = Object::makeNumber(-val);
                         stack_push(vm, res);
                     }
                     else
                     {
                         bool overload_found = false;
-                        bool ok = try_overload_operator(vm, operand, object_make_null(), OPCODE_MINUS, &overload_found);
+                        bool ok = try_overload_operator(vm, operand, Object::makeNull(), OPCODE_MINUS, &overload_found);
                         if(!ok)
                         {
                             goto err;
@@ -14006,28 +14038,28 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
             case OPCODE_BANG:
                 {
                     Object operand = stack_pop(vm);
-                    ObjectType type = object_get_type(operand);
+                    ObjectType type = operand.type();
                     if(type == APE_OBJECT_BOOL)
                     {
-                        Object res = object_make_bool(!object_get_bool(operand));
+                        Object res = Object::makeBool(!object_get_bool(operand));
                         stack_push(vm, res);
                     }
                     else if(type == APE_OBJECT_NULL)
                     {
-                        Object res = object_make_bool(true);
+                        Object res = Object::makeBool(true);
                         stack_push(vm, res);
                     }
                     else
                     {
                         bool overload_found = false;
-                        bool ok = try_overload_operator(vm, operand, object_make_null(), OPCODE_BANG, &overload_found);
+                        bool ok = try_overload_operator(vm, operand, Object::makeNull(), OPCODE_BANG, &overload_found);
                         if(!ok)
                         {
                             goto err;
                         }
                         if(!overload_found)
                         {
-                            Object res = object_make_bool(false);
+                            Object res = Object::makeBool(false);
                             stack_push(vm, res);
                         }
                     }
@@ -14065,7 +14097,7 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
 
             case OPCODE_NULL:
                 {
-                    stack_push(vm, object_make_null());
+                    stack_push(vm, Object::makeNull());
                 }
                 break;
 
@@ -14100,8 +14132,8 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
             case OPCODE_ARRAY:
                 {
                     uint16_t cn = frame_read_uint16(vm->current_frame);
-                    Object array_obj = object_make_array_with_capacity(vm->mem, cn);
-                    if(object_is_null(array_obj))
+                    Object array_obj = Object::makeArray(vm->mem, cn);
+                    if(array_obj.isNull())
                     {
                         goto err;
                     }
@@ -14123,8 +14155,8 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
             case OPCODE_MAP_START:
                 {
                     uint16_t cn = frame_read_uint16(vm->current_frame);
-                    Object map_obj = object_make_map_with_capacity(vm->mem, cn);
-                    if(object_is_null(map_obj))
+                    Object map_obj = Object::makeMap(vm->mem, cn);
+                    if(map_obj.isNull())
                     {
                         goto err;
                     }
@@ -14141,9 +14173,9 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
                     for(int i = 0; i < items_count; i += 2)
                     {
                         Object key = kv_pairs[i];
-                        if(!object_is_hashable(key))
+                        if(!key.isHashable())
                         {
-                            ObjectType key_type = object_get_type(key);
+                            ObjectType key_type = key.type();
                             const char* key_type_name = object_get_type_name(key_type);
                             errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
                                               "Key of type %s is not hashable", key_type_name);
@@ -14175,8 +14207,8 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
                     #endif
                     Object index = stack_pop(vm);
                     Object left = stack_pop(vm);
-                    ObjectType left_type = object_get_type(left);
-                    ObjectType index_type = object_get_type(index);
+                    ObjectType left_type = left.type();
+                    ObjectType index_type = index.type();
                     const char* left_type_name = object_get_type_name(left_type);
                     const char* index_type_name = object_get_type_name(index_type);
                     /*
@@ -14211,7 +14243,7 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
                             "Type %s is not indexable (in OPCODE_GET_INDEX)", left_type_name);
                         goto err;
                     }
-                    Object res = object_make_null();
+                    Object res = Object::makeNull();
 
                     if(left_type == APE_OBJECT_ARRAY)
                     {
@@ -14243,7 +14275,7 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
                         if(ix >= 0 && ix < left_len)
                         {
                             char res_str[2] = { str[ix], '\0' };
-                            res = object_make_string(vm->mem, res_str);
+                            res = Object::makeString(vm->mem, res_str);
                         }
                     }
                     stack_push(vm, res);
@@ -14254,8 +14286,8 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
             {
                 Object index = stack_pop(vm);
                 Object left = stack_pop(vm);
-                ObjectType left_type = object_get_type(left);
-                ObjectType index_type = object_get_type(index);
+                ObjectType left_type = left.type();
+                ObjectType index_type = index.type();
                 const char* left_type_name = object_get_type_name(left_type);
                 const char* index_type_name = object_get_type_name(index_type);
 
@@ -14266,7 +14298,7 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
                     goto err;
                 }
 
-                Object res = object_make_null();
+                Object res = Object::makeNull();
                 if(index_type != APE_OBJECT_NUMBER)
                 {
                     errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
@@ -14291,7 +14323,7 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
                     if(ix >= 0 && ix < left_len)
                     {
                         char res_str[2] = { str[ix], '\0' };
-                        res = object_make_string(vm->mem, res_str);
+                        res = Object::makeString(vm->mem, res_str);
                     }
                 }
                 stack_push(vm, res);
@@ -14322,7 +14354,7 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
             case OPCODE_RETURN:
             {
                 bool ok = pop_frame(vm);
-                stack_push(vm, object_make_null());
+                stack_push(vm, Object::makeNull());
                 if(!ok)
                 {
                     stack_pop(vm);
@@ -14380,7 +14412,7 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
                                           "Constant %d not found", constant_ix);
                         goto err;
                     }
-                    ObjectType constant_type = object_get_type(*constant);
+                    ObjectType constant_type = (*constant).type();
                     if(constant_type != APE_OBJECT_FUNCTION)
                     {
                         const char* type_name = object_get_type_name(constant_type);
@@ -14391,9 +14423,9 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
 
                     const ScriptFunction* constant_function = object_get_function(*constant);
                     Object function_obj
-                    = object_make_function(vm->mem, object_get_function_name(*constant), constant_function->comp_result,
+                    = Object::makeFunction(vm->mem, object_get_function_name(*constant), constant_function->comp_result,
                                            false, constant_function->num_locals, constant_function->num_args, num_free);
-                    if(object_is_null(function_obj))
+                    if(function_obj.isNull())
                     {
                         goto err;
                     }
@@ -14431,8 +14463,8 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
                     Object index = stack_pop(vm);
                     Object left = stack_pop(vm);
                     Object new_value = stack_pop(vm);
-                    ObjectType left_type = object_get_type(left);
-                    ObjectType index_type = object_get_type(index);
+                    ObjectType left_type = left.type();
+                    ObjectType index_type = index.type();
                     const char* left_type_name = object_get_type_name(left_type);
                     const char* index_type_name = object_get_type_name(index_type);
 
@@ -14485,7 +14517,7 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
                 {
                     Object val = stack_pop(vm);
                     int len = 0;
-                    ObjectType type = object_get_type(val);
+                    ObjectType type = val.type();
                     if(type == APE_OBJECT_ARRAY)
                     {
                         len = object_get_array_length(val);
@@ -14505,7 +14537,7 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
                                           "Cannot get length of %s", type_name);
                         goto err;
                     }
-                    stack_push(vm, object_make_number(len));
+                    stack_push(vm, Object::makeNumber(len));
                 }
                 break;
 
@@ -14513,7 +14545,7 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
                 {
                     uint64_t val = frame_read_uint64(vm->current_frame);
                     double val_double = ape_uint64_to_double(val);
-                    Object obj = object_make_number(val_double);
+                    Object obj = Object::makeNumber(val_double);
                     stack_push(vm, obj);
                 }
                 break;
@@ -14580,8 +14612,8 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
                     {
                         pop_frame(vm);
                     }
-                    Object err_obj = object_make_error(vm->mem, err->message);
-                    if(!object_is_null(err_obj))
+                    Object err_obj = Object::makeError(vm->mem, err->message);
+                    if(!err_obj.isNull())
                     {
                         object_set_error_traceback(err_obj, err->traceback);
                         err->traceback = NULL;
@@ -14597,7 +14629,7 @@ bool vm_execute_function(VM* vm, Object function, Array * constants)
                 goto end;
             }
         }
-        if(gc_should_sweep(vm->mem))
+        if(vm->mem->shouldSweep())
         {
             run_gc(vm, constants);
         }
@@ -14655,7 +14687,7 @@ Object vm_get_global(VM* vm, int ix)
     {
         APE_ASSERT(false);
         errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Global read out of range");
-        return object_make_null();
+        return Object::makeNull();
     }
     return vm->globals[ix];
 }
@@ -14700,7 +14732,7 @@ Object stack_pop(VM* vm)
     {
         errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Stack underflow");
         APE_ASSERT(false);
-        return object_make_null();
+        return Object::makeNull();
     }
     if(vm->current_frame)
     {
@@ -14724,7 +14756,7 @@ Object stack_get(VM* vm, int nth_item)
     {
         errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Invalid stack index: %d", nth_item);
         APE_ASSERT(false);
-        return object_make_null();
+        return Object::makeNull();
     }
 #endif
     return vm->stack[ix];
@@ -14751,7 +14783,7 @@ static Object this_stack_pop(VM* vm)
     {
         errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "this stack underflow");
         APE_ASSERT(false);
-        return object_make_null();
+        return Object::makeNull();
     }
 #endif
     vm->this_sp--;
@@ -14766,7 +14798,7 @@ static Object this_stack_get(VM* vm, int nth_item)
     {
         errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Invalid this stack index: %d", nth_item);
         APE_ASSERT(false);
-        return object_make_null();
+        return Object::makeNull();
     }
 #endif
     return vm->this_stack[ix];
@@ -14808,25 +14840,25 @@ bool pop_frame(VM* vm)
 
 void run_gc(VM* vm, Array * constants)
 {
-    gc_unmark_all(vm->mem);
-    gc_mark_objects(global_store_get_object_data(vm->global_store), global_store_get_object_count(vm->global_store));
-    gc_mark_objects((Object*)constants->data(), constants->count());
-    gc_mark_objects(vm->globals, vm->globals_count);
+    vm->mem->unmarkAll();
+    GCMemory::markObjects(global_store_get_object_data(vm->global_store), global_store_get_object_count(vm->global_store));
+    GCMemory::markObjects((Object*)constants->data(), constants->count());
+    GCMemory::markObjects(vm->globals, vm->globals_count);
     for(int i = 0; i < vm->frames_count; i++)
     {
         Frame* frame = &vm->frames[i];
-        gc_mark_object(frame->function);
+        GCMemory::markObject(frame->function);
     }
-    gc_mark_objects(vm->stack, vm->sp);
-    gc_mark_objects(vm->this_stack, vm->this_sp);
-    gc_mark_object(vm->last_popped);
-    gc_mark_objects(vm->operator_oveload_keys, OPCODE_MAX);
-    gc_sweep(vm->mem);
+    GCMemory::markObjects(vm->stack, vm->sp);
+    GCMemory::markObjects(vm->this_stack, vm->this_sp);
+    GCMemory::markObject(vm->last_popped);
+    GCMemory::markObjects(vm->operator_oveload_keys, OPCODE_MAX);
+    vm->mem->sweep();
 }
 
 bool call_object(VM* vm, Object callee, int num_args)
 {
-    ObjectType callee_type = object_get_type(callee);
+    ObjectType callee_type = callee.type();
     if(callee_type == APE_OBJECT_FUNCTION)
     {
         ScriptFunction* callee_function = object_get_function(callee);
@@ -14884,9 +14916,9 @@ Object call_native_function(VM* vm, Object callee, Position src_pos, int argc, O
         {
             traceback_append(err->traceback, native_fun->name, src_pos_invalid);
         }
-        return object_make_null();
+        return Object::makeNull();
     }
-    ObjectType res_type = object_get_type(res);
+    ObjectType res_type = res.type();
     if(res_type == APE_OBJECT_ERROR)
     {
         Traceback* traceback = traceback_make(vm->alloc);
@@ -14909,8 +14941,8 @@ bool check_assign(VM* vm, Object old_value, Object new_value)
     ObjectType old_value_type;
     ObjectType new_value_type;
     (void)vm;
-    old_value_type = object_get_type(old_value);
-    new_value_type = object_get_type(new_value);
+    old_value_type = old_value.type();
+    new_value_type = new_value.type();
     if(old_value_type == APE_OBJECT_NULL || new_value_type == APE_OBJECT_NULL)
     {
         return true;
@@ -14934,8 +14966,8 @@ static bool try_overload_operator(VM* vm, Object left, Object right, opcode_t op
     ObjectType left_type;
     ObjectType right_type;
     *out_overload_found = false;
-    left_type = object_get_type(left);
-    right_type = object_get_type(right);
+    left_type = left.type();
+    right_type = right.type();
     if(left_type != APE_OBJECT_MAP && right_type != APE_OBJECT_MAP)
     {
         *out_overload_found = false;
@@ -14947,18 +14979,18 @@ static bool try_overload_operator(VM* vm, Object left, Object right, opcode_t op
         num_operands = 1;
     }
     key = vm->operator_oveload_keys[op];
-    callee = object_make_null();
+    callee = Object::makeNull();
     if(left_type == APE_OBJECT_MAP)
     {
         callee = object_get_map_value_object(left, key);
     }
-    if(!object_is_callable(callee))
+    if(!callee.isCallable())
     {
         if(right_type == APE_OBJECT_MAP)
         {
             callee = object_get_map_value_object(right, key);
         }
-        if(!object_is_callable(callee))
+        if(!callee.isCallable())
         {
             *out_overload_found = false;
             return true;
@@ -14984,23 +15016,23 @@ Context* ape_make(void)
 
 Context* ape_make_ex(MallocFNCallback malloc_fn, FreeFNCallback free_fn, void* ctx)
 {
-    Allocator custom_alloc = allocator_make((AllocatorMallocFNCallback)malloc_fn, (AllocatorFreeFNCallback)free_fn, ctx);
+    Allocator custom_alloc = Allocator::make((AllocatorMallocFNCallback)malloc_fn, (AllocatorFreeFNCallback)free_fn, ctx);
 
-    Context* ape = (Context*)allocator_malloc(&custom_alloc, sizeof(Context));
+    Context* ape = (Context*)custom_alloc.allocate(sizeof(Context));
     if(!ape)
     {
         return NULL;
     }
 
     memset(ape, 0, sizeof(Context));
-    ape->alloc = allocator_make(ape_malloc, ape_free, ape);
+    ape->alloc = Allocator::make(ape_malloc, ape_free, ape);
     ape->custom_allocator = custom_alloc;
 
     set_default_config(ape);
 
     errors_init(&ape->errors);
 
-    ape->mem = gcmem_make(&ape->alloc);
+    ape->mem = GCMemory::make(&ape->alloc);
     if(!ape->mem)
     {
         goto err;
@@ -15033,7 +15065,7 @@ Context* ape_make_ex(MallocFNCallback malloc_fn, FreeFNCallback free_fn, void* c
     return ape;
 err:
     ape_deinit(ape);
-    allocator_free(&custom_alloc, ape);
+    custom_alloc.release(ape);
     return NULL;
 }
 
@@ -15045,12 +15077,12 @@ void ape_destroy(Context* ape)
     }
     ape_deinit(ape);
     Allocator alloc = ape->alloc;
-    allocator_free(&alloc, ape);
+    alloc.release(ape);
 }
 
 void ape_free_allocated(Context* ape, void* ptr)
 {
-    allocator_free(&ape->alloc, ptr);
+    ape->alloc.release(ptr);
 }
 
 void ape_set_repl_mode(Context* ape, bool enabled)
@@ -15108,7 +15140,7 @@ void ape_program_destroy(Program* program)
         return;
     }
     compilation_result_destroy(program->comp_res);
-    allocator_free(&program->ape->alloc, program);
+    program->ape->alloc.release(program);
 }
 
 Object ape_execute(Context* ape, const char* code)
@@ -15129,7 +15161,7 @@ Object ape_execute(Context* ape, const char* code)
     }
     APE_ASSERT(ape->vm->sp == 0);
     res = vm_get_last_popped(ape->vm);
-    if(object_get_type(res) == APE_OBJECT_NONE)
+    if(res.type() == APE_OBJECT_NONE)
     {
         goto err;
     }
@@ -15138,7 +15170,7 @@ Object ape_execute(Context* ape, const char* code)
 
 err:
     compilation_result_destroy(comp_res);
-    return object_make_null();
+    return Object::makeNull();
 }
 
 Object ape_execute_file(Context* ape, const char* path)
@@ -15159,7 +15191,7 @@ Object ape_execute_file(Context* ape, const char* path)
     }
     APE_ASSERT(ape->vm->sp == 0);
     res = vm_get_last_popped(ape->vm);
-    if(object_get_type(res) == APE_OBJECT_NONE)
+    if(res.type() == APE_OBJECT_NONE)
     {
         goto err;
     }
@@ -15169,7 +15201,7 @@ Object ape_execute_file(Context* ape, const char* path)
 
 err:
     compilation_result_destroy(comp_res);
-    return object_make_null();
+    return Object::makeNull();
 }
 
 
@@ -15197,7 +15229,7 @@ const Error* ape_get_error(const Context* ape, int index)
 bool ape_set_native_function(Context* ape, const char* name, UserFNCallback fn, void* data)
 {
     Object obj = ape_object_make_native_function_with_name(ape, name, fn, data);
-    if(object_is_null(obj))
+    if(obj.isNull())
     {
         return false;
     }
@@ -15216,9 +15248,9 @@ Object ape_get_object(Context* ape, const char* name)
     if(!symbol)
     {
         errors_add_errorf(&ape->errors, APE_ERROR_USER, src_pos_invalid, "Symbol \"%s\" is not defined", name);
-        return object_make_null();
+        return Object::makeNull();
     }
-    Object res = object_make_null();
+    Object res = Object::makeNull();
     if(symbol->type == SYMBOL_MODULE_GLOBAL)
     {
         res = vm_get_global(ape->vm, symbol->index);
@@ -15230,13 +15262,13 @@ Object ape_get_object(Context* ape, const char* name)
         if(!ok)
         {
             errors_add_errorf(&ape->errors, APE_ERROR_USER, src_pos_invalid, "Failed to get global object at %d", symbol->index);
-            return object_make_null();
+            return Object::makeNull();
         }
     }
     else
     {
         errors_add_errorf(&ape->errors, APE_ERROR_USER, src_pos_invalid, "Value associated with symbol \"%s\" could not be loaded", name);
-        return object_make_null();
+        return Object::makeNull();
     }
     return res;
 }
@@ -15251,13 +15283,13 @@ Object ape_object_make_native_function(Context* ape, UserFNCallback fn, void* da
 bool ape_object_disable_gc(Object ape_obj)
 {
     Object obj = ape_obj;
-    return gc_disable_on_object(obj);
+    return GCMemory::disableFor(obj);
 }
 
 void ape_object_enable_gc(Object ape_obj)
 {
     Object obj = ape_obj;
-    gc_enable_on_object(obj);
+    GCMemory::enableFor(obj);
 }
 
 void ape_set_runtime_error(Context* ape, const char* message)
@@ -15290,7 +15322,7 @@ const char* ape_object_get_array_string(Object obj, int ix)
 {
     Object object;
     object = object_get_array_value(obj, ix);
-    if(object_get_type(object) != APE_OBJECT_STRING)
+    if(object.type() != APE_OBJECT_STRING)
     {
         return NULL;
     }
@@ -15301,7 +15333,7 @@ double ape_object_get_array_number(Object obj, int ix)
 {
     Object object;
     object = object_get_array_value(obj, ix);
-    if(object_get_type(object) != APE_OBJECT_NUMBER)
+    if(object.type() != APE_OBJECT_NUMBER)
     {
         return 0;
     }
@@ -15311,7 +15343,7 @@ double ape_object_get_array_number(Object obj, int ix)
 bool ape_object_get_array_bool(Object obj, int ix)
 {
     Object object = object_get_array_value(obj, ix);
-    if(object_get_type(object) != APE_OBJECT_BOOL)
+    if(object.type() != APE_OBJECT_BOOL)
     {
         return 0;
     }
@@ -15327,48 +15359,48 @@ bool ape_object_set_array_value(Object ape_obj, int ix, Object ape_value)
 
 bool ape_object_set_array_string(Object obj, int ix, const char* string)
 {
-    GCMemory* mem = object_get_mem(obj);
+    GCMemory* mem = GCMemory::objectGetMemory(obj);
     if(!mem)
     {
         return false;
     }
-    Object new_value = object_make_string(mem, string);
+    Object new_value = Object::makeString(mem, string);
     return ape_object_set_array_value(obj, ix, new_value);
 }
 
 bool ape_object_set_array_number(Object obj, int ix, double number)
 {
-    Object new_value = object_make_number(number);
+    Object new_value = Object::makeNumber(number);
     return ape_object_set_array_value(obj, ix, new_value);
 }
 
 bool ape_object_set_array_bool(Object obj, int ix, bool value)
 {
-    Object new_value = object_make_bool(value);
+    Object new_value = Object::makeBool(value);
     return ape_object_set_array_value(obj, ix, new_value);
 }
 
 
 bool ape_object_add_array_string(Object obj, const char* string)
 {
-    GCMemory* mem = object_get_mem(obj);
+    GCMemory* mem = GCMemory::objectGetMemory(obj);
     if(!mem)
     {
         return false;
     }
-    Object new_value = object_make_string(mem, string);
+    Object new_value = Object::makeString(mem, string);
     return object_add_array_value(obj, new_value);
 }
 
 bool ape_object_add_array_number(Object obj, double number)
 {
-    Object new_value = object_make_number(number);
+    Object new_value = Object::makeNumber(number);
     return object_add_array_value(obj, new_value);
 }
 
 bool ape_object_add_array_bool(Object obj, bool value)
 {
-    Object new_value = object_make_bool(value);
+    Object new_value = Object::makeBool(value);
     return object_add_array_value(obj, new_value);
 }
 
@@ -15378,13 +15410,13 @@ bool ape_object_add_array_bool(Object obj, bool value)
 
 bool ape_object_set_map_value(Object obj, const char* key, Object value)
 {
-    GCMemory* mem = object_get_mem(obj);
+    GCMemory* mem = GCMemory::objectGetMemory(obj);
     if(!mem)
     {
         return false;
     }
-    Object key_object = object_make_string(mem, key);
-    if(object_is_null(key_object))
+    Object key_object = Object::makeString(mem, key);
+    if(key_object.isNull())
     {
         return false;
     }
@@ -15393,13 +15425,13 @@ bool ape_object_set_map_value(Object obj, const char* key, Object value)
 
 bool ape_object_set_map_string(Object obj, const char* key, const char* string)
 {
-    GCMemory* mem = object_get_mem(obj);
+    GCMemory* mem = GCMemory::objectGetMemory(obj);
     if(!mem)
     {
         return false;
     }
-    Object string_object = object_make_string(mem, string);
-    if(object_is_null(string_object))
+    Object string_object = Object::makeString(mem, string);
+    if(string_object.isNull())
     {
         return false;
     }
@@ -15408,28 +15440,28 @@ bool ape_object_set_map_string(Object obj, const char* key, const char* string)
 
 bool ape_object_set_map_number(Object obj, const char* key, double number)
 {
-    Object number_object = object_make_number(number);
+    Object number_object = Object::makeNumber(number);
     return ape_object_set_map_value(obj, key, number_object);
 }
 
 bool ape_object_set_map_bool(Object obj, const char* key, bool value)
 {
-    Object bool_object = object_make_bool(value);
+    Object bool_object = Object::makeBool(value);
     return ape_object_set_map_value(obj, key, bool_object);
 }
 
 
 Object ape_object_get_map_value(Object object, const char* key)
 {
-    GCMemory* mem = object_get_mem(object);
+    GCMemory* mem = GCMemory::objectGetMemory(object);
     if(!mem)
     {
-        return object_make_null();
+        return Object::makeNull();
     }
-    Object key_object = object_make_string(mem, key);
-    if(object_is_null(key_object))
+    Object key_object = Object::makeString(mem, key);
+    if(key_object.isNull())
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     Object res = object_get_map_value_object(object, key_object);
     return res;
@@ -15456,13 +15488,13 @@ bool ape_object_get_map_bool(Object object, const char* key)
 bool ape_object_map_has_key(Object ape_object, const char* key)
 {
     Object object = ape_object;
-    GCMemory* mem = object_get_mem(object);
+    GCMemory* mem = GCMemory::objectGetMemory(object);
     if(!mem)
     {
         return false;
     }
-    Object key_object = object_make_string(mem, key);
-    if(object_is_null(key_object))
+    Object key_object = Object::makeString(mem, key);
+    if(key_object.isNull())
     {
         return false;
     }
@@ -15676,7 +15708,7 @@ void ape_deinit(Context* ape)
     vm_destroy(ape->vm);
     ape->compiler->destroy();
     global_store_destroy(ape->global_store);
-    gcmem_destroy(ape->mem);
+    ape->mem->destroy();
     ape->files->destroyWithItems(compiled_file_destroy);
     errors_deinit(&ape->errors);
 }
@@ -15691,7 +15723,7 @@ Object ape_native_fn_wrapper(VM* vm, void* data, int argc, Object* args)
     res = wrapper->wrapped_funcptr(wrapper->ape, wrapper->data, argc, (Object*)args);
     if(ape_has_errors(wrapper->ape))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     return res;
 }
@@ -15703,10 +15735,10 @@ Object ape_object_make_native_function_with_name(Context* ape, const char* name,
     wrapper.wrapped_funcptr = fn;
     wrapper.ape = ape;
     wrapper.data = data;
-    Object wrapper_native_function = object_make_native_function_memory(ape->mem, name, ape_native_fn_wrapper, &wrapper, sizeof(wrapper));
-    if(object_is_null(wrapper_native_function))
+    Object wrapper_native_function = Object::makeNativeFunctionMemory(ape->mem, name, ape_native_fn_wrapper, &wrapper, sizeof(wrapper));
+    if(wrapper_native_function.isNull())
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     return wrapper_native_function;
 }
@@ -15752,7 +15784,7 @@ static char* read_file_default(void* ctx, const char* filename)
     }
     size_to_read = pos;
     rewind(fp);
-    file_contents = (char*)allocator_malloc(&ape->alloc, sizeof(char) * (size_to_read + 1));
+    file_contents = (char*)ape->alloc.allocate(sizeof(char) * (size_to_read + 1));
     if(!file_contents)
     {
         fclose(fp);
@@ -15796,7 +15828,7 @@ void* ape_malloc(void* ctx, size_t size)
     void* res;
     Context* ape;
     ape = (Context*)ctx;
-    res = (void*)allocator_malloc(&ape->custom_allocator, size);
+    res = (void*)ape->custom_allocator.allocate(size);
     if(!res)
     {
         errors_add_error(&ape->errors, APE_ERROR_ALLOCATION, src_pos_invalid, "Allocation failed");
@@ -15808,7 +15840,7 @@ void ape_free(void* ctx, void* ptr)
 {
     Context* ape;
     ape = (Context*)ctx;
-    allocator_free(&ape->custom_allocator, ptr);
+    ape->custom_allocator.release( ptr);
 }
 
 #if __has_include(<dirent.h>)
@@ -15841,7 +15873,7 @@ void ape_free(void* ctx, void* ptr)
 
 //Object object_make_native_function(GCMemory* mem, const char* name, NativeFNCallback fn, void* data, int data_len);
 #define make_fn_data(vm, name, fnc, dataptr, datasize) \
-    object_make_native_function_memory(vm->mem, name, fnc, dataptr, datasize)
+    Object::makeNativeFunctionMemory(vm->mem, name, fnc, dataptr, datasize)
 
 #define make_fn(vm, name, fnc) \
     make_fn_data(vm, name, fnc, NULL, 0)
@@ -15892,7 +15924,7 @@ static bool check_args(VM* vm, bool generate_error, int argc, Object* args, int 
     for(int i = 0; i < argc; i++)
     {
         Object arg = args[i];
-        ObjectType type = object_get_type(arg);
+        ObjectType type = arg.type();
         ObjectType expected_type = expected_types[i];
         if(!(type & expected_type))
         {
@@ -15906,7 +15938,7 @@ static bool check_args(VM* vm, bool generate_error, int argc, Object* args, int 
                 }
                 errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid,
                                   "Invalid argument %d type, got %s, expected %s", i, type_str, expected_type_str);
-                allocator_free(vm->alloc, expected_type_str);
+                vm->alloc->release(expected_type_str);
             }
             return false;
         }
@@ -15920,28 +15952,28 @@ static Object cfn_len(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING | APE_OBJECT_ARRAY | APE_OBJECT_MAP))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
 
     Object arg = args[0];
-    ObjectType type = object_get_type(arg);
+    ObjectType type = arg.type();
     if(type == APE_OBJECT_STRING)
     {
         int len = object_get_string_length(arg);
-        return object_make_number(len);
+        return Object::makeNumber(len);
     }
     else if(type == APE_OBJECT_ARRAY)
     {
         int len = object_get_array_length(arg);
-        return object_make_number(len);
+        return Object::makeNumber(len);
     }
     else if(type == APE_OBJECT_MAP)
     {
         int len = object_get_map_length(arg);
-        return object_make_number(len);
+        return Object::makeNumber(len);
     }
 
-    return object_make_null();
+    return Object::makeNull();
 }
 
 static Object cfn_first(VM* vm, void* data, int argc, Object* args)
@@ -15949,7 +15981,7 @@ static Object cfn_first(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ARRAY))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     Object arg = args[0];
     return object_get_array_value(arg, 0);
@@ -15960,7 +15992,7 @@ static Object cfn_last(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ARRAY))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     Object arg = args[0];
     return object_get_array_value(arg, object_get_array_length(arg) - 1);
@@ -15971,19 +16003,19 @@ static Object cfn_rest(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ARRAY))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     Object arg = args[0];
     int len = object_get_array_length(arg);
     if(len == 0)
     {
-        return object_make_null();
+        return Object::makeNull();
     }
 
-    Object res = object_make_array(vm->mem);
-    if(object_is_null(res))
+    Object res = Object::makeArray(vm->mem);
+    if(res.isNull())
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     for(int i = 1; i < len; i++)
     {
@@ -15991,7 +16023,7 @@ static Object cfn_rest(VM* vm, void* data, int argc, Object* args)
         bool ok = object_add_array_value(res, item);
         if(!ok)
         {
-            return object_make_null();
+            return Object::makeNull();
         }
     }
     return res;
@@ -16002,17 +16034,17 @@ static Object cfn_reverse(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ARRAY | APE_OBJECT_STRING))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     Object arg = args[0];
-    ObjectType type = object_get_type(arg);
+    ObjectType type = arg.type();
     if(type == APE_OBJECT_ARRAY)
     {
         int len = object_get_array_length(arg);
-        Object res = object_make_array_with_capacity(vm->mem, len);
-        if(object_is_null(res))
+        Object res = Object::makeArray(vm->mem, len);
+        if(res.isNull())
         {
-            return object_make_null();
+            return Object::makeNull();
         }
         for(int i = 0; i < len; i++)
         {
@@ -16020,7 +16052,7 @@ static Object cfn_reverse(VM* vm, void* data, int argc, Object* args)
             bool ok = object_set_array_value_at(res, len - i - 1, obj);
             if(!ok)
             {
-                return object_make_null();
+                return Object::makeNull();
             }
         }
         return res;
@@ -16030,10 +16062,10 @@ static Object cfn_reverse(VM* vm, void* data, int argc, Object* args)
         const char* str = object_get_string(arg);
         int len = object_get_string_length(arg);
 
-        Object res = object_make_string_with_capacity(vm->mem, len);
-        if(object_is_null(res))
+        Object res = Object::makeStringCapacity(vm->mem, len);
+        if(res.isNull())
         {
-            return object_make_null();
+            return Object::makeNull();
         }
         char* res_buf = object_get_mutable_string(res);
         for(int i = 0; i < len; i++)
@@ -16044,7 +16076,7 @@ static Object cfn_reverse(VM* vm, void* data, int argc, Object* args)
         object_set_string_length(res, len);
         return res;
     }
-    return object_make_null();
+    return Object::makeNull();
 }
 
 static Object cfn_array(VM* vm, void* data, int argc, Object* args)
@@ -16054,21 +16086,21 @@ static Object cfn_array(VM* vm, void* data, int argc, Object* args)
     {
         if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER))
         {
-            return object_make_null();
+            return Object::makeNull();
         }
         int capacity = (int)object_get_number(args[0]);
-        Object res = object_make_array_with_capacity(vm->mem, capacity);
-        if(object_is_null(res))
+        Object res = Object::makeArray(vm->mem, capacity);
+        if(res.isNull())
         {
-            return object_make_null();
+            return Object::makeNull();
         }
-        Object obj_null = object_make_null();
+        Object obj_null = Object::makeNull();
         for(int i = 0; i < capacity; i++)
         {
             bool ok = object_add_array_value(res, obj_null);
             if(!ok)
             {
-                return object_make_null();
+                return Object::makeNull();
             }
         }
         return res;
@@ -16077,26 +16109,26 @@ static Object cfn_array(VM* vm, void* data, int argc, Object* args)
     {
         if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER, APE_OBJECT_ANY))
         {
-            return object_make_null();
+            return Object::makeNull();
         }
         int capacity = (int)object_get_number(args[0]);
-        Object res = object_make_array_with_capacity(vm->mem, capacity);
-        if(object_is_null(res))
+        Object res = Object::makeArray(vm->mem, capacity);
+        if(res.isNull())
         {
-            return object_make_null();
+            return Object::makeNull();
         }
         for(int i = 0; i < capacity; i++)
         {
             bool ok = object_add_array_value(res, args[1]);
             if(!ok)
             {
-                return object_make_null();
+                return Object::makeNull();
             }
         }
         return res;
     }
     CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER);
-    return object_make_null();
+    return Object::makeNull();
 }
 
 static Object cfn_append(VM* vm, void* data, int argc, Object* args)
@@ -16104,15 +16136,15 @@ static Object cfn_append(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ARRAY, APE_OBJECT_ANY))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     bool ok = object_add_array_value(args[0], args[1]);
     if(!ok)
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     int len = object_get_array_length(args[0]);
-    return object_make_number(len);
+    return Object::makeNumber(len);
 }
 
 static Object cfn_println(VM* vm, void* data, int argc, Object* args)
@@ -16123,13 +16155,13 @@ static Object cfn_println(VM* vm, void* data, int argc, Object* args)
 
     if(!config->stdio.write.write)
     {
-        return object_make_null();// todo: runtime error?
+        return Object::makeNull();// todo: runtime error?
     }
 
     StringBuffer* buf = StringBuffer::make(vm->alloc);
     if(!buf)
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     for(int i = 0; i < argc; i++)
     {
@@ -16140,11 +16172,11 @@ static Object cfn_println(VM* vm, void* data, int argc, Object* args)
     if(buf->failed())
     {
         buf->destroy();
-        return object_make_null();
+        return Object::makeNull();
     }
     config->stdio.write.write(config->stdio.write.context, buf->string(), buf->length());
     buf->destroy();
-    return object_make_null();
+    return Object::makeNull();
 }
 
 static Object cfn_print(VM* vm, void* data, int argc, Object* args)
@@ -16154,13 +16186,13 @@ static Object cfn_print(VM* vm, void* data, int argc, Object* args)
 
     if(!config->stdio.write.write)
     {
-        return object_make_null();// todo: runtime error?
+        return Object::makeNull();// todo: runtime error?
     }
 
     StringBuffer* buf = StringBuffer::make(vm->alloc);
     if(!buf)
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     for(int i = 0; i < argc; i++)
     {
@@ -16170,11 +16202,11 @@ static Object cfn_print(VM* vm, void* data, int argc, Object* args)
     if(buf->failed())
     {
         buf->destroy();
-        return object_make_null();
+        return Object::makeNull();
     }
     config->stdio.write.write(config->stdio.write.context, buf->string(), buf->length());
     buf->destroy();
-    return object_make_null();
+    return Object::makeNull();
 }
 
 static Object cfn_to_str(VM* vm, void* data, int argc, Object* args)
@@ -16182,21 +16214,21 @@ static Object cfn_to_str(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING | APE_OBJECT_NUMBER | APE_OBJECT_BOOL | APE_OBJECT_NULL | APE_OBJECT_MAP | APE_OBJECT_ARRAY))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     Object arg = args[0];
     StringBuffer* buf = StringBuffer::make(vm->alloc);
     if(!buf)
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     object_to_string(arg, buf, false);
     if(buf->failed())
     {
         buf->destroy();
-        return object_make_null();
+        return Object::makeNull();
     }
-    Object res = object_make_string(vm->mem, buf->string());
+    Object res = Object::makeString(vm->mem, buf->string());
     buf->destroy();
     return res;
 }
@@ -16206,19 +16238,19 @@ static Object cfn_to_num(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING | APE_OBJECT_NUMBER | APE_OBJECT_BOOL | APE_OBJECT_NULL))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     double result = 0;
     const char* string = "";
-    if(object_is_numeric(args[0]))
+    if(args[0].isNumeric())
     {
         result = object_get_number(args[0]);
     }
-    else if(object_is_null(args[0]))
+    else if(args[0].isNull())
     {
         result = 0;
     }
-    else if(object_get_type(args[0]) == APE_OBJECT_STRING)
+    else if(args[0].type() == APE_OBJECT_STRING)
     {
         string = object_get_string(args[0]);
         char* end;
@@ -16244,10 +16276,10 @@ static Object cfn_to_num(VM* vm, void* data, int argc, Object* args)
     {
         goto err;
     }
-    return object_make_number(result);
+    return Object::makeNumber(result);
 err:
     errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "Cannot convert \"%s\" to number", string);
-    return object_make_null();
+    return Object::makeNull();
 }
 
 static Object cfn_chr(VM* vm, void* data, int argc, Object* args)
@@ -16255,14 +16287,14 @@ static Object cfn_chr(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
 
     double val = object_get_number(args[0]);
 
     char c = (char)val;
     char str[2] = { c, '\0' };
-    return object_make_string(vm->mem, str);
+    return Object::makeString(vm->mem, str);
 }
 
 static Object cfn_range(VM* vm, void* data, int argc, Object* args)
@@ -16270,14 +16302,14 @@ static Object cfn_range(VM* vm, void* data, int argc, Object* args)
     (void)data;
     for(int i = 0; i < argc; i++)
     {
-        ObjectType type = object_get_type(args[i]);
+        ObjectType type = args[i].type();
         if(type != APE_OBJECT_NUMBER)
         {
             const char* type_str = object_get_type_name(type);
             const char* expected_str = object_get_type_name(APE_OBJECT_NUMBER);
             errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid,
                               "Invalid argument %d passed to range, got %s instead of %s", i, type_str, expected_str);
-            return object_make_null();
+            return Object::makeNull();
         }
     }
 
@@ -16303,27 +16335,27 @@ static Object cfn_range(VM* vm, void* data, int argc, Object* args)
     else
     {
         errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "Invalid number of arguments passed to range, got %d", argc);
-        return object_make_null();
+        return Object::makeNull();
     }
 
     if(step == 0)
     {
         errors_add_error(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "range step cannot be 0");
-        return object_make_null();
+        return Object::makeNull();
     }
 
-    Object res = object_make_array(vm->mem);
-    if(object_is_null(res))
+    Object res = Object::makeArray(vm->mem);
+    if(res.isNull())
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     for(int i = start; i < end; i += step)
     {
-        Object item = object_make_number(i);
+        Object item = Object::makeNumber(i);
         bool ok = object_add_array_value(res, item);
         if(!ok)
         {
-            return object_make_null();
+            return Object::makeNull();
         }
     }
     return res;
@@ -16334,13 +16366,13 @@ static Object cfn_keys(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_MAP))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     Object arg = args[0];
-    Object res = object_make_array(vm->mem);
-    if(object_is_null(res))
+    Object res = Object::makeArray(vm->mem);
+    if(res.isNull())
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     int len = object_get_map_length(arg);
     for(int i = 0; i < len; i++)
@@ -16349,7 +16381,7 @@ static Object cfn_keys(VM* vm, void* data, int argc, Object* args)
         bool ok = object_add_array_value(res, key);
         if(!ok)
         {
-            return object_make_null();
+            return Object::makeNull();
         }
     }
     return res;
@@ -16360,13 +16392,13 @@ static Object cfn_values(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_MAP))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     Object arg = args[0];
-    Object res = object_make_array(vm->mem);
-    if(object_is_null(res))
+    Object res = Object::makeArray(vm->mem);
+    if(res.isNull())
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     int len = object_get_map_length(arg);
     for(int i = 0; i < len; i++)
@@ -16375,7 +16407,7 @@ static Object cfn_values(VM* vm, void* data, int argc, Object* args)
         bool ok = object_add_array_value(res, key);
         if(!ok)
         {
-            return object_make_null();
+            return Object::makeNull();
         }
     }
     return res;
@@ -16386,7 +16418,7 @@ static Object cfn_copy(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ANY))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     return object_copy(vm->mem, args[0]);
 }
@@ -16396,7 +16428,7 @@ static Object cfn_deep_copy(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ANY))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     return object_deep_copy(vm->mem, args[0]);
 }
@@ -16406,17 +16438,17 @@ static Object cfn_concat(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ARRAY | APE_OBJECT_STRING, APE_OBJECT_ARRAY | APE_OBJECT_STRING))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
-    ObjectType type = object_get_type(args[0]);
-    ObjectType item_type = object_get_type(args[1]);
+    ObjectType type = args[0].type();
+    ObjectType item_type = args[1].type();
     if(type == APE_OBJECT_ARRAY)
     {
         if(item_type != APE_OBJECT_ARRAY)
         {
             const char* item_type_str = object_get_type_name(item_type);
             errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "Invalid argument 2 passed to concat, got %s", item_type_str);
-            return object_make_null();
+            return Object::makeNull();
         }
         for(int i = 0; i < object_get_array_length(args[1]); i++)
         {
@@ -16424,16 +16456,16 @@ static Object cfn_concat(VM* vm, void* data, int argc, Object* args)
             bool ok = object_add_array_value(args[0], item);
             if(!ok)
             {
-                return object_make_null();
+                return Object::makeNull();
             }
         }
-        return object_make_number(object_get_array_length(args[0]));
+        return Object::makeNumber(object_get_array_length(args[0]));
     }
     else if(type == APE_OBJECT_STRING)
     {
         if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING, APE_OBJECT_STRING))
         {
-            return object_make_null();
+            return Object::makeNull();
         }
         const char* left_val = object_get_string(args[0]);
         int left_len = (int)object_get_string_length(args[0]);
@@ -16441,27 +16473,27 @@ static Object cfn_concat(VM* vm, void* data, int argc, Object* args)
         const char* right_val = object_get_string(args[1]);
         int right_len = (int)object_get_string_length(args[1]);
 
-        Object res = object_make_string_with_capacity(vm->mem, left_len + right_len);
-        if(object_is_null(res))
+        Object res = Object::makeStringCapacity(vm->mem, left_len + right_len);
+        if(res.isNull())
         {
-            return object_make_null();
+            return Object::makeNull();
         }
 
         bool ok = object_string_append(res, left_val, left_len);
         if(!ok)
         {
-            return object_make_null();
+            return Object::makeNull();
         }
 
         ok = object_string_append(res, right_val, right_len);
         if(!ok)
         {
-            return object_make_null();
+            return Object::makeNull();
         }
 
         return res;
     }
-    return object_make_null();
+    return Object::makeNull();
 }
 
 static Object cfn_remove(VM* vm, void* data, int argc, Object* args)
@@ -16469,7 +16501,7 @@ static Object cfn_remove(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ARRAY, APE_OBJECT_ANY))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
 
     int ix = -1;
@@ -16485,11 +16517,11 @@ static Object cfn_remove(VM* vm, void* data, int argc, Object* args)
 
     if(ix == -1)
     {
-        return object_make_bool(false);
+        return Object::makeBool(false);
     }
 
     bool res = object_remove_array_value_at(args[0], ix);
-    return object_make_bool(res);
+    return Object::makeBool(res);
 }
 
 static Object cfn_remove_at(VM* vm, void* data, int argc, Object* args)
@@ -16497,10 +16529,10 @@ static Object cfn_remove_at(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ARRAY, APE_OBJECT_NUMBER))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
 
-    ObjectType type = object_get_type(args[0]);
+    ObjectType type = args[0].type();
     int ix = (int)object_get_number(args[1]);
 
     switch(type)
@@ -16508,33 +16540,33 @@ static Object cfn_remove_at(VM* vm, void* data, int argc, Object* args)
         case APE_OBJECT_ARRAY:
         {
             bool res = object_remove_array_value_at(args[0], ix);
-            return object_make_bool(res);
+            return Object::makeBool(res);
         }
         default:
             break;
     }
 
-    return object_make_bool(true);
+    return Object::makeBool(true);
 }
 
 
 static Object cfn_error(VM* vm, void* data, int argc, Object* args)
 {
     (void)data;
-    if(argc == 1 && object_get_type(args[0]) == APE_OBJECT_STRING)
+    if(argc == 1 && args[0].type() == APE_OBJECT_STRING)
     {
-        return object_make_error(vm->mem, object_get_string(args[0]));
+        return Object::makeError(vm->mem, object_get_string(args[0]));
     }
     else
     {
-        return object_make_error(vm->mem, "");
+        return Object::makeError(vm->mem, "");
     }
 }
 
 static Object cfn_crash(VM* vm, void* data, int argc, Object* args)
 {
     (void)data;
-    if(argc == 1 && object_get_type(args[0]) == APE_OBJECT_STRING)
+    if(argc == 1 && args[0].type() == APE_OBJECT_STRING)
     {
         errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), object_get_string(args[0]));
     }
@@ -16542,7 +16574,7 @@ static Object cfn_crash(VM* vm, void* data, int argc, Object* args)
     {
         errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "");
     }
-    return object_make_null();
+    return Object::makeNull();
 }
 
 static Object cfn_assert(VM* vm, void* data, int argc, Object* args)
@@ -16550,16 +16582,16 @@ static Object cfn_assert(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_BOOL))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
 
     if(!object_get_bool(args[0]))
     {
         errors_add_error(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "assertion failed");
-        return object_make_null();
+        return Object::makeNull();
     }
 
-    return object_make_bool(true);
+    return Object::makeBool(true);
 }
 
 static Object cfn_random_seed(VM* vm, void* data, int argc, Object* args)
@@ -16567,11 +16599,11 @@ static Object cfn_random_seed(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     int seed = (int)object_get_number(args[0]);
     srand(seed);
-    return object_make_bool(true);
+    return Object::makeBool(true);
 }
 
 static Object cfn_random(VM* vm, void* data, int argc, Object* args)
@@ -16580,29 +16612,29 @@ static Object cfn_random(VM* vm, void* data, int argc, Object* args)
     double res = (double)rand() / RAND_MAX;
     if(argc == 0)
     {
-        return object_make_number(res);
+        return Object::makeNumber(res);
     }
     else if(argc == 2)
     {
         if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER, APE_OBJECT_NUMBER))
         {
-            return object_make_null();
+            return Object::makeNull();
         }
         double min = object_get_number(args[0]);
         double max = object_get_number(args[1]);
         if(min >= max)
         {
             errors_add_error(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "max is bigger than min");
-            return object_make_null();
+            return Object::makeNull();
         }
         double range = max - min;
         res = min + (res * range);
-        return object_make_number(res);
+        return Object::makeNumber(res);
     }
     else
     {
         errors_add_error(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "Invalid number or arguments");
-        return object_make_null();
+        return Object::makeNull();
     }
 }
 
@@ -16611,9 +16643,9 @@ static Object cfn_slice(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING | APE_OBJECT_ARRAY, APE_OBJECT_NUMBER))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
-    ObjectType arg_type = object_get_type(args[0]);
+    ObjectType arg_type = args[0].type();
     int index = (int)object_get_number(args[1]);
     if(arg_type == APE_OBJECT_ARRAY)
     {
@@ -16626,10 +16658,10 @@ static Object cfn_slice(VM* vm, void* data, int argc, Object* args)
                 index = 0;
             }
         }
-        Object res = object_make_array_with_capacity(vm->mem, len - index);
-        if(object_is_null(res))
+        Object res = Object::makeArray(vm->mem, len - index);
+        if(res.isNull())
         {
-            return object_make_null();
+            return Object::makeNull();
         }
         for(int i = index; i < len; i++)
         {
@@ -16637,7 +16669,7 @@ static Object cfn_slice(VM* vm, void* data, int argc, Object* args)
             bool ok = object_add_array_value(res, item);
             if(!ok)
             {
-                return object_make_null();
+                return Object::makeNull();
             }
         }
         return res;
@@ -16651,18 +16683,18 @@ static Object cfn_slice(VM* vm, void* data, int argc, Object* args)
             index = len + index;
             if(index < 0)
             {
-                return object_make_string(vm->mem, "");
+                return Object::makeString(vm->mem, "");
             }
         }
         if(index >= len)
         {
-            return object_make_string(vm->mem, "");
+            return Object::makeString(vm->mem, "");
         }
         int res_len = len - index;
-        Object res = object_make_string_with_capacity(vm->mem, res_len);
-        if(object_is_null(res))
+        Object res = Object::makeStringCapacity(vm->mem, res_len);
+        if(res.isNull())
         {
-            return object_make_null();
+            return Object::makeNull();
         }
 
         char* res_buf = object_get_mutable_string(res);
@@ -16679,7 +16711,7 @@ static Object cfn_slice(VM* vm, void* data, int argc, Object* args)
     {
         const char* type_str = object_get_type_name(arg_type);
         errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "Invalid argument 0 passed to slice, got %s instead", type_str);
-        return object_make_null();
+        return Object::makeNull();
     }
 }
 
@@ -16692,9 +16724,9 @@ static Object cfn_is_string(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ANY))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
-    return object_make_bool(object_get_type(args[0]) == APE_OBJECT_STRING);
+    return Object::makeBool(args[0].type() == APE_OBJECT_STRING);
 }
 
 static Object cfn_is_array(VM* vm, void* data, int argc, Object* args)
@@ -16702,9 +16734,9 @@ static Object cfn_is_array(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ANY))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
-    return object_make_bool(object_get_type(args[0]) == APE_OBJECT_ARRAY);
+    return Object::makeBool(args[0].type() == APE_OBJECT_ARRAY);
 }
 
 static Object cfn_is_map(VM* vm, void* data, int argc, Object* args)
@@ -16712,9 +16744,9 @@ static Object cfn_is_map(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ANY))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
-    return object_make_bool(object_get_type(args[0]) == APE_OBJECT_MAP);
+    return Object::makeBool(args[0].type() == APE_OBJECT_MAP);
 }
 
 static Object cfn_is_number(VM* vm, void* data, int argc, Object* args)
@@ -16722,9 +16754,9 @@ static Object cfn_is_number(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ANY))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
-    return object_make_bool(object_get_type(args[0]) == APE_OBJECT_NUMBER);
+    return Object::makeBool(args[0].type() == APE_OBJECT_NUMBER);
 }
 
 static Object cfn_is_bool(VM* vm, void* data, int argc, Object* args)
@@ -16732,9 +16764,9 @@ static Object cfn_is_bool(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ANY))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
-    return object_make_bool(object_get_type(args[0]) == APE_OBJECT_BOOL);
+    return Object::makeBool(args[0].type() == APE_OBJECT_BOOL);
 }
 
 static Object cfn_is_null(VM* vm, void* data, int argc, Object* args)
@@ -16742,9 +16774,9 @@ static Object cfn_is_null(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ANY))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
-    return object_make_bool(object_get_type(args[0]) == APE_OBJECT_NULL);
+    return Object::makeBool(args[0].type() == APE_OBJECT_NULL);
 }
 
 static Object cfn_is_function(VM* vm, void* data, int argc, Object* args)
@@ -16752,9 +16784,9 @@ static Object cfn_is_function(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ANY))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
-    return object_make_bool(object_get_type(args[0]) == APE_OBJECT_FUNCTION);
+    return Object::makeBool(args[0].type() == APE_OBJECT_FUNCTION);
 }
 
 static Object cfn_is_external(VM* vm, void* data, int argc, Object* args)
@@ -16762,9 +16794,9 @@ static Object cfn_is_external(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ANY))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
-    return object_make_bool(object_get_type(args[0]) == APE_OBJECT_EXTERNAL);
+    return Object::makeBool(args[0].type() == APE_OBJECT_EXTERNAL);
 }
 
 static Object cfn_is_error(VM* vm, void* data, int argc, Object* args)
@@ -16772,9 +16804,9 @@ static Object cfn_is_error(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ANY))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
-    return object_make_bool(object_get_type(args[0]) == APE_OBJECT_ERROR);
+    return Object::makeBool(args[0].type() == APE_OBJECT_ERROR);
 }
 
 static Object cfn_is_native_function(VM* vm, void* data, int argc, Object* args)
@@ -16782,9 +16814,9 @@ static Object cfn_is_native_function(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ANY))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
-    return object_make_bool(object_get_type(args[0]) == APE_OBJECT_NATIVE_FUNCTION);
+    return Object::makeBool(args[0].type() == APE_OBJECT_NATIVE_FUNCTION);
 }
 
 //-----------------------------------------------------------------------------
@@ -16796,11 +16828,11 @@ static Object cfn_sqrt(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     double arg = object_get_number(args[0]);
     double res = sqrt(arg);
-    return object_make_number(res);
+    return Object::makeNumber(res);
 }
 
 static Object cfn_pow(VM* vm, void* data, int argc, Object* args)
@@ -16808,12 +16840,12 @@ static Object cfn_pow(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER, APE_OBJECT_NUMBER))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     double arg1 = object_get_number(args[0]);
     double arg2 = object_get_number(args[1]);
     double res = pow(arg1, arg2);
-    return object_make_number(res);
+    return Object::makeNumber(res);
 }
 
 static Object cfn_sin(VM* vm, void* data, int argc, Object* args)
@@ -16821,11 +16853,11 @@ static Object cfn_sin(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     double arg = object_get_number(args[0]);
     double res = sin(arg);
-    return object_make_number(res);
+    return Object::makeNumber(res);
 }
 
 static Object cfn_cos(VM* vm, void* data, int argc, Object* args)
@@ -16833,11 +16865,11 @@ static Object cfn_cos(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     double arg = object_get_number(args[0]);
     double res = cos(arg);
-    return object_make_number(res);
+    return Object::makeNumber(res);
 }
 
 static Object cfn_tan(VM* vm, void* data, int argc, Object* args)
@@ -16845,11 +16877,11 @@ static Object cfn_tan(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     double arg = object_get_number(args[0]);
     double res = tan(arg);
-    return object_make_number(res);
+    return Object::makeNumber(res);
 }
 
 static Object cfn_log(VM* vm, void* data, int argc, Object* args)
@@ -16857,11 +16889,11 @@ static Object cfn_log(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     double arg = object_get_number(args[0]);
     double res = log(arg);
-    return object_make_number(res);
+    return Object::makeNumber(res);
 }
 
 static Object cfn_ceil(VM* vm, void* data, int argc, Object* args)
@@ -16869,11 +16901,11 @@ static Object cfn_ceil(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     double arg = object_get_number(args[0]);
     double res = ceil(arg);
-    return object_make_number(res);
+    return Object::makeNumber(res);
 }
 
 static Object cfn_floor(VM* vm, void* data, int argc, Object* args)
@@ -16881,11 +16913,11 @@ static Object cfn_floor(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     double arg = object_get_number(args[0]);
     double res = floor(arg);
-    return object_make_number(res);
+    return Object::makeNumber(res);
 }
 
 static Object cfn_abs(VM* vm, void* data, int argc, Object* args)
@@ -16893,11 +16925,11 @@ static Object cfn_abs(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     double arg = object_get_number(args[0]);
     double res = fabs(arg);
-    return object_make_number(res);
+    return Object::makeNumber(res);
 }
 
 
@@ -16906,14 +16938,14 @@ static Object cfn_file_write(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING, APE_OBJECT_STRING))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
 
     const Config* config = vm->config;
 
     if(!config->fileio.write_file.write_file)
     {
-        return object_make_null();
+        return Object::makeNull();
     }
 
     const char* path = object_get_string(args[0]);
@@ -16922,7 +16954,7 @@ static Object cfn_file_write(VM* vm, void* data, int argc, Object* args)
 
     int written = (int)config->fileio.write_file.write_file(config->fileio.write_file.context, path, string, string_len);
 
-    return object_make_number(written);
+    return Object::makeNumber(written);
 }
 
 static Object cfn_file_read(VM* vm, void* data, int argc, Object* args)
@@ -16930,14 +16962,14 @@ static Object cfn_file_read(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
 
     const Config* config = vm->config;
 
     if(!config->fileio.read_file.read_file)
     {
-        return object_make_null();
+        return Object::makeNull();
     }
 
     const char* path = object_get_string(args[0]);
@@ -16945,10 +16977,10 @@ static Object cfn_file_read(VM* vm, void* data, int argc, Object* args)
     char* contents = config->fileio.read_file.read_file(config->fileio.read_file.context, path);
     if(!contents)
     {
-        return object_make_null();
+        return Object::makeNull();
     }
-    Object res = object_make_string(vm->mem, contents);
-    allocator_free(vm->alloc, contents);
+    Object res = Object::makeString(vm->mem, contents);
+    vm->alloc->release(contents);
     return res;
 }
 
@@ -16959,17 +16991,17 @@ static Object cfn_file_isfile(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING))
     {
-        return object_make_bool(false);
+        return Object::makeBool(false);
     }
     path = object_get_string(args[0]);
     if(stat(path, &st) != -1)
     {
         if((st.st_mode & S_IFMT) == S_IFREG)
         {
-            return object_make_bool(true);
+            return Object::makeBool(true);
         }
     }
-    return object_make_bool(false);
+    return Object::makeBool(false);
 }
 
 static Object cfn_file_isdirectory(VM* vm, void* data, int argc, Object* args)
@@ -16979,23 +17011,23 @@ static Object cfn_file_isdirectory(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING))
     {
-        return object_make_bool(false);
+        return Object::makeBool(false);
     }
     path = object_get_string(args[0]);
     if(stat(path, &st) != -1)
     {
         if((st.st_mode & S_IFMT) == S_IFDIR)
         {
-            return object_make_bool(true);
+            return Object::makeBool(true);
         }
     }
-    return object_make_bool(false);
+    return Object::makeBool(false);
 }
 
 static Object timespec_to_map(VM* vm, struct timespec ts)
 {
     Object map;
-    map = object_make_map(vm->mem);
+    map = Object::makeMap(vm->mem);
     ape_object_set_map_number(map, "sec", ts.tv_sec);
     ape_object_set_map_number(map, "nsec", ts.tv_nsec);
     return map;
@@ -17009,12 +17041,12 @@ static Object cfn_file_stat(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING))
     {
-        return object_make_bool(false);
+        return Object::makeBool(false);
     }
     path = object_get_string(args[0]);
     if(stat(path, &st) != -1)
     {
-        map = object_make_map(vm->mem);
+        map = Object::makeMap(vm->mem);
         //ape_object_add_array_string(ary, dent->d_name);
         ape_object_set_map_string(map, "name", path);
         ape_object_set_map_string(map, "path", path);
@@ -17033,7 +17065,7 @@ static Object cfn_file_stat(VM* vm, void* data, int argc, Object* args)
         ape_object_set_map_value(map, "ctim", timespec_to_map(vm, st.st_ctim));
         return map;
     }
-    return object_make_null();
+    return Object::makeNull();
 }
 
 static Object objfn_string_length(VM* vm, void* data, int argc, Object* args)
@@ -17043,7 +17075,7 @@ static Object objfn_string_length(VM* vm, void* data, int argc, Object* args)
     (void)data;
     (void)argc;
     self = args[0];
-    return object_make_number(object_get_string_length(self));
+    return Object::makeNumber(object_get_string_length(self));
 }
 
 
@@ -17061,15 +17093,15 @@ static Object cfn_dir_readdir(VM* vm, void* data, int argc, Object* args)
     (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     path = object_get_string(args[0]);
     hnd = opendir(path);
     if(hnd == NULL)
     {
-        return object_make_null();
+        return Object::makeNull();
     }
-    ary = object_make_array(vm->mem);
+    ary = Object::makeArray(vm->mem);
     while(true)
     {
         dent = readdir(hnd);
@@ -17079,7 +17111,7 @@ static Object cfn_dir_readdir(VM* vm, void* data, int argc, Object* args)
         }
         isfile = (dent->d_type == DT_REG);
         isdir = (dent->d_type == DT_DIR);
-        subm = object_make_map(vm->mem);
+        subm = Object::makeMap(vm->mem);
         //ape_object_add_array_string(ary, dent->d_name);
         ape_object_set_map_string(subm, "name", dent->d_name);
         ape_object_set_map_number(subm, "ino", dent->d_ino);
@@ -17107,18 +17139,18 @@ static Object cfn_string_split(VM* vm, void* data, int argc, Object* args)
     PtrArray* parr;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING, APE_OBJECT_STRING))
     {
-        return object_make_null();
+        return Object::makeNull();
     }
     str = object_get_string(args[0]);
     delim = object_get_string(args[1]);
-    arr = object_make_array(vm->mem);
+    arr = Object::makeArray(vm->mem);
     if(object_get_string_length(args[1]) == 0)
     {
         len = object_get_string_length(args[0]);
         for(i=0; i<len; i++)
         {
             c = str[i];
-            object_add_array_value(arr, object_make_string_len(vm->mem, &c, 1));
+            object_add_array_value(arr, Object::makeString(vm->mem, &c, 1));
         }
     }
     else
@@ -17127,8 +17159,8 @@ static Object cfn_string_split(VM* vm, void* data, int argc, Object* args)
         for(i=0; i<parr->count(); i++)
         {
             itm = (char*)parr->get(i);
-            object_add_array_value(arr, object_make_string(vm->mem, itm));
-            allocator_free(vm->alloc, (void*)itm);
+            object_add_array_value(arr, Object::makeString(vm->mem, itm));
+            vm->alloc->release((void*)itm);
         }
         parr->destroy();
     }
@@ -17235,7 +17267,7 @@ static void setup_namespace(VM* vm, const char* nsname, NatFunc_t* fnarray)
 {
     int i;
     Object map;
-    map = object_make_map(vm->mem);
+    map = Object::makeMap(vm->mem);
     for(i=0; fnarray[i].name != NULL; i++)
     {
         make_fn_entry(vm, map, fnarray[i].name, fnarray[i].fn);
@@ -17413,7 +17445,7 @@ static Object exit_repl(Context *ape, void *data, int argc, Object *args)
     (void)args;
     exit_repl = (bool*)data;
     *exit_repl = true;
-    return object_make_null();
+    return Object::makeNull();
 }
 
 #if !defined(NO_READLINE)
@@ -17542,7 +17574,7 @@ int main(int argc, char *argv[])
     ape_set_native_function(ape, "exit", exit_repl, &replexit);
     if((fx.poscnt > 0) || (opts.codeline != NULL))
     {
-        args_array = object_make_array(ape->mem);
+        args_array = Object::makeArray(ape->mem);
         for(i=0; i<fx.poscnt; i++)
         {
             ape_object_add_array_string(args_array, fx.positional[i]);
