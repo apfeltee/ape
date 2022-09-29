@@ -103,7 +103,7 @@ THE SOFTWARE.
 #define APE_DBLEQ(a, b) (fabs((a) - (b)) < DBL_EPSILON)
 
 #define APE_CALL(vm, function_name, ...) \
-    vm_call(vm, (function_name), sizeof((Object[]){ __VA_ARGS__ }) / sizeof(Object), (Object[]){ __VA_ARGS__ })
+    vm->call((function_name), sizeof((Object[]){ __VA_ARGS__ }) / sizeof(Object), (Object[]){ __VA_ARGS__ })
 
 
 #ifdef APE_DEBUG
@@ -454,27 +454,26 @@ struct /**/NativeFuncWrapper;
 struct /**/NatFunc_t;
 
 //typedef Object (*ape_native_fn)(Context* ape, void* data, int argc, Object* args);
-typedef Object (*UserFNCallback)(Context* ape, void* data, int argc, Object* args);
+typedef Object (*UserFNCallback)(Context*, void*, int, Object*);
 typedef Object (*NativeFNCallback)(VM*, void*, int, Object*);
-
-typedef void* (*MallocFNCallback)(void* ctx, size_t size);
-typedef void (*FreeFNCallback)(void* ctx, void* ptr);
-typedef void (*DataDestroyFNCallback)(void* data);
-typedef void* (*DataCopyFNCallback)(void* data);
-typedef size_t (*StdoutWriteFNCallback)(void* context, const void* data, size_t data_size);
-typedef char* (*ReadFileFNCallback)(void* context, const char* path);
-typedef size_t (*WriteFileFNCallback)(void* context, const char* path, const char* string, size_t string_size);
-typedef unsigned long (*CollectionsHashFNCallback)(const void* val);
-typedef bool (*CollectionsEqualsFNCallback)(const void* a, const void* b);
-typedef void* (*AllocatorMallocFNCallback)(void* ctx, size_t size);
-typedef void (*AllocatorFreeFNCallback)(void* ctx, void* ptr);
-typedef void (*DictItemDestroyFNCallback)(void* item);
-typedef void* (*DictItemCopyFNCallback)(void* item);
-typedef void (*ArrayItemDeinitFNCallback)(void* item);
-typedef void (*PtrArrayItemDestroyFNCallback)(void* item);
-typedef void* (*PtrArrayItemCopyFNCallback)(void* item);
-typedef Expression* (*RightAssocParseFNCallback)(Parser* p);
-typedef Expression* (*LeftAssocParseFNCallback)(Parser* p, Expression* expr);
+typedef void* (*MallocFNCallback)(void*, size_t size);
+typedef void (*FreeFNCallback)(void*, void* ptr);
+typedef void (*DataDestroyFNCallback)(void*);
+typedef void* (*DataCopyFNCallback)(void*);
+typedef size_t (*StdoutWriteFNCallback)(void*, const void*, size_t);
+typedef char* (*ReadFileFNCallback)(void*, const char*);
+typedef size_t (*WriteFileFNCallback)(void*, const char*, const char*, size_t);
+typedef unsigned long (*CollectionsHashFNCallback)(const void*);
+typedef bool (*CollectionsEqualsFNCallback)(const void*, const void*);
+typedef void* (*AllocatorMallocFNCallback)(void*, size_t);
+typedef void (*AllocatorFreeFNCallback)(void*, void*);
+typedef void (*DictItemDestroyFNCallback)(void*);
+typedef void* (*DictItemCopyFNCallback)(void*);
+typedef void (*ArrayItemDeinitFNCallback)(void*);
+typedef void (*PtrArrayItemDestroyFNCallback)(void*);
+typedef void* (*PtrArrayItemCopyFNCallback)(void*);
+typedef Expression* (*RightAssocParseFNCallback)(Parser*);
+typedef Expression* (*LeftAssocParseFNCallback)(Parser*, Expression*);
 
 typedef void (*ExternalDataDestroyFNCallback)(void* data);
 typedef void* (*ExternalDataCopyFNCallback)(void* data);
@@ -621,49 +620,13 @@ uint64_t frame_read_uint64(Frame *frame);
 uint16_t frame_read_uint16(Frame *frame);
 uint8_t frame_read_uint8(Frame *frame);
 Position frame_src_position(const Frame *frame);
-VM *vm_make(Allocator *alloc, const Config *config, GCMemory *mem, ErrorList *errors, GlobalStore *global_store);
-void vm_destroy(VM *vm);
-void vm_reset(VM *vm);
-bool vm_run(VM *vm, CompilationResult *comp_res, Array *constants);
-Object vm_call(VM *vm, Array *constants, Object callee, int argc, Object *args);
-bool vm_execute_function(VM *vm, Object function, Array *constants);
-Object vm_get_last_popped(VM *vm);
-bool vm_has_errors(VM *vm);
-bool vm_set_global(VM *vm, int ix, Object val);
-Object vm_get_global(VM *vm, int ix);
-void stack_push(VM *vm, Object obj);
-Object stack_pop(VM *vm);
-Object stack_get(VM *vm, int nth_item);
-bool push_frame(VM *vm, Frame frame);
-bool pop_frame(VM *vm);
-void run_gc(VM *vm, Array *constants);
-bool call_object(VM *vm, Object callee, int num_args);
-Object call_native_function(VM *vm, Object callee, Position src_pos, int argc, Object *args);
-bool check_assign(VM *vm, Object old_value, Object new_value);
-Context *ape_make(void);
-Context *ape_make_ex(MallocFNCallback malloc_fn, FreeFNCallback free_fn, void *ctx);
-void ape_destroy(Context *ape);
-void ape_free_allocated(Context *ape, void *ptr);
-void ape_set_repl_mode(Context *ape, bool enabled);
-bool ape_set_timeout(Context *ape, double max_execution_time_ms);
-void ape_set_stdout_write_function(Context *ape, StdoutWriteFNCallback stdout_write, void *context);
-void ape_set_file_write_function(Context *ape, WriteFileFNCallback file_write, void *context);
-void ape_set_file_read_function(Context *ape, ReadFileFNCallback file_read, void *context);
+
+
+
 void ape_program_destroy(Program *program);
-Object ape_execute(Context *ape, const char *code);
-Object ape_execute_file(Context *ape, const char *path);
-bool ape_has_errors(const Context *ape);
-int ape_errors_count(const Context *ape);
-void ape_clear_errors(Context *ape);
-const Error *ape_get_error(const Context *ape, int index);
-bool ape_set_native_function(Context *ape, const char *name, UserFNCallback fn, void *data);
-bool ape_set_global_constant(Context *ape, const char *name, Object obj);
-Object ape_get_object(Context *ape, const char *name);
-Object ape_object_make_native_function(Context *ape, UserFNCallback fn, void *data);
 bool ape_object_disable_gc(Object ape_obj);
 void ape_object_enable_gc(Object ape_obj);
-void ape_set_runtime_error(Context *ape, const char *message);
-void ape_set_runtime_errorf(Context *ape, const char *fmt, ...);
+
 const char *ape_object_get_array_string(Object obj, int ix);
 double ape_object_get_array_number(Object obj, int ix);
 bool ape_object_get_array_bool(Object obj, int ix);
@@ -690,7 +653,6 @@ int ape_error_get_line_number(const Error *ae);
 int ape_error_get_column_number(const Error *ae);
 ErrorType ape_error_get_type(const Error *ae);
 const char *ape_error_get_type_string(const Error *error);
-char *ape_error_serialize(Context *ape, const Error *err);
 const Traceback *ape_error_get_traceback(const Error *ae);
 int ape_traceback_get_depth(const Traceback *ape_traceback);
 const char *ape_traceback_get_filepath(const Traceback *ape_traceback, int depth);
@@ -698,56 +660,21 @@ const char *ape_traceback_get_line(const Traceback *ape_traceback, int depth);
 int ape_traceback_get_line_number(const Traceback *ape_traceback, int depth);
 int ape_traceback_get_column_number(const Traceback *ape_traceback, int depth);
 const char *ape_traceback_get_function_name(const Traceback *ape_traceback, int depth);
-void ape_deinit(Context *ape);
 Object ape_native_fn_wrapper(VM *vm, void *data, int argc, Object *args);
-Object ape_object_make_native_function_with_name(Context *ape, const char *name, UserFNCallback fn, void *data);
-void reset_state(Context *ape);
-void *ape_malloc(void *ctx, size_t size);
-void ape_free(void *ctx, void *ptr);
+void *ape_malloc(void*, size_t size);
+void ape_free(void*, void *ptr);
 
 
 /* main.c */
 int main(int argc, char *argv[]);
 /* parser.c */
-Expression *expression_make_ident(Allocator *alloc, Ident *ident);
-Expression *expression_make_number_literal(Allocator *alloc, double val);
-Expression *expression_make_bool_literal(Allocator *alloc, bool val);
-Expression *expression_make_string_literal(Allocator *alloc, char *value);
-Expression *expression_make_null_literal(Allocator *alloc);
-Expression *expression_make_array_literal(Allocator *alloc, PtrArray *values);
-Expression *expression_make_map_literal(Allocator *alloc, PtrArray *keys, PtrArray *values);
-Expression *expression_make_prefix(Allocator *alloc, Operator op, Expression *right);
-Expression *expression_make_infix(Allocator *alloc, Operator op, Expression *left, Expression *right);
-Expression *expression_make_fn_literal(Allocator *alloc, PtrArray *params, StmtBlock *body);
-Expression *expression_make_call(Allocator *alloc, Expression *function, PtrArray *args);
-Expression *expression_make_index(Allocator *alloc, Expression *left, Expression *index);
-Expression *expression_make_assign(Allocator *alloc, Expression *dest, Expression *source, bool is_postfix);
-Expression *expression_make_logical(Allocator *alloc, Operator op, Expression *left, Expression *right);
-Expression *expression_make_ternary(Allocator *alloc, Expression *test, Expression *if_true, Expression *if_false);
-void expression_destroy(Expression *expr);
-Expression *expression_copy(Expression *expr);
-Expression *statement_make_define(Allocator *alloc, Ident *name, Expression *value, bool assignable);
-Expression *statement_make_if(Allocator *alloc, PtrArray *cases, StmtBlock *alternative);
-Expression *statement_make_return(Allocator *alloc, Expression *value);
-Expression *statement_make_expression(Allocator *alloc, Expression *value);
-Expression *statement_make_while_loop(Allocator *alloc, Expression *test, StmtBlock *body);
-Expression *statement_make_break(Allocator *alloc);
-Expression *statement_make_foreach(Allocator *alloc, Ident *iterator, Expression *source, StmtBlock *body);
-Expression *statement_make_for_loop(Allocator *alloc, Expression *init, Expression *test, Expression *update, StmtBlock *body);
-Expression *statement_make_continue(Allocator *alloc);
-Expression *statement_make_block(Allocator *alloc, StmtBlock *block);
-Expression *statement_make_import(Allocator *alloc, char *path);
-Expression *statement_make_recover(Allocator *alloc, Ident *error_ident, StmtBlock *body);
-void statement_destroy(Expression *stmt);
-Expression *statement_copy(const Expression *stmt);
+
 StmtBlock *code_block_make(Allocator *alloc, PtrArray *statements);
 void code_block_destroy(StmtBlock *block);
 StmtBlock *code_block_copy(StmtBlock *block);
 void ident_destroy(Ident *ident);
 
 
-Expression *expression_make(Allocator *alloc, Expr_type type);
-Expression *statement_make(Allocator *alloc, Expr_type type);
 
 /* tostring.c */
 void statements_to_string(StringBuffer* buf, PtrArray *statements);
@@ -771,25 +698,20 @@ static const Error *errors_getc(const ErrorList *errors, int ix);
 
 static uint64_t get_type_tag(ObjectType type);
 static bool freevals_are_allocated(ScriptFunction *fun);
-static void set_sp(VM *vm, int new_sp);
-static void this_stack_push(VM *vm, Object obj);
-static Object this_stack_pop(VM *vm);
-static Object this_stack_get(VM *vm, int nth_item);
-static bool try_overload_operator(VM *vm, Object left, Object right, opcode_t op, bool *out_overload_found);
-static void set_default_config(Context *ape);
-static char *read_file_default(void *ctx, const char *filename);
-static size_t write_file_default(void *ctx, const char *path, const char *string, size_t string_size);
-static size_t stdout_write_default(void *ctx, const void *data, size_t size);
+
+static char *read_file_default(void*, const char*);
+static size_t write_file_default(void*, const char*, const char*, size_t);
+static size_t stdout_write_default(void*, const void*, size_t);
 
 struct Allocator
 {
     public:
-        static Allocator make(AllocatorMallocFNCallback malloc_fn, AllocatorFreeFNCallback free_fn, void* ctx)
+        static Allocator make(AllocatorMallocFNCallback malloc_fn, AllocatorFreeFNCallback free_fn, void* pctx)
         {
             Allocator alloc;
             alloc.m_allocfn = malloc_fn;
             alloc.m_freefn = free_fn;
-            alloc.ctx = ctx;
+            alloc.ctx = pctx;
             return alloc;
         }
 
@@ -3174,48 +3096,9 @@ struct StmtIfClause
                 StmtBlock* consequence;
 
             public:
-                void destroy()
-                {
-                    if(!this)
-                    {
-                        return;
-                    }
-                    expression_destroy(this->test);
-                    code_block_destroy(this->consequence);
-                    this->alloc->release(this);
-                }
+                void destroy();
 
-                Case* copy()
-                {
-                    if(!this)
-                    {
-                        return NULL;
-                    }
-                    Expression* test_copy = NULL;
-                    StmtBlock* consequence_copy = NULL;
-                    Case* if_case_copy = NULL;
-                    test_copy = expression_copy(this->test);
-                    if(!test_copy)
-                    {
-                        goto err;
-                    }
-                    consequence_copy = code_block_copy(this->consequence);
-                    if(!test_copy || !consequence_copy)
-                    {
-                        goto err;
-                    }
-                    if_case_copy = Case::make(this->alloc, test_copy, consequence_copy);
-                    if(!if_case_copy)
-                    {
-                        goto err;
-                    }
-                    return if_case_copy;
-                err:
-                    expression_destroy(test_copy);
-                    code_block_destroy(consequence_copy);
-                    if_case_copy->destroy();
-                    return NULL;
-                }
+                Case* copy();
 
         };
 
@@ -3223,6 +3106,7 @@ struct StmtIfClause
         PtrArray * cases;
         StmtBlock* alternative;
 };
+
 
 struct StmtWhileLoop
 {
@@ -3256,38 +3140,985 @@ struct StmtRecover
     StmtBlock* body;
 };
 
+static const Position src_pos_invalid = { NULL, -1, -1 };
+static const Position src_pos_zero = { NULL, 0, 0 };
+
+
 struct Expression
 {
-    Allocator* alloc;
-    Expr_type type;
-    union
-    {
-        Ident* ident;
-        double number_literal;
-        bool bool_literal;
-        char* string_literal;
-        PtrArray * array;
-        MapLiteral map;
-        StmtPrefix prefix;
-        StmtInfix infix;
-        StmtFuncDef fn_literal;
-        StmtCall call_expr;
-        StmtIndex index_expr;
-        StmtAssign assign;
-        StmtLogical logical;
-        StmtTernary ternary;
-        StmtDefine define;
-        StmtIfClause if_statement;
-        Expression* return_value;
-        Expression* expression;
-        StmtWhileLoop while_loop;
-        StmtForeach foreach;
-        StmtForLoop for_loop;
-        StmtBlock* block;
-        StmtImport import;
-        StmtRecover recover;
-    };
-    Position pos;
+    public:
+        static Expression* makeBasicExpression(Allocator* alloc, Expr_type type)
+        {
+            Expression* res = (Expression*)alloc->allocate(sizeof(Expression));
+            if(!res)
+            {
+                return NULL;
+            }
+            res->alloc = alloc;
+            res->type = type;
+            res->pos = src_pos_invalid;
+            return res;
+        }
+
+        static Expression* makeIdent(Allocator* alloc, Ident* ident)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_IDENT);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->ident = ident;
+            return res;
+        }
+
+        static Expression* makeNumberLiteral(Allocator* alloc, double val)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_NUMBER_LITERAL);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->number_literal = val;
+            return res;
+        }
+
+        static Expression* makeBoolLiteral(Allocator* alloc, bool val)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_BOOL_LITERAL);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->bool_literal = val;
+            return res;
+        }
+
+        static Expression* makeStringLiteral(Allocator* alloc, char* value)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_STRING_LITERAL);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->string_literal = value;
+            return res;
+        }
+
+        static Expression* makeNullLiteral(Allocator* alloc)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_NULL_LITERAL);
+            if(!res)
+            {
+                return NULL;
+            }
+            return res;
+        }
+
+        static Expression* makeArrayLiteral(Allocator* alloc, PtrArray * values)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_ARRAY_LITERAL);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->array = values;
+            return res;
+        }
+
+        static Expression* makeMapLiteral(Allocator* alloc, PtrArray * keys, PtrArray * values)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_MAP_LITERAL);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->map.keys = keys;
+            res->map.values = values;
+            return res;
+        }
+
+        static Expression* makePrefix(Allocator* alloc, Operator op, Expression* right)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_PREFIX);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->prefix.op = op;
+            res->prefix.right = right;
+            return res;
+        }
+
+        static Expression* makeInfix(Allocator* alloc, Operator op, Expression* left, Expression* right)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_INFIX);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->infix.op = op;
+            res->infix.left = left;
+            res->infix.right = right;
+            return res;
+        }
+
+        static Expression* makeFunctionLiteral(Allocator* alloc, PtrArray * params, StmtBlock* body)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_FUNCTION_LITERAL);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->fn_literal.name = NULL;
+            res->fn_literal.params = params;
+            res->fn_literal.body = body;
+            return res;
+        }
+
+        static Expression* makeCall(Allocator* alloc, Expression* function, PtrArray * args)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_CALL);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->call_expr.function = function;
+            res->call_expr.args = args;
+            return res;
+        }
+
+        static Expression* makeIndex(Allocator* alloc, Expression* left, Expression* index)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_INDEX);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->index_expr.left = left;
+            res->index_expr.index = index;
+            return res;
+        }
+
+        static Expression* makeAssign(Allocator* alloc, Expression* dest, Expression* source, bool is_postfix)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_ASSIGN);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->assign.dest = dest;
+            res->assign.source = source;
+            res->assign.is_postfix = is_postfix;
+            return res;
+        }
+
+        static Expression* makeLogical(Allocator* alloc, Operator op, Expression* left, Expression* right)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_LOGICAL);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->logical.op = op;
+            res->logical.left = left;
+            res->logical.right = right;
+            return res;
+        }
+
+        static Expression* makeTernary(Allocator* alloc, Expression* test, Expression* if_true, Expression* if_false)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_TERNARY);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->ternary.test = test;
+            res->ternary.if_true = if_true;
+            res->ternary.if_false = if_false;
+            return res;
+        }
+
+
+        static Expression* makeDefine(Allocator* alloc, Ident* name, Expression* value, bool assignable)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_DEFINE);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->define.name = name;
+            res->define.value = value;
+            res->define.assignable = assignable;
+            return res;
+        }
+
+        static Expression* makeIf(Allocator* alloc, PtrArray * cases, StmtBlock* alternative)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_IF);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->if_statement.cases = cases;
+            res->if_statement.alternative = alternative;
+            return res;
+        }
+
+        static Expression* makeReturn(Allocator* alloc, Expression* value)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_RETURN_VALUE);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->return_value = value;
+            return res;
+        }
+
+        static Expression* makeExpression(Allocator* alloc, Expression* value)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_EXPRESSION);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->expression = value;
+            return res;
+        }
+
+        static Expression* makeWhileLoop(Allocator* alloc, Expression* test, StmtBlock* body)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_WHILE_LOOP);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->while_loop.test = test;
+            res->while_loop.body = body;
+            return res;
+        }
+
+        static Expression* makeBreak(Allocator* alloc)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_BREAK);
+            if(!res)
+            {
+                return NULL;
+            }
+            return res;
+        }
+
+        static Expression* makeForeach(Allocator* alloc, Ident* iterator, Expression* source, StmtBlock* body)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_FOREACH);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->foreach.iterator = iterator;
+            res->foreach.source = source;
+            res->foreach.body = body;
+            return res;
+        }
+
+        static Expression* makeForLoop(Allocator* alloc, Expression* init, Expression* test, Expression* update, StmtBlock* body)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_FOR_LOOP);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->for_loop.init = init;
+            res->for_loop.test = test;
+            res->for_loop.update = update;
+            res->for_loop.body = body;
+            return res;
+        }
+
+        static Expression* makeContinue(Allocator* alloc)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_CONTINUE);
+            if(!res)
+            {
+                return NULL;
+            }
+            return res;
+        }
+
+        static Expression* makeBlock(Allocator* alloc, StmtBlock* block)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_BLOCK);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->block = block;
+            return res;
+        }
+
+        static Expression* makeImport(Allocator* alloc, char* path)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_IMPORT);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->import.path = path;
+            return res;
+        }
+
+        static Expression* makeRecover(Allocator* alloc, Ident* error_ident, StmtBlock* body)
+        {
+            Expression* res = Expression::makeBasicExpression(alloc, EXPRESSION_RECOVER);
+            if(!res)
+            {
+                return NULL;
+            }
+            res->recover.error_ident = error_ident;
+            res->recover.body = body;
+            return res;
+        }
+
+        static Expression* copyExpression(Expression* expr)
+        {
+            if(!expr)
+            {
+                return NULL;
+            }
+            Expression* res = NULL;
+            switch(expr->type)
+            {
+                case EXPRESSION_NONE:
+                {
+                    APE_ASSERT(false);
+                    break;
+                }
+                case EXPRESSION_IDENT:
+                {
+                    Ident* ident = Ident::copy_callback(expr->ident);
+                    if(!ident)
+                    {
+                        return NULL;
+                    }
+                    res = Expression::makeIdent(expr->alloc, ident);
+                    if(!res)
+                    {
+                        ident_destroy(ident);
+                        return NULL;
+                    }
+                    break;
+                }
+                case EXPRESSION_NUMBER_LITERAL:
+                {
+                    res = Expression::makeNumberLiteral(expr->alloc, expr->number_literal);
+                    break;
+                }
+                case EXPRESSION_BOOL_LITERAL:
+                {
+                    res = Expression::makeBoolLiteral(expr->alloc, expr->bool_literal);
+                    break;
+                }
+                case EXPRESSION_STRING_LITERAL:
+                {
+                    char* string_copy = ape_strdup(expr->alloc, expr->string_literal);
+                    if(!string_copy)
+                    {
+                        return NULL;
+                    }
+                    res = Expression::makeStringLiteral(expr->alloc, string_copy);
+                    if(!res)
+                    {
+                        expr->alloc->release(string_copy);
+                        return NULL;
+                    }
+                    break;
+                }
+                case EXPRESSION_NULL_LITERAL:
+                {
+                    res = Expression::makeNullLiteral(expr->alloc);
+                    break;
+                }
+                case EXPRESSION_ARRAY_LITERAL:
+                {
+                    PtrArray* values_copy = expr->array->copyWithItems(Expression::copyExpression, Expression::destroyExpression);
+                    if(!values_copy)
+                    {
+                        return NULL;
+                    }
+                    res = Expression::makeArrayLiteral(expr->alloc, values_copy);
+                    if(!res)
+                    {
+                        values_copy->destroyWithItems(Expression::destroyExpression);
+                        return NULL;
+                    }
+                    break;
+                }
+                case EXPRESSION_MAP_LITERAL:
+                {
+                    PtrArray* keys_copy = expr->map.keys->copyWithItems(Expression::copyExpression, Expression::destroyExpression);
+                    PtrArray* values_copy = expr->map.values->copyWithItems(Expression::copyExpression, Expression::destroyExpression);
+                    if(!keys_copy || !values_copy)
+                    {
+                        keys_copy->destroyWithItems(Expression::destroyExpression);
+                        values_copy->destroyWithItems(Expression::destroyExpression);
+                        return NULL;
+                    }
+                    res = Expression::makeMapLiteral(expr->alloc, keys_copy, values_copy);
+                    if(!res)
+                    {
+                        keys_copy->destroyWithItems(Expression::destroyExpression);
+                        values_copy->destroyWithItems(Expression::destroyExpression);
+                        return NULL;
+                    }
+                    break;
+                }
+                case EXPRESSION_PREFIX:
+                {
+                    Expression* right_copy = Expression::copyExpression(expr->prefix.right);
+                    if(!right_copy)
+                    {
+                        return NULL;
+                    }
+                    res = Expression::makePrefix(expr->alloc, expr->prefix.op, right_copy);
+                    if(!res)
+                    {
+                        Expression::destroyExpression(right_copy);
+                        return NULL;
+                    }
+                    break;
+                }
+                case EXPRESSION_INFIX:
+                {
+                    Expression* left_copy = Expression::copyExpression(expr->infix.left);
+                    Expression* right_copy = Expression::copyExpression(expr->infix.right);
+                    if(!left_copy || !right_copy)
+                    {
+                        Expression::destroyExpression(left_copy);
+                        Expression::destroyExpression(right_copy);
+                        return NULL;
+                    }
+                    res = Expression::makeInfix(expr->alloc, expr->infix.op, left_copy, right_copy);
+                    if(!res)
+                    {
+                        Expression::destroyExpression(left_copy);
+                        Expression::destroyExpression(right_copy);
+                        return NULL;
+                    }
+                    break;
+                }
+                case EXPRESSION_FUNCTION_LITERAL:
+                {
+                    PtrArray* params_copy = expr->fn_literal.params->copyWithItems(Ident::copy_callback, ident_destroy);
+                    StmtBlock* body_copy = code_block_copy(expr->fn_literal.body);
+                    char* name_copy = ape_strdup(expr->alloc, expr->fn_literal.name);
+                    if(!params_copy || !body_copy)
+                    {
+                        params_copy->destroyWithItems(ident_destroy);
+                        code_block_destroy(body_copy);
+                        expr->alloc->release(name_copy);
+                        return NULL;
+                    }
+                    res = Expression::makeFunctionLiteral(expr->alloc, params_copy, body_copy);
+                    if(!res)
+                    {
+                        params_copy->destroyWithItems(ident_destroy);
+                        code_block_destroy(body_copy);
+                        expr->alloc->release(name_copy);
+                        return NULL;
+                    }
+                    res->fn_literal.name = name_copy;
+                    break;
+                }
+                case EXPRESSION_CALL:
+                {
+                    Expression* function_copy = Expression::copyExpression(expr->call_expr.function);
+                    PtrArray* args_copy = expr->call_expr.args->copyWithItems(Expression::copyExpression, Expression::destroyExpression);
+                    if(!function_copy || !args_copy)
+                    {
+                        Expression::destroyExpression(function_copy);
+                        expr->call_expr.args->destroyWithItems(Expression::destroyExpression);
+                        return NULL;
+                    }
+                    res = Expression::makeCall(expr->alloc, function_copy, args_copy);
+                    if(!res)
+                    {
+                        Expression::destroyExpression(function_copy);
+                        expr->call_expr.args->destroyWithItems(Expression::destroyExpression);
+                        return NULL;
+                    }
+                    break;
+                }
+                case EXPRESSION_INDEX:
+                {
+                    Expression* left_copy = Expression::copyExpression(expr->index_expr.left);
+                    Expression* index_copy = Expression::copyExpression(expr->index_expr.index);
+                    if(!left_copy || !index_copy)
+                    {
+                        Expression::destroyExpression(left_copy);
+                        Expression::destroyExpression(index_copy);
+                        return NULL;
+                    }
+                    res = Expression::makeIndex(expr->alloc, left_copy, index_copy);
+                    if(!res)
+                    {
+                        Expression::destroyExpression(left_copy);
+                        Expression::destroyExpression(index_copy);
+                        return NULL;
+                    }
+                    break;
+                }
+                case EXPRESSION_ASSIGN:
+                {
+                    Expression* dest_copy = Expression::copyExpression(expr->assign.dest);
+                    Expression* source_copy = Expression::copyExpression(expr->assign.source);
+                    if(!dest_copy || !source_copy)
+                    {
+                        Expression::destroyExpression(dest_copy);
+                        Expression::destroyExpression(source_copy);
+                        return NULL;
+                    }
+                    res = Expression::makeAssign(expr->alloc, dest_copy, source_copy, expr->assign.is_postfix);
+                    if(!res)
+                    {
+                        Expression::destroyExpression(dest_copy);
+                        Expression::destroyExpression(source_copy);
+                        return NULL;
+                    }
+                    break;
+                }
+                case EXPRESSION_LOGICAL:
+                {
+                    Expression* left_copy = Expression::copyExpression(expr->logical.left);
+                    Expression* right_copy = Expression::copyExpression(expr->logical.right);
+                    if(!left_copy || !right_copy)
+                    {
+                        Expression::destroyExpression(left_copy);
+                        Expression::destroyExpression(right_copy);
+                        return NULL;
+                    }
+                    res = Expression::makeLogical(expr->alloc, expr->logical.op, left_copy, right_copy);
+                    if(!res)
+                    {
+                        Expression::destroyExpression(left_copy);
+                        Expression::destroyExpression(right_copy);
+                        return NULL;
+                    }
+                    break;
+                }
+                case EXPRESSION_TERNARY:
+                {
+                    Expression* test_copy = Expression::copyExpression(expr->ternary.test);
+                    Expression* if_true_copy = Expression::copyExpression(expr->ternary.if_true);
+                    Expression* if_false_copy = Expression::copyExpression(expr->ternary.if_false);
+                    if(!test_copy || !if_true_copy || !if_false_copy)
+                    {
+                        Expression::destroyExpression(test_copy);
+                        Expression::destroyExpression(if_true_copy);
+                        Expression::destroyExpression(if_false_copy);
+                        return NULL;
+                    }
+                    res = Expression::makeTernary(expr->alloc, test_copy, if_true_copy, if_false_copy);
+                    if(!res)
+                    {
+                        Expression::destroyExpression(test_copy);
+                        Expression::destroyExpression(if_true_copy);
+                        Expression::destroyExpression(if_false_copy);
+                        return NULL;
+                    }
+                    break;
+                }
+                case EXPRESSION_DEFINE:
+                {
+                    Expression* value_copy = Expression::copyExpression(expr->define.value);
+                    if(!value_copy)
+                    {
+                        return NULL;
+                    }
+                    res = Expression::makeDefine(expr->alloc, Ident::copy_callback(expr->define.name), value_copy, expr->define.assignable);
+                    if(!res)
+                    {
+                        Expression::destroyExpression(value_copy);
+                        return NULL;
+                    }
+                    break;
+                }
+                case EXPRESSION_IF:
+                {
+                    PtrArray* cases_copy = expr->if_statement.cases->copyWithItems(StmtIfClause::Case::copy_callback, StmtIfClause::Case::destroy_callback);
+                    StmtBlock* alternative_copy = code_block_copy(expr->if_statement.alternative);
+                    if(!cases_copy || !alternative_copy)
+                    {
+                        cases_copy->destroyWithItems(StmtIfClause::Case::destroy_callback);
+                        code_block_destroy(alternative_copy);
+                        return NULL;
+                    }
+                    res = Expression::makeIf(expr->alloc, cases_copy, alternative_copy);
+                    if(res)
+                    {
+                        cases_copy->destroyWithItems(StmtIfClause::Case::destroy_callback);
+                        code_block_destroy(alternative_copy);
+                        return NULL;
+                    }
+                    break;
+                }
+                case EXPRESSION_RETURN_VALUE:
+                {
+                    Expression* value_copy = Expression::copyExpression(expr->return_value);
+                    if(!value_copy)
+                    {
+                        return NULL;
+                    }
+                    res = Expression::makeReturn(expr->alloc, value_copy);
+                    if(!res)
+                    {
+                        Expression::destroyExpression(value_copy);
+                        return NULL;
+                    }
+                    break;
+                }
+                case EXPRESSION_EXPRESSION:
+                {
+                    Expression* value_copy = Expression::copyExpression(expr->expression);
+                    if(!value_copy)
+                    {
+                        return NULL;
+                    }
+                    res = Expression::makeExpression(expr->alloc, value_copy);
+                    if(!res)
+                    {
+                        Expression::destroyExpression(value_copy);
+                        return NULL;
+                    }
+                    break;
+                }
+                case EXPRESSION_WHILE_LOOP:
+                {
+                    Expression* test_copy = Expression::copyExpression(expr->while_loop.test);
+                    StmtBlock* body_copy = code_block_copy(expr->while_loop.body);
+                    if(!test_copy || !body_copy)
+                    {
+                        Expression::destroyExpression(test_copy);
+                        code_block_destroy(body_copy);
+                        return NULL;
+                    }
+                    res = Expression::makeWhileLoop(expr->alloc, test_copy, body_copy);
+                    if(!res)
+                    {
+                        Expression::destroyExpression(test_copy);
+                        code_block_destroy(body_copy);
+                        return NULL;
+                    }
+                    break;
+                }
+                case EXPRESSION_BREAK:
+                {
+                    res = Expression::makeBreak(expr->alloc);
+                    break;
+                }
+                case EXPRESSION_CONTINUE:
+                {
+                    res = Expression::makeContinue(expr->alloc);
+                    break;
+                }
+                case EXPRESSION_FOREACH:
+                {
+                    Expression* source_copy = Expression::copyExpression(expr->foreach.source);
+                    StmtBlock* body_copy = code_block_copy(expr->foreach.body);
+                    if(!source_copy || !body_copy)
+                    {
+                        Expression::destroyExpression(source_copy);
+                        code_block_destroy(body_copy);
+                        return NULL;
+                    }
+                    res = Expression::makeForeach(expr->alloc, Ident::copy_callback(expr->foreach.iterator), source_copy, body_copy);
+                    if(!res)
+                    {
+                        Expression::destroyExpression(source_copy);
+                        code_block_destroy(body_copy);
+                        return NULL;
+                    }
+                    break;
+                }
+                case EXPRESSION_FOR_LOOP:
+                {
+                    Expression* init_copy = Expression::copyExpression(expr->for_loop.init);
+                    Expression* test_copy = Expression::copyExpression(expr->for_loop.test);
+                    Expression* update_copy = Expression::copyExpression(expr->for_loop.update);
+                    StmtBlock* body_copy = code_block_copy(expr->for_loop.body);
+                    if(!init_copy || !test_copy || !update_copy || !body_copy)
+                    {
+                        Expression::destroyExpression(init_copy);
+                        Expression::destroyExpression(test_copy);
+                        Expression::destroyExpression(update_copy);
+                        code_block_destroy(body_copy);
+                        return NULL;
+                    }
+                    res = Expression::makeForLoop(expr->alloc, init_copy, test_copy, update_copy, body_copy);
+                    if(!res)
+                    {
+                        Expression::destroyExpression(init_copy);
+                        Expression::destroyExpression(test_copy);
+                        Expression::destroyExpression(update_copy);
+                        code_block_destroy(body_copy);
+                        return NULL;
+                    }
+                    break;
+                }
+                case EXPRESSION_BLOCK:
+                {
+                    StmtBlock* block_copy = code_block_copy(expr->block);
+                    if(!block_copy)
+                    {
+                        return NULL;
+                    }
+                    res = Expression::makeBlock(expr->alloc, block_copy);
+                    if(!res)
+                    {
+                        code_block_destroy(block_copy);
+                        return NULL;
+                    }
+                    break;
+                }
+                case EXPRESSION_IMPORT:
+                {
+                    char* path_copy = ape_strdup(expr->alloc, expr->import.path);
+                    if(!path_copy)
+                    {
+                        return NULL;
+                    }
+                    res = Expression::makeImport(expr->alloc, path_copy);
+                    if(!res)
+                    {
+                        expr->alloc->release(path_copy);
+                        return NULL;
+                    }
+                    break;
+                }
+                case EXPRESSION_RECOVER:
+                {
+                    StmtBlock* body_copy = code_block_copy(expr->recover.body);
+                    Ident* error_ident_copy = Ident::copy_callback(expr->recover.error_ident);
+                    if(!body_copy || !error_ident_copy)
+                    {
+                        code_block_destroy(body_copy);
+                        ident_destroy(error_ident_copy);
+                        return NULL;
+                    }
+                    res = Expression::makeRecover(expr->alloc, error_ident_copy, body_copy);
+                    if(!res)
+                    {
+                        code_block_destroy(body_copy);
+                        ident_destroy(error_ident_copy);
+                        return NULL;
+                    }
+                    break;
+                }
+            }
+            if(!res)
+            {
+                return NULL;
+            }
+            res->pos = expr->pos;
+            return res;
+        }
+
+        static void destroyExpression(Expression* expr)
+        {
+            if(!expr)
+            {
+                return;
+            }
+
+            switch(expr->type)
+            {
+                case EXPRESSION_NONE:
+                {
+                    APE_ASSERT(false);
+                    break;
+                }
+                case EXPRESSION_IDENT:
+                {
+                    ident_destroy(expr->ident);
+                    break;
+                }
+                case EXPRESSION_NUMBER_LITERAL:
+                case EXPRESSION_BOOL_LITERAL:
+                {
+                    break;
+                }
+                case EXPRESSION_STRING_LITERAL:
+                {
+                    expr->alloc->release(expr->string_literal);
+                    break;
+                }
+                case EXPRESSION_NULL_LITERAL:
+                {
+                    break;
+                }
+                case EXPRESSION_ARRAY_LITERAL:
+                {
+                    expr->array->destroyWithItems(Expression::destroyExpression);
+                    break;
+                }
+                case EXPRESSION_MAP_LITERAL:
+                {
+                    expr->map.keys->destroyWithItems(Expression::destroyExpression);
+                    expr->map.values->destroyWithItems(Expression::destroyExpression);
+                    break;
+                }
+                case EXPRESSION_PREFIX:
+                {
+                    Expression::destroyExpression(expr->prefix.right);
+                    break;
+                }
+                case EXPRESSION_INFIX:
+                {
+                    Expression::destroyExpression(expr->infix.left);
+                    Expression::destroyExpression(expr->infix.right);
+                    break;
+                }
+                case EXPRESSION_FUNCTION_LITERAL:
+                {
+                    StmtFuncDef* fn = &expr->fn_literal;
+                    expr->alloc->release(fn->name);
+                    fn->params->destroyWithItems(ident_destroy);
+                    code_block_destroy(fn->body);
+                    break;
+                }
+                case EXPRESSION_CALL:
+                {
+                    expr->call_expr.args->destroyWithItems(Expression::destroyExpression);
+                    Expression::destroyExpression(expr->call_expr.function);
+                    break;
+                }
+                case EXPRESSION_INDEX:
+                {
+                    Expression::destroyExpression(expr->index_expr.left);
+                    Expression::destroyExpression(expr->index_expr.index);
+                    break;
+                }
+                case EXPRESSION_ASSIGN:
+                {
+                    Expression::destroyExpression(expr->assign.dest);
+                    Expression::destroyExpression(expr->assign.source);
+                    break;
+                }
+                case EXPRESSION_LOGICAL:
+                {
+                    Expression::destroyExpression(expr->logical.left);
+                    Expression::destroyExpression(expr->logical.right);
+                    break;
+                }
+                case EXPRESSION_TERNARY:
+                {
+                    Expression::destroyExpression(expr->ternary.test);
+                    Expression::destroyExpression(expr->ternary.if_true);
+                    Expression::destroyExpression(expr->ternary.if_false);
+                    break;
+                }
+                case EXPRESSION_DEFINE:
+                {
+                    ident_destroy(expr->define.name);
+                    Expression::destroyExpression(expr->define.value);
+                    break;
+                }
+                case EXPRESSION_IF:
+                {
+                    expr->if_statement.cases->destroyWithItems(StmtIfClause::Case::destroy_callback);
+                    code_block_destroy(expr->if_statement.alternative);
+                    break;
+                }
+                case EXPRESSION_RETURN_VALUE:
+                {
+                    Expression::destroyExpression(expr->return_value);
+                    break;
+                }
+                case EXPRESSION_EXPRESSION:
+                {
+                    Expression::destroyExpression(expr->expression);
+                    break;
+                }
+                case EXPRESSION_WHILE_LOOP:
+                {
+                    Expression::destroyExpression(expr->while_loop.test);
+                    code_block_destroy(expr->while_loop.body);
+                    break;
+                }
+                case EXPRESSION_BREAK:
+                {
+                    break;
+                }
+                case EXPRESSION_CONTINUE:
+                {
+                    break;
+                }
+                case EXPRESSION_FOREACH:
+                {
+                    ident_destroy(expr->foreach.iterator);
+                    Expression::destroyExpression(expr->foreach.source);
+                    code_block_destroy(expr->foreach.body);
+                    break;
+                }
+                case EXPRESSION_FOR_LOOP:
+                {
+                    Expression::destroyExpression(expr->for_loop.init);
+                    Expression::destroyExpression(expr->for_loop.test);
+                    Expression::destroyExpression(expr->for_loop.update);
+                    code_block_destroy(expr->for_loop.body);
+                    break;
+                }
+                case EXPRESSION_BLOCK:
+                {
+                    code_block_destroy(expr->block);
+                    break;
+                }
+                case EXPRESSION_IMPORT:
+                {
+                    expr->alloc->release(expr->import.path);
+                    break;
+                }
+                case EXPRESSION_RECOVER:
+                {
+                    code_block_destroy(expr->recover.body);
+                    ident_destroy(expr->recover.error_ident);
+                    break;
+                }
+            }
+            expr->alloc->release(expr);
+        }
+
+
+    public:
+        Allocator* alloc;
+        Expr_type type;
+        union
+        {
+            Ident* ident;
+            double number_literal;
+            bool bool_literal;
+            char* string_literal;
+            PtrArray * array;
+            MapLiteral map;
+            StmtPrefix prefix;
+            StmtInfix infix;
+            StmtFuncDef fn_literal;
+            StmtCall call_expr;
+            StmtIndex index_expr;
+            StmtAssign assign;
+            StmtLogical logical;
+            StmtTernary ternary;
+            StmtDefine define;
+            StmtIfClause if_statement;
+            Expression* return_value;
+            Expression* expression;
+            StmtWhileLoop while_loop;
+            StmtForeach foreach;
+            StmtForLoop for_loop;
+            StmtBlock* block;
+            StmtImport import;
+            StmtRecover recover;
+        };
+        Position pos;
 };
 
 struct Parser
@@ -3526,7 +4357,7 @@ struct Parser
             }
             ident->pos = fn_token.pos;
 
-            Expression* function_ident_expr = expression_make_ident(alloc, ident);
+            Expression* function_ident_expr = Expression::makeIdent(alloc, ident);
             ;
             if(!function_ident_expr)
             {
@@ -3539,7 +4370,7 @@ struct Parser
             PtrArray* args = PtrArray::make(alloc);
             if(!args)
             {
-                expression_destroy(function_ident_expr);
+                Expression::destroyExpression(function_ident_expr);
                 return NULL;
             }
 
@@ -3547,15 +4378,15 @@ struct Parser
             if(!ok)
             {
                 args->destroy();
-                expression_destroy(function_ident_expr);
+                Expression::destroyExpression(function_ident_expr);
                 return NULL;
             }
 
-            Expression* call_expr = expression_make_call(alloc, function_ident_expr, args);
+            Expression* call_expr = Expression::makeCall(alloc, function_ident_expr, args);
             if(!call_expr)
             {
                 args->destroy();
-                expression_destroy(function_ident_expr);
+                Expression::destroyExpression(function_ident_expr);
                 return NULL;
             }
             call_expr->pos = expr->pos;
@@ -3686,7 +4517,7 @@ struct Parser
                 ok = statements->add(stmt);
                 if(!ok)
                 {
-                    statement_destroy(stmt);
+                    Expression::destroyExpression(stmt);
                     goto err;
                 }
             }
@@ -3697,7 +4528,7 @@ struct Parser
 
             return statements;
         err:
-            statements->destroyWithItems(statement_destroy);
+            statements->destroyWithItems(Expression::destroyExpression);
             return NULL;
         }
 
@@ -3830,14 +4661,14 @@ struct Parser
                     goto err;
                 }
             }
-            res = statement_make_define(p->alloc, name_ident, value, assignable);
+            res = Expression::makeDefine(p->alloc, name_ident, value, assignable);
             if(!res)
             {
                 goto err;
             }
             return res;
         err:
-            expression_destroy(value);
+            Expression::destroyExpression(value);
             ident_destroy(name_ident);
             return NULL;
         }
@@ -3936,7 +4767,7 @@ struct Parser
                     }
                 }
             }
-            res = statement_make_if(p->alloc, cases, alternative);
+            res = Expression::makeIf(p->alloc, cases, alternative);
             if(!res)
             {
                 goto err;
@@ -3962,10 +4793,10 @@ struct Parser
                     return NULL;
                 }
             }
-            res = statement_make_return(p->alloc, expr);
+            res = Expression::makeReturn(p->alloc, expr);
             if(!res)
             {
-                expression_destroy(expr);
+                Expression::destroyExpression(expr);
                 return NULL;
             }
             return res;
@@ -3985,14 +4816,14 @@ struct Parser
                 if(expr->type != EXPRESSION_ASSIGN && expr->type != EXPRESSION_CALL)
                 {
                     errors_add_errorf(p->errors, APE_ERROR_PARSING, expr->pos, "Only assignments and function calls can be expression statements");
-                    expression_destroy(expr);
+                    Expression::destroyExpression(expr);
                     return NULL;
                 }
             }
-            res = statement_make_expression(p->alloc, expr);
+            res = Expression::makeExpression(p->alloc, expr);
             if(!res)
             {
-                expression_destroy(expr);
+                Expression::destroyExpression(expr);
                 return NULL;
             }
             return res;
@@ -4026,7 +4857,7 @@ struct Parser
             {
                 goto err;
             }
-            res = statement_make_while_loop(p->alloc, test, body);
+            res = Expression::makeWhileLoop(p->alloc, test, body);
             if(!res)
             {
                 goto err;
@@ -4034,20 +4865,20 @@ struct Parser
             return res;
         err:
             code_block_destroy(body);
-            expression_destroy(test);
+            Expression::destroyExpression(test);
             return NULL;
         }
 
         static Expression* parse_break_statement(Parser* p)
         {
             p->lexer.nextToken();
-            return statement_make_break(p->alloc);
+            return Expression::makeBreak(p->alloc);
         }
 
         static Expression* parse_continue_statement(Parser* p)
         {
             p->lexer.nextToken();
-            return statement_make_continue(p->alloc);
+            return Expression::makeContinue(p->alloc);
         }
 
         static Expression* parse_block_statement(Parser* p)
@@ -4059,7 +4890,7 @@ struct Parser
             {
                 return NULL;
             }
-            res = statement_make_block(p->alloc, block);
+            res = Expression::makeBlock(p->alloc, block);
             if(!res)
             {
                 code_block_destroy(block);
@@ -4084,7 +4915,7 @@ struct Parser
                 return NULL;
             }
             p->lexer.nextToken();
-            res= statement_make_import(p->alloc, processed_name);
+            res= Expression::makeImport(p->alloc, processed_name);
             if(!res)
             {
                 p->alloc->release(processed_name);
@@ -4126,7 +4957,7 @@ struct Parser
             {
                 goto err;
             }
-            res = statement_make_recover(p->alloc, error_ident, body);
+            res = Expression::makeRecover(p->alloc, error_ident, body);
             if(!res)
             {
                 goto err;
@@ -4187,7 +5018,7 @@ struct Parser
             {
                 goto err;
             }
-            res = statement_make_foreach(p->alloc, iterator_ident, source, body);
+            res = Expression::makeForeach(p->alloc, iterator_ident, source, body);
             if(!res)
             {
                 goto err;
@@ -4196,7 +5027,7 @@ struct Parser
         err:
             code_block_destroy(body);
             ident_destroy(iterator_ident);
-            expression_destroy(source);
+            Expression::destroyExpression(source);
             return NULL;
         }
 
@@ -4261,7 +5092,7 @@ struct Parser
             {
                 goto err;
             }
-            res = statement_make_for_loop(p->alloc, init, test, update, body);
+            res = Expression::makeForLoop(p->alloc, init, test, update, body);
             if(!res)
             {
                 goto err;
@@ -4269,9 +5100,9 @@ struct Parser
 
             return res;
         err:
-            statement_destroy(init);
-            expression_destroy(test);
-            expression_destroy(update);
+            Expression::destroyExpression(init);
+            Expression::destroyExpression(test);
+            Expression::destroyExpression(update);
             code_block_destroy(body);
             return NULL;
         }
@@ -4307,7 +5138,7 @@ struct Parser
             {
                 goto err;
             }
-            res = statement_make_define(p->alloc, name_ident, value, false);
+            res = Expression::makeDefine(p->alloc, name_ident, value, false);
             if(!res)
             {
                 goto err;
@@ -4315,7 +5146,7 @@ struct Parser
             return res;
 
         err:
-            expression_destroy(value);
+            Expression::destroyExpression(value);
             ident_destroy(name_ident);
             return NULL;
         }
@@ -4357,7 +5188,7 @@ struct Parser
                 ok = statements->add(stmt);
                 if(!ok)
                 {
-                    statement_destroy(stmt);
+                    Expression::destroyExpression(stmt);
                     goto err;
                 }
             }
@@ -4371,7 +5202,7 @@ struct Parser
             return res;
         err:
             p->depth--;
-            statements->destroyWithItems(statement_destroy);
+            statements->destroyWithItems(Expression::destroyExpression);
             return NULL;
         }
 
@@ -4414,7 +5245,7 @@ struct Parser
                 new_left_expr= parse_left_assoc(p, left_expr);
                 if(!new_left_expr)
                 {
-                    expression_destroy(left_expr);
+                    Expression::destroyExpression(left_expr);
                     return NULL;
                 }
                 new_left_expr->pos = pos;
@@ -4432,7 +5263,7 @@ struct Parser
             {
                 return NULL;
             }
-            res = expression_make_ident(p->alloc, ident);
+            res = Expression::makeIdent(p->alloc, ident);
             if(!res)
             {
                 ident_destroy(ident);
@@ -4460,13 +5291,13 @@ struct Parser
                 return NULL;
             }
             p->lexer.nextToken();
-            return expression_make_number_literal(p->alloc, number);
+            return Expression::makeNumberLiteral(p->alloc, number);
         }
 
         static Expression* parse_bool_literal(Parser* p)
         {
             Expression* res;
-            res = expression_make_bool_literal(p->alloc, p->lexer.cur_token.type == TOKEN_TRUE);
+            res = Expression::makeBoolLiteral(p->alloc, p->lexer.cur_token.type == TOKEN_TRUE);
             p->lexer.nextToken();
             return res;
         }
@@ -4481,7 +5312,7 @@ struct Parser
                 return NULL;
             }
             p->lexer.nextToken();
-            Expression* res = expression_make_string_literal(p->alloc, processed_literal);
+            Expression* res = Expression::makeStringLiteral(p->alloc, processed_literal);
             if(!res)
             {
                 p->alloc->release(processed_literal);
@@ -4524,7 +5355,7 @@ struct Parser
 
             pos = p->lexer.cur_token.pos;
 
-            left_string_expr = expression_make_string_literal(p->alloc, processed_literal);
+            left_string_expr = Expression::makeStringLiteral(p->alloc, processed_literal);
             if(!left_string_expr)
             {
                 goto err;
@@ -4544,7 +5375,7 @@ struct Parser
             }
             to_str_call_expr->pos = pos;
             template_expr = NULL;
-            left_add_expr = expression_make_infix(p->alloc, OPERATOR_PLUS, left_string_expr, to_str_call_expr);
+            left_add_expr = Expression::makeInfix(p->alloc, OPERATOR_PLUS, left_string_expr, to_str_call_expr);
             if(!left_add_expr)
             {
                 goto err;
@@ -4566,7 +5397,7 @@ struct Parser
             {
                 goto err;
             }
-            right_add_expr = expression_make_infix(p->alloc, OPERATOR_PLUS, left_add_expr, right_expr);
+            right_add_expr = Expression::makeInfix(p->alloc, OPERATOR_PLUS, left_add_expr, right_expr);
             if(!right_add_expr)
             {
                 goto err;
@@ -4577,12 +5408,12 @@ struct Parser
 
             return right_add_expr;
         err:
-            expression_destroy(right_add_expr);
-            expression_destroy(right_expr);
-            expression_destroy(left_add_expr);
-            expression_destroy(to_str_call_expr);
-            expression_destroy(template_expr);
-            expression_destroy(left_string_expr);
+            Expression::destroyExpression(right_add_expr);
+            Expression::destroyExpression(right_expr);
+            Expression::destroyExpression(left_add_expr);
+            Expression::destroyExpression(to_str_call_expr);
+            Expression::destroyExpression(template_expr);
+            Expression::destroyExpression(left_string_expr);
             p->alloc->release(processed_literal);
             return NULL;
         }
@@ -4590,7 +5421,7 @@ struct Parser
         static Expression* parse_null_literal(Parser* p)
         {
             p->lexer.nextToken();
-            return expression_make_null_literal(p->alloc);
+            return Expression::makeNullLiteral(p->alloc);
         }
 
         static Expression* parse_array_literal(Parser* p)
@@ -4602,10 +5433,10 @@ struct Parser
             {
                 return NULL;
             }
-            res = expression_make_array_literal(p->alloc, array);
+            res = Expression::makeArrayLiteral(p->alloc, array);
             if(!res)
             {
-                array->destroyWithItems(expression_destroy);
+                array->destroyWithItems(Expression::destroyExpression);
                 return NULL;
             }
             return res;
@@ -4633,7 +5464,7 @@ struct Parser
                 if(p->lexer.currentTokenIs(TOKEN_IDENT))
                 {
                     str = p->lexer.cur_token.copyLiteral(p->alloc);
-                    key = expression_make_string_literal(p->alloc, str);
+                    key = Expression::makeStringLiteral(p->alloc, str);
                     if(!key)
                     {
                         p->alloc->release(str);
@@ -4660,7 +5491,7 @@ struct Parser
                         default:
                         {
                             errors_add_errorf(p->errors, APE_ERROR_PARSING, key->pos, "Invalid map literal key type");
-                            expression_destroy(key);
+                            Expression::destroyExpression(key);
                             goto err;
                         }
                     }
@@ -4669,7 +5500,7 @@ struct Parser
                 ok = keys->add(key);
                 if(!ok)
                 {
-                    expression_destroy(key);
+                    Expression::destroyExpression(key);
                     goto err;
                 }
 
@@ -4688,7 +5519,7 @@ struct Parser
                 ok = values->add(value);
                 if(!ok)
                 {
-                    expression_destroy(value);
+                    Expression::destroyExpression(value);
                     goto err;
                 }
 
@@ -4707,15 +5538,15 @@ struct Parser
 
             p->lexer.nextToken();
 
-            res = expression_make_map_literal(p->alloc, keys, values);
+            res = Expression::makeMapLiteral(p->alloc, keys, values);
             if(!res)
             {
                 goto err;
             }
             return res;
         err:
-            keys->destroyWithItems(expression_destroy);
-            values->destroyWithItems(expression_destroy);
+            keys->destroyWithItems(Expression::destroyExpression);
+            values->destroyWithItems(Expression::destroyExpression);
             return NULL;
         }
 
@@ -4731,10 +5562,10 @@ struct Parser
             {
                 return NULL;
             }
-            res = expression_make_prefix(p->alloc, op, right);
+            res = Expression::makePrefix(p->alloc, op, right);
             if(!res)
             {
-                expression_destroy(right);
+                Expression::destroyExpression(right);
                 return NULL;
             }
             return res;
@@ -4754,10 +5585,10 @@ struct Parser
             {
                 return NULL;
             }
-            res = expression_make_infix(p->alloc, op, left, right);
+            res = Expression::makeInfix(p->alloc, op, left, right);
             if(!res)
             {
-                expression_destroy(right);
+                Expression::destroyExpression(right);
                 return NULL;
             }
             return res;
@@ -4770,7 +5601,7 @@ struct Parser
             expr = parse_expression(p, PRECEDENCE_LOWEST);
             if(!expr || !p->lexer.expectCurrent(TOKEN_RPAREN))
             {
-                expression_destroy(expr);
+                Expression::destroyExpression(expr);
                 return NULL;
             }
             p->lexer.nextToken();
@@ -4801,7 +5632,7 @@ struct Parser
             {
                 goto err;
             }
-            res = expression_make_fn_literal(p->alloc, params, body);
+            res = Expression::makeFunctionLiteral(p->alloc, params, body);
             if(!res)
             {
                 goto err;
@@ -4885,10 +5716,10 @@ struct Parser
             {
                 return NULL;
             }
-            res = expression_make_call(p->alloc, function, args);
+            res = Expression::makeCall(p->alloc, function, args);
             if(!res)
             {
-                args->destroyWithItems(expression_destroy);
+                args->destroyWithItems(Expression::destroyExpression);
                 return NULL;
             }
             return res;
@@ -4918,7 +5749,7 @@ struct Parser
             ok = res->add(arg_expr);
             if(!ok)
             {
-                expression_destroy(arg_expr);
+                Expression::destroyExpression(arg_expr);
                 goto err;
             }
             while(p->lexer.currentTokenIs(TOKEN_COMMA))
@@ -4936,7 +5767,7 @@ struct Parser
                 ok = res->add(arg_expr);
                 if(!ok)
                 {
-                    expression_destroy(arg_expr);
+                    Expression::destroyExpression(arg_expr);
                     goto err;
                 }
             }
@@ -4947,7 +5778,7 @@ struct Parser
             p->lexer.nextToken();
             return res;
         err:
-            res->destroyWithItems(expression_destroy);
+            res->destroyWithItems(Expression::destroyExpression);
             return NULL;
         }
 
@@ -4963,14 +5794,14 @@ struct Parser
             }
             if(!p->lexer.expectCurrent(TOKEN_RBRACKET))
             {
-                expression_destroy(index);
+                Expression::destroyExpression(index);
                 return NULL;
             }
             p->lexer.nextToken();
-            res = expression_make_index(p->alloc, left, index);
+            res = Expression::makeIndex(p->alloc, left, index);
             if(!res)
             {
-                expression_destroy(index);
+                Expression::destroyExpression(index);
                 return NULL;
             }
             return res;
@@ -5008,16 +5839,16 @@ struct Parser
                 case TOKEN_RSHIFT_ASSIGN:
                     {
                         op = token_to_operator(assign_type);
-                        left_copy = expression_copy(left);
+                        left_copy = Expression::copyExpression(left);
                         if(!left_copy)
                         {
                             goto err;
                         }
                         pos = source->pos;
-                        new_source = expression_make_infix(p->alloc, op, left_copy, source);
+                        new_source = Expression::makeInfix(p->alloc, op, left_copy, source);
                         if(!new_source)
                         {
-                            expression_destroy(left_copy);
+                            Expression::destroyExpression(left_copy);
                             goto err;
                         }
                         new_source->pos = pos;
@@ -5034,14 +5865,14 @@ struct Parser
                     }
                     break;
             }
-            res = expression_make_assign(p->alloc, left, source, false);
+            res = Expression::makeAssign(p->alloc, left, source, false);
             if(!res)
             {
                 goto err;
             }
             return res;
         err:
-            expression_destroy(source);
+            Expression::destroyExpression(source);
             return NULL;
         }
 
@@ -5059,10 +5890,10 @@ struct Parser
             {
                 return NULL;
             }
-            res = expression_make_logical(p->alloc, op, left, right);
+            res = Expression::makeLogical(p->alloc, op, left, right);
             if(!res)
             {
-                expression_destroy(right);
+                Expression::destroyExpression(right);
                 return NULL;
             }
             return res;
@@ -5081,21 +5912,21 @@ struct Parser
             }
             if(!p->lexer.expectCurrent(TOKEN_COLON))
             {
-                expression_destroy(if_true);
+                Expression::destroyExpression(if_true);
                 return NULL;
             }
             p->lexer.nextToken();
             if_false = parse_expression(p, PRECEDENCE_LOWEST);
             if(!if_false)
             {
-                expression_destroy(if_true);
+                Expression::destroyExpression(if_true);
                 return NULL;
             }
-            res = expression_make_ternary(p->alloc, left, if_true, if_false);
+            res = Expression::makeTernary(p->alloc, left, if_true, if_false);
             if(!res)
             {
-                expression_destroy(if_true);
-                expression_destroy(if_false);
+                Expression::destroyExpression(if_true);
+                Expression::destroyExpression(if_false);
                 return NULL;
             }
             return res;
@@ -5123,40 +5954,40 @@ struct Parser
             {
                 goto err;
             }
-            one_literal = expression_make_number_literal(p->alloc, 1);
+            one_literal = Expression::makeNumberLiteral(p->alloc, 1);
             if(!one_literal)
             {
-                expression_destroy(dest);
+                Expression::destroyExpression(dest);
                 goto err;
             }
             one_literal->pos = pos;
-            dest_copy = expression_copy(dest);
+            dest_copy = Expression::copyExpression(dest);
             if(!dest_copy)
             {
-                expression_destroy(one_literal);
-                expression_destroy(dest);
+                Expression::destroyExpression(one_literal);
+                Expression::destroyExpression(dest);
                 goto err;
             }
-            operation = expression_make_infix(p->alloc, op, dest_copy, one_literal);
+            operation = Expression::makeInfix(p->alloc, op, dest_copy, one_literal);
             if(!operation)
             {
-                expression_destroy(dest_copy);
-                expression_destroy(dest);
-                expression_destroy(one_literal);
+                Expression::destroyExpression(dest_copy);
+                Expression::destroyExpression(dest);
+                Expression::destroyExpression(one_literal);
                 goto err;
             }
             operation->pos = pos;
 
-            res = expression_make_assign(p->alloc, dest, operation, false);
+            res = Expression::makeAssign(p->alloc, dest, operation, false);
             if(!res)
             {
-                expression_destroy(dest);
-                expression_destroy(operation);
+                Expression::destroyExpression(dest);
+                Expression::destroyExpression(operation);
                 goto err;
             }
             return res;
         err:
-            expression_destroy(source);
+            Expression::destroyExpression(source);
             return NULL;
         }
 
@@ -5175,36 +6006,36 @@ struct Parser
             pos = p->lexer.cur_token.pos;
             p->lexer.nextToken();
             op = token_to_operator(operation_type);
-            left_copy = expression_copy(left);
+            left_copy = Expression::copyExpression(left);
             if(!left_copy)
             {
                 goto err;
             }
-            one_literal = expression_make_number_literal(p->alloc, 1);
+            one_literal = Expression::makeNumberLiteral(p->alloc, 1);
             if(!one_literal)
             {
-                expression_destroy(left_copy);
+                Expression::destroyExpression(left_copy);
                 goto err;
             }
             one_literal->pos = pos;
-            operation = expression_make_infix(p->alloc, op, left_copy, one_literal);
+            operation = Expression::makeInfix(p->alloc, op, left_copy, one_literal);
             if(!operation)
             {
-                expression_destroy(one_literal);
-                expression_destroy(left_copy);
+                Expression::destroyExpression(one_literal);
+                Expression::destroyExpression(left_copy);
                 goto err;
             }
             operation->pos = pos;
-            res = expression_make_assign(p->alloc, left, operation, true);
+            res = Expression::makeAssign(p->alloc, left, operation, true);
             if(!res)
             {
-                expression_destroy(operation);
+                Expression::destroyExpression(operation);
                 goto err;
             }
 
             return res;
         err:
-            expression_destroy(source);
+            Expression::destroyExpression(source);
             return NULL;
         }
 
@@ -5219,7 +6050,7 @@ struct Parser
             }
 
             char* str = p->lexer.cur_token.copyLiteral(p->alloc);
-            Expression* index = expression_make_string_literal(p->alloc, str);
+            Expression* index = Expression::makeStringLiteral(p->alloc, str);
             if(!index)
             {
                 p->alloc->release(str);
@@ -5229,10 +6060,10 @@ struct Parser
 
             p->lexer.nextToken();
 
-            Expression* res = expression_make_index(p->alloc, left, index);
+            Expression* res = Expression::makeIndex(p->alloc, left, index);
             if(!res)
             {
-                expression_destroy(index);
+                Expression::destroyExpression(index);
                 return NULL;
             }
             return res;
@@ -5506,7 +6337,7 @@ struct NativeFunction
 struct NativeFuncWrapper
 {
     UserFNCallback wrapped_funcptr;
-    Context* ape;
+    Context* context;
     void* data;
 };       
 
@@ -5570,7 +6401,6 @@ inline ObjectType Object::typeFromData(ObjectData* data)
 {
     return data->type;
 }
-
 
 struct GCMemory
 {
@@ -6045,24 +6875,1434 @@ struct Frame
 
 struct VM
 {
-    Allocator* alloc;
-    const Config* config;
-    GCMemory* mem;
-    ErrorList* errors;
-    GlobalStore* global_store;
-    Object globals[VM_MAX_GLOBALS];
-    int globals_count;
-    Object stack[VM_STACK_SIZE];
-    int sp;
-    Object this_stack[VM_THIS_STACK_SIZE];
-    int this_sp;
-    Frame frames[VM_MAX_FRAMES];
-    int frames_count;
-    Object last_popped;
-    Frame* current_frame;
-    bool running;
-    Object operator_oveload_keys[OPCODE_MAX];
+    public:
+        static VM* make(Allocator* alloc, const Config* config, GCMemory* mem, ErrorList* errors, GlobalStore* global_store)
+        {
+            VM* vm = (VM*)alloc->allocate(sizeof(VM));
+            if(!vm)
+            {
+                return NULL;
+            }
+            memset(vm, 0, sizeof(VM));
+            vm->alloc = alloc;
+            vm->config = config;
+            vm->mem = mem;
+            vm->errors = errors;
+            vm->global_store = global_store;
+            vm->globals_count = 0;
+            vm->sp = 0;
+            vm->this_sp = 0;
+            vm->frames_count = 0;
+            vm->last_popped = Object::makeNull();
+            vm->running = false;
+
+            for(int i = 0; i < OPCODE_MAX; i++)
+            {
+                vm->operator_oveload_keys[i] = Object::makeNull();
+            }
+        #define SET_OPERATOR_OVERLOAD_KEY(op, key)                   \
+            do                                                       \
+            {                                                        \
+                Object key_obj = Object::makeString(vm->mem, key); \
+                if(key_obj.isNull())                          \
+                {                                                    \
+                    goto err;                                        \
+                }                                                    \
+                vm->operator_oveload_keys[op] = key_obj;             \
+            } while(0)
+            SET_OPERATOR_OVERLOAD_KEY(OPCODE_ADD, "__operator_add__");
+            SET_OPERATOR_OVERLOAD_KEY(OPCODE_SUB, "__operator_sub__");
+            SET_OPERATOR_OVERLOAD_KEY(OPCODE_MUL, "__operator_mul__");
+            SET_OPERATOR_OVERLOAD_KEY(OPCODE_DIV, "__operator_div__");
+            SET_OPERATOR_OVERLOAD_KEY(OPCODE_MOD, "__operator_mod__");
+            SET_OPERATOR_OVERLOAD_KEY(OPCODE_OR, "__operator_or__");
+            SET_OPERATOR_OVERLOAD_KEY(OPCODE_XOR, "__operator_xor__");
+            SET_OPERATOR_OVERLOAD_KEY(OPCODE_AND, "__operator_and__");
+            SET_OPERATOR_OVERLOAD_KEY(OPCODE_LSHIFT, "__operator_lshift__");
+            SET_OPERATOR_OVERLOAD_KEY(OPCODE_RSHIFT, "__operator_rshift__");
+            SET_OPERATOR_OVERLOAD_KEY(OPCODE_MINUS, "__operator_minus__");
+            SET_OPERATOR_OVERLOAD_KEY(OPCODE_BANG, "__operator_bang__");
+            SET_OPERATOR_OVERLOAD_KEY(OPCODE_COMPARE, "__cmp__");
+        #undef SET_OPERATOR_OVERLOAD_KEY
+
+            return vm;
+        err:
+            vm->destroy();
+            return NULL;
+        }
+
+    public:
+        Allocator* alloc;
+        const Config* config;
+        GCMemory* mem;
+        ErrorList* errors;
+        GlobalStore* global_store;
+        Object globals[VM_MAX_GLOBALS];
+        int globals_count;
+        Object stack[VM_STACK_SIZE];
+        int sp;
+        Object this_stack[VM_THIS_STACK_SIZE];
+        int this_sp;
+        Frame frames[VM_MAX_FRAMES];
+        int frames_count;
+        Object last_popped;
+        Frame* current_frame;
+        bool running;
+        Object operator_oveload_keys[OPCODE_MAX];
+
+    public:
+        void destroy()
+        {
+            if(!this)
+            {
+                return;
+            }
+            this->alloc->release(this);
+        }
+
+        void reset()
+        {
+            this->sp = 0;
+            this->this_sp = 0;
+            while(this->frames_count > 0)
+            {
+                this->popFrame();
+            }
+        }
+
+        bool run(CompilationResult* comp_res, Array * constants)
+        {
+        #ifdef APE_DEBUG
+            int old_sp = this->sp;
+        #endif
+            int old_this_sp = this->this_sp;
+            int old_frames_count = this->frames_count;
+            Object main_fn = Object::makeFunction(this->mem, "main", comp_res, false, 0, 0, 0);
+            if(main_fn.isNull())
+            {
+                return false;
+            }
+            this->stackPush(main_fn);
+            bool res = this->executeFunction(main_fn, constants);
+            while(this->frames_count > old_frames_count)
+            {
+                this->popFrame();
+            }
+            APE_ASSERT(this->sp == old_sp);
+            this->this_sp = old_this_sp;
+            return res;
+        }
+
+        Object call(Array * constants, Object callee, int argc, Object* args)
+        {
+            ObjectType type = callee.type();
+            if(type == APE_OBJECT_FUNCTION)
+            {
+        #ifdef APE_DEBUG
+                int old_sp = this->sp;
+        #endif
+                int old_this_sp = this->this_sp;
+                int old_frames_count = this->frames_count;
+                this->stackPush(callee);
+                for(int i = 0; i < argc; i++)
+                {
+                    this->stackPush(args[i]);
+                }
+                bool ok = this->executeFunction(callee, constants);
+                if(!ok)
+                {
+                    return Object::makeNull();
+                }
+                while(this->frames_count > old_frames_count)
+                {
+                    this->popFrame();
+                }
+                APE_ASSERT(this->sp == old_sp);
+                this->this_sp = old_this_sp;
+                return this->getLastPopped();
+            }
+            else if(type == APE_OBJECT_NATIVE_FUNCTION)
+            {
+                return this->callNativeFunction(callee, src_pos_invalid, argc, args);
+            }
+            else
+            {
+                errors_add_error(this->errors, APE_ERROR_USER, src_pos_invalid, "Object is not callable");
+                return Object::makeNull();
+            }
+        }
+
+        Object getLastPopped()
+        {
+            return this->last_popped;
+        }
+
+        bool hasErrors()
+        {
+            return errors_get_count(this->errors) > 0;
+        }
+
+        bool setGlobalByIndex(int ix, Object val)
+        {
+            if(ix >= VM_MAX_GLOBALS)
+            {
+                APE_ASSERT(false);
+                errors_add_error(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame), "Global write out of range");
+                return false;
+            }
+            this->globals[ix] = val;
+            if(ix >= this->globals_count)
+            {
+                this->globals_count = ix + 1;
+            }
+            return true;
+        }
+
+        Object getGlobalByIndex(int ix)
+        {
+            if(ix >= VM_MAX_GLOBALS)
+            {
+                APE_ASSERT(false);
+                errors_add_error(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame), "Global read out of range");
+                return Object::makeNull();
+            }
+            return this->globals[ix];
+        }
+
+        void setStackPointer(int new_sp)
+        {
+            if(new_sp > this->sp)
+            {// to avoid gcing freed objects
+                int cn = new_sp - this->sp;
+                size_t bytes_count = cn * sizeof(Object);
+                memset(this->stack + this->sp, 0, bytes_count);
+            }
+            this->sp = new_sp;
+        }
+
+        void stackPush(Object obj)
+        {
+        #ifdef APE_DEBUG
+            if(this->sp >= VM_STACK_SIZE)
+            {
+                APE_ASSERT(false);
+                errors_add_error(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame), "Stack overflow");
+                return;
+            }
+            if(this->current_frame)
+            {
+                Frame* frame = this->current_frame;
+                ScriptFunction* current_function = object_get_function(frame->function);
+                int num_locals = current_function->num_locals;
+                APE_ASSERT(this->sp >= (frame->base_pointer + num_locals));
+            }
+        #endif
+            this->stack[this->sp] = obj;
+            this->sp++;
+        }
+
+        Object stackPop()
+        {
+        #ifdef APE_DEBUG
+            if(this->sp == 0)
+            {
+                errors_add_error(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame), "Stack underflow");
+                APE_ASSERT(false);
+                return Object::makeNull();
+            }
+            if(this->current_frame)
+            {
+                Frame* frame = this->current_frame;
+                ScriptFunction* current_function = object_get_function(frame->function);
+                int num_locals = current_function->num_locals;
+                APE_ASSERT((this->sp - 1) >= (frame->base_pointer + num_locals));
+            }
+        #endif
+            this->sp--;
+            Object res = this->stack[this->sp];
+            this->last_popped = res;
+            return res;
+        }
+
+        Object stackGet(int nth_item)
+        {
+            int ix = this->sp - 1 - nth_item;
+        #ifdef APE_DEBUG
+            if(ix < 0 || ix >= VM_STACK_SIZE)
+            {
+                errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame), "Invalid stack index: %d", nth_item);
+                APE_ASSERT(false);
+                return Object::makeNull();
+            }
+        #endif
+            return this->stack[ix];
+        }
+
+        void pushThisStack(Object obj)
+        {
+        #ifdef APE_DEBUG
+            if(this->this_sp >= VM_THIS_STACK_SIZE)
+            {
+                APE_ASSERT(false);
+                errors_add_error(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame), "this stack overflow");
+                return;
+            }
+        #endif
+            this->this_stack[this->this_sp] = obj;
+            this->this_sp++;
+        }
+
+        Object popThisStack()
+        {
+        #ifdef APE_DEBUG
+            if(this->this_sp == 0)
+            {
+                errors_add_error(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame), "this stack underflow");
+                APE_ASSERT(false);
+                return Object::makeNull();
+            }
+        #endif
+            this->this_sp--;
+            return this->this_stack[this->this_sp];
+        }
+
+        Object getThisStack(int nth_item)
+        {
+            int ix = this->this_sp - 1 - nth_item;
+        #ifdef APE_DEBUG
+            if(ix < 0 || ix >= VM_THIS_STACK_SIZE)
+            {
+                errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame), "Invalid this stack index: %d", nth_item);
+                APE_ASSERT(false);
+                return Object::makeNull();
+            }
+        #endif
+            return this->this_stack[ix];
+        }
+
+        bool pushFrame(Frame frame)
+        {
+            if(this->frames_count >= VM_MAX_FRAMES)
+            {
+                APE_ASSERT(false);
+                return false;
+            }
+            this->frames[this->frames_count] = frame;
+            this->current_frame = &this->frames[this->frames_count];
+            this->frames_count++;
+            ScriptFunction* frame_function = object_get_function(frame.function);
+            this->setStackPointer(frame.base_pointer + frame_function->num_locals);
+            return true;
+        }
+
+        bool popFrame()
+        {
+            this->setStackPointer(this->current_frame->base_pointer - 1);
+            if(this->frames_count <= 0)
+            {
+                APE_ASSERT(false);
+                this->current_frame = NULL;
+                return false;
+            }
+            this->frames_count--;
+            if(this->frames_count == 0)
+            {
+                this->current_frame = NULL;
+                return false;
+            }
+            this->current_frame = &this->frames[this->frames_count - 1];
+            return true;
+        }
+
+        void runGarbageCollector(Array * constants)
+        {
+            this->mem->unmarkAll();
+            GCMemory::markObjects(global_store_get_object_data(this->global_store), global_store_get_object_count(this->global_store));
+            GCMemory::markObjects((Object*)constants->data(), constants->count());
+            GCMemory::markObjects(this->globals, this->globals_count);
+            for(int i = 0; i < this->frames_count; i++)
+            {
+                Frame* frame = &this->frames[i];
+                GCMemory::markObject(frame->function);
+            }
+            GCMemory::markObjects(this->stack, this->sp);
+            GCMemory::markObjects(this->this_stack, this->this_sp);
+            GCMemory::markObject(this->last_popped);
+            GCMemory::markObjects(this->operator_oveload_keys, OPCODE_MAX);
+            this->mem->sweep();
+        }
+
+        bool callObject(Object callee, int num_args)
+        {
+            ObjectType callee_type = callee.type();
+            if(callee_type == APE_OBJECT_FUNCTION)
+            {
+                ScriptFunction* callee_function = object_get_function(callee);
+                if(num_args != callee_function->num_args)
+                {
+                    errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame),
+                                      "Invalid number of arguments to \"%s\", expected %d, got %d",
+                                      object_get_function_name(callee), callee_function->num_args, num_args);
+                    return false;
+                }
+                Frame callee_frame;
+                bool ok = frame_init(&callee_frame, callee, this->sp - num_args);
+                if(!ok)
+                {
+                    errors_add_error(this->errors, APE_ERROR_RUNTIME, src_pos_invalid, "Frame init failed in call_object");
+                    return false;
+                }
+                ok = this->pushFrame(callee_frame);
+                if(!ok)
+                {
+                    errors_add_error(this->errors, APE_ERROR_RUNTIME, src_pos_invalid, "Pushing frame failed in call_object");
+                    return false;
+                }
+            }
+            else if(callee_type == APE_OBJECT_NATIVE_FUNCTION)
+            {
+                Object* stack_pos = this->stack + this->sp - num_args;
+                Object res = this->callNativeFunction(callee, frame_src_position(this->current_frame), num_args, stack_pos);
+                if(this->hasErrors())
+                {
+                    return false;
+                }
+                this->setStackPointer(this->sp - num_args - 1);
+                this->stackPush(res);
+            }
+            else
+            {
+                const char* callee_type_name = object_get_type_name(callee_type);
+                errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame), "%s object is not callable", callee_type_name);
+                return false;
+            }
+            return true;
+        }
+
+        Object callNativeFunction(Object callee, Position src_pos, int argc, Object* args)
+        {
+            NativeFunction* native_fun = object_get_native_function(callee);
+            Object res = native_fun->native_funcptr(this, native_fun->data, argc, args);
+            if(errors_has_errors(this->errors) && !APE_STREQ(native_fun->name, "crash"))
+            {
+                Error* err = errors_get_last_error(this->errors);
+                err->pos = src_pos;
+                err->traceback = traceback_make(this->alloc);
+                if(err->traceback)
+                {
+                    traceback_append(err->traceback, native_fun->name, src_pos_invalid);
+                }
+                return Object::makeNull();
+            }
+            ObjectType res_type = res.type();
+            if(res_type == APE_OBJECT_ERROR)
+            {
+                Traceback* traceback = traceback_make(this->alloc);
+                if(traceback)
+                {
+                    // error builtin is treated in a special way
+                    if(!APE_STREQ(native_fun->name, "error"))
+                    {
+                        traceback_append(traceback, native_fun->name, src_pos_invalid);
+                    }
+                    traceback_append_from_vm(traceback, this);
+                    object_set_error_traceback(res, traceback);
+                }
+            }
+            return res;
+        }
+
+        bool checkAssign(Object old_value, Object new_value)
+        {
+            ObjectType old_value_type;
+            ObjectType new_value_type;
+            (void)this;
+            old_value_type = old_value.type();
+            new_value_type = new_value.type();
+            if(old_value_type == APE_OBJECT_NULL || new_value_type == APE_OBJECT_NULL)
+            {
+                return true;
+            }
+            if(old_value_type != new_value_type)
+            {
+                /*
+                errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame), "Trying to assign variable of type %s to %s",
+                                  object_get_type_name(new_value_type), object_get_type_name(old_value_type));
+                return false;
+                */
+            }
+            return true;
+        }
+
+        bool findOverload(Object left, Object right, opcode_t op, bool* out_overload_found)
+        {
+            int num_operands;
+            Object key;
+            Object callee;
+            ObjectType left_type;
+            ObjectType right_type;
+            *out_overload_found = false;
+            left_type = left.type();
+            right_type = right.type();
+            if(left_type != APE_OBJECT_MAP && right_type != APE_OBJECT_MAP)
+            {
+                *out_overload_found = false;
+                return true;
+            }
+            num_operands = 2;
+            if(op == OPCODE_MINUS || op == OPCODE_BANG)
+            {
+                num_operands = 1;
+            }
+            key = this->operator_oveload_keys[op];
+            callee = Object::makeNull();
+            if(left_type == APE_OBJECT_MAP)
+            {
+                callee = object_get_map_value_object(left, key);
+            }
+            if(!callee.isCallable())
+            {
+                if(right_type == APE_OBJECT_MAP)
+                {
+                    callee = object_get_map_value_object(right, key);
+                }
+                if(!callee.isCallable())
+                {
+                    *out_overload_found = false;
+                    return true;
+                }
+            }
+            *out_overload_found = true;
+            this->stackPush(callee);
+            this->stackPush(left);
+            if(num_operands == 2)
+            {
+                this->stackPush( right);
+            }
+            return this->callObject(callee, num_operands);
+        }
+
+
+        bool executeFunction(Object function, Array * constants)
+        {
+            if(this->running)
+            {
+                errors_add_error(this->errors, APE_ERROR_USER, src_pos_invalid, "VM is already executing code");
+                return false;
+            }
+
+            ScriptFunction* function_function = object_get_function(function);// naming is hard
+            Frame new_frame;
+            bool ok = false;
+            ok = frame_init(&new_frame, function, this->sp - function_function->num_args);
+            if(!ok)
+            {
+                return false;
+            }
+            ok = this->pushFrame(new_frame);
+            if(!ok)
+            {
+                errors_add_error(this->errors, APE_ERROR_USER, src_pos_invalid, "Pushing frame failed");
+                return false;
+            }
+
+            this->running = true;
+            this->last_popped = Object::makeNull();
+
+            bool check_time = false;
+            double max_exec_time_ms = 0;
+            if(this->config)
+            {
+                check_time = this->config->max_execution_time_set;
+                max_exec_time_ms = this->config->max_execution_time_ms;
+            }
+            unsigned time_check_interval = 1000;
+            unsigned time_check_counter = 0;
+            Timer timer;
+            memset(&timer, 0, sizeof(Timer));
+            if(check_time)
+            {
+                timer = ape_timer_start();
+            }
+
+            while(this->current_frame->ip < this->current_frame->bytecode_size)
+            {
+                OpcodeValue opcode = frame_read_opcode(this->current_frame);
+                switch(opcode)
+                {
+                    case OPCODE_CONSTANT:
+                        {
+                            uint16_t constant_ix = frame_read_uint16(this->current_frame);
+                            Object* constant = (Object*)constants->get(constant_ix);
+                            if(!constant)
+                            {
+                                errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame),
+                                                  "Constant at %d not found", constant_ix);
+                                goto err;
+                            }
+                            this->stackPush(*constant);
+                        }
+                        break;
+
+                    case OPCODE_ADD:
+                    case OPCODE_SUB:
+                    case OPCODE_MUL:
+                    case OPCODE_DIV:
+                    case OPCODE_MOD:
+                    case OPCODE_OR:
+                    case OPCODE_XOR:
+                    case OPCODE_AND:
+                    case OPCODE_LSHIFT:
+                    case OPCODE_RSHIFT:
+                        {
+                            Object right = this->stackPop();
+                            Object left = this->stackPop();
+                            ObjectType left_type = left.type();
+                            ObjectType right_type = right.type();
+                            if(left.isNumeric() && right.isNumeric())
+                            {
+                                double right_val = object_get_number(right);
+                                double left_val = object_get_number(left);
+
+                                int64_t left_val_int = (int64_t)left_val;
+                                int64_t right_val_int = (int64_t)right_val;
+
+                                double res = 0;
+                                switch(opcode)
+                                {
+                                    case OPCODE_ADD:
+                                        res = left_val + right_val;
+                                        break;
+                                    case OPCODE_SUB:
+                                        res = left_val - right_val;
+                                        break;
+                                    case OPCODE_MUL:
+                                        res = left_val * right_val;
+                                        break;
+                                    case OPCODE_DIV:
+                                        res = left_val / right_val;
+                                        break;
+                                    case OPCODE_MOD:
+                                        res = fmod(left_val, right_val);
+                                        break;
+                                    case OPCODE_OR:
+                                        res = (double)(left_val_int | right_val_int);
+                                        break;
+                                    case OPCODE_XOR:
+                                        res = (double)(left_val_int ^ right_val_int);
+                                        break;
+                                    case OPCODE_AND:
+                                        res = (double)(left_val_int & right_val_int);
+                                        break;
+                                    case OPCODE_LSHIFT:
+                                        res = (double)(left_val_int << right_val_int);
+                                        break;
+                                    case OPCODE_RSHIFT:
+                                        res = (double)(left_val_int >> right_val_int);
+                                        break;
+                                    default:
+                                        APE_ASSERT(false);
+                                        break;
+                                }
+                                this->stackPush(Object::makeNumber(res));
+                            }
+                            else if(left_type == APE_OBJECT_STRING && right_type == APE_OBJECT_STRING && opcode == OPCODE_ADD)
+                            {
+                                int left_len = (int)object_get_string_length(left);
+                                int right_len = (int)object_get_string_length(right);
+
+                                if(left_len == 0)
+                                {
+                                    this->stackPush(right);
+                                }
+                                else if(right_len == 0)
+                                {
+                                    this->stackPush(left);
+                                }
+                                else
+                                {
+                                    const char* left_val = object_get_string(left);
+                                    const char* right_val = object_get_string(right);
+
+                                    Object res = Object::makeStringCapacity(this->mem, left_len + right_len);
+                                    if(res.isNull())
+                                    {
+                                        goto err;
+                                    }
+
+                                    ok = object_string_append(res, left_val, left_len);
+                                    if(!ok)
+                                    {
+                                        goto err;
+                                    }
+
+                                    ok = object_string_append(res, right_val, right_len);
+                                    if(!ok)
+                                    {
+                                        goto err;
+                                    }
+                                    this->stackPush(res);
+                                }
+                            }
+                            else if((left_type == APE_OBJECT_ARRAY) && opcode == OPCODE_ADD)
+                            {
+                                object_add_array_value(left, right);
+                                this->stackPush(left);
+                            }
+                            else
+                            {
+                                bool overload_found = false;
+                                bool ok = this->findOverload(left, right, opcode, &overload_found);
+                                if(!ok)
+                                {
+                                    goto err;
+                                }
+                                if(!overload_found)
+                                {
+                                    const char* opcode_name = opcode_get_name(opcode);
+                                    const char* left_type_name = object_get_type_name(left_type);
+                                    const char* right_type_name = object_get_type_name(right_type);
+                                    errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame),
+                                                      "Invalid operand types for %s, got %s and %s", opcode_name, left_type_name,
+                                                      right_type_name);
+                                    goto err;
+                                }
+                            }
+                        }
+                        break;
+
+                    case OPCODE_POP:
+                        {
+                            this->stackPop();
+                        }
+                        break;
+
+                    case OPCODE_TRUE:
+                        {
+                            this->stackPush(Object::makeBool(true));
+                        }
+                        break;
+
+                    case OPCODE_FALSE:
+                    {
+                        this->stackPush(Object::makeBool(false));
+                        break;
+                    }
+                    case OPCODE_COMPARE:
+                    case OPCODE_COMPARE_EQ:
+                        {
+                            Object right = this->stackPop();
+                            Object left = this->stackPop();
+                            bool is_overloaded = false;
+                            bool ok = this->findOverload(left, right, OPCODE_COMPARE, &is_overloaded);
+                            if(!ok)
+                            {
+                                goto err;
+                            }
+                            if(!is_overloaded)
+                            {
+                                double comparison_res = object_compare(left, right, &ok);
+                                if(ok || opcode == OPCODE_COMPARE_EQ)
+                                {
+                                    Object res = Object::makeNumber(comparison_res);
+                                    this->stackPush(res);
+                                }
+                                else
+                                {
+                                    const char* right_type_string = object_get_type_name(right.type());
+                                    const char* left_type_string = object_get_type_name(left.type());
+                                    errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame),
+                                                      "Cannot compare %s and %s", left_type_string, right_type_string);
+                                    goto err;
+                                }
+                            }
+                        }
+                        break;
+
+                    case OPCODE_EQUAL:
+                    case OPCODE_NOT_EQUAL:
+                    case OPCODE_GREATER_THAN:
+                    case OPCODE_GREATER_THAN_EQUAL:
+                        {
+                            Object value = this->stackPop();
+                            double comparison_res = object_get_number(value);
+                            bool res_val = false;
+                            switch(opcode)
+                            {
+                                case OPCODE_EQUAL:
+                                    res_val = APE_DBLEQ(comparison_res, 0);
+                                    break;
+                                case OPCODE_NOT_EQUAL:
+                                    res_val = !APE_DBLEQ(comparison_res, 0);
+                                    break;
+                                case OPCODE_GREATER_THAN:
+                                    res_val = comparison_res > 0;
+                                    break;
+                                case OPCODE_GREATER_THAN_EQUAL:
+                                {
+                                    res_val = comparison_res > 0 || APE_DBLEQ(comparison_res, 0);
+                                    break;
+                                }
+                                default:
+                                    APE_ASSERT(false);
+                                    break;
+                            }
+                            Object res = Object::makeBool(res_val);
+                            this->stackPush(res);
+                        }
+                        break;
+
+                    case OPCODE_MINUS:
+                        {
+                            Object operand = this->stackPop();
+                            ObjectType operand_type = operand.type();
+                            if(operand_type == APE_OBJECT_NUMBER)
+                            {
+                                double val = object_get_number(operand);
+                                Object res = Object::makeNumber(-val);
+                                this->stackPush(res);
+                            }
+                            else
+                            {
+                                bool overload_found = false;
+                                bool ok = this->findOverload(operand, Object::makeNull(), OPCODE_MINUS, &overload_found);
+                                if(!ok)
+                                {
+                                    goto err;
+                                }
+                                if(!overload_found)
+                                {
+                                    const char* operand_type_string = object_get_type_name(operand_type);
+                                    errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame),
+                                                      "Invalid operand type for MINUS, got %s", operand_type_string);
+                                    goto err;
+                                }
+                            }
+                        }
+                        break;
+
+                    case OPCODE_BANG:
+                        {
+                            Object operand = this->stackPop();
+                            ObjectType type = operand.type();
+                            if(type == APE_OBJECT_BOOL)
+                            {
+                                Object res = Object::makeBool(!object_get_bool(operand));
+                                this->stackPush(res);
+                            }
+                            else if(type == APE_OBJECT_NULL)
+                            {
+                                Object res = Object::makeBool(true);
+                                this->stackPush(res);
+                            }
+                            else
+                            {
+                                bool overload_found = false;
+                                bool ok = this->findOverload(operand, Object::makeNull(), OPCODE_BANG, &overload_found);
+                                if(!ok)
+                                {
+                                    goto err;
+                                }
+                                if(!overload_found)
+                                {
+                                    Object res = Object::makeBool(false);
+                                    this->stackPush(res);
+                                }
+                            }
+                        }
+                        break;
+
+                    case OPCODE_JUMP:
+                        {
+                            uint16_t pos = frame_read_uint16(this->current_frame);
+                            this->current_frame->ip = pos;
+                        }
+                        break;
+
+                    case OPCODE_JUMP_IF_FALSE:
+                        {
+                            uint16_t pos = frame_read_uint16(this->current_frame);
+                            Object test = this->stackPop();
+                            if(!object_get_bool(test))
+                            {
+                                this->current_frame->ip = pos;
+                            }
+                        }
+                        break;
+
+                    case OPCODE_JUMP_IF_TRUE:
+                        {
+                            uint16_t pos = frame_read_uint16(this->current_frame);
+                            Object test = this->stackPop();
+                            if(object_get_bool(test))
+                            {
+                                this->current_frame->ip = pos;
+                            }
+                        }
+                        break;
+
+                    case OPCODE_NULL:
+                        {
+                            this->stackPush(Object::makeNull());
+                        }
+                        break;
+
+                    case OPCODE_DEFINE_MODULE_GLOBAL:
+                    {
+                        uint16_t ix = frame_read_uint16(this->current_frame);
+                        Object value = this->stackPop();
+                        this->setGlobalByIndex(ix, value);
+                        break;
+                    }
+                    case OPCODE_SET_MODULE_GLOBAL:
+                        {
+                            uint16_t ix = frame_read_uint16(this->current_frame);
+                            Object new_value = this->stackPop();
+                            Object old_value = this->getGlobalByIndex(ix);
+                            if(!this->checkAssign(old_value, new_value))
+                            {
+                                goto err;
+                            }
+                            this->setGlobalByIndex(ix, new_value);
+                        }
+                        break;
+
+                    case OPCODE_GET_MODULE_GLOBAL:
+                        {
+                            uint16_t ix = frame_read_uint16(this->current_frame);
+                            Object global = this->globals[ix];
+                            this->stackPush(global);
+                        }
+                        break;
+
+                    case OPCODE_ARRAY:
+                        {
+                            uint16_t cn = frame_read_uint16(this->current_frame);
+                            Object array_obj = Object::makeArray(this->mem, cn);
+                            if(array_obj.isNull())
+                            {
+                                goto err;
+                            }
+                            Object* items = this->stack + this->sp - cn;
+                            for(int i = 0; i < cn; i++)
+                            {
+                                Object item = items[i];
+                                ok = object_add_array_value(array_obj, item);
+                                if(!ok)
+                                {
+                                    goto err;
+                                }
+                            }
+                            this->setStackPointer(this->sp - cn);
+                            this->stackPush(array_obj);
+                        }
+                        break;
+
+                    case OPCODE_MAP_START:
+                        {
+                            uint16_t cn = frame_read_uint16(this->current_frame);
+                            Object map_obj = Object::makeMap(this->mem, cn);
+                            if(map_obj.isNull())
+                            {
+                                goto err;
+                            }
+                            this->pushThisStack(map_obj);
+                        }
+                        break;
+
+                    case OPCODE_MAP_END:
+                        {
+                            uint16_t kvp_count = frame_read_uint16(this->current_frame);
+                            uint16_t items_count = kvp_count * 2;
+                            Object map_obj = this->popThisStack();
+                            Object* kv_pairs = this->stack + this->sp - items_count;
+                            for(int i = 0; i < items_count; i += 2)
+                            {
+                                Object key = kv_pairs[i];
+                                if(!key.isHashable())
+                                {
+                                    ObjectType key_type = key.type();
+                                    const char* key_type_name = object_get_type_name(key_type);
+                                    errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame),
+                                                      "Key of type %s is not hashable", key_type_name);
+                                    goto err;
+                                }
+                                Object val = kv_pairs[i + 1];
+                                ok = object_set_map_value_object(map_obj, key, val);
+                                if(!ok)
+                                {
+                                    goto err;
+                                }
+                            }
+                            this->setStackPointer(this->sp - items_count);
+                            this->stackPush(map_obj);
+                        }
+                        break;
+
+                    case OPCODE_GET_THIS:
+                        {
+                            Object obj = this->getThisStack(0);
+                            this->stackPush(obj);
+                        }
+                        break;
+
+                    case OPCODE_GET_INDEX:
+                        {
+                            #if 0
+                            const char* idxname;
+                            #endif
+                            Object index = this->stackPop();
+                            Object left = this->stackPop();
+                            ObjectType left_type = left.type();
+                            ObjectType index_type = index.type();
+                            const char* left_type_name = object_get_type_name(left_type);
+                            const char* index_type_name = object_get_type_name(index_type);
+                            /*
+                            * todo: object method lookup could be implemented here
+                            */
+                            #if 0
+                            {
+                                int argc;
+                                Object args[10];
+                                NativeFNCallback afn;
+                                argc = 0;
+                                if(index_type == APE_OBJECT_STRING)
+                                {
+                                    idxname = object_get_string(index);
+                                    fprintf(stderr, "index is a string: name=%s\n", idxname);
+                                    if((afn = builtin_get_object(left_type, idxname)) != NULL)
+                                    {
+                                        fprintf(stderr, "got a callback: afn=%p\n", afn);
+                                        //typedef Object (*NativeFNCallback)(VM*, void*, int, Object*);
+                                        args[argc] = left;
+                                        argc++;
+                                        this->stackPush(afn(this, NULL, argc, args));
+                                        break;
+                                    }
+                                }
+                            }
+                            #endif
+
+                            if(left_type != APE_OBJECT_ARRAY && left_type != APE_OBJECT_MAP && left_type != APE_OBJECT_STRING)
+                            {
+                                errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame),
+                                    "Type %s is not indexable (in OPCODE_GET_INDEX)", left_type_name);
+                                goto err;
+                            }
+                            Object res = Object::makeNull();
+
+                            if(left_type == APE_OBJECT_ARRAY)
+                            {
+                                if(index_type != APE_OBJECT_NUMBER)
+                                {
+                                    errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame),
+                                                      "Cannot index %s with %s", left_type_name, index_type_name);
+                                    goto err;
+                                }
+                                int ix = (int)object_get_number(index);
+                                if(ix < 0)
+                                {
+                                    ix = object_get_array_length(left) + ix;
+                                }
+                                if(ix >= 0 && ix < object_get_array_length(left))
+                                {
+                                    res = object_get_array_value(left, ix);
+                                }
+                            }
+                            else if(left_type == APE_OBJECT_MAP)
+                            {
+                                res = object_get_map_value_object(left, index);
+                            }
+                            else if(left_type == APE_OBJECT_STRING)
+                            {
+                                const char* str = object_get_string(left);
+                                int left_len = object_get_string_length(left);
+                                int ix = (int)object_get_number(index);
+                                if(ix >= 0 && ix < left_len)
+                                {
+                                    char res_str[2] = { str[ix], '\0' };
+                                    res = Object::makeString(this->mem, res_str);
+                                }
+                            }
+                            this->stackPush(res);
+                        }
+                        break;
+
+                    case OPCODE_GET_VALUE_AT:
+                    {
+                        Object index = this->stackPop();
+                        Object left = this->stackPop();
+                        ObjectType left_type = left.type();
+                        ObjectType index_type = index.type();
+                        const char* left_type_name = object_get_type_name(left_type);
+                        const char* index_type_name = object_get_type_name(index_type);
+
+                        if(left_type != APE_OBJECT_ARRAY && left_type != APE_OBJECT_MAP && left_type != APE_OBJECT_STRING)
+                        {
+                            errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame),
+                                              "Type %s is not indexable (in OPCODE_GET_VALUE_AT)", left_type_name);
+                            goto err;
+                        }
+
+                        Object res = Object::makeNull();
+                        if(index_type != APE_OBJECT_NUMBER)
+                        {
+                            errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame),
+                                              "Cannot index %s with %s", left_type_name, index_type_name);
+                            goto err;
+                        }
+                        int ix = (int)object_get_number(index);
+
+                        if(left_type == APE_OBJECT_ARRAY)
+                        {
+                            res = object_get_array_value(left, ix);
+                        }
+                        else if(left_type == APE_OBJECT_MAP)
+                        {
+                            res = object_get_kv_pair_at(this->mem, left, ix);
+                        }
+                        else if(left_type == APE_OBJECT_STRING)
+                        {
+                            const char* str = object_get_string(left);
+                            int left_len = object_get_string_length(left);
+                            int ix = (int)object_get_number(index);
+                            if(ix >= 0 && ix < left_len)
+                            {
+                                char res_str[2] = { str[ix], '\0' };
+                                res = Object::makeString(this->mem, res_str);
+                            }
+                        }
+                        this->stackPush(res);
+                        break;
+                    }
+                    case OPCODE_CALL:
+                    {
+                        uint8_t num_args = frame_read_uint8(this->current_frame);
+                        Object callee = this->stackGet(num_args);
+                        bool ok = this->callObject(callee, num_args);
+                        if(!ok)
+                        {
+                            goto err;
+                        }
+                        break;
+                    }
+                    case OPCODE_RETURN_VALUE:
+                    {
+                        Object res = this->stackPop();
+                        bool ok = this->popFrame();
+                        if(!ok)
+                        {
+                            goto end;
+                        }
+                        this->stackPush(res);
+                        break;
+                    }
+                    case OPCODE_RETURN:
+                    {
+                        bool ok = this->popFrame();
+                        this->stackPush(Object::makeNull());
+                        if(!ok)
+                        {
+                            this->stackPop();
+                            goto end;
+                        }
+                        break;
+                    }
+                    case OPCODE_DEFINE_LOCAL:
+                    {
+                        uint8_t pos = frame_read_uint8(this->current_frame);
+                        this->stack[this->current_frame->base_pointer + pos] = this->stackPop();
+                        break;
+                    }
+                    case OPCODE_SET_LOCAL:
+                    {
+                        uint8_t pos = frame_read_uint8(this->current_frame);
+                        Object new_value = this->stackPop();
+                        Object old_value = this->stack[this->current_frame->base_pointer + pos];
+                        if(!this->checkAssign(old_value, new_value))
+                        {
+                            goto err;
+                        }
+                        this->stack[this->current_frame->base_pointer + pos] = new_value;
+                        break;
+                    }
+                    case OPCODE_GET_LOCAL:
+                    {
+                        uint8_t pos = frame_read_uint8(this->current_frame);
+                        Object val = this->stack[this->current_frame->base_pointer + pos];
+                        this->stackPush(val);
+                        break;
+                    }
+                    case OPCODE_GET_APE_GLOBAL:
+                    {
+                        uint16_t ix = frame_read_uint16(this->current_frame);
+                        bool ok = false;
+                        Object val = global_store_get_object_at(this->global_store, ix, &ok);
+                        if(!ok)
+                        {
+                            errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame),
+                                              "Global value %d not found", ix);
+                            goto err;
+                        }
+                        this->stackPush(val);
+                        break;
+                    }
+                    case OPCODE_FUNCTION:
+                        {
+                            uint16_t constant_ix = frame_read_uint16(this->current_frame);
+                            uint8_t num_free = frame_read_uint8(this->current_frame);
+                            Object* constant = (Object*)constants->get(constant_ix);
+                            if(!constant)
+                            {
+                                errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame),
+                                                  "Constant %d not found", constant_ix);
+                                goto err;
+                            }
+                            ObjectType constant_type = (*constant).type();
+                            if(constant_type != APE_OBJECT_FUNCTION)
+                            {
+                                const char* type_name = object_get_type_name(constant_type);
+                                errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame),
+                                                  "%s is not a function", type_name);
+                                goto err;
+                            }
+
+                            const ScriptFunction* constant_function = object_get_function(*constant);
+                            Object function_obj
+                            = Object::makeFunction(this->mem, object_get_function_name(*constant), constant_function->comp_result,
+                                                   false, constant_function->num_locals, constant_function->num_args, num_free);
+                            if(function_obj.isNull())
+                            {
+                                goto err;
+                            }
+                            for(int i = 0; i < num_free; i++)
+                            {
+                                Object free_val = this->stack[this->sp - num_free + i];
+                                object_set_function_free_val(function_obj, i, free_val);
+                            }
+                            this->setStackPointer(this->sp - num_free);
+                            this->stackPush(function_obj);
+                        }
+                        break;
+                    case OPCODE_GET_FREE:
+                        {
+                            uint8_t free_ix = frame_read_uint8(this->current_frame);
+                            Object val = object_get_function_free_val(this->current_frame->function, free_ix);
+                            this->stackPush(val);
+                        }
+                        break;
+                    case OPCODE_SET_FREE:
+                        {
+                            uint8_t free_ix = frame_read_uint8(this->current_frame);
+                            Object val = this->stackPop();
+                            object_set_function_free_val(this->current_frame->function, free_ix, val);
+                        }
+                        break;
+                    case OPCODE_CURRENT_FUNCTION:
+                        {
+                            Object current_function = this->current_frame->function;
+                            this->stackPush(current_function);
+                        }
+                        break;
+                    case OPCODE_SET_INDEX:
+                        {
+                            Object index = this->stackPop();
+                            Object left = this->stackPop();
+                            Object new_value = this->stackPop();
+                            ObjectType left_type = left.type();
+                            ObjectType index_type = index.type();
+                            const char* left_type_name = object_get_type_name(left_type);
+                            const char* index_type_name = object_get_type_name(index_type);
+
+                            if(left_type != APE_OBJECT_ARRAY && left_type != APE_OBJECT_MAP)
+                            {
+                                errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame),
+                                                  "Type %s is not indexable (in OPCODE_SET_INDEX)", left_type_name);
+                                goto err;
+                            }
+
+                            if(left_type == APE_OBJECT_ARRAY)
+                            {
+                                if(index_type != APE_OBJECT_NUMBER)
+                                {
+                                    errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame),
+                                                      "Cannot index %s with %s", left_type_name, index_type_name);
+                                    goto err;
+                                }
+                                int ix = (int)object_get_number(index);
+                                ok = object_set_array_value_at(left, ix, new_value);
+                                if(!ok)
+                                {
+                                    errors_add_error(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame),
+                                                     "Setting array item failed (out of bounds?)");
+                                    goto err;
+                                }
+                            }
+                            else if(left_type == APE_OBJECT_MAP)
+                            {
+                                Object old_value = object_get_map_value_object(left, index);
+                                if(!this->checkAssign(old_value, new_value))
+                                {
+                                    goto err;
+                                }
+                                ok = object_set_map_value_object(left, index, new_value);
+                                if(!ok)
+                                {
+                                    goto err;
+                                }
+                            }
+                        }
+                        break;
+                    case OPCODE_DUP:
+                        {
+                            Object val = this->stackGet(0);
+                            this->stackPush(val);
+                        }
+                        break;
+                    case OPCODE_LEN:
+                        {
+                            Object val = this->stackPop();
+                            int len = 0;
+                            ObjectType type = val.type();
+                            if(type == APE_OBJECT_ARRAY)
+                            {
+                                len = object_get_array_length(val);
+                            }
+                            else if(type == APE_OBJECT_MAP)
+                            {
+                                len = object_get_map_length(val);
+                            }
+                            else if(type == APE_OBJECT_STRING)
+                            {
+                                len = object_get_string_length(val);
+                            }
+                            else
+                            {
+                                const char* type_name = object_get_type_name(type);
+                                errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame),
+                                                  "Cannot get length of %s", type_name);
+                                goto err;
+                            }
+                            this->stackPush(Object::makeNumber(len));
+                        }
+                        break;
+
+                    case OPCODE_NUMBER:
+                        {
+                            uint64_t val = frame_read_uint64(this->current_frame);
+                            double val_double = ape_uint64_to_double(val);
+                            Object obj = Object::makeNumber(val_double);
+                            this->stackPush(obj);
+                        }
+                        break;
+                    case OPCODE_SET_RECOVER:
+                        {
+                            uint16_t recover_ip = frame_read_uint16(this->current_frame);
+                            this->current_frame->recover_ip = recover_ip;
+                        }
+                        break;
+                    default:
+                        {
+                            APE_ASSERT(false);
+                            errors_add_errorf(this->errors, APE_ERROR_RUNTIME, frame_src_position(this->current_frame), "Unknown opcode: 0x%x", opcode);
+                            goto err;
+                        }
+                        break;
+                }
+                if(check_time)
+                {
+                    time_check_counter++;
+                    if(time_check_counter > time_check_interval)
+                    {
+                        int elapsed_ms = (int)ape_timer_get_elapsed_ms(&timer);
+                        if(elapsed_ms > max_exec_time_ms)
+                        {
+                            errors_add_errorf(this->errors, APE_ERROR_TIMEOUT, frame_src_position(this->current_frame),
+                                              "Execution took more than %1.17g ms", max_exec_time_ms);
+                            goto err;
+                        }
+                        time_check_counter = 0;
+                    }
+                }
+            err:
+                if(errors_get_count(this->errors) > 0)
+                {
+                    Error* err = errors_get_last_error(this->errors);
+                    if(err->type == APE_ERROR_RUNTIME && errors_get_count(this->errors) == 1)
+                    {
+                        int recover_frame_ix = -1;
+                        for(int i = this->frames_count - 1; i >= 0; i--)
+                        {
+                            Frame* frame = &this->frames[i];
+                            if(frame->recover_ip >= 0 && !frame->is_recovering)
+                            {
+                                recover_frame_ix = i;
+                                break;
+                            }
+                        }
+                        if(recover_frame_ix < 0)
+                        {
+                            goto end;
+                        }
+                        else
+                        {
+                            if(!err->traceback)
+                            {
+                                err->traceback = traceback_make(this->alloc);
+                            }
+                            if(err->traceback)
+                            {
+                                traceback_append_from_vm(err->traceback, this);
+                            }
+                            while(this->frames_count > (recover_frame_ix + 1))
+                            {
+                                this->popFrame();
+                            }
+                            Object err_obj = Object::makeError(this->mem, err->message);
+                            if(!err_obj.isNull())
+                            {
+                                object_set_error_traceback(err_obj, err->traceback);
+                                err->traceback = NULL;
+                            }
+                            this->stackPush(err_obj);
+                            this->current_frame->ip = this->current_frame->recover_ip;
+                            this->current_frame->is_recovering = true;
+                            errors_clear(this->errors);
+                        }
+                    }
+                    else
+                    {
+                        goto end;
+                    }
+                }
+                if(this->mem->shouldSweep())
+                {
+                    this->runGarbageCollector(constants);
+                }
+            }
+
+        end:
+            if(errors_get_count(this->errors) > 0)
+            {
+                Error* err = errors_get_last_error(this->errors);
+                if(!err->traceback)
+                {
+                    err->traceback = traceback_make(this->alloc);
+                }
+                if(err->traceback)
+                {
+                    traceback_append_from_vm(err->traceback, this);
+                }
+            }
+
+            this->runGarbageCollector(constants);
+
+            this->running = false;
+            return errors_get_count(this->errors) == 0;
+        }
+
 };
+
 
 
 struct StringBuffer
@@ -6786,9 +9026,6 @@ struct FileScope
 };
 
 
-static const Position src_pos_invalid = { NULL, -1, -1 };
-static const Position src_pos_zero = { NULL, 0, 0 };
-
 struct Compiler
 {
     public:
@@ -7293,7 +9530,7 @@ struct Compiler
             ok = this->compileStatements(statements);
             statements_to_string(buf, statements);            
             puts(buf->string());
-            statements->destroyWithItems(statement_destroy);
+            statements->destroyWithItems(Expression::destroyExpression);
 
             // Left for debugging purposes
             #if 0
@@ -8803,7 +11040,7 @@ struct Compiler
             res = false;
         end:
             this->src_positions_stack->pop(NULL);
-            expression_destroy(expr_optimised);
+            Expression::destroyExpression(expr_optimised);
             return res;
         }
 
@@ -9127,28 +11364,371 @@ struct Compiler
         {
             this->compilation_scope = scope;
         }
-
-
 };
 
 
 struct Program
 {
-    Context* ape;
+    Context* context;
     CompilationResult* comp_res;
 };
 
 struct Context
 {
-    Allocator alloc;
-    GCMemory* mem;
-    PtrArray * files;
-    GlobalStore* global_store;
-    Compiler* compiler;
-    VM* vm;
-    ErrorList errors;
-    Config config;
-    Allocator custom_allocator;
+    public:
+        static Context* make(void)
+        {
+            return Context::make(NULL, NULL, NULL);
+        }
+
+        static Context* make(MallocFNCallback malloc_fn, FreeFNCallback free_fn, void* pctx)
+        {
+            Allocator custom_alloc = Allocator::make((AllocatorMallocFNCallback)malloc_fn, (AllocatorFreeFNCallback)free_fn, pctx);
+            Context* ctx = (Context*)custom_alloc.allocate(sizeof(Context));
+            if(!ctx)
+            {
+                return NULL;
+            }
+            memset(ctx, 0, sizeof(Context));
+            ctx->alloc = Allocator::make(ape_malloc, ape_free, ctx);
+            ctx->custom_allocator = custom_alloc;
+            ctx->setDefaultConfig();
+            errors_init(&ctx->errors);
+            ctx->mem = GCMemory::make(&ctx->alloc);
+            if(!ctx->mem)
+            {
+                goto err;
+            }
+            ctx->files = PtrArray::make(&ctx->alloc);
+            if(!ctx->files)
+            {
+                goto err;
+            }
+            ctx->global_store = global_store_make(&ctx->alloc, ctx->mem);
+            if(!ctx->global_store)
+            {
+                goto err;
+            }
+            ctx->compiler = Compiler::make(&ctx->alloc, &ctx->config, ctx->mem, &ctx->errors, ctx->files, ctx->global_store);
+            if(!ctx->compiler)
+            {
+                goto err;
+            }
+            ctx->vm = VM::make(&ctx->alloc, &ctx->config, ctx->mem, &ctx->errors, ctx->global_store);
+            if(!ctx->vm)
+            {
+                goto err;
+            }
+            builtins_install(ctx->vm);
+            return ctx;
+        err:
+            ctx->deinit();
+            custom_alloc.release(ctx);
+            return NULL;
+        }
+
+    public:
+        Allocator alloc;
+        GCMemory* mem;
+        PtrArray * files;
+        GlobalStore* global_store;
+        Compiler* compiler;
+        VM* vm;
+        ErrorList errors;
+        Config config;
+        Allocator custom_allocator;
+
+    public:
+        void destroy()
+        {
+            if(!this)
+            {
+                return;
+            }
+            this->deinit();
+            Allocator alloc = this->alloc;
+            alloc.release(this);
+        }
+
+        void deinit()
+        {
+            this->vm->destroy();
+            this->compiler->destroy();
+            global_store_destroy(this->global_store);
+            this->mem->destroy();
+            this->files->destroyWithItems(compiled_file_destroy);
+            errors_deinit(&this->errors);
+        }
+
+        Object makeNamedNativeFunction(const char* name, UserFNCallback fn, void* data)
+        {
+            NativeFuncWrapper wrapper;
+            memset(&wrapper, 0, sizeof(NativeFuncWrapper));
+            wrapper.wrapped_funcptr = fn;
+            wrapper.context = this;
+            wrapper.data = data;
+            Object wrapper_native_function = Object::makeNativeFunctionMemory(this->mem, name, ape_native_fn_wrapper, &wrapper, sizeof(wrapper));
+            if(wrapper_native_function.isNull())
+            {
+                return Object::makeNull();
+            }
+            return wrapper_native_function;
+        }
+
+        void resetState()
+        {
+            this->clearErrors();
+            this->vm->reset();
+        }
+
+        void setDefaultConfig()
+        {
+            memset(&this->config, 0, sizeof(Config));
+            this->setREPLMode(false);
+            this->setTimeout(-1);
+            this->setFileRead(read_file_default, this);
+            this->setFileWrite(write_file_default, this);
+            this->setStdoutWrite(stdout_write_default, this);
+        }
+
+        void pushRuntimeError(const char* fmt, ...)
+        {
+            va_list args;
+            va_start(args, fmt);
+            int to_write = vsnprintf(NULL, 0, fmt, args);
+            (void)to_write;
+            va_end(args);
+            va_start(args, fmt);
+            char res[APE_ERROR_MESSAGE_MAX_LENGTH];
+            int written = vsnprintf(res, APE_ERROR_MESSAGE_MAX_LENGTH, fmt, args);
+            (void)written;
+            APE_ASSERT(to_write == written);
+            va_end(args);
+            errors_add_error(&this->errors, APE_ERROR_RUNTIME, src_pos_invalid, res);
+        }
+
+        char* serializeError(const Error* err)
+        {
+            const char* type_str = ape_error_get_type_string(err);
+            const char* filename = ape_error_get_filepath(err);
+            const char* line = ape_error_get_line(err);
+            int line_num = ape_error_get_line_number(err);
+            int col_num = ape_error_get_column_number(err);
+            StringBuffer* buf = StringBuffer::make(&this->alloc);
+            if(!buf)
+            {
+                return NULL;
+            }
+            if(line)
+            {
+                buf->append(line);
+                buf->append("\n");
+                if(col_num >= 0)
+                {
+                    for(int j = 0; j < (col_num - 1); j++)
+                    {
+                        buf->append(" ");
+                    }
+                    buf->append("^\n");
+                }
+            }
+            buf->appendFormat("%s ERROR in \"%s\" on %d:%d: %s\n", type_str, filename, line_num, col_num, ape_error_get_message(err));
+            const Traceback* traceback = ape_error_get_traceback(err);
+            if(traceback)
+            {
+                buf->appendFormat("Traceback:\n");
+                traceback_to_string((const Traceback*)ape_error_get_traceback(err), buf);
+            }
+            if(buf->failed())
+            {
+                buf->destroy();
+                return NULL;
+            }
+            return buf->getStringAndDestroy();
+        }
+
+        void releaseAllocated(void* ptr)
+        {
+            this->alloc.release(ptr);
+        }
+
+        void setREPLMode(bool enabled)
+        {
+            this->config.repl_mode = enabled;
+        }
+
+        bool setTimeout(double max_execution_time_ms)
+        {
+            if(!ape_timer_platform_supported())
+            {
+                this->config.max_execution_time_ms = 0;
+                this->config.max_execution_time_set = false;
+                return false;
+            }
+
+            if(max_execution_time_ms >= 0)
+            {
+                this->config.max_execution_time_ms = max_execution_time_ms;
+                this->config.max_execution_time_set = true;
+            }
+            else
+            {
+                this->config.max_execution_time_ms = 0;
+                this->config.max_execution_time_set = false;
+            }
+            return true;
+        }
+
+        void setStdoutWrite(StdoutWriteFNCallback stdout_write, void* context)
+        {
+            this->config.stdio.write.write = stdout_write;
+            this->config.stdio.write.context = context;
+        }
+
+        void setFileWrite(WriteFileFNCallback file_write, void* context)
+        {
+            this->config.fileio.write_file.write_file = file_write;
+            this->config.fileio.write_file.context = context;
+        }
+
+        void setFileRead(ReadFileFNCallback file_read, void* context)
+        {
+            this->config.fileio.read_file.read_file = file_read;
+            this->config.fileio.read_file.context = context;
+        }
+
+        Object executeCode(const char* code)
+        {
+            bool ok;
+            Object res;
+            CompilationResult* comp_res;
+            this->resetState();
+            comp_res = this->compiler->compileSource(code);
+            if(!comp_res || errors_get_count(&this->errors) > 0)
+            {
+                goto err;
+            }
+            ok = this->vm->run(comp_res, this->compiler->getConstants());
+            if(!ok || errors_get_count(&this->errors) > 0)
+            {
+                goto err;
+            }
+            APE_ASSERT(this->vm->sp == 0);
+            res = this->vm->getLastPopped();
+            if(res.type() == APE_OBJECT_NONE)
+            {
+                goto err;
+            }
+            compilation_result_destroy(comp_res);
+            return res;
+
+        err:
+            compilation_result_destroy(comp_res);
+            return Object::makeNull();
+        }
+
+        Object executeFile(const char* path)
+        {
+            bool ok;
+            Object res;
+            CompilationResult* comp_res;
+            this->resetState();
+            comp_res = this->compiler->compileFile(path);
+            if(!comp_res || errors_get_count(&this->errors) > 0)
+            {
+                goto err;
+            }
+            ok = this->vm->run(comp_res, this->compiler->getConstants());
+            if(!ok || errors_get_count(&this->errors) > 0)
+            {
+                goto err;
+            }
+            APE_ASSERT(this->vm->sp == 0);
+            res = this->vm->getLastPopped();
+            if(res.type() == APE_OBJECT_NONE)
+            {
+                goto err;
+            }
+            compilation_result_destroy(comp_res);
+
+            return res;
+
+        err:
+            compilation_result_destroy(comp_res);
+            return Object::makeNull();
+        }
+
+        bool hasErrors()
+        {
+            return this->errorCount() > 0;
+        }
+
+        int errorCount()
+        {
+            return errors_get_count(&this->errors);
+        }
+
+        void clearErrors()
+        {
+            errors_clear(&this->errors);
+        }
+
+        const Error* getError(int index)
+        {
+            return (const Error*)errors_getc(&this->errors, index);
+        }
+
+        bool setNativeFunction(const char* name, UserFNCallback fn, void* data)
+        {
+            Object obj = this->makeNamedNativeFunction(name, fn, data);
+            if(obj.isNull())
+            {
+                return false;
+            }
+            return this->setGlobalConstant(name, obj);
+        }
+
+        bool setGlobalConstant(const char* name, Object obj)
+        {
+            return global_store_set(this->global_store, name, obj);
+        }
+
+        Object getObject(const char* name)
+        {
+            Symbol::Table* st = this->compiler->getSymbolTable();
+            const Symbol* symbol = st->resolve(name);
+            if(!symbol)
+            {
+                errors_add_errorf(&this->errors, APE_ERROR_USER, src_pos_invalid, "Symbol \"%s\" is not defined", name);
+                return Object::makeNull();
+            }
+            Object res = Object::makeNull();
+            if(symbol->type == SYMBOL_MODULE_GLOBAL)
+            {
+                res = this->vm->getGlobalByIndex(symbol->index);
+            }
+            else if(symbol->type == SYMBOL_APE_GLOBAL)
+            {
+                bool ok = false;
+                res = global_store_get_object_at(this->global_store, symbol->index, &ok);
+                if(!ok)
+                {
+                    errors_add_errorf(&this->errors, APE_ERROR_USER, src_pos_invalid, "Failed to get global object at %d", symbol->index);
+                    return Object::makeNull();
+                }
+            }
+            else
+            {
+                errors_add_errorf(&this->errors, APE_ERROR_USER, src_pos_invalid, "Value associated with symbol \"%s\" could not be loaded", name);
+                return Object::makeNull();
+            }
+            return res;
+        }
+
+        Object makeNativeFunctionObject(UserFNCallback fn, void* data)
+        {
+            return this->makeNamedNativeFunction("", fn, data);
+        }
 };
 
 //impl::object
@@ -9339,983 +11919,49 @@ void Object::deinit(Object obj)
     }
 }
 
-Expression* statement_make(Allocator* alloc, Expr_type type)
-{
-    Expression* res = (Expression*)alloc->allocate(sizeof(Expression));
-    if(!res)
-    {
-        return NULL;
-    }
-    res->alloc = alloc;
-    res->type = type;
-    res->pos = src_pos_invalid;
-    return res;
-}
+// impl:expression
 
-Expression* expression_make_ident(Allocator* alloc, Ident* ident)
+void StmtIfClause::Case::destroy()
 {
-    Expression* res = expression_make(alloc, EXPRESSION_IDENT);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->ident = ident;
-    return res;
-}
-
-Expression* expression_make_number_literal(Allocator* alloc, double val)
-{
-    Expression* res = expression_make(alloc, EXPRESSION_NUMBER_LITERAL);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->number_literal = val;
-    return res;
-}
-
-Expression* expression_make_bool_literal(Allocator* alloc, bool val)
-{
-    Expression* res = expression_make(alloc, EXPRESSION_BOOL_LITERAL);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->bool_literal = val;
-    return res;
-}
-
-Expression* expression_make_string_literal(Allocator* alloc, char* value)
-{
-    Expression* res = expression_make(alloc, EXPRESSION_STRING_LITERAL);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->string_literal = value;
-    return res;
-}
-
-Expression* expression_make_null_literal(Allocator* alloc)
-{
-    Expression* res = expression_make(alloc, EXPRESSION_NULL_LITERAL);
-    if(!res)
-    {
-        return NULL;
-    }
-    return res;
-}
-
-Expression* expression_make_array_literal(Allocator* alloc, PtrArray * values)
-{
-    Expression* res = expression_make(alloc, EXPRESSION_ARRAY_LITERAL);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->array = values;
-    return res;
-}
-
-Expression* expression_make_map_literal(Allocator* alloc, PtrArray * keys, PtrArray * values)
-{
-    Expression* res = expression_make(alloc, EXPRESSION_MAP_LITERAL);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->map.keys = keys;
-    res->map.values = values;
-    return res;
-}
-
-Expression* expression_make_prefix(Allocator* alloc, Operator op, Expression* right)
-{
-    Expression* res = expression_make(alloc, EXPRESSION_PREFIX);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->prefix.op = op;
-    res->prefix.right = right;
-    return res;
-}
-
-Expression* expression_make_infix(Allocator* alloc, Operator op, Expression* left, Expression* right)
-{
-    Expression* res = expression_make(alloc, EXPRESSION_INFIX);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->infix.op = op;
-    res->infix.left = left;
-    res->infix.right = right;
-    return res;
-}
-
-Expression* expression_make_fn_literal(Allocator* alloc, PtrArray * params, StmtBlock* body)
-{
-    Expression* res = expression_make(alloc, EXPRESSION_FUNCTION_LITERAL);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->fn_literal.name = NULL;
-    res->fn_literal.params = params;
-    res->fn_literal.body = body;
-    return res;
-}
-
-Expression* expression_make_call(Allocator* alloc, Expression* function, PtrArray * args)
-{
-    Expression* res = expression_make(alloc, EXPRESSION_CALL);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->call_expr.function = function;
-    res->call_expr.args = args;
-    return res;
-}
-
-Expression* expression_make_index(Allocator* alloc, Expression* left, Expression* index)
-{
-    Expression* res = expression_make(alloc, EXPRESSION_INDEX);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->index_expr.left = left;
-    res->index_expr.index = index;
-    return res;
-}
-
-Expression* expression_make_assign(Allocator* alloc, Expression* dest, Expression* source, bool is_postfix)
-{
-    Expression* res = expression_make(alloc, EXPRESSION_ASSIGN);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->assign.dest = dest;
-    res->assign.source = source;
-    res->assign.is_postfix = is_postfix;
-    return res;
-}
-
-Expression* expression_make_logical(Allocator* alloc, Operator op, Expression* left, Expression* right)
-{
-    Expression* res = expression_make(alloc, EXPRESSION_LOGICAL);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->logical.op = op;
-    res->logical.left = left;
-    res->logical.right = right;
-    return res;
-}
-
-Expression* expression_make_ternary(Allocator* alloc, Expression* test, Expression* if_true, Expression* if_false)
-{
-    Expression* res = expression_make(alloc, EXPRESSION_TERNARY);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->ternary.test = test;
-    res->ternary.if_true = if_true;
-    res->ternary.if_false = if_false;
-    return res;
-}
-
-void expression_destroy(Expression* expr)
-{
-    if(!expr)
+    if(!this)
     {
         return;
     }
-
-    switch(expr->type)
-    {
-        case EXPRESSION_NONE:
-        {
-            APE_ASSERT(false);
-            break;
-        }
-        case EXPRESSION_IDENT:
-        {
-            ident_destroy(expr->ident);
-            break;
-        }
-        case EXPRESSION_NUMBER_LITERAL:
-        case EXPRESSION_BOOL_LITERAL:
-        {
-            break;
-        }
-        case EXPRESSION_STRING_LITERAL:
-        {
-            expr->alloc->release(expr->string_literal);
-            break;
-        }
-        case EXPRESSION_NULL_LITERAL:
-        {
-            break;
-        }
-        case EXPRESSION_ARRAY_LITERAL:
-        {
-            expr->array->destroyWithItems(expression_destroy);
-            break;
-        }
-        case EXPRESSION_MAP_LITERAL:
-        {
-            expr->map.keys->destroyWithItems(expression_destroy);
-            expr->map.values->destroyWithItems(expression_destroy);
-            break;
-        }
-        case EXPRESSION_PREFIX:
-        {
-            expression_destroy(expr->prefix.right);
-            break;
-        }
-        case EXPRESSION_INFIX:
-        {
-            expression_destroy(expr->infix.left);
-            expression_destroy(expr->infix.right);
-            break;
-        }
-        case EXPRESSION_FUNCTION_LITERAL:
-        {
-            StmtFuncDef* fn = &expr->fn_literal;
-            expr->alloc->release(fn->name);
-            fn->params->destroyWithItems(ident_destroy);
-            code_block_destroy(fn->body);
-            break;
-        }
-        case EXPRESSION_CALL:
-        {
-            expr->call_expr.args->destroyWithItems(expression_destroy);
-            expression_destroy(expr->call_expr.function);
-            break;
-        }
-        case EXPRESSION_INDEX:
-        {
-            expression_destroy(expr->index_expr.left);
-            expression_destroy(expr->index_expr.index);
-            break;
-        }
-        case EXPRESSION_ASSIGN:
-        {
-            expression_destroy(expr->assign.dest);
-            expression_destroy(expr->assign.source);
-            break;
-        }
-        case EXPRESSION_LOGICAL:
-        {
-            expression_destroy(expr->logical.left);
-            expression_destroy(expr->logical.right);
-            break;
-        }
-        case EXPRESSION_TERNARY:
-        {
-            expression_destroy(expr->ternary.test);
-            expression_destroy(expr->ternary.if_true);
-            expression_destroy(expr->ternary.if_false);
-            break;
-        }
-    }
-    expr->alloc->release(expr);
+    Expression::destroyExpression(this->test);
+    code_block_destroy(this->consequence);
+    this->alloc->release(this);
 }
 
-Expression* expression_copy(Expression* expr)
+StmtIfClause::Case* StmtIfClause::Case::copy()
 {
-    if(!expr)
+    if(!this)
     {
         return NULL;
     }
-    Expression* res = NULL;
-    switch(expr->type)
+    Expression* test_copy = NULL;
+    StmtBlock* consequence_copy = NULL;
+    Case* if_case_copy = NULL;
+    test_copy = Expression::copyExpression(this->test);
+    if(!test_copy)
     {
-        case EXPRESSION_NONE:
-        {
-            APE_ASSERT(false);
-            break;
-        }
-        case EXPRESSION_IDENT:
-        {
-            Ident* ident = Ident::copy_callback(expr->ident);
-            if(!ident)
-            {
-                return NULL;
-            }
-            res = expression_make_ident(expr->alloc, ident);
-            if(!res)
-            {
-                ident_destroy(ident);
-                return NULL;
-            }
-            break;
-        }
-        case EXPRESSION_NUMBER_LITERAL:
-        {
-            res = expression_make_number_literal(expr->alloc, expr->number_literal);
-            break;
-        }
-        case EXPRESSION_BOOL_LITERAL:
-        {
-            res = expression_make_bool_literal(expr->alloc, expr->bool_literal);
-            break;
-        }
-        case EXPRESSION_STRING_LITERAL:
-        {
-            char* string_copy = ape_strdup(expr->alloc, expr->string_literal);
-            if(!string_copy)
-            {
-                return NULL;
-            }
-            res = expression_make_string_literal(expr->alloc, string_copy);
-            if(!res)
-            {
-                expr->alloc->release(string_copy);
-                return NULL;
-            }
-            break;
-        }
-        case EXPRESSION_NULL_LITERAL:
-        {
-            res = expression_make_null_literal(expr->alloc);
-            break;
-        }
-        case EXPRESSION_ARRAY_LITERAL:
-        {
-            PtrArray* values_copy = expr->array->copyWithItems(expression_copy, expression_destroy);
-            if(!values_copy)
-            {
-                return NULL;
-            }
-            res = expression_make_array_literal(expr->alloc, values_copy);
-            if(!res)
-            {
-                values_copy->destroyWithItems(expression_destroy);
-                return NULL;
-            }
-            break;
-        }
-        case EXPRESSION_MAP_LITERAL:
-        {
-            PtrArray* keys_copy = expr->map.keys->copyWithItems(expression_copy, expression_destroy);
-            PtrArray* values_copy = expr->map.values->copyWithItems(expression_copy, expression_destroy);
-            if(!keys_copy || !values_copy)
-            {
-                keys_copy->destroyWithItems(expression_destroy);
-                values_copy->destroyWithItems(expression_destroy);
-                return NULL;
-            }
-            res = expression_make_map_literal(expr->alloc, keys_copy, values_copy);
-            if(!res)
-            {
-                keys_copy->destroyWithItems(expression_destroy);
-                values_copy->destroyWithItems(expression_destroy);
-                return NULL;
-            }
-            break;
-        }
-        case EXPRESSION_PREFIX:
-        {
-            Expression* right_copy = expression_copy(expr->prefix.right);
-            if(!right_copy)
-            {
-                return NULL;
-            }
-            res = expression_make_prefix(expr->alloc, expr->prefix.op, right_copy);
-            if(!res)
-            {
-                expression_destroy(right_copy);
-                return NULL;
-            }
-            break;
-        }
-        case EXPRESSION_INFIX:
-        {
-            Expression* left_copy = expression_copy(expr->infix.left);
-            Expression* right_copy = expression_copy(expr->infix.right);
-            if(!left_copy || !right_copy)
-            {
-                expression_destroy(left_copy);
-                expression_destroy(right_copy);
-                return NULL;
-            }
-            res = expression_make_infix(expr->alloc, expr->infix.op, left_copy, right_copy);
-            if(!res)
-            {
-                expression_destroy(left_copy);
-                expression_destroy(right_copy);
-                return NULL;
-            }
-            break;
-        }
-        case EXPRESSION_FUNCTION_LITERAL:
-        {
-            PtrArray* params_copy = expr->fn_literal.params->copyWithItems(Ident::copy_callback, ident_destroy);
-            StmtBlock* body_copy = code_block_copy(expr->fn_literal.body);
-            char* name_copy = ape_strdup(expr->alloc, expr->fn_literal.name);
-            if(!params_copy || !body_copy)
-            {
-                params_copy->destroyWithItems(ident_destroy);
-                code_block_destroy(body_copy);
-                expr->alloc->release(name_copy);
-                return NULL;
-            }
-            res = expression_make_fn_literal(expr->alloc, params_copy, body_copy);
-            if(!res)
-            {
-                params_copy->destroyWithItems(ident_destroy);
-                code_block_destroy(body_copy);
-                expr->alloc->release(name_copy);
-                return NULL;
-            }
-            res->fn_literal.name = name_copy;
-            break;
-        }
-        case EXPRESSION_CALL:
-        {
-            Expression* function_copy = expression_copy(expr->call_expr.function);
-            PtrArray* args_copy = expr->call_expr.args->copyWithItems(expression_copy, expression_destroy);
-            if(!function_copy || !args_copy)
-            {
-                expression_destroy(function_copy);
-                expr->call_expr.args->destroyWithItems(expression_destroy);
-                return NULL;
-            }
-            res = expression_make_call(expr->alloc, function_copy, args_copy);
-            if(!res)
-            {
-                expression_destroy(function_copy);
-                expr->call_expr.args->destroyWithItems(expression_destroy);
-                return NULL;
-            }
-            break;
-        }
-        case EXPRESSION_INDEX:
-        {
-            Expression* left_copy = expression_copy(expr->index_expr.left);
-            Expression* index_copy = expression_copy(expr->index_expr.index);
-            if(!left_copy || !index_copy)
-            {
-                expression_destroy(left_copy);
-                expression_destroy(index_copy);
-                return NULL;
-            }
-            res = expression_make_index(expr->alloc, left_copy, index_copy);
-            if(!res)
-            {
-                expression_destroy(left_copy);
-                expression_destroy(index_copy);
-                return NULL;
-            }
-            break;
-        }
-        case EXPRESSION_ASSIGN:
-        {
-            Expression* dest_copy = expression_copy(expr->assign.dest);
-            Expression* source_copy = expression_copy(expr->assign.source);
-            if(!dest_copy || !source_copy)
-            {
-                expression_destroy(dest_copy);
-                expression_destroy(source_copy);
-                return NULL;
-            }
-            res = expression_make_assign(expr->alloc, dest_copy, source_copy, expr->assign.is_postfix);
-            if(!res)
-            {
-                expression_destroy(dest_copy);
-                expression_destroy(source_copy);
-                return NULL;
-            }
-            break;
-        }
-        case EXPRESSION_LOGICAL:
-        {
-            Expression* left_copy = expression_copy(expr->logical.left);
-            Expression* right_copy = expression_copy(expr->logical.right);
-            if(!left_copy || !right_copy)
-            {
-                expression_destroy(left_copy);
-                expression_destroy(right_copy);
-                return NULL;
-            }
-            res = expression_make_logical(expr->alloc, expr->logical.op, left_copy, right_copy);
-            if(!res)
-            {
-                expression_destroy(left_copy);
-                expression_destroy(right_copy);
-                return NULL;
-            }
-            break;
-        }
-        case EXPRESSION_TERNARY:
-        {
-            Expression* test_copy = expression_copy(expr->ternary.test);
-            Expression* if_true_copy = expression_copy(expr->ternary.if_true);
-            Expression* if_false_copy = expression_copy(expr->ternary.if_false);
-            if(!test_copy || !if_true_copy || !if_false_copy)
-            {
-                expression_destroy(test_copy);
-                expression_destroy(if_true_copy);
-                expression_destroy(if_false_copy);
-                return NULL;
-            }
-            res = expression_make_ternary(expr->alloc, test_copy, if_true_copy, if_false_copy);
-            if(!res)
-            {
-                expression_destroy(test_copy);
-                expression_destroy(if_true_copy);
-                expression_destroy(if_false_copy);
-                return NULL;
-            }
-            break;
-        }
+        goto err;
     }
-    if(!res)
+    consequence_copy = code_block_copy(this->consequence);
+    if(!test_copy || !consequence_copy)
     {
-        return NULL;
+        goto err;
     }
-    res->pos = expr->pos;
-    return res;
-}
-
-Expression* statement_make_define(Allocator* alloc, Ident* name, Expression* value, bool assignable)
-{
-    Expression* res = statement_make(alloc, EXPRESSION_DEFINE);
-    if(!res)
+    if_case_copy = Case::make(this->alloc, test_copy, consequence_copy);
+    if(!if_case_copy)
     {
-        return NULL;
+        goto err;
     }
-    res->define.name = name;
-    res->define.value = value;
-    res->define.assignable = assignable;
-    return res;
-}
-
-Expression* statement_make_if(Allocator* alloc, PtrArray * cases, StmtBlock* alternative)
-{
-    Expression* res = statement_make(alloc, EXPRESSION_IF);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->if_statement.cases = cases;
-    res->if_statement.alternative = alternative;
-    return res;
-}
-
-Expression* statement_make_return(Allocator* alloc, Expression* value)
-{
-    Expression* res = statement_make(alloc, EXPRESSION_RETURN_VALUE);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->return_value = value;
-    return res;
-}
-
-Expression* statement_make_expression(Allocator* alloc, Expression* value)
-{
-    Expression* res = statement_make(alloc, EXPRESSION_EXPRESSION);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->expression = value;
-    return res;
-}
-
-Expression* statement_make_while_loop(Allocator* alloc, Expression* test, StmtBlock* body)
-{
-    Expression* res = statement_make(alloc, EXPRESSION_WHILE_LOOP);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->while_loop.test = test;
-    res->while_loop.body = body;
-    return res;
-}
-
-Expression* statement_make_break(Allocator* alloc)
-{
-    Expression* res = statement_make(alloc, EXPRESSION_BREAK);
-    if(!res)
-    {
-        return NULL;
-    }
-    return res;
-}
-
-Expression* statement_make_foreach(Allocator* alloc, Ident* iterator, Expression* source, StmtBlock* body)
-{
-    Expression* res = statement_make(alloc, EXPRESSION_FOREACH);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->foreach.iterator = iterator;
-    res->foreach.source = source;
-    res->foreach.body = body;
-    return res;
-}
-
-Expression* statement_make_for_loop(Allocator* alloc, Expression* init, Expression* test, Expression* update, StmtBlock* body)
-{
-    Expression* res = statement_make(alloc, EXPRESSION_FOR_LOOP);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->for_loop.init = init;
-    res->for_loop.test = test;
-    res->for_loop.update = update;
-    res->for_loop.body = body;
-    return res;
-}
-
-Expression* statement_make_continue(Allocator* alloc)
-{
-    Expression* res = statement_make(alloc, EXPRESSION_CONTINUE);
-    if(!res)
-    {
-        return NULL;
-    }
-    return res;
-}
-
-Expression* statement_make_block(Allocator* alloc, StmtBlock* block)
-{
-    Expression* res = statement_make(alloc, EXPRESSION_BLOCK);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->block = block;
-    return res;
-}
-
-Expression* statement_make_import(Allocator* alloc, char* path)
-{
-    Expression* res = statement_make(alloc, EXPRESSION_IMPORT);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->import.path = path;
-    return res;
-}
-
-Expression* statement_make_recover(Allocator* alloc, Ident* error_ident, StmtBlock* body)
-{
-    Expression* res = statement_make(alloc, EXPRESSION_RECOVER);
-    if(!res)
-    {
-        return NULL;
-    }
-    res->recover.error_ident = error_ident;
-    res->recover.body = body;
-    return res;
-}
-
-void statement_destroy(Expression* stmt)
-{
-    if(!stmt)
-    {
-        return;
-    }
-    switch(stmt->type)
-    {
-        case EXPRESSION_NONE:
-        {
-            APE_ASSERT(false);
-            break;
-        }
-        case EXPRESSION_DEFINE:
-        {
-            ident_destroy(stmt->define.name);
-            expression_destroy(stmt->define.value);
-            break;
-        }
-        case EXPRESSION_IF:
-        {
-            stmt->if_statement.cases->destroyWithItems(StmtIfClause::Case::destroy_callback);
-            code_block_destroy(stmt->if_statement.alternative);
-            break;
-        }
-        case EXPRESSION_RETURN_VALUE:
-        {
-            expression_destroy(stmt->return_value);
-            break;
-        }
-        case EXPRESSION_EXPRESSION:
-        {
-            expression_destroy(stmt->expression);
-            break;
-        }
-        case EXPRESSION_WHILE_LOOP:
-        {
-            expression_destroy(stmt->while_loop.test);
-            code_block_destroy(stmt->while_loop.body);
-            break;
-        }
-        case EXPRESSION_BREAK:
-        {
-            break;
-        }
-        case EXPRESSION_CONTINUE:
-        {
-            break;
-        }
-        case EXPRESSION_FOREACH:
-        {
-            ident_destroy(stmt->foreach.iterator);
-            expression_destroy(stmt->foreach.source);
-            code_block_destroy(stmt->foreach.body);
-            break;
-        }
-        case EXPRESSION_FOR_LOOP:
-        {
-            statement_destroy(stmt->for_loop.init);
-            expression_destroy(stmt->for_loop.test);
-            expression_destroy(stmt->for_loop.update);
-            code_block_destroy(stmt->for_loop.body);
-            break;
-        }
-        case EXPRESSION_BLOCK:
-        {
-            code_block_destroy(stmt->block);
-            break;
-        }
-        case EXPRESSION_IMPORT:
-        {
-            stmt->alloc->release(stmt->import.path);
-            break;
-        }
-        case EXPRESSION_RECOVER:
-        {
-            code_block_destroy(stmt->recover.body);
-            ident_destroy(stmt->recover.error_ident);
-            break;
-        }
-    }
-    stmt->alloc->release(stmt);
-}
-
-Expression* statement_copy(const Expression* stmt)
-{
-    if(!stmt)
-    {
-        return NULL;
-    }
-    Expression* res = NULL;
-    switch(stmt->type)
-    {
-        case EXPRESSION_NONE:
-        {
-            APE_ASSERT(false);
-            break;
-        }
-        case EXPRESSION_DEFINE:
-        {
-            Expression* value_copy = expression_copy(stmt->define.value);
-            if(!value_copy)
-            {
-                return NULL;
-            }
-            res = statement_make_define(stmt->alloc, Ident::copy_callback(stmt->define.name), value_copy, stmt->define.assignable);
-            if(!res)
-            {
-                expression_destroy(value_copy);
-                return NULL;
-            }
-            break;
-        }
-        case EXPRESSION_IF:
-        {
-            PtrArray* cases_copy = stmt->if_statement.cases->copyWithItems(StmtIfClause::Case::copy_callback, StmtIfClause::Case::destroy_callback);
-            StmtBlock* alternative_copy = code_block_copy(stmt->if_statement.alternative);
-            if(!cases_copy || !alternative_copy)
-            {
-                cases_copy->destroyWithItems(StmtIfClause::Case::destroy_callback);
-                code_block_destroy(alternative_copy);
-                return NULL;
-            }
-            res = statement_make_if(stmt->alloc, cases_copy, alternative_copy);
-            if(res)
-            {
-                cases_copy->destroyWithItems(StmtIfClause::Case::destroy_callback);
-                code_block_destroy(alternative_copy);
-                return NULL;
-            }
-            break;
-        }
-        case EXPRESSION_RETURN_VALUE:
-        {
-            Expression* value_copy = expression_copy(stmt->return_value);
-            if(!value_copy)
-            {
-                return NULL;
-            }
-            res = statement_make_return(stmt->alloc, value_copy);
-            if(!res)
-            {
-                expression_destroy(value_copy);
-                return NULL;
-            }
-            break;
-        }
-        case EXPRESSION_EXPRESSION:
-        {
-            Expression* value_copy = expression_copy(stmt->expression);
-            if(!value_copy)
-            {
-                return NULL;
-            }
-            res = statement_make_expression(stmt->alloc, value_copy);
-            if(!res)
-            {
-                expression_destroy(value_copy);
-                return NULL;
-            }
-            break;
-        }
-        case EXPRESSION_WHILE_LOOP:
-        {
-            Expression* test_copy = expression_copy(stmt->while_loop.test);
-            StmtBlock* body_copy = code_block_copy(stmt->while_loop.body);
-            if(!test_copy || !body_copy)
-            {
-                expression_destroy(test_copy);
-                code_block_destroy(body_copy);
-                return NULL;
-            }
-            res = statement_make_while_loop(stmt->alloc, test_copy, body_copy);
-            if(!res)
-            {
-                expression_destroy(test_copy);
-                code_block_destroy(body_copy);
-                return NULL;
-            }
-            break;
-        }
-        case EXPRESSION_BREAK:
-        {
-            res = statement_make_break(stmt->alloc);
-            break;
-        }
-        case EXPRESSION_CONTINUE:
-        {
-            res = statement_make_continue(stmt->alloc);
-            break;
-        }
-        case EXPRESSION_FOREACH:
-        {
-            Expression* source_copy = expression_copy(stmt->foreach.source);
-            StmtBlock* body_copy = code_block_copy(stmt->foreach.body);
-            if(!source_copy || !body_copy)
-            {
-                expression_destroy(source_copy);
-                code_block_destroy(body_copy);
-                return NULL;
-            }
-            res = statement_make_foreach(stmt->alloc, Ident::copy_callback(stmt->foreach.iterator), source_copy, body_copy);
-            if(!res)
-            {
-                expression_destroy(source_copy);
-                code_block_destroy(body_copy);
-                return NULL;
-            }
-            break;
-        }
-        case EXPRESSION_FOR_LOOP:
-        {
-            Expression* init_copy = statement_copy(stmt->for_loop.init);
-            Expression* test_copy = expression_copy(stmt->for_loop.test);
-            Expression* update_copy = expression_copy(stmt->for_loop.update);
-            StmtBlock* body_copy = code_block_copy(stmt->for_loop.body);
-            if(!init_copy || !test_copy || !update_copy || !body_copy)
-            {
-                statement_destroy(init_copy);
-                expression_destroy(test_copy);
-                expression_destroy(update_copy);
-                code_block_destroy(body_copy);
-                return NULL;
-            }
-            res = statement_make_for_loop(stmt->alloc, init_copy, test_copy, update_copy, body_copy);
-            if(!res)
-            {
-                statement_destroy(init_copy);
-                expression_destroy(test_copy);
-                expression_destroy(update_copy);
-                code_block_destroy(body_copy);
-                return NULL;
-            }
-            break;
-        }
-        case EXPRESSION_BLOCK:
-        {
-            StmtBlock* block_copy = code_block_copy(stmt->block);
-            if(!block_copy)
-            {
-                return NULL;
-            }
-            res = statement_make_block(stmt->alloc, block_copy);
-            if(!res)
-            {
-                code_block_destroy(block_copy);
-                return NULL;
-            }
-            break;
-        }
-        case EXPRESSION_IMPORT:
-        {
-            char* path_copy = ape_strdup(stmt->alloc, stmt->import.path);
-            if(!path_copy)
-            {
-                return NULL;
-            }
-            res = statement_make_import(stmt->alloc, path_copy);
-            if(!res)
-            {
-                stmt->alloc->release(path_copy);
-                return NULL;
-            }
-            break;
-        }
-        case EXPRESSION_RECOVER:
-        {
-            StmtBlock* body_copy = code_block_copy(stmt->recover.body);
-            Ident* error_ident_copy = Ident::copy_callback(stmt->recover.error_ident);
-            if(!body_copy || !error_ident_copy)
-            {
-                code_block_destroy(body_copy);
-                ident_destroy(error_ident_copy);
-                return NULL;
-            }
-            res = statement_make_recover(stmt->alloc, error_ident_copy, body_copy);
-            if(!res)
-            {
-                code_block_destroy(body_copy);
-                ident_destroy(error_ident_copy);
-                return NULL;
-            }
-            break;
-        }
-    }
-    if(!res)
-    {
-        return NULL;
-    }
-    res->pos = stmt->pos;
-    return res;
+    return if_case_copy;
+err:
+    Expression::destroyExpression(test_copy);
+    code_block_destroy(consequence_copy);
+    if_case_copy->destroy();
+    return NULL;
 }
 
 StmtBlock* code_block_make(Allocator* alloc, PtrArray * statements)
@@ -10336,7 +11982,7 @@ void code_block_destroy(StmtBlock* block)
     {
         return;
     }
-    block->statements->destroyWithItems(statement_destroy);
+    block->statements->destroyWithItems(Expression::destroyExpression);
     block->alloc->release(block);
 }
 
@@ -10346,7 +11992,7 @@ StmtBlock* code_block_copy(StmtBlock* block)
     {
         return NULL;
     }
-    PtrArray* statements_copy = block->statements->copyWithItems(statement_copy, statement_destroy);
+    PtrArray* statements_copy = block->statements->copyWithItems(Expression::copyExpression, Expression::destroyExpression);
     if(!statements_copy)
     {
         return NULL;
@@ -10354,16 +12000,11 @@ StmtBlock* code_block_copy(StmtBlock* block)
     StmtBlock* res = code_block_make(block->alloc, statements_copy);
     if(!res)
     {
-        statements_copy->destroyWithItems(statement_destroy);
+        statements_copy->destroyWithItems(Expression::destroyExpression);
         return NULL;
     }
     return res;
 }
-
-
-
-
-
 
 void ident_destroy(Ident* ident)
 {
@@ -10376,29 +12017,6 @@ void ident_destroy(Ident* ident)
     ident->pos = src_pos_invalid;
     ident->alloc->release(ident);
 }
-
-
-
-// INTERNAL
-Expression* expression_make(Allocator* alloc, Expr_type type)
-{
-    Expression* res = (Expression*)alloc->allocate(sizeof(Expression));
-    if(!res)
-    {
-        return NULL;
-    }
-    res->alloc = alloc;
-    res->type = type;
-    res->pos = src_pos_invalid;
-    return res;
-}
-
-
-
-
-
-// INTERNAL
-
 
 
 static const char* g_type_names[] = {
@@ -12122,82 +13740,82 @@ Expression* optimise_infix_expression(Expression* expr)
         {
             case OPERATOR_PLUS:
             {
-                res = expression_make_number_literal(alloc, left_val + right_val);
+                res = Expression::makeNumberLiteral(alloc, left_val + right_val);
                 break;
             }
             case OPERATOR_MINUS:
             {
-                res = expression_make_number_literal(alloc, left_val - right_val);
+                res = Expression::makeNumberLiteral(alloc, left_val - right_val);
                 break;
             }
             case OPERATOR_ASTERISK:
             {
-                res = expression_make_number_literal(alloc, left_val * right_val);
+                res = Expression::makeNumberLiteral(alloc, left_val * right_val);
                 break;
             }
             case OPERATOR_SLASH:
             {
-                res = expression_make_number_literal(alloc, left_val / right_val);
+                res = Expression::makeNumberLiteral(alloc, left_val / right_val);
                 break;
             }
             case OPERATOR_LT:
             {
-                res = expression_make_bool_literal(alloc, left_val < right_val);
+                res = Expression::makeBoolLiteral(alloc, left_val < right_val);
                 break;
             }
             case OPERATOR_LTE:
             {
-                res = expression_make_bool_literal(alloc, left_val <= right_val);
+                res = Expression::makeBoolLiteral(alloc, left_val <= right_val);
                 break;
             }
             case OPERATOR_GT:
             {
-                res = expression_make_bool_literal(alloc, left_val > right_val);
+                res = Expression::makeBoolLiteral(alloc, left_val > right_val);
                 break;
             }
             case OPERATOR_GTE:
             {
-                res = expression_make_bool_literal(alloc, left_val >= right_val);
+                res = Expression::makeBoolLiteral(alloc, left_val >= right_val);
                 break;
             }
             case OPERATOR_EQ:
             {
-                res = expression_make_bool_literal(alloc, APE_DBLEQ(left_val, right_val));
+                res = Expression::makeBoolLiteral(alloc, APE_DBLEQ(left_val, right_val));
                 break;
             }
             case OPERATOR_NOT_EQ:
             {
-                res = expression_make_bool_literal(alloc, !APE_DBLEQ(left_val, right_val));
+                res = Expression::makeBoolLiteral(alloc, !APE_DBLEQ(left_val, right_val));
                 break;
             }
             case OPERATOR_MODULUS:
             {
-                res = expression_make_number_literal(alloc, fmod(left_val, right_val));
+                res = Expression::makeNumberLiteral(alloc, fmod(left_val, right_val));
                 break;
             }
             case OPERATOR_BIT_AND:
             {
-                res = expression_make_number_literal(alloc, (double)(left_val_int & right_val_int));
+                res = Expression::makeNumberLiteral(alloc, (double)(left_val_int & right_val_int));
                 break;
             }
             case OPERATOR_BIT_OR:
             {
-                res = expression_make_number_literal(alloc, (double)(left_val_int | right_val_int));
+                res = Expression::makeNumberLiteral(alloc, (double)(left_val_int | right_val_int));
                 break;
             }
             case OPERATOR_BIT_XOR:
             {
-                res = expression_make_number_literal(alloc, (double)(left_val_int ^ right_val_int));
+                res = Expression::makeNumberLiteral(alloc, (double)(left_val_int ^ right_val_int));
                 break;
             }
             case OPERATOR_LSHIFT:
             {
-                res = expression_make_number_literal(alloc, (double)(left_val_int << right_val_int));
+                res = Expression::makeNumberLiteral(alloc, (double)(left_val_int << right_val_int));
                 break;
             }
             case OPERATOR_RSHIFT:
             {
-                res = expression_make_number_literal(alloc, (double)(left_val_int >> right_val_int));
+                res = Expression::makeNumberLiteral(alloc, (double)(left_val_int >> right_val_int));
                 break;
             }
             default:
@@ -12213,7 +13831,7 @@ Expression* optimise_infix_expression(Expression* expr)
         char* res_str = ape_stringf(alloc, "%s%s", left_val, right_val);
         if(res_str)
         {
-            res = expression_make_string_literal(alloc, res_str);
+            res = Expression::makeStringLiteral(alloc, res_str);
             if(!res)
             {
                 alloc->release(res_str);
@@ -12221,8 +13839,8 @@ Expression* optimise_infix_expression(Expression* expr)
         }
     }
 
-    expression_destroy(left_optimised);
-    expression_destroy(right_optimised);
+    Expression::destroyExpression(left_optimised);
+    Expression::destroyExpression(right_optimised);
 
     if(res)
     {
@@ -12243,13 +13861,13 @@ Expression* optimise_prefix_expression(Expression* expr)
     Expression* res = NULL;
     if(expr->prefix.op == OPERATOR_MINUS && right->type == EXPRESSION_NUMBER_LITERAL)
     {
-        res = expression_make_number_literal(expr->alloc, -right->number_literal);
+        res = Expression::makeNumberLiteral(expr->alloc, -right->number_literal);
     }
     else if(expr->prefix.op == OPERATOR_BANG && right->type == EXPRESSION_BOOL_LITERAL)
     {
-        res = expression_make_bool_literal(expr->alloc, !right->bool_literal);
+        res = Expression::makeBoolLiteral(expr->alloc, !right->bool_literal);
     }
-    expression_destroy(right_optimised);
+    Expression::destroyExpression(right_optimised);
     if(res)
     {
         res->pos = expr->pos;
@@ -13601,1535 +15219,10 @@ Position frame_src_position(const Frame* frame)
 }
 
 
-VM* vm_make(Allocator* alloc, const Config* config, GCMemory* mem, ErrorList* errors, GlobalStore* global_store)
-{
-    VM* vm = (VM*)alloc->allocate(sizeof(VM));
-    if(!vm)
-    {
-        return NULL;
-    }
-    memset(vm, 0, sizeof(VM));
-    vm->alloc = alloc;
-    vm->config = config;
-    vm->mem = mem;
-    vm->errors = errors;
-    vm->global_store = global_store;
-    vm->globals_count = 0;
-    vm->sp = 0;
-    vm->this_sp = 0;
-    vm->frames_count = 0;
-    vm->last_popped = Object::makeNull();
-    vm->running = false;
-
-    for(int i = 0; i < OPCODE_MAX; i++)
-    {
-        vm->operator_oveload_keys[i] = Object::makeNull();
-    }
-#define SET_OPERATOR_OVERLOAD_KEY(op, key)                   \
-    do                                                       \
-    {                                                        \
-        Object key_obj = Object::makeString(vm->mem, key); \
-        if(key_obj.isNull())                          \
-        {                                                    \
-            goto err;                                        \
-        }                                                    \
-        vm->operator_oveload_keys[op] = key_obj;             \
-    } while(0)
-    SET_OPERATOR_OVERLOAD_KEY(OPCODE_ADD, "__operator_add__");
-    SET_OPERATOR_OVERLOAD_KEY(OPCODE_SUB, "__operator_sub__");
-    SET_OPERATOR_OVERLOAD_KEY(OPCODE_MUL, "__operator_mul__");
-    SET_OPERATOR_OVERLOAD_KEY(OPCODE_DIV, "__operator_div__");
-    SET_OPERATOR_OVERLOAD_KEY(OPCODE_MOD, "__operator_mod__");
-    SET_OPERATOR_OVERLOAD_KEY(OPCODE_OR, "__operator_or__");
-    SET_OPERATOR_OVERLOAD_KEY(OPCODE_XOR, "__operator_xor__");
-    SET_OPERATOR_OVERLOAD_KEY(OPCODE_AND, "__operator_and__");
-    SET_OPERATOR_OVERLOAD_KEY(OPCODE_LSHIFT, "__operator_lshift__");
-    SET_OPERATOR_OVERLOAD_KEY(OPCODE_RSHIFT, "__operator_rshift__");
-    SET_OPERATOR_OVERLOAD_KEY(OPCODE_MINUS, "__operator_minus__");
-    SET_OPERATOR_OVERLOAD_KEY(OPCODE_BANG, "__operator_bang__");
-    SET_OPERATOR_OVERLOAD_KEY(OPCODE_COMPARE, "__cmp__");
-#undef SET_OPERATOR_OVERLOAD_KEY
-
-    return vm;
-err:
-    vm_destroy(vm);
-    return NULL;
-}
-
-void vm_destroy(VM* vm)
-{
-    if(!vm)
-    {
-        return;
-    }
-    vm->alloc->release(vm);
-}
-
-void vm_reset(VM* vm)
-{
-    vm->sp = 0;
-    vm->this_sp = 0;
-    while(vm->frames_count > 0)
-    {
-        pop_frame(vm);
-    }
-}
-
-bool vm_run(VM* vm, CompilationResult* comp_res, Array * constants)
-{
-#ifdef APE_DEBUG
-    int old_sp = vm->sp;
-#endif
-    int old_this_sp = vm->this_sp;
-    int old_frames_count = vm->frames_count;
-    Object main_fn = Object::makeFunction(vm->mem, "main", comp_res, false, 0, 0, 0);
-    if(main_fn.isNull())
-    {
-        return false;
-    }
-    stack_push(vm, main_fn);
-    bool res = vm_execute_function(vm, main_fn, constants);
-    while(vm->frames_count > old_frames_count)
-    {
-        pop_frame(vm);
-    }
-    APE_ASSERT(vm->sp == old_sp);
-    vm->this_sp = old_this_sp;
-    return res;
-}
-
-Object vm_call(VM* vm, Array * constants, Object callee, int argc, Object* args)
-{
-    ObjectType type = callee.type();
-    if(type == APE_OBJECT_FUNCTION)
-    {
-#ifdef APE_DEBUG
-        int old_sp = vm->sp;
-#endif
-        int old_this_sp = vm->this_sp;
-        int old_frames_count = vm->frames_count;
-        stack_push(vm, callee);
-        for(int i = 0; i < argc; i++)
-        {
-            stack_push(vm, args[i]);
-        }
-        bool ok = vm_execute_function(vm, callee, constants);
-        if(!ok)
-        {
-            return Object::makeNull();
-        }
-        while(vm->frames_count > old_frames_count)
-        {
-            pop_frame(vm);
-        }
-        APE_ASSERT(vm->sp == old_sp);
-        vm->this_sp = old_this_sp;
-        return vm_get_last_popped(vm);
-    }
-    else if(type == APE_OBJECT_NATIVE_FUNCTION)
-    {
-        return call_native_function(vm, callee, src_pos_invalid, argc, args);
-    }
-    else
-    {
-        errors_add_error(vm->errors, APE_ERROR_USER, src_pos_invalid, "Object is not callable");
-        return Object::makeNull();
-    }
-}
-
-bool vm_execute_function(VM* vm, Object function, Array * constants)
-{
-    if(vm->running)
-    {
-        errors_add_error(vm->errors, APE_ERROR_USER, src_pos_invalid, "VM is already executing code");
-        return false;
-    }
-
-    ScriptFunction* function_function = object_get_function(function);// naming is hard
-    Frame new_frame;
-    bool ok = false;
-    ok = frame_init(&new_frame, function, vm->sp - function_function->num_args);
-    if(!ok)
-    {
-        return false;
-    }
-    ok = push_frame(vm, new_frame);
-    if(!ok)
-    {
-        errors_add_error(vm->errors, APE_ERROR_USER, src_pos_invalid, "Pushing frame failed");
-        return false;
-    }
-
-    vm->running = true;
-    vm->last_popped = Object::makeNull();
-
-    bool check_time = false;
-    double max_exec_time_ms = 0;
-    if(vm->config)
-    {
-        check_time = vm->config->max_execution_time_set;
-        max_exec_time_ms = vm->config->max_execution_time_ms;
-    }
-    unsigned time_check_interval = 1000;
-    unsigned time_check_counter = 0;
-    Timer timer;
-    memset(&timer, 0, sizeof(Timer));
-    if(check_time)
-    {
-        timer = ape_timer_start();
-    }
-
-    while(vm->current_frame->ip < vm->current_frame->bytecode_size)
-    {
-        OpcodeValue opcode = frame_read_opcode(vm->current_frame);
-        switch(opcode)
-        {
-            case OPCODE_CONSTANT:
-                {
-                    uint16_t constant_ix = frame_read_uint16(vm->current_frame);
-                    Object* constant = (Object*)constants->get(constant_ix);
-                    if(!constant)
-                    {
-                        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                          "Constant at %d not found", constant_ix);
-                        goto err;
-                    }
-                    stack_push(vm, *constant);
-                }
-                break;
-
-            case OPCODE_ADD:
-            case OPCODE_SUB:
-            case OPCODE_MUL:
-            case OPCODE_DIV:
-            case OPCODE_MOD:
-            case OPCODE_OR:
-            case OPCODE_XOR:
-            case OPCODE_AND:
-            case OPCODE_LSHIFT:
-            case OPCODE_RSHIFT:
-                {
-                    Object right = stack_pop(vm);
-                    Object left = stack_pop(vm);
-                    ObjectType left_type = left.type();
-                    ObjectType right_type = right.type();
-                    if(left.isNumeric() && right.isNumeric())
-                    {
-                        double right_val = object_get_number(right);
-                        double left_val = object_get_number(left);
-
-                        int64_t left_val_int = (int64_t)left_val;
-                        int64_t right_val_int = (int64_t)right_val;
-
-                        double res = 0;
-                        switch(opcode)
-                        {
-                            case OPCODE_ADD:
-                                res = left_val + right_val;
-                                break;
-                            case OPCODE_SUB:
-                                res = left_val - right_val;
-                                break;
-                            case OPCODE_MUL:
-                                res = left_val * right_val;
-                                break;
-                            case OPCODE_DIV:
-                                res = left_val / right_val;
-                                break;
-                            case OPCODE_MOD:
-                                res = fmod(left_val, right_val);
-                                break;
-                            case OPCODE_OR:
-                                res = (double)(left_val_int | right_val_int);
-                                break;
-                            case OPCODE_XOR:
-                                res = (double)(left_val_int ^ right_val_int);
-                                break;
-                            case OPCODE_AND:
-                                res = (double)(left_val_int & right_val_int);
-                                break;
-                            case OPCODE_LSHIFT:
-                                res = (double)(left_val_int << right_val_int);
-                                break;
-                            case OPCODE_RSHIFT:
-                                res = (double)(left_val_int >> right_val_int);
-                                break;
-                            default:
-                                APE_ASSERT(false);
-                                break;
-                        }
-                        stack_push(vm, Object::makeNumber(res));
-                    }
-                    else if(left_type == APE_OBJECT_STRING && right_type == APE_OBJECT_STRING && opcode == OPCODE_ADD)
-                    {
-                        int left_len = (int)object_get_string_length(left);
-                        int right_len = (int)object_get_string_length(right);
-
-                        if(left_len == 0)
-                        {
-                            stack_push(vm, right);
-                        }
-                        else if(right_len == 0)
-                        {
-                            stack_push(vm, left);
-                        }
-                        else
-                        {
-                            const char* left_val = object_get_string(left);
-                            const char* right_val = object_get_string(right);
-
-                            Object res = Object::makeStringCapacity(vm->mem, left_len + right_len);
-                            if(res.isNull())
-                            {
-                                goto err;
-                            }
-
-                            ok = object_string_append(res, left_val, left_len);
-                            if(!ok)
-                            {
-                                goto err;
-                            }
-
-                            ok = object_string_append(res, right_val, right_len);
-                            if(!ok)
-                            {
-                                goto err;
-                            }
-                            stack_push(vm, res);
-                        }
-                    }
-                    else if((left_type == APE_OBJECT_ARRAY) && opcode == OPCODE_ADD)
-                    {
-                        object_add_array_value(left, right);
-                        stack_push(vm, left);
-                    }
-                    else
-                    {
-                        bool overload_found = false;
-                        bool ok = try_overload_operator(vm, left, right, opcode, &overload_found);
-                        if(!ok)
-                        {
-                            goto err;
-                        }
-                        if(!overload_found)
-                        {
-                            const char* opcode_name = opcode_get_name(opcode);
-                            const char* left_type_name = object_get_type_name(left_type);
-                            const char* right_type_name = object_get_type_name(right_type);
-                            errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                              "Invalid operand types for %s, got %s and %s", opcode_name, left_type_name,
-                                              right_type_name);
-                            goto err;
-                        }
-                    }
-                }
-                break;
-
-            case OPCODE_POP:
-                {
-                    stack_pop(vm);
-                }
-                break;
-
-            case OPCODE_TRUE:
-                {
-                    stack_push(vm, Object::makeBool(true));
-                }
-                break;
-
-            case OPCODE_FALSE:
-            {
-                stack_push(vm, Object::makeBool(false));
-                break;
-            }
-            case OPCODE_COMPARE:
-            case OPCODE_COMPARE_EQ:
-                {
-                    Object right = stack_pop(vm);
-                    Object left = stack_pop(vm);
-                    bool is_overloaded = false;
-                    bool ok = try_overload_operator(vm, left, right, OPCODE_COMPARE, &is_overloaded);
-                    if(!ok)
-                    {
-                        goto err;
-                    }
-                    if(!is_overloaded)
-                    {
-                        double comparison_res = object_compare(left, right, &ok);
-                        if(ok || opcode == OPCODE_COMPARE_EQ)
-                        {
-                            Object res = Object::makeNumber(comparison_res);
-                            stack_push(vm, res);
-                        }
-                        else
-                        {
-                            const char* right_type_string = object_get_type_name(right.type());
-                            const char* left_type_string = object_get_type_name(left.type());
-                            errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                              "Cannot compare %s and %s", left_type_string, right_type_string);
-                            goto err;
-                        }
-                    }
-                }
-                break;
-
-            case OPCODE_EQUAL:
-            case OPCODE_NOT_EQUAL:
-            case OPCODE_GREATER_THAN:
-            case OPCODE_GREATER_THAN_EQUAL:
-                {
-                    Object value = stack_pop(vm);
-                    double comparison_res = object_get_number(value);
-                    bool res_val = false;
-                    switch(opcode)
-                    {
-                        case OPCODE_EQUAL:
-                            res_val = APE_DBLEQ(comparison_res, 0);
-                            break;
-                        case OPCODE_NOT_EQUAL:
-                            res_val = !APE_DBLEQ(comparison_res, 0);
-                            break;
-                        case OPCODE_GREATER_THAN:
-                            res_val = comparison_res > 0;
-                            break;
-                        case OPCODE_GREATER_THAN_EQUAL:
-                        {
-                            res_val = comparison_res > 0 || APE_DBLEQ(comparison_res, 0);
-                            break;
-                        }
-                        default:
-                            APE_ASSERT(false);
-                            break;
-                    }
-                    Object res = Object::makeBool(res_val);
-                    stack_push(vm, res);
-                }
-                break;
-
-            case OPCODE_MINUS:
-                {
-                    Object operand = stack_pop(vm);
-                    ObjectType operand_type = operand.type();
-                    if(operand_type == APE_OBJECT_NUMBER)
-                    {
-                        double val = object_get_number(operand);
-                        Object res = Object::makeNumber(-val);
-                        stack_push(vm, res);
-                    }
-                    else
-                    {
-                        bool overload_found = false;
-                        bool ok = try_overload_operator(vm, operand, Object::makeNull(), OPCODE_MINUS, &overload_found);
-                        if(!ok)
-                        {
-                            goto err;
-                        }
-                        if(!overload_found)
-                        {
-                            const char* operand_type_string = object_get_type_name(operand_type);
-                            errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                              "Invalid operand type for MINUS, got %s", operand_type_string);
-                            goto err;
-                        }
-                    }
-                }
-                break;
-
-            case OPCODE_BANG:
-                {
-                    Object operand = stack_pop(vm);
-                    ObjectType type = operand.type();
-                    if(type == APE_OBJECT_BOOL)
-                    {
-                        Object res = Object::makeBool(!object_get_bool(operand));
-                        stack_push(vm, res);
-                    }
-                    else if(type == APE_OBJECT_NULL)
-                    {
-                        Object res = Object::makeBool(true);
-                        stack_push(vm, res);
-                    }
-                    else
-                    {
-                        bool overload_found = false;
-                        bool ok = try_overload_operator(vm, operand, Object::makeNull(), OPCODE_BANG, &overload_found);
-                        if(!ok)
-                        {
-                            goto err;
-                        }
-                        if(!overload_found)
-                        {
-                            Object res = Object::makeBool(false);
-                            stack_push(vm, res);
-                        }
-                    }
-                }
-                break;
-
-            case OPCODE_JUMP:
-                {
-                    uint16_t pos = frame_read_uint16(vm->current_frame);
-                    vm->current_frame->ip = pos;
-                }
-                break;
-
-            case OPCODE_JUMP_IF_FALSE:
-                {
-                    uint16_t pos = frame_read_uint16(vm->current_frame);
-                    Object test = stack_pop(vm);
-                    if(!object_get_bool(test))
-                    {
-                        vm->current_frame->ip = pos;
-                    }
-                }
-                break;
-
-            case OPCODE_JUMP_IF_TRUE:
-                {
-                    uint16_t pos = frame_read_uint16(vm->current_frame);
-                    Object test = stack_pop(vm);
-                    if(object_get_bool(test))
-                    {
-                        vm->current_frame->ip = pos;
-                    }
-                }
-                break;
-
-            case OPCODE_NULL:
-                {
-                    stack_push(vm, Object::makeNull());
-                }
-                break;
-
-            case OPCODE_DEFINE_MODULE_GLOBAL:
-            {
-                uint16_t ix = frame_read_uint16(vm->current_frame);
-                Object value = stack_pop(vm);
-                vm_set_global(vm, ix, value);
-                break;
-            }
-            case OPCODE_SET_MODULE_GLOBAL:
-                {
-                    uint16_t ix = frame_read_uint16(vm->current_frame);
-                    Object new_value = stack_pop(vm);
-                    Object old_value = vm_get_global(vm, ix);
-                    if(!check_assign(vm, old_value, new_value))
-                    {
-                        goto err;
-                    }
-                    vm_set_global(vm, ix, new_value);
-                }
-                break;
-
-            case OPCODE_GET_MODULE_GLOBAL:
-                {
-                    uint16_t ix = frame_read_uint16(vm->current_frame);
-                    Object global = vm->globals[ix];
-                    stack_push(vm, global);
-                }
-                break;
-
-            case OPCODE_ARRAY:
-                {
-                    uint16_t cn = frame_read_uint16(vm->current_frame);
-                    Object array_obj = Object::makeArray(vm->mem, cn);
-                    if(array_obj.isNull())
-                    {
-                        goto err;
-                    }
-                    Object* items = vm->stack + vm->sp - cn;
-                    for(int i = 0; i < cn; i++)
-                    {
-                        Object item = items[i];
-                        ok = object_add_array_value(array_obj, item);
-                        if(!ok)
-                        {
-                            goto err;
-                        }
-                    }
-                    set_sp(vm, vm->sp - cn);
-                    stack_push(vm, array_obj);
-                }
-                break;
-
-            case OPCODE_MAP_START:
-                {
-                    uint16_t cn = frame_read_uint16(vm->current_frame);
-                    Object map_obj = Object::makeMap(vm->mem, cn);
-                    if(map_obj.isNull())
-                    {
-                        goto err;
-                    }
-                    this_stack_push(vm, map_obj);
-                }
-                break;
-
-            case OPCODE_MAP_END:
-                {
-                    uint16_t kvp_count = frame_read_uint16(vm->current_frame);
-                    uint16_t items_count = kvp_count * 2;
-                    Object map_obj = this_stack_pop(vm);
-                    Object* kv_pairs = vm->stack + vm->sp - items_count;
-                    for(int i = 0; i < items_count; i += 2)
-                    {
-                        Object key = kv_pairs[i];
-                        if(!key.isHashable())
-                        {
-                            ObjectType key_type = key.type();
-                            const char* key_type_name = object_get_type_name(key_type);
-                            errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                              "Key of type %s is not hashable", key_type_name);
-                            goto err;
-                        }
-                        Object val = kv_pairs[i + 1];
-                        ok = object_set_map_value_object(map_obj, key, val);
-                        if(!ok)
-                        {
-                            goto err;
-                        }
-                    }
-                    set_sp(vm, vm->sp - items_count);
-                    stack_push(vm, map_obj);
-                }
-                break;
-
-            case OPCODE_GET_THIS:
-                {
-                    Object obj = this_stack_get(vm, 0);
-                    stack_push(vm, obj);
-                }
-                break;
-
-            case OPCODE_GET_INDEX:
-                {
-                    #if 0
-                    const char* idxname;
-                    #endif
-                    Object index = stack_pop(vm);
-                    Object left = stack_pop(vm);
-                    ObjectType left_type = left.type();
-                    ObjectType index_type = index.type();
-                    const char* left_type_name = object_get_type_name(left_type);
-                    const char* index_type_name = object_get_type_name(index_type);
-                    /*
-                    * todo: object method lookup could be implemented here
-                    */
-                    #if 0
-                    {
-                        int argc;
-                        Object args[10];
-                        NativeFNCallback afn;
-                        argc = 0;
-                        if(index_type == APE_OBJECT_STRING)
-                        {
-                            idxname = object_get_string(index);
-                            fprintf(stderr, "index is a string: name=%s\n", idxname);
-                            if((afn = builtin_get_object(left_type, idxname)) != NULL)
-                            {
-                                fprintf(stderr, "got a callback: afn=%p\n", afn);
-                                //typedef Object (*NativeFNCallback)(VM*, void*, int, Object*);
-                                args[argc] = left;
-                                argc++;
-                                stack_push(vm, afn(vm, NULL, argc, args));
-                                break;
-                            }
-                        }
-                    }
-                    #endif
-
-                    if(left_type != APE_OBJECT_ARRAY && left_type != APE_OBJECT_MAP && left_type != APE_OBJECT_STRING)
-                    {
-                        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                            "Type %s is not indexable (in OPCODE_GET_INDEX)", left_type_name);
-                        goto err;
-                    }
-                    Object res = Object::makeNull();
-
-                    if(left_type == APE_OBJECT_ARRAY)
-                    {
-                        if(index_type != APE_OBJECT_NUMBER)
-                        {
-                            errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                              "Cannot index %s with %s", left_type_name, index_type_name);
-                            goto err;
-                        }
-                        int ix = (int)object_get_number(index);
-                        if(ix < 0)
-                        {
-                            ix = object_get_array_length(left) + ix;
-                        }
-                        if(ix >= 0 && ix < object_get_array_length(left))
-                        {
-                            res = object_get_array_value(left, ix);
-                        }
-                    }
-                    else if(left_type == APE_OBJECT_MAP)
-                    {
-                        res = object_get_map_value_object(left, index);
-                    }
-                    else if(left_type == APE_OBJECT_STRING)
-                    {
-                        const char* str = object_get_string(left);
-                        int left_len = object_get_string_length(left);
-                        int ix = (int)object_get_number(index);
-                        if(ix >= 0 && ix < left_len)
-                        {
-                            char res_str[2] = { str[ix], '\0' };
-                            res = Object::makeString(vm->mem, res_str);
-                        }
-                    }
-                    stack_push(vm, res);
-                }
-                break;
-
-            case OPCODE_GET_VALUE_AT:
-            {
-                Object index = stack_pop(vm);
-                Object left = stack_pop(vm);
-                ObjectType left_type = left.type();
-                ObjectType index_type = index.type();
-                const char* left_type_name = object_get_type_name(left_type);
-                const char* index_type_name = object_get_type_name(index_type);
-
-                if(left_type != APE_OBJECT_ARRAY && left_type != APE_OBJECT_MAP && left_type != APE_OBJECT_STRING)
-                {
-                    errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                      "Type %s is not indexable (in OPCODE_GET_VALUE_AT)", left_type_name);
-                    goto err;
-                }
-
-                Object res = Object::makeNull();
-                if(index_type != APE_OBJECT_NUMBER)
-                {
-                    errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                      "Cannot index %s with %s", left_type_name, index_type_name);
-                    goto err;
-                }
-                int ix = (int)object_get_number(index);
-
-                if(left_type == APE_OBJECT_ARRAY)
-                {
-                    res = object_get_array_value(left, ix);
-                }
-                else if(left_type == APE_OBJECT_MAP)
-                {
-                    res = object_get_kv_pair_at(vm->mem, left, ix);
-                }
-                else if(left_type == APE_OBJECT_STRING)
-                {
-                    const char* str = object_get_string(left);
-                    int left_len = object_get_string_length(left);
-                    int ix = (int)object_get_number(index);
-                    if(ix >= 0 && ix < left_len)
-                    {
-                        char res_str[2] = { str[ix], '\0' };
-                        res = Object::makeString(vm->mem, res_str);
-                    }
-                }
-                stack_push(vm, res);
-                break;
-            }
-            case OPCODE_CALL:
-            {
-                uint8_t num_args = frame_read_uint8(vm->current_frame);
-                Object callee = stack_get(vm, num_args);
-                bool ok = call_object(vm, callee, num_args);
-                if(!ok)
-                {
-                    goto err;
-                }
-                break;
-            }
-            case OPCODE_RETURN_VALUE:
-            {
-                Object res = stack_pop(vm);
-                bool ok = pop_frame(vm);
-                if(!ok)
-                {
-                    goto end;
-                }
-                stack_push(vm, res);
-                break;
-            }
-            case OPCODE_RETURN:
-            {
-                bool ok = pop_frame(vm);
-                stack_push(vm, Object::makeNull());
-                if(!ok)
-                {
-                    stack_pop(vm);
-                    goto end;
-                }
-                break;
-            }
-            case OPCODE_DEFINE_LOCAL:
-            {
-                uint8_t pos = frame_read_uint8(vm->current_frame);
-                vm->stack[vm->current_frame->base_pointer + pos] = stack_pop(vm);
-                break;
-            }
-            case OPCODE_SET_LOCAL:
-            {
-                uint8_t pos = frame_read_uint8(vm->current_frame);
-                Object new_value = stack_pop(vm);
-                Object old_value = vm->stack[vm->current_frame->base_pointer + pos];
-                if(!check_assign(vm, old_value, new_value))
-                {
-                    goto err;
-                }
-                vm->stack[vm->current_frame->base_pointer + pos] = new_value;
-                break;
-            }
-            case OPCODE_GET_LOCAL:
-            {
-                uint8_t pos = frame_read_uint8(vm->current_frame);
-                Object val = vm->stack[vm->current_frame->base_pointer + pos];
-                stack_push(vm, val);
-                break;
-            }
-            case OPCODE_GET_APE_GLOBAL:
-            {
-                uint16_t ix = frame_read_uint16(vm->current_frame);
-                bool ok = false;
-                Object val = global_store_get_object_at(vm->global_store, ix, &ok);
-                if(!ok)
-                {
-                    errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                      "Global value %d not found", ix);
-                    goto err;
-                }
-                stack_push(vm, val);
-                break;
-            }
-            case OPCODE_FUNCTION:
-                {
-                    uint16_t constant_ix = frame_read_uint16(vm->current_frame);
-                    uint8_t num_free = frame_read_uint8(vm->current_frame);
-                    Object* constant = (Object*)constants->get(constant_ix);
-                    if(!constant)
-                    {
-                        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                          "Constant %d not found", constant_ix);
-                        goto err;
-                    }
-                    ObjectType constant_type = (*constant).type();
-                    if(constant_type != APE_OBJECT_FUNCTION)
-                    {
-                        const char* type_name = object_get_type_name(constant_type);
-                        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                          "%s is not a function", type_name);
-                        goto err;
-                    }
-
-                    const ScriptFunction* constant_function = object_get_function(*constant);
-                    Object function_obj
-                    = Object::makeFunction(vm->mem, object_get_function_name(*constant), constant_function->comp_result,
-                                           false, constant_function->num_locals, constant_function->num_args, num_free);
-                    if(function_obj.isNull())
-                    {
-                        goto err;
-                    }
-                    for(int i = 0; i < num_free; i++)
-                    {
-                        Object free_val = vm->stack[vm->sp - num_free + i];
-                        object_set_function_free_val(function_obj, i, free_val);
-                    }
-                    set_sp(vm, vm->sp - num_free);
-                    stack_push(vm, function_obj);
-                }
-                break;
-            case OPCODE_GET_FREE:
-                {
-                    uint8_t free_ix = frame_read_uint8(vm->current_frame);
-                    Object val = object_get_function_free_val(vm->current_frame->function, free_ix);
-                    stack_push(vm, val);
-                }
-                break;
-            case OPCODE_SET_FREE:
-                {
-                    uint8_t free_ix = frame_read_uint8(vm->current_frame);
-                    Object val = stack_pop(vm);
-                    object_set_function_free_val(vm->current_frame->function, free_ix, val);
-                }
-                break;
-            case OPCODE_CURRENT_FUNCTION:
-                {
-                    Object current_function = vm->current_frame->function;
-                    stack_push(vm, current_function);
-                }
-                break;
-            case OPCODE_SET_INDEX:
-                {
-                    Object index = stack_pop(vm);
-                    Object left = stack_pop(vm);
-                    Object new_value = stack_pop(vm);
-                    ObjectType left_type = left.type();
-                    ObjectType index_type = index.type();
-                    const char* left_type_name = object_get_type_name(left_type);
-                    const char* index_type_name = object_get_type_name(index_type);
-
-                    if(left_type != APE_OBJECT_ARRAY && left_type != APE_OBJECT_MAP)
-                    {
-                        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                          "Type %s is not indexable (in OPCODE_SET_INDEX)", left_type_name);
-                        goto err;
-                    }
-
-                    if(left_type == APE_OBJECT_ARRAY)
-                    {
-                        if(index_type != APE_OBJECT_NUMBER)
-                        {
-                            errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                              "Cannot index %s with %s", left_type_name, index_type_name);
-                            goto err;
-                        }
-                        int ix = (int)object_get_number(index);
-                        ok = object_set_array_value_at(left, ix, new_value);
-                        if(!ok)
-                        {
-                            errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                             "Setting array item failed (out of bounds?)");
-                            goto err;
-                        }
-                    }
-                    else if(left_type == APE_OBJECT_MAP)
-                    {
-                        Object old_value = object_get_map_value_object(left, index);
-                        if(!check_assign(vm, old_value, new_value))
-                        {
-                            goto err;
-                        }
-                        ok = object_set_map_value_object(left, index, new_value);
-                        if(!ok)
-                        {
-                            goto err;
-                        }
-                    }
-                }
-                break;
-            case OPCODE_DUP:
-                {
-                    Object val = stack_get(vm, 0);
-                    stack_push(vm, val);
-                }
-                break;
-            case OPCODE_LEN:
-                {
-                    Object val = stack_pop(vm);
-                    int len = 0;
-                    ObjectType type = val.type();
-                    if(type == APE_OBJECT_ARRAY)
-                    {
-                        len = object_get_array_length(val);
-                    }
-                    else if(type == APE_OBJECT_MAP)
-                    {
-                        len = object_get_map_length(val);
-                    }
-                    else if(type == APE_OBJECT_STRING)
-                    {
-                        len = object_get_string_length(val);
-                    }
-                    else
-                    {
-                        const char* type_name = object_get_type_name(type);
-                        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                          "Cannot get length of %s", type_name);
-                        goto err;
-                    }
-                    stack_push(vm, Object::makeNumber(len));
-                }
-                break;
-
-            case OPCODE_NUMBER:
-                {
-                    uint64_t val = frame_read_uint64(vm->current_frame);
-                    double val_double = ape_uint64_to_double(val);
-                    Object obj = Object::makeNumber(val_double);
-                    stack_push(vm, obj);
-                }
-                break;
-            case OPCODE_SET_RECOVER:
-                {
-                    uint16_t recover_ip = frame_read_uint16(vm->current_frame);
-                    vm->current_frame->recover_ip = recover_ip;
-                }
-                break;
-            default:
-                {
-                    APE_ASSERT(false);
-                    errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Unknown opcode: 0x%x", opcode);
-                    goto err;
-                }
-                break;
-        }
-        if(check_time)
-        {
-            time_check_counter++;
-            if(time_check_counter > time_check_interval)
-            {
-                int elapsed_ms = (int)ape_timer_get_elapsed_ms(&timer);
-                if(elapsed_ms > max_exec_time_ms)
-                {
-                    errors_add_errorf(vm->errors, APE_ERROR_TIMEOUT, frame_src_position(vm->current_frame),
-                                      "Execution took more than %1.17g ms", max_exec_time_ms);
-                    goto err;
-                }
-                time_check_counter = 0;
-            }
-        }
-    err:
-        if(errors_get_count(vm->errors) > 0)
-        {
-            Error* err = errors_get_last_error(vm->errors);
-            if(err->type == APE_ERROR_RUNTIME && errors_get_count(vm->errors) == 1)
-            {
-                int recover_frame_ix = -1;
-                for(int i = vm->frames_count - 1; i >= 0; i--)
-                {
-                    Frame* frame = &vm->frames[i];
-                    if(frame->recover_ip >= 0 && !frame->is_recovering)
-                    {
-                        recover_frame_ix = i;
-                        break;
-                    }
-                }
-                if(recover_frame_ix < 0)
-                {
-                    goto end;
-                }
-                else
-                {
-                    if(!err->traceback)
-                    {
-                        err->traceback = traceback_make(vm->alloc);
-                    }
-                    if(err->traceback)
-                    {
-                        traceback_append_from_vm(err->traceback, vm);
-                    }
-                    while(vm->frames_count > (recover_frame_ix + 1))
-                    {
-                        pop_frame(vm);
-                    }
-                    Object err_obj = Object::makeError(vm->mem, err->message);
-                    if(!err_obj.isNull())
-                    {
-                        object_set_error_traceback(err_obj, err->traceback);
-                        err->traceback = NULL;
-                    }
-                    stack_push(vm, err_obj);
-                    vm->current_frame->ip = vm->current_frame->recover_ip;
-                    vm->current_frame->is_recovering = true;
-                    errors_clear(vm->errors);
-                }
-            }
-            else
-            {
-                goto end;
-            }
-        }
-        if(vm->mem->shouldSweep())
-        {
-            run_gc(vm, constants);
-        }
-    }
-
-end:
-    if(errors_get_count(vm->errors) > 0)
-    {
-        Error* err = errors_get_last_error(vm->errors);
-        if(!err->traceback)
-        {
-            err->traceback = traceback_make(vm->alloc);
-        }
-        if(err->traceback)
-        {
-            traceback_append_from_vm(err->traceback, vm);
-        }
-    }
-
-    run_gc(vm, constants);
-
-    vm->running = false;
-    return errors_get_count(vm->errors) == 0;
-}
-
-Object vm_get_last_popped(VM* vm)
-{
-    return vm->last_popped;
-}
-
-bool vm_has_errors(VM* vm)
-{
-    return errors_get_count(vm->errors) > 0;
-}
-
-bool vm_set_global(VM* vm, int ix, Object val)
-{
-    if(ix >= VM_MAX_GLOBALS)
-    {
-        APE_ASSERT(false);
-        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Global write out of range");
-        return false;
-    }
-    vm->globals[ix] = val;
-    if(ix >= vm->globals_count)
-    {
-        vm->globals_count = ix + 1;
-    }
-    return true;
-}
-
-Object vm_get_global(VM* vm, int ix)
-{
-    if(ix >= VM_MAX_GLOBALS)
-    {
-        APE_ASSERT(false);
-        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Global read out of range");
-        return Object::makeNull();
-    }
-    return vm->globals[ix];
-}
-
-// INTERNAL
-static void set_sp(VM* vm, int new_sp)
-{
-    if(new_sp > vm->sp)
-    {// to avoid gcing freed objects
-        int cn = new_sp - vm->sp;
-        size_t bytes_count = cn * sizeof(Object);
-        memset(vm->stack + vm->sp, 0, bytes_count);
-    }
-    vm->sp = new_sp;
-}
-
-void stack_push(VM* vm, Object obj)
-{
-#ifdef APE_DEBUG
-    if(vm->sp >= VM_STACK_SIZE)
-    {
-        APE_ASSERT(false);
-        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Stack overflow");
-        return;
-    }
-    if(vm->current_frame)
-    {
-        Frame* frame = vm->current_frame;
-        ScriptFunction* current_function = object_get_function(frame->function);
-        int num_locals = current_function->num_locals;
-        APE_ASSERT(vm->sp >= (frame->base_pointer + num_locals));
-    }
-#endif
-    vm->stack[vm->sp] = obj;
-    vm->sp++;
-}
-
-Object stack_pop(VM* vm)
-{
-#ifdef APE_DEBUG
-    if(vm->sp == 0)
-    {
-        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Stack underflow");
-        APE_ASSERT(false);
-        return Object::makeNull();
-    }
-    if(vm->current_frame)
-    {
-        Frame* frame = vm->current_frame;
-        ScriptFunction* current_function = object_get_function(frame->function);
-        int num_locals = current_function->num_locals;
-        APE_ASSERT((vm->sp - 1) >= (frame->base_pointer + num_locals));
-    }
-#endif
-    vm->sp--;
-    Object res = vm->stack[vm->sp];
-    vm->last_popped = res;
-    return res;
-}
-
-Object stack_get(VM* vm, int nth_item)
-{
-    int ix = vm->sp - 1 - nth_item;
-#ifdef APE_DEBUG
-    if(ix < 0 || ix >= VM_STACK_SIZE)
-    {
-        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Invalid stack index: %d", nth_item);
-        APE_ASSERT(false);
-        return Object::makeNull();
-    }
-#endif
-    return vm->stack[ix];
-}
-
-static void this_stack_push(VM* vm, Object obj)
-{
-#ifdef APE_DEBUG
-    if(vm->this_sp >= VM_THIS_STACK_SIZE)
-    {
-        APE_ASSERT(false);
-        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "this stack overflow");
-        return;
-    }
-#endif
-    vm->this_stack[vm->this_sp] = obj;
-    vm->this_sp++;
-}
-
-static Object this_stack_pop(VM* vm)
-{
-#ifdef APE_DEBUG
-    if(vm->this_sp == 0)
-    {
-        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "this stack underflow");
-        APE_ASSERT(false);
-        return Object::makeNull();
-    }
-#endif
-    vm->this_sp--;
-    return vm->this_stack[vm->this_sp];
-}
-
-static Object this_stack_get(VM* vm, int nth_item)
-{
-    int ix = vm->this_sp - 1 - nth_item;
-#ifdef APE_DEBUG
-    if(ix < 0 || ix >= VM_THIS_STACK_SIZE)
-    {
-        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Invalid this stack index: %d", nth_item);
-        APE_ASSERT(false);
-        return Object::makeNull();
-    }
-#endif
-    return vm->this_stack[ix];
-}
-
-bool push_frame(VM* vm, Frame frame)
-{
-    if(vm->frames_count >= VM_MAX_FRAMES)
-    {
-        APE_ASSERT(false);
-        return false;
-    }
-    vm->frames[vm->frames_count] = frame;
-    vm->current_frame = &vm->frames[vm->frames_count];
-    vm->frames_count++;
-    ScriptFunction* frame_function = object_get_function(frame.function);
-    set_sp(vm, frame.base_pointer + frame_function->num_locals);
-    return true;
-}
-
-bool pop_frame(VM* vm)
-{
-    set_sp(vm, vm->current_frame->base_pointer - 1);
-    if(vm->frames_count <= 0)
-    {
-        APE_ASSERT(false);
-        vm->current_frame = NULL;
-        return false;
-    }
-    vm->frames_count--;
-    if(vm->frames_count == 0)
-    {
-        vm->current_frame = NULL;
-        return false;
-    }
-    vm->current_frame = &vm->frames[vm->frames_count - 1];
-    return true;
-}
-
-void run_gc(VM* vm, Array * constants)
-{
-    vm->mem->unmarkAll();
-    GCMemory::markObjects(global_store_get_object_data(vm->global_store), global_store_get_object_count(vm->global_store));
-    GCMemory::markObjects((Object*)constants->data(), constants->count());
-    GCMemory::markObjects(vm->globals, vm->globals_count);
-    for(int i = 0; i < vm->frames_count; i++)
-    {
-        Frame* frame = &vm->frames[i];
-        GCMemory::markObject(frame->function);
-    }
-    GCMemory::markObjects(vm->stack, vm->sp);
-    GCMemory::markObjects(vm->this_stack, vm->this_sp);
-    GCMemory::markObject(vm->last_popped);
-    GCMemory::markObjects(vm->operator_oveload_keys, OPCODE_MAX);
-    vm->mem->sweep();
-}
-
-bool call_object(VM* vm, Object callee, int num_args)
-{
-    ObjectType callee_type = callee.type();
-    if(callee_type == APE_OBJECT_FUNCTION)
-    {
-        ScriptFunction* callee_function = object_get_function(callee);
-        if(num_args != callee_function->num_args)
-        {
-            errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                              "Invalid number of arguments to \"%s\", expected %d, got %d",
-                              object_get_function_name(callee), callee_function->num_args, num_args);
-            return false;
-        }
-        Frame callee_frame;
-        bool ok = frame_init(&callee_frame, callee, vm->sp - num_args);
-        if(!ok)
-        {
-            errors_add_error(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "Frame init failed in call_object");
-            return false;
-        }
-        ok = push_frame(vm, callee_frame);
-        if(!ok)
-        {
-            errors_add_error(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "Pushing frame failed in call_object");
-            return false;
-        }
-    }
-    else if(callee_type == APE_OBJECT_NATIVE_FUNCTION)
-    {
-        Object* stack_pos = vm->stack + vm->sp - num_args;
-        Object res = call_native_function(vm, callee, frame_src_position(vm->current_frame), num_args, stack_pos);
-        if(vm_has_errors(vm))
-        {
-            return false;
-        }
-        set_sp(vm, vm->sp - num_args - 1);
-        stack_push(vm, res);
-    }
-    else
-    {
-        const char* callee_type_name = object_get_type_name(callee_type);
-        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "%s object is not callable", callee_type_name);
-        return false;
-    }
-    return true;
-}
-
-Object call_native_function(VM* vm, Object callee, Position src_pos, int argc, Object* args)
-{
-    NativeFunction* native_fun = object_get_native_function(callee);
-    Object res = native_fun->native_funcptr(vm, native_fun->data, argc, args);
-    if(errors_has_errors(vm->errors) && !APE_STREQ(native_fun->name, "crash"))
-    {
-        Error* err = errors_get_last_error(vm->errors);
-        err->pos = src_pos;
-        err->traceback = traceback_make(vm->alloc);
-        if(err->traceback)
-        {
-            traceback_append(err->traceback, native_fun->name, src_pos_invalid);
-        }
-        return Object::makeNull();
-    }
-    ObjectType res_type = res.type();
-    if(res_type == APE_OBJECT_ERROR)
-    {
-        Traceback* traceback = traceback_make(vm->alloc);
-        if(traceback)
-        {
-            // error builtin is treated in a special way
-            if(!APE_STREQ(native_fun->name, "error"))
-            {
-                traceback_append(traceback, native_fun->name, src_pos_invalid);
-            }
-            traceback_append_from_vm(traceback, vm);
-            object_set_error_traceback(res, traceback);
-        }
-    }
-    return res;
-}
-
-bool check_assign(VM* vm, Object old_value, Object new_value)
-{
-    ObjectType old_value_type;
-    ObjectType new_value_type;
-    (void)vm;
-    old_value_type = old_value.type();
-    new_value_type = new_value.type();
-    if(old_value_type == APE_OBJECT_NULL || new_value_type == APE_OBJECT_NULL)
-    {
-        return true;
-    }
-    if(old_value_type != new_value_type)
-    {
-        /*
-        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Trying to assign variable of type %s to %s",
-                          object_get_type_name(new_value_type), object_get_type_name(old_value_type));
-        return false;
-        */
-    }
-    return true;
-}
-
-static bool try_overload_operator(VM* vm, Object left, Object right, opcode_t op, bool* out_overload_found)
-{
-    int num_operands;
-    Object key;
-    Object callee;
-    ObjectType left_type;
-    ObjectType right_type;
-    *out_overload_found = false;
-    left_type = left.type();
-    right_type = right.type();
-    if(left_type != APE_OBJECT_MAP && right_type != APE_OBJECT_MAP)
-    {
-        *out_overload_found = false;
-        return true;
-    }
-    num_operands = 2;
-    if(op == OPCODE_MINUS || op == OPCODE_BANG)
-    {
-        num_operands = 1;
-    }
-    key = vm->operator_oveload_keys[op];
-    callee = Object::makeNull();
-    if(left_type == APE_OBJECT_MAP)
-    {
-        callee = object_get_map_value_object(left, key);
-    }
-    if(!callee.isCallable())
-    {
-        if(right_type == APE_OBJECT_MAP)
-        {
-            callee = object_get_map_value_object(right, key);
-        }
-        if(!callee.isCallable())
-        {
-            *out_overload_found = false;
-            return true;
-        }
-    }
-    *out_overload_found = true;
-    stack_push(vm, callee);
-    stack_push(vm, left);
-    if(num_operands == 2)
-    {
-        stack_push(vm, right);
-    }
-    return call_object(vm, callee, num_operands);
-}
 
 //-----------------------------------------------------------------------------
 // Ape
 //-----------------------------------------------------------------------------
-Context* ape_make(void)
-{
-    return ape_make_ex(NULL, NULL, NULL);
-}
-
-Context* ape_make_ex(MallocFNCallback malloc_fn, FreeFNCallback free_fn, void* ctx)
-{
-    Allocator custom_alloc = Allocator::make((AllocatorMallocFNCallback)malloc_fn, (AllocatorFreeFNCallback)free_fn, ctx);
-
-    Context* ape = (Context*)custom_alloc.allocate(sizeof(Context));
-    if(!ape)
-    {
-        return NULL;
-    }
-
-    memset(ape, 0, sizeof(Context));
-    ape->alloc = Allocator::make(ape_malloc, ape_free, ape);
-    ape->custom_allocator = custom_alloc;
-
-    set_default_config(ape);
-
-    errors_init(&ape->errors);
-
-    ape->mem = GCMemory::make(&ape->alloc);
-    if(!ape->mem)
-    {
-        goto err;
-    }
-
-    ape->files = PtrArray::make(&ape->alloc);
-    if(!ape->files)
-    {
-        goto err;
-    }
-
-    ape->global_store = global_store_make(&ape->alloc, ape->mem);
-    if(!ape->global_store)
-    {
-        goto err;
-    }
-
-    ape->compiler = Compiler::make(&ape->alloc, &ape->config, ape->mem, &ape->errors, ape->files, ape->global_store);
-    if(!ape->compiler)
-    {
-        goto err;
-    }
-
-    ape->vm = vm_make(&ape->alloc, &ape->config, ape->mem, &ape->errors, ape->global_store);
-    if(!ape->vm)
-    {
-        goto err;
-    }
-    builtins_install(ape->vm);
-    return ape;
-err:
-    ape_deinit(ape);
-    custom_alloc.release(ape);
-    return NULL;
-}
-
-void ape_destroy(Context* ape)
-{
-    if(!ape)
-    {
-        return;
-    }
-    ape_deinit(ape);
-    Allocator alloc = ape->alloc;
-    alloc.release(ape);
-}
-
-void ape_free_allocated(Context* ape, void* ptr)
-{
-    ape->alloc.release(ptr);
-}
-
-void ape_set_repl_mode(Context* ape, bool enabled)
-{
-    ape->config.repl_mode = enabled;
-}
-
-bool ape_set_timeout(Context* ape, double max_execution_time_ms)
-{
-    if(!ape_timer_platform_supported())
-    {
-        ape->config.max_execution_time_ms = 0;
-        ape->config.max_execution_time_set = false;
-        return false;
-    }
-
-    if(max_execution_time_ms >= 0)
-    {
-        ape->config.max_execution_time_ms = max_execution_time_ms;
-        ape->config.max_execution_time_set = true;
-    }
-    else
-    {
-        ape->config.max_execution_time_ms = 0;
-        ape->config.max_execution_time_set = false;
-    }
-    return true;
-}
-
-void ape_set_stdout_write_function(Context* ape, StdoutWriteFNCallback stdout_write, void* context)
-{
-    ape->config.stdio.write.write = stdout_write;
-    ape->config.stdio.write.context = context;
-}
-
-void ape_set_file_write_function(Context* ape, WriteFileFNCallback file_write, void* context)
-{
-    ape->config.fileio.write_file.write_file = file_write;
-    ape->config.fileio.write_file.context = context;
-}
-
-void ape_set_file_read_function(Context* ape, ReadFileFNCallback file_read, void* context)
-{
-    ape->config.fileio.read_file.read_file = file_read;
-    ape->config.fileio.read_file.context = context;
-}
-
 
 
 
@@ -15140,143 +15233,9 @@ void ape_program_destroy(Program* program)
         return;
     }
     compilation_result_destroy(program->comp_res);
-    program->ape->alloc.release(program);
+    program->context->alloc.release(program);
 }
 
-Object ape_execute(Context* ape, const char* code)
-{
-    bool ok;
-    Object res;
-    CompilationResult* comp_res;
-    reset_state(ape);
-    comp_res = ape->compiler->compileSource(code);
-    if(!comp_res || errors_get_count(&ape->errors) > 0)
-    {
-        goto err;
-    }
-    ok = vm_run(ape->vm, comp_res, ape->compiler->getConstants());
-    if(!ok || errors_get_count(&ape->errors) > 0)
-    {
-        goto err;
-    }
-    APE_ASSERT(ape->vm->sp == 0);
-    res = vm_get_last_popped(ape->vm);
-    if(res.type() == APE_OBJECT_NONE)
-    {
-        goto err;
-    }
-    compilation_result_destroy(comp_res);
-    return res;
-
-err:
-    compilation_result_destroy(comp_res);
-    return Object::makeNull();
-}
-
-Object ape_execute_file(Context* ape, const char* path)
-{
-    bool ok;
-    Object res;
-    CompilationResult* comp_res;
-    reset_state(ape);
-    comp_res = ape->compiler->compileFile(path);
-    if(!comp_res || errors_get_count(&ape->errors) > 0)
-    {
-        goto err;
-    }
-    ok = vm_run(ape->vm, comp_res, ape->compiler->getConstants());
-    if(!ok || errors_get_count(&ape->errors) > 0)
-    {
-        goto err;
-    }
-    APE_ASSERT(ape->vm->sp == 0);
-    res = vm_get_last_popped(ape->vm);
-    if(res.type() == APE_OBJECT_NONE)
-    {
-        goto err;
-    }
-    compilation_result_destroy(comp_res);
-
-    return res;
-
-err:
-    compilation_result_destroy(comp_res);
-    return Object::makeNull();
-}
-
-
-
-bool ape_has_errors(const Context* ape)
-{
-    return ape_errors_count(ape) > 0;
-}
-
-int ape_errors_count(const Context* ape)
-{
-    return errors_get_count(&ape->errors);
-}
-
-void ape_clear_errors(Context* ape)
-{
-    errors_clear(&ape->errors);
-}
-
-const Error* ape_get_error(const Context* ape, int index)
-{
-    return (const Error*)errors_getc(&ape->errors, index);
-}
-
-bool ape_set_native_function(Context* ape, const char* name, UserFNCallback fn, void* data)
-{
-    Object obj = ape_object_make_native_function_with_name(ape, name, fn, data);
-    if(obj.isNull())
-    {
-        return false;
-    }
-    return ape_set_global_constant(ape, name, obj);
-}
-
-bool ape_set_global_constant(Context* ape, const char* name, Object obj)
-{
-    return global_store_set(ape->global_store, name, obj);
-}
-
-Object ape_get_object(Context* ape, const char* name)
-{
-    Symbol::Table* st = ape->compiler->getSymbolTable();
-    const Symbol* symbol = st->resolve(name);
-    if(!symbol)
-    {
-        errors_add_errorf(&ape->errors, APE_ERROR_USER, src_pos_invalid, "Symbol \"%s\" is not defined", name);
-        return Object::makeNull();
-    }
-    Object res = Object::makeNull();
-    if(symbol->type == SYMBOL_MODULE_GLOBAL)
-    {
-        res = vm_get_global(ape->vm, symbol->index);
-    }
-    else if(symbol->type == SYMBOL_APE_GLOBAL)
-    {
-        bool ok = false;
-        res = global_store_get_object_at(ape->global_store, symbol->index, &ok);
-        if(!ok)
-        {
-            errors_add_errorf(&ape->errors, APE_ERROR_USER, src_pos_invalid, "Failed to get global object at %d", symbol->index);
-            return Object::makeNull();
-        }
-    }
-    else
-    {
-        errors_add_errorf(&ape->errors, APE_ERROR_USER, src_pos_invalid, "Value associated with symbol \"%s\" could not be loaded", name);
-        return Object::makeNull();
-    }
-    return res;
-}
-
-Object ape_object_make_native_function(Context* ape, UserFNCallback fn, void* data)
-{
-    return ape_object_make_native_function_with_name(ape, "", fn, data);
-}
 
 
 
@@ -15292,26 +15251,6 @@ void ape_object_enable_gc(Object ape_obj)
     GCMemory::enableFor(obj);
 }
 
-void ape_set_runtime_error(Context* ape, const char* message)
-{
-    errors_add_error(&ape->errors, APE_ERROR_RUNTIME, src_pos_invalid, message);
-}
-
-void ape_set_runtime_errorf(Context* ape, const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    int to_write = vsnprintf(NULL, 0, fmt, args);
-    (void)to_write;
-    va_end(args);
-    va_start(args, fmt);
-    char res[APE_ERROR_MESSAGE_MAX_LENGTH];
-    int written = vsnprintf(res, APE_ERROR_MESSAGE_MAX_LENGTH, fmt, args);
-    (void)written;
-    APE_ASSERT(to_write == written);
-    va_end(args);
-    errors_add_error(&ape->errors, APE_ERROR_RUNTIME, src_pos_invalid, res);
-}
 
 //-----------------------------------------------------------------------------
 // Ape object array
@@ -15587,45 +15526,6 @@ const char* ape_error_get_type_string(const Error* error)
 }
 
 
-char* ape_error_serialize(Context* ape, const Error* err)
-{
-    const char* type_str = ape_error_get_type_string(err);
-    const char* filename = ape_error_get_filepath(err);
-    const char* line = ape_error_get_line(err);
-    int line_num = ape_error_get_line_number(err);
-    int col_num = ape_error_get_column_number(err);
-    StringBuffer* buf = StringBuffer::make(&ape->alloc);
-    if(!buf)
-    {
-        return NULL;
-    }
-    if(line)
-    {
-        buf->append(line);
-        buf->append("\n");
-        if(col_num >= 0)
-        {
-            for(int j = 0; j < (col_num - 1); j++)
-            {
-                buf->append(" ");
-            }
-            buf->append("^\n");
-        }
-    }
-    buf->appendFormat("%s ERROR in \"%s\" on %d:%d: %s\n", type_str, filename, line_num, col_num, ape_error_get_message(err));
-    const Traceback* traceback = ape_error_get_traceback(err);
-    if(traceback)
-    {
-        buf->appendFormat("Traceback:\n");
-        traceback_to_string((const Traceback*)ape_error_get_traceback(err), buf);
-    }
-    if(buf->failed())
-    {
-        buf->destroy();
-        return NULL;
-    }
-    return buf->getStringAndDestroy();
-}
 
 const Traceback* ape_error_get_traceback(const Error* ae)
 {
@@ -15700,18 +15600,6 @@ const char* ape_traceback_get_function_name(const Traceback* ape_traceback, int 
     return item->function_name;
 }
 
-//-----------------------------------------------------------------------------
-// Ape internal
-//-----------------------------------------------------------------------------
-void ape_deinit(Context* ape)
-{
-    vm_destroy(ape->vm);
-    ape->compiler->destroy();
-    global_store_destroy(ape->global_store);
-    ape->mem->destroy();
-    ape->files->destroyWithItems(compiled_file_destroy);
-    errors_deinit(&ape->errors);
-}
 
 Object ape_native_fn_wrapper(VM* vm, void* data, int argc, Object* args)
 {
@@ -15719,55 +15607,25 @@ Object ape_native_fn_wrapper(VM* vm, void* data, int argc, Object* args)
     NativeFuncWrapper* wrapper;
     (void)vm;
     wrapper = (NativeFuncWrapper*)data;
-    APE_ASSERT(vm == wrapper->ape->vm);
-    res = wrapper->wrapped_funcptr(wrapper->ape, wrapper->data, argc, (Object*)args);
-    if(ape_has_errors(wrapper->ape))
+    APE_ASSERT(vm == wrapper->context->vm);
+    res = wrapper->wrapped_funcptr(wrapper->context, wrapper->data, argc, (Object*)args);
+    if(wrapper->context->hasErrors())
     {
         return Object::makeNull();
     }
     return res;
 }
 
-Object ape_object_make_native_function_with_name(Context* ape, const char* name, UserFNCallback fn, void* data)
-{
-    NativeFuncWrapper wrapper;
-    memset(&wrapper, 0, sizeof(NativeFuncWrapper));
-    wrapper.wrapped_funcptr = fn;
-    wrapper.ape = ape;
-    wrapper.data = data;
-    Object wrapper_native_function = Object::makeNativeFunctionMemory(ape->mem, name, ape_native_fn_wrapper, &wrapper, sizeof(wrapper));
-    if(wrapper_native_function.isNull())
-    {
-        return Object::makeNull();
-    }
-    return wrapper_native_function;
-}
 
-void reset_state(Context* ape)
-{
-    ape_clear_errors(ape);
-    vm_reset(ape->vm);
-}
-
-static void set_default_config(Context* ape)
-{
-    memset(&ape->config, 0, sizeof(Config));
-    ape_set_repl_mode(ape, false);
-    ape_set_timeout(ape, -1);
-    ape_set_file_read_function(ape, read_file_default, ape);
-    ape_set_file_write_function(ape, write_file_default, ape);
-    ape_set_stdout_write_function(ape, stdout_write_default, ape);
-}
-
-static char* read_file_default(void* ctx, const char* filename)
+static char* read_file_default(void* pctx, const char* filename)
 {
     long pos;
     size_t size_read;
     size_t size_to_read;
     char* file_contents;
     FILE* fp;
-    Context* ape;
-    ape = (Context*)ctx;
+    Context* ctx;
+    ctx = (Context*)pctx;
     fp = fopen(filename, "r");
     size_to_read = 0;
     size_read = 0;
@@ -15784,7 +15642,7 @@ static char* read_file_default(void* ctx, const char* filename)
     }
     size_to_read = pos;
     rewind(fp);
-    file_contents = (char*)ape->alloc.allocate(sizeof(char) * (size_to_read + 1));
+    file_contents = (char*)ctx->alloc.allocate(sizeof(char) * (size_to_read + 1));
     if(!file_contents)
     {
         fclose(fp);
@@ -15802,11 +15660,11 @@ static char* read_file_default(void* ctx, const char* filename)
     return file_contents;
 }
 
-static size_t write_file_default(void* ctx, const char* path, const char* string, size_t string_size)
+static size_t write_file_default(void* pctx, const char* path, const char* string, size_t string_size)
 {
     size_t written;
     FILE* fp;
-    (void)ctx;
+    (void)pctx;
     fp = fopen(path, "w");
     if(!fp)
     {
@@ -15817,30 +15675,30 @@ static size_t write_file_default(void* ctx, const char* path, const char* string
     return written;
 }
 
-static size_t stdout_write_default(void* ctx, const void* data, size_t size)
+static size_t stdout_write_default(void* pctx, const void* data, size_t size)
 {
-    (void)ctx;
+    (void)pctx;
     return fwrite(data, 1, size, stdout);
 }
 
-void* ape_malloc(void* ctx, size_t size)
+void* ape_malloc(void* pctx, size_t size)
 {
     void* res;
-    Context* ape;
-    ape = (Context*)ctx;
-    res = (void*)ape->custom_allocator.allocate(size);
+    Context* ctx;
+    ctx = (Context*)pctx;
+    res = (void*)ctx->custom_allocator.allocate(size);
     if(!res)
     {
-        errors_add_error(&ape->errors, APE_ERROR_ALLOCATION, src_pos_invalid, "Allocation failed");
+        errors_add_error(&ctx->errors, APE_ERROR_ALLOCATION, src_pos_invalid, "Allocation failed");
     }
     return res;
 }
 
-void ape_free(void* ctx, void* ptr)
+void ape_free(void* pctx, void* ptr)
 {
-    Context* ape;
-    ape = (Context*)ctx;
-    ape->custom_allocator.release( ptr);
+    Context* ctx;
+    ctx = (Context*)pctx;
+    ctx->custom_allocator.release( ptr);
 }
 
 #if __has_include(<dirent.h>)
@@ -17421,26 +17279,28 @@ static bool populate_flags(int argc, int begin, char** argv, const char* expectv
     return true;
 }
 
-static void print_errors(Context *ape)
+
+
+static void print_errors(Context* ctx)
 {
     int i;
     int cn;
     char *err_str;
     const Error *err;
-    cn = ape_errors_count(ape);
+    cn = ctx->errorCount();
     for (i = 0; i < cn; i++)
     {
-        err = ape_get_error(ape, i);
-        err_str = ape_error_serialize(ape, err);
+        err = ctx->getError(i);
+        err_str = ctx->serializeError(err);
         fprintf(stderr, "%s", err_str);
-        ape_free_allocated(ape, err_str);
+        ctx->releaseAllocated(err_str);
     }
 }
 
-static Object exit_repl(Context *ape, void *data, int argc, Object *args)
+static Object exit_repl(Context* ctx, void *data, int argc, Object *args)
 {
     bool *exit_repl;
-    (void)ape;
+    (void)ctx;
     (void)argc;
     (void)args;
     exit_repl = (bool*)data;
@@ -17463,14 +17323,14 @@ static bool notjustspace(const char* line)
     return false;
 }
 
-static void do_repl(Context* ape)
+static void do_repl(Context* ctx)
 {
     size_t len;
     char *line;
     char *object_str;
     Object res;
-    ape_set_repl_mode(ape, true);
-    ape_set_timeout(ape, 100.0);
+    ctx->setREPLMode(true);
+    ctx->setTimeout(100.0);
     while(true)
     {
         line = readline(">> ");
@@ -17479,15 +17339,15 @@ static void do_repl(Context* ape)
             continue;
         }
         add_history(line);
-        res = ape_execute(ape, line);
-        if (ape_has_errors(ape))
+        res = ctx->executeCode(line);
+        if (ctx->hasErrors())
         {
-            print_errors(ape);
+            print_errors(ctx);
             free(line);
         }
         else
         {
-            object_str = object_serialize(&ape->alloc, res, &len);
+            object_str = object_serialize(&ctx->alloc, res, &len);
             printf("%.*s\n", (int)len, object_str);
             free(object_str);
         }
@@ -17561,48 +17421,48 @@ int main(int argc, char *argv[])
     const char* filename;
     FlagContext_t fx;
     Options_t opts;
-    Context *ape;
+    Context* ctx;
     Object args_array;
     replexit = false;
     populate_flags(argc, 1, argv, "epI", &fx);
-    ape = ape_make();
+    ctx = Context::make();
     if(!parse_options(&opts, fx.flags, fx.fcnt))
     {
         fprintf(stderr, "failed to process command line flags.\n");
         return 1;
     }
-    ape_set_native_function(ape, "exit", exit_repl, &replexit);
+    ctx->setNativeFunction("exit", exit_repl, &replexit);
     if((fx.poscnt > 0) || (opts.codeline != NULL))
     {
-        args_array = Object::makeArray(ape->mem);
+        args_array = Object::makeArray(ctx->mem);
         for(i=0; i<fx.poscnt; i++)
         {
             ape_object_add_array_string(args_array, fx.positional[i]);
         }
-        ape_set_global_constant(ape, "args", args_array);
+        ctx->setGlobalConstant("args", args_array);
         if(opts.codeline)
         {
-            ape_execute(ape, opts.codeline);
+            ctx->executeCode(opts.codeline);
         }
         else
         {
             filename = fx.positional[0];
-            ape_execute_file(ape, filename);
+            ctx->executeFile(filename);
         }
-        if(ape_has_errors(ape))
+        if(ctx->hasErrors())
         {
-            print_errors(ape);
+            print_errors(ctx);
         }
     }
     else
     {
         #if !defined(NO_READLINE)
-            do_repl(ape);
+            do_repl(ctx);
         #else
             fprintf(stderr, "no repl support compiled in\n");
         #endif
     }
-    ape_destroy(ape);
+    ctx->destroy();
     return 0;
 }
 

@@ -1,0 +1,233 @@
+
+JSON = {}
+
+
+JSON["isWhiteSpace"] = function(c)
+{
+    return c == " " || c == "\r" || c == "\n" || c == "\t";
+};
+
+JSON["skipWhiteSpace"] = function(state)
+{
+    while(state.m_index < state.m_source.length && JSON["isWhiteSpace"](state.m_source[state.m_index]))
+    {
+        state.m_index++;
+    }
+};
+
+JSON["parseValue"] = function(state)
+{
+    JSON["skipWhiteSpace"](state);
+    if(state.m_index == state.m_source.length)
+    {
+        return null;
+    }
+    var c = state.m_source[state.m_index];
+    if (c == "{")
+    {
+        return JSON["parseObject"](state);
+    }
+    else if (c == "[")
+    {
+        return JSON["parseArray"](state);
+    }
+    else if (c == "'")
+    {
+        return JSON["parseString"](state, "'");
+    }
+    else if (c == "\"")
+    {
+        return JSON["parseString"](state, "\"");
+    }
+    else if (state.nfirstchars.indexOf(c) != -1)
+    {
+        return JSON["parseNumber"](state);
+    }
+    else if (c == "t")
+    {
+        return JSON["parseLiteral"](state, "true", true);
+    }
+    else if (c == "f")
+    {
+        return JSON["parseLiteral"](state, "false", false);
+    }
+    else if (c == "n")
+    {
+        return JSON["parseLiteral"](state, "null", null);
+    }
+    else if (c == "N")
+    {
+        return JSON["parseLiteral"](state, "NaN", NaN);
+    }
+    else if (c == "u")
+    {
+        return JSON["parseLiteral"](state, "undefined", undefined);
+    }
+    Fiber.abort("Invalid json (c=" + c + ", index=" + state.m_index + ", max=" + state.m_source.length + ")");
+};
+
+JSON["parseLiteral"] = function(state, literal, value)
+{
+    if(literal.length > (state.m_source.length - state.m_index))
+    {
+        Fiber.abort("Expecting " + literal);
+    }
+    for (var i = 0; i < literal.length; i++)
+    {
+        if (literal[i] != state.m_source[state.m_index++])
+        {
+            Fiber.abort("Expecting " + literal);
+        }
+    }
+    return value;
+};
+
+JSON["parseNumber"] = function (state)
+{
+    var startIndex = state.m_index;
+    var c = 0;
+    while(state.nchars.indexOf(state.m_source[state.m_index]) != -1)
+    {
+        state.m_index++;
+    }
+    return (state.m_source.substring(startIndex, state.m_index)).toNumber();
+};
+
+JSON["parseString"] = function(state, quote)
+{
+    var startIndex = state.m_index;
+    state.m_index++;
+    var c = 0;
+    var s = "";
+    while ((c = state.m_source[state.m_index]) != quote)
+    {
+        if(c == "\\")
+        {
+            state.m_index++;
+            c = state.m_source[state.m_index];
+            if(c == "r")
+            {
+                s += "\r";
+            }
+            else if (c == "n")
+            {
+                s += "\n";
+            }
+            else if (c == "t")
+            {
+                s += "\t";
+            }
+            else if (c == "f")
+            {
+                s += "\f";
+            }
+            // Note escaped unicode not handled
+            else
+            {
+                s += c;
+            }
+        }
+        else
+        {
+            s += c;
+        }
+        state.m_index++;
+    }
+    state.m_index++;
+    return s;
+};
+
+JSON["parseObject"] = function(state)
+{
+    state.m_index++;
+    JSON["skipWhiteSpace"](state);
+    if(state.m_source[state.m_index] == "}")
+    {
+        state.m_index++;
+        return {};
+    }
+    var o = {};
+    var c = null;
+    while (true)
+    {
+        var name = JSON["parseValue"](state);
+        JSON["skipWhiteSpace"](state);
+        c = state.m_source[state.m_index];
+        if (c != ":")
+        {
+            Fiber.abort("Expecting :");
+        }
+        state.m_index++;
+        JSON["skipWhiteSpace"](state);
+        var value = JSON["parseValue"](state);
+        JSON["skipWhiteSpace"](state);
+        if(name != null)
+        {
+            o[name] = value;
+        }
+        c = state.m_source[state.m_index];
+        if (c == ",")
+        {
+            state.m_index++;
+            JSON["skipWhiteSpace"](state);
+        }
+        else
+        {
+            break;
+        }
+    }
+    if(c != "}")
+    {
+        Fiber.abort("Expecting }");
+    }
+    state.m_index++;
+    return o;
+};
+
+JSON["parseArray"] = function(state)
+{
+    state.m_index++;
+    JSON["skipWhiteSpace"](state);
+    if(state.m_source[state.m_index] == "]")
+    {
+        state.m_index++;
+        return [];
+    }
+    var a = [];
+    var c;
+    while(true)
+    {
+        var value = JSON["parseValue"](state);
+        a.push(value);
+        JSON["skipWhiteSpace"](state);
+        c = state.m_source[state.m_index];
+        if (c == ",")
+        {
+            state.m_index++;
+            JSON["skipWhiteSpace"](state);
+        }
+        else
+        {
+            break;
+        }
+    }
+    if(c != "]")
+    {
+        Fiber.abort("Expecting ]");
+    }
+    state.m_index++;
+    return a;
+};
+
+JSON["parse"] = function(str, options)
+{
+    var state = new Object();
+    state.m_source = str;
+    state.m_index = 0;
+    state.nfirstchars = "-0123456789.";
+    state.nchars = "-0123456789.eE";
+    return JSON["parseValue"](state);
+};
+
+src = "[1, 2, 3, {\"name\": \"john doe\", \"flags\": [4, 5, 6]}]";
+console.log(JSON["parse"](src));
