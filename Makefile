@@ -4,7 +4,7 @@ INCFLAGS = -I$(EXTDIR)
 
 CC = clang
 #CXX = g++ -std=c++20 -fdata-sections -ffunction-sections -Wl,--gc-sections -Wl,--print-gc-sections -Wl,--demangle -Wl,-z,stack-size=0 
-CXX = g++ -std=c++20 -Wl,-z,stack-size=0 
+CXX = g++ -std=c++20 -Wl,-z,stack-size=0 -flto -fno-asynchronous-unwind-tables -ffunction-sections -Wl,--gc-sections
 #CXX = g++ -std=c++20
 # ricing intensifies
 WARNFLAGS = -Wall -Wextra
