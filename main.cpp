@@ -1,25 +1,5 @@
 
 
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
-#include <float.h>
-#include <limits.h>
-#include <assert.h>
-#include <errno.h>
-#include <sys/time.h>
-#include <errno.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <dirent.h>
-#include <readline/readline.h>
-#include <readline/history.h>
-
-
 /*
 SPDX-License-Identifier: MIT
 
@@ -46,17 +26,40 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <float.h>
+#include <limits.h>
+#include <assert.h>
+#include <errno.h>
+#include <sys/time.h>
+#include <errno.h>
+#include <sys/stat.h>
+
+#if __has_include(<dirent.h>)
+    #include <unistd.h>
+    #include <dirent.h>
+#else
+    #define CORE_NODIRENT
+#endif
+
+#if __has_include(<readline/readline.h>)
+    #include <readline/readline.h>
+    #include <readline/history.h>
+#else
+    #define NO_READLINE
+#endif
+
 #ifdef _MSC_VER
     #ifndef _CRT_SECURE_NO_WARNINGS
         #define _CRT_SECURE_NO_WARNINGS
     #endif /* _CRT_SECURE_NO_WARNINGS */
 #endif /* _MSC_VER */
-
-#ifdef __cplusplus
-    #define AS_LIST
-#else
-    #define AS_LIST (uint64_t[])
-#endif
 
 
 #define APE_IMPL_VERSION_MAJOR 0
@@ -93,10 +96,6 @@ THE SOFTWARE.
 #define ERRORS_MAX_COUNT 16
 #define APE_ERROR_MESSAGE_MAX_LENGTH 255
 
-
-
-
-
 #define APE_STREQ(a, b) (strcmp((a), (b)) == 0)
 #define APE_STRNEQ(a, b, n) (strncmp((a), (b), (n)) == 0)
 #define APE_ARRAY_LEN(array) ((int)(sizeof(array) / sizeof(array[0])))
@@ -104,7 +103,6 @@ THE SOFTWARE.
 
 #define APE_CALL(vm, function_name, ...) \
     vm->call((function_name), sizeof((Object[]){ __VA_ARGS__ }) / sizeof(Object), (Object[]){ __VA_ARGS__ })
-
 
 #ifdef APE_DEBUG
     #define APE_ASSERT(x) assert((x))
@@ -114,6 +112,43 @@ THE SOFTWARE.
     #define APE_ASSERT(x) ((void)0)
     #define APE_LOG(...) ((void)0)
 #endif
+
+
+#if 0
+    #define CHECK_ARGS(vm, generate_error, argc, args, ...) \
+        check_args( \
+            (vm), \
+            (generate_error), \
+            (argc), \
+            (args),  \
+            (sizeof((ObjectType[]){ __VA_ARGS__ }) / sizeof(ObjectType)), \
+            ((ObjectType*)((ObjectType[]){ __VA_ARGS__ })) \
+        )
+#else
+    #define CHECK_ARGS(vm, generate_error, argc, args, ...) \
+        check_args( \
+            (vm), \
+            (generate_error), \
+            (argc), \
+            (args),  \
+            (sizeof((int[]){ __VA_ARGS__ }) / sizeof(int)), \
+            typargs_to_array(__VA_ARGS__, -1) \
+        )
+#endif
+
+//Object object_make_native_function(GCMemory* mem, const char* name, NativeFNCallback fn, void* data, int data_len);
+#define make_fn_data(vm, name, fnc, dataptr, datasize) \
+    Object::makeNativeFunctionMemory(vm->mem, name, fnc, dataptr, datasize)
+
+#define make_fn(vm, name, fnc) \
+    make_fn_data(vm, name, fnc, NULL, 0)
+
+#define make_fn_entry_data(vm, map, name, fnc, dataptr, datasize) \
+    ape_object_set_map_value(map, name, make_fn(vm, name, fnc))
+
+#define make_fn_entry(vm, map, name, fnc) \
+    make_fn_entry_data(vm, map, name, fnc, NULL, 0)
+
 
 enum ErrorType
 {
@@ -378,7 +413,7 @@ enum Precedence
     PRECEDENCE_HIGHEST
 };
 
-typedef uint8_t opcode_t;
+using opcode_t = uint8_t;
 
 
 enum /**/TokenType;
@@ -429,13 +464,11 @@ struct /**/ObjectError;
 struct /**/String;
 struct /**/ObjectData;
 struct /**/Symbol;
-struct /**/BlockScope;
 struct /**/OpcodeDefinition;
 struct /**/CompilationResult;
 struct /**/CompilationScope;
 struct /**/ObjectDataPool;
 struct /**/GCMemory;
-struct /**/TracebackItem;
 struct /**/Traceback;
 struct /**/Frame;
 struct /**/ValDictionary;
@@ -444,7 +477,6 @@ struct /**/Array;
 struct /**/PtrDictionary;
 struct /**/PtrArray;
 struct /**/StringBuffer;
-struct /**/GlobalStore;
 struct /**/Module;
 struct /**/FileScope;
 struct /**/Compiler;
@@ -483,7 +515,6 @@ int builtins_count(void);
 NativeFNCallback builtins_get_fn(int ix);
 const char *builtins_get_name(int ix);
 NativeFNCallback builtin_get_object(ObjectType objt, const char *idxname);
-/* compiler.c */
 
 
 /* imp.c */
@@ -508,22 +539,8 @@ bool kg_streq(const char *a, const char *b);
 
 CompiledFile *compiled_file_make(Allocator *alloc, const char *path);
 void compiled_file_destroy(CompiledFile *file);
-GlobalStore *global_store_make(Allocator *alloc, GCMemory *mem);
-void global_store_destroy(GlobalStore *store);
-const Symbol *global_store_get_symbol(GlobalStore *store, const char *name);
-Object global_store_get_object(GlobalStore *store, const char *name);
-bool global_store_set(GlobalStore *store, const char *name, Object object);
-Object global_store_get_object_at(GlobalStore *store, int ix, bool *out_ok);
-bool global_store_set_object_at(GlobalStore *store, int ix, Object object);
-Object *global_store_get_object_data(GlobalStore *store);
-int global_store_get_object_count(GlobalStore *store);
 
 
-
-
-BlockScope *block_scope_make(Allocator *alloc, int offset);
-void block_scope_destroy(BlockScope *scope);
-BlockScope *block_scope_copy(BlockScope *scope);
 OpcodeDefinition *opcode_lookup(opcode_t op);
 const char *opcode_get_name(opcode_t op);
 int code_make(opcode_t op, int operands_count, uint64_t* operands, Array *res);
@@ -599,13 +616,7 @@ char *object_data_get_string(ObjectData *data);
 bool object_data_string_reserve_capacity(ObjectData *data, int capacity);
 
 
-Traceback *traceback_make(Allocator *alloc);
 
-void traceback_destroy(Traceback *traceback);
-bool traceback_append(Traceback *traceback, const char *function_name, Position pos);
-bool traceback_append_from_vm(Traceback *traceback, VM *vm);
-const char *traceback_item_get_line(TracebackItem *item);
-const char *traceback_item_get_filepath(TracebackItem *item);
 bool frame_init(Frame *frame, Object function_obj, int base_pointer);
 OpcodeValue frame_read_opcode(Frame *frame);
 uint64_t frame_read_uint64(Frame *frame);
@@ -640,12 +651,7 @@ bool ape_object_get_map_bool(Object object, const char *key);
 bool ape_object_map_has_key(Object ape_object, const char *key);
 
 
-int ape_traceback_get_depth(const Traceback *ape_traceback);
-const char *ape_traceback_get_filepath(const Traceback *ape_traceback, int depth);
-const char *ape_traceback_get_line(const Traceback *ape_traceback, int depth);
-int ape_traceback_get_line_number(const Traceback *ape_traceback, int depth);
-int ape_traceback_get_column_number(const Traceback *ape_traceback, int depth);
-const char *ape_traceback_get_function_name(const Traceback *ape_traceback, int depth);
+
 Object ape_native_fn_wrapper(VM *vm, void *data, int argc, Object *args);
 void *ape_malloc(void*, size_t size);
 void ape_free(void*, void *ptr);
@@ -670,7 +676,6 @@ const char *operator_to_string(Operator op);
 const char *expression_type_to_string(Expr_type type);
 void code_to_string(uint8_t *code, Position *source_positions, size_t code_size, StringBuffer *res);
 void object_to_string(Object obj, StringBuffer *buf, bool quote_str);
-bool traceback_to_string(const Traceback *traceback, StringBuffer *buf);
 
 const char *token_type_to_string(TokenType type);
 
@@ -2161,6 +2166,179 @@ struct PtrArray: public Allocator::Allocated
 };
 
 
+struct StringBuffer: public Allocator::Allocated
+{
+    public:
+        static StringBuffer* make(Allocator* alloc)
+        {
+            return make(alloc, 1);
+        }
+
+        static StringBuffer* make(Allocator* alloc, unsigned int capacity)
+        {
+            StringBuffer* buf = alloc->allocate<StringBuffer>();
+            if(buf == NULL)
+            {
+                return NULL;
+            }
+            memset(buf, 0, sizeof(StringBuffer));
+            buf->m_alloc = alloc;
+            buf->m_failed = false;
+            buf->stringdata = (char*)alloc->allocate(capacity);
+            if(buf->stringdata == NULL)
+            {
+                alloc->release(buf);
+                return NULL;
+            }
+            buf->m_capacity = capacity;
+            buf->len = 0;
+            buf->stringdata[0] = '\0';
+            return buf;
+        }
+
+    public:
+        bool m_failed;
+        char* stringdata;
+        size_t m_capacity;
+        size_t len;
+
+    public:
+        void destroy()
+        {
+            if(this == NULL)
+            {
+                return;
+            }
+            m_alloc->release(this->stringdata);
+            m_alloc->release(this);
+        }
+
+        void clear()
+        {
+            if(m_failed)
+            {
+                return;
+            }
+            this->len = 0;
+            this->stringdata[0] = '\0';
+        }
+
+        bool append(const char* str)
+        {
+            if(m_failed)
+            {
+                return false;
+            }
+            size_t str_len = strlen(str);
+            if(str_len == 0)
+            {
+                return true;
+            }
+            size_t required_capacity = this->len + str_len + 1;
+            if(required_capacity > m_capacity)
+            {
+                bool ok = this->grow(required_capacity * 2);
+                if(!ok)
+                {
+                    return false;
+                }
+            }
+            memcpy(this->stringdata + this->len, str, str_len);
+            this->len = this->len + str_len;
+            this->stringdata[this->len] = '\0';
+            return true;
+        }
+
+        bool appendFormat(const char* fmt, ...)
+        {
+            if(m_failed)
+            {
+                return false;
+            }
+            va_list args;
+            va_start(args, fmt);
+            int to_write = vsnprintf(NULL, 0, fmt, args);
+            va_end(args);
+            if(to_write == 0)
+            {
+                return true;
+            }
+            size_t required_capacity = this->len + to_write + 1;
+            if(required_capacity > m_capacity)
+            {
+                bool ok = this->grow(required_capacity * 2);
+                if(!ok)
+                {
+                    return false;
+                }
+            }
+            va_start(args, fmt);
+            int written = vsprintf(this->stringdata + this->len, fmt, args);
+            (void)written;
+            va_end(args);
+            if(written != to_write)
+            {
+                return false;
+            }
+            this->len = this->len + to_write;
+            this->stringdata[this->len] = '\0';
+            return true;
+        }
+
+        const char* string() const
+        {
+            if(m_failed)
+            {
+                return NULL;
+            }
+            return this->stringdata;
+        }
+
+        size_t length() const
+        {
+            if(m_failed)
+            {
+                return 0;
+            }
+            return this->len;
+        }
+
+        char* getStringAndDestroy()
+        {
+            if(m_failed)
+            {
+                this->destroy();
+                return NULL;
+            }
+            char* res = this->stringdata;
+            this->stringdata = NULL;
+            this->destroy();
+            return res;
+        }
+
+        bool failed()
+        {
+            return m_failed;
+        }
+
+        bool grow(size_t new_capacity)
+        {
+            char* new_data = (char*)m_alloc->allocate(new_capacity);
+            if(new_data == NULL)
+            {
+                m_failed = true;
+                return false;
+            }
+            memcpy(new_data, this->stringdata, this->len);
+            new_data[this->len] = '\0';
+            m_alloc->release(this->stringdata);
+            this->stringdata = new_data;
+            m_capacity = new_capacity;
+            return true;
+        }
+
+};
+
 struct Timer
 {
 #if defined(APE_POSIX)
@@ -2177,6 +2355,125 @@ struct CompiledFile: public Allocator::Allocated
     char* dir_path;
     char* path;
     PtrArray * lines;
+};
+
+struct Traceback: public Allocator::Allocated
+{
+    public:
+        struct Item
+        {
+            public:
+
+            public:
+                char* function_name;
+                Position pos;
+
+            public:
+                const char* getLine() const
+                {
+                    if(!this->pos.file)
+                    {
+                        return NULL;
+                    }
+                    PtrArray* lines = this->pos.file->lines;
+                    if(this->pos.line >= lines->count())
+                    {
+                        return NULL;
+                    }
+                    const char* line = (const char*)lines->get(this->pos.line);
+                    return line;
+                }
+
+                const char* getFilePath() const
+                {
+                    if(!this->pos.file)
+                    {
+                        return NULL;
+                    }
+                    return this->pos.file->path;
+                }
+        };
+
+    public:
+        static Traceback* make(Allocator* alloc)
+        {
+            Traceback* traceback = alloc->allocate<Traceback>();
+            if(!traceback)
+            {
+                return NULL;
+            }
+            memset(traceback, 0, sizeof(Traceback));
+            traceback->m_alloc = alloc;
+            traceback->items = Array::make<Traceback::Item>(alloc);
+            if(!traceback->items)
+            {
+                traceback->destroy();
+                return NULL;
+            }
+            return traceback;
+        }
+
+    public:
+        Array* items;
+
+    public:
+
+        void destroy()
+        {
+            if(!this)
+            {
+                return;
+            }
+            for(int i = 0; i < this->items->count(); i++)
+            {
+                Traceback::Item* item = (Traceback::Item*)this->items->get(i);
+                this->m_alloc->release(item->function_name);
+            }
+            Array::destroy(this->items);
+            this->m_alloc->release(this);
+        }
+
+        bool append(const char* function_name, Position pos)
+        {
+            Traceback::Item item;
+            item.function_name = ape_strdup(this->m_alloc, function_name);
+            if(!item.function_name)
+            {
+                return false;
+            }
+            item.pos = pos;
+            bool ok = this->items->add(&item);
+            if(!ok)
+            {
+                this->m_alloc->release(item.function_name);
+                return false;
+            }
+            return true;
+        }
+
+        bool append(VM* vm);
+
+        bool toString(StringBuffer* buf) const
+        {
+            int i;
+            int depth;
+            depth = this->items->count();
+            for(i = 0; i < depth; i++)
+            {
+                auto item = (Traceback::Item*)this->items->get(i);
+                const char* filename = item->getFilePath();
+                if(item->pos.line >= 0 && item->pos.column >= 0)
+                {
+                    buf->appendFormat("%s in %s on %d:%d\n", item->function_name, filename, item->pos.line, item->pos.column);
+                }
+                else
+                {
+                    buf->appendFormat("%s\n", item->function_name);
+                }
+            }
+            return !buf->failed();
+        }
+
 };
 
 struct ErrorList
@@ -2239,6 +2536,44 @@ struct ErrorList
                     return (const Traceback*)this->traceback;
                 }
 
+                bool serialize(StringBuffer* buf) const
+                {
+                    const char* type_str = ErrorList::toString(this->type);
+                    const char* filename = this->getFilePath();
+                    const char* line = this->getSource();
+                    int line_num = this->getLine();
+                    int col_num = this->getColumn();
+                    if(!buf)
+                    {
+                        return false;
+                    }
+                    if(line)
+                    {
+                        buf->append(line);
+                        buf->append("\n");
+                        if(col_num >= 0)
+                        {
+                            for(int j = 0; j < (col_num - 1); j++)
+                            {
+                                buf->append(" ");
+                            }
+                            buf->append("^\n");
+                        }
+                    }
+                    buf->appendFormat("%s ERROR in \"%s\" on %d:%d: %s\n", type_str, filename, line_num, col_num, this->message);
+                    const Traceback* traceback = this->getTraceback();
+                    if(traceback)
+                    {
+                        buf->appendFormat("Traceback:\n");
+                        ((const Traceback*)this->getTraceback())->toString(buf);
+                    }
+                    if(buf->failed())
+                    {
+                        return false;
+                    }
+                    return true;
+                }
+
         };
 
     public:
@@ -2263,8 +2598,6 @@ struct ErrorList
             }
         }
 
-
-
     public:
         Error items[ERRORS_MAX_COUNT];
         int m_count;
@@ -2287,8 +2620,8 @@ struct ErrorList
             {
                 return;
             }
-            ErrorList::Error err;
-            memset(&err, 0, sizeof(ErrorList::Error));
+            Error err;
+            memset(&err, 0, sizeof(Error));
             err.type = type;
             int len = (int)strlen(message);
             int to_copy = len;
@@ -2328,7 +2661,7 @@ struct ErrorList
                 Error* error = this->get(i);
                 if(error->traceback)
                 {
-                    traceback_destroy(error->traceback);
+                    error->traceback->destroy();
                 }
             }
             this->m_count = 0;
@@ -2374,10 +2707,6 @@ struct ErrorList
 
 };
 
-
-
-
-
 struct Token
 {
     public:
@@ -2400,7 +2729,6 @@ struct Token
         }
 
 };
-
 
 struct Lexer: public Allocator::Allocated
 {
@@ -2882,7 +3210,7 @@ struct Lexer: public Allocator::Allocated
             }
         }
 
-        bool expectCurrent(TokenType type)
+        bool expectCurrent(const char* from, TokenType type)
         {
             if(this->failed())
             {
@@ -2894,7 +3222,7 @@ struct Lexer: public Allocator::Allocated
                 const char* expected_type_str = token_type_to_string(type);
                 const char* actual_type_str = token_type_to_string(m_currtoken.type);
                 m_errors->addFormat(APE_ERROR_PARSING, m_currtoken.pos,
-                                  "Expected current token to be \"%s\", got \"%s\" instead", expected_type_str, actual_type_str);
+                                  "from %s: expected current token to be \"%s\", got \"%s\" instead", from, expected_type_str, actual_type_str);
                 return false;
             }
             return true;
@@ -2933,16 +3261,18 @@ struct Lexer: public Allocator::Allocated
             return true;
         }
 
-        char peekChar()
+        char peekChar(size_t additional)
         {
             if(m_nextpos >= m_sourcelen)
             {
                 return '\0';
             }
-            else
-            {
-                return m_sourcedata[m_nextpos];
-            }
+            return m_sourcedata[m_nextpos + additional];
+        }
+
+        char peekChar()
+        {
+            return peekChar(0);
         }
 
         static bool is_letter(char ch)
@@ -3002,38 +3332,68 @@ struct Lexer: public Allocator::Allocated
             return m_sourcedata + position;
         }
 
-        const char* readString(char delimiter, bool is_template, bool* out_template_found, int* out_len)
+        //TODO: string parsing is kind of broken! in particular, it will not parse "\\", or "\""
+        const char* readString(const char delimiter, bool is_template, bool* out_template_found, int* out_len)
         {
+            enum{ kTempSize = 512 };
+            int len;
+            int last;
+            int startpos;
+            bool escaped;
+            //char tmpsrc[kTempSize + 1] = {0};
             *out_len = 0;
-
-            bool escaped = false;
-            int position = m_position;
-
+            escaped = false;
+            startpos = m_position;
+            //fprintf(stderr, "in readString(startpos=%d) ...\n", startpos);
             while(true)
             {
                 if(m_currchar == '\0')
                 {
+                    m_errors->addFormat(APE_ERROR_PARSING, m_currtoken.pos, "unexpected EOF while parsing string");
                     return NULL;
                 }
-                if(m_currchar == delimiter && !escaped)
+                if((m_currchar == delimiter) && !escaped)
                 {
                     break;
                 }
-                if(is_template && !escaped && m_currchar == '$' && this->peekChar() == '{')
+                if(is_template && !escaped && (m_currchar == '$') && (this->peekChar() == '{'))
                 {
                     *out_template_found = true;
                     break;
                 }
                 escaped = false;
-                if(m_currchar == '\\')
+                if((m_currchar == '\\'))
                 {
-                    escaped = true;
+                    /* this is completely ridiculous */
+                    //fprintf(stderr, "peekChar: 0=<%c>, 1=<%c>, 2=<%c>\n", peekChar(0), peekChar(1), peekChar(2));
+                    if((peekChar(0) == '\\') && (peekChar(1) == delimiter))
+                    {
+                        //fprintf(stderr, "readString: endscan!\n");
+                        readChar();
+                        readChar();
+                        goto endscan;
+                    }
+                    if((peekChar() != '\\'))
+                    {
+                        escaped = true;
+                    }
                 }
                 this->readChar();
             }
-            int len = m_position - position;
+            endscan:
+            /* this is also ridiculous. */
+            last = m_sourcedata[startpos];
+            //memset(tmpsrc, 0, kTempSize);
+            //memcpy(tmpsrc, &m_sourcedata[startpos], m_position-startpos);
+            //fprintf(stderr, "readString(delimiter=(%d)%c, start=%d, source=<<<%s>>>): last=%c\n", delimiter, delimiter, startpos, tmpsrc, last);
+            if(last == delimiter)
+            {
+                //fprintf(stderr, "readString(): reading remainder...\n");
+                this->readChar();
+            }
+            len = m_position - startpos;
             *out_len = len;
-            return m_sourcedata + position;
+            return m_sourcedata + startpos;
         }
 
         static TokenType lookup_identifier(const char* ident, int len)
@@ -4812,7 +5172,7 @@ struct Parser: public Allocator::Allocated
             value = NULL;
             assignable = p->lexer.currentTokenIs(TOKEN_VAR);
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent(TOKEN_IDENT))
+            if(!p->lexer.expectCurrent("parse_define_statement", TOKEN_IDENT))
             {
                 goto err;
             }
@@ -4822,7 +5182,7 @@ struct Parser: public Allocator::Allocated
                 goto err;
             }
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent(TOKEN_ASSIGN))
+            if(!p->lexer.expectCurrent("parse_define_statement", TOKEN_ASSIGN))
             {
                 goto err;
             }
@@ -4868,7 +5228,7 @@ struct Parser: public Allocator::Allocated
                 goto err;
             }
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent(TOKEN_LPAREN))
+            if(!p->lexer.expectCurrent("parse_if_statement", TOKEN_LPAREN))
             {
                 goto err;
             }
@@ -4889,7 +5249,7 @@ struct Parser: public Allocator::Allocated
             {
                 goto err;
             }
-            if(!p->lexer.expectCurrent(TOKEN_RPAREN))
+            if(!p->lexer.expectCurrent("parse_if_statement", TOKEN_RPAREN))
             {
                 goto err;
             }
@@ -4905,7 +5265,7 @@ struct Parser: public Allocator::Allocated
                 if(p->lexer.currentTokenIs(TOKEN_IF))
                 {
                     p->lexer.nextToken();
-                    if(!p->lexer.expectCurrent(TOKEN_LPAREN))
+                    if(!p->lexer.expectCurrent("parse_if_statement->else if", TOKEN_LPAREN))
                     {
                         goto err;
                     }
@@ -4926,7 +5286,7 @@ struct Parser: public Allocator::Allocated
                     {
                         goto err;
                     }
-                    if(!p->lexer.expectCurrent(TOKEN_RPAREN))
+                    if(!p->lexer.expectCurrent("parse_if_statement->else if", TOKEN_RPAREN))
                     {
                         goto err;
                     }
@@ -5016,7 +5376,7 @@ struct Parser: public Allocator::Allocated
             test = NULL;
             body = NULL;
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent(TOKEN_LPAREN))
+            if(!p->lexer.expectCurrent("parse_while_loop_statement", TOKEN_LPAREN))
             {
                 goto err;
             }
@@ -5026,7 +5386,7 @@ struct Parser: public Allocator::Allocated
             {
                 goto err;
             }
-            if(!p->lexer.expectCurrent(TOKEN_RPAREN))
+            if(!p->lexer.expectCurrent("parse_while_loop_statement", TOKEN_RPAREN))
             {
                 goto err;
             }
@@ -5083,7 +5443,7 @@ struct Parser: public Allocator::Allocated
             char* processed_name;
             Expression* res;
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent(TOKEN_STRING))
+            if(!p->lexer.expectCurrent("parse_import_statement", TOKEN_STRING))
             {
                 return NULL;
             }
@@ -5111,12 +5471,12 @@ struct Parser: public Allocator::Allocated
             error_ident = NULL;
             body = NULL;
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent(TOKEN_LPAREN))
+            if(!p->lexer.expectCurrent("parse_recover_statement", TOKEN_LPAREN))
             {
                 return NULL;
             }
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent(TOKEN_IDENT))
+            if(!p->lexer.expectCurrent("parse_recover_statement", TOKEN_IDENT))
             {
                 return NULL;
             }
@@ -5126,7 +5486,7 @@ struct Parser: public Allocator::Allocated
                 return NULL;
             }
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent(TOKEN_RPAREN))
+            if(!p->lexer.expectCurrent("parse_recover_statement", TOKEN_RPAREN))
             {
                 goto err;
             }
@@ -5151,7 +5511,7 @@ struct Parser: public Allocator::Allocated
         static Expression* parse_for_loop_statement(Parser* p)
         {
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent(TOKEN_LPAREN))
+            if(!p->lexer.expectCurrent("parse_for_loop_statement", TOKEN_LPAREN))
             {
                 return NULL;
             }
@@ -5177,7 +5537,7 @@ struct Parser: public Allocator::Allocated
                 goto err;
             }
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent(TOKEN_IN))
+            if(!p->lexer.expectCurrent("parse_foreach", TOKEN_IN))
             {
                 goto err;
             }
@@ -5187,7 +5547,7 @@ struct Parser: public Allocator::Allocated
             {
                 goto err;
             }
-            if(!p->lexer.expectCurrent(TOKEN_RPAREN))
+            if(!p->lexer.expectCurrent("parse_foreach", TOKEN_RPAREN))
             {
                 goto err;
             }
@@ -5234,7 +5594,7 @@ struct Parser: public Allocator::Allocated
                     p->m_errors->addFormat(APE_ERROR_PARSING, init->pos, "for loop's init clause should be a define statement or an expression");
                     goto err;
                 }
-                if(!p->lexer.expectCurrent(TOKEN_SEMICOLON))
+                if(!p->lexer.expectCurrent("parse_classic_for_loop->initial", TOKEN_SEMICOLON))
                 {
                     goto err;
                 }
@@ -5247,7 +5607,7 @@ struct Parser: public Allocator::Allocated
                 {
                     goto err;
                 }
-                if(!p->lexer.expectCurrent(TOKEN_SEMICOLON))
+                if(!p->lexer.expectCurrent("parse_classic_for_loop->condition", TOKEN_SEMICOLON))
                 {
                     goto err;
                 }
@@ -5260,7 +5620,7 @@ struct Parser: public Allocator::Allocated
                 {
                     goto err;
                 }
-                if(!p->lexer.expectCurrent(TOKEN_RPAREN))
+                if(!p->lexer.expectCurrent("parse_classic_for_loop", TOKEN_RPAREN))
                 {
                     goto err;
                 }
@@ -5296,7 +5656,7 @@ struct Parser: public Allocator::Allocated
             name_ident = NULL;
             pos = p->lexer.m_currtoken.pos;
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent(TOKEN_IDENT))
+            if(!p->lexer.expectCurrent("parse_function_statement", TOKEN_IDENT))
             {
                 goto err;
             }
@@ -5336,7 +5696,7 @@ struct Parser: public Allocator::Allocated
             PtrArray* statements;
             Expression* stmt;
             StmtBlock* res;
-            if(!p->lexer.expectCurrent(TOKEN_LBRACE))
+            if(!p->lexer.expectCurrent("parse_code_block", TOKEN_LBRACE))
             {
                 return NULL;
             }
@@ -5526,7 +5886,7 @@ struct Parser: public Allocator::Allocated
             }
             p->lexer.nextToken();
 
-            if(!p->lexer.expectCurrent(TOKEN_LBRACE))
+            if(!p->lexer.expectCurrent("parse_template_string_literal", TOKEN_LBRACE))
             {
                 goto err;
             }
@@ -5562,7 +5922,7 @@ struct Parser: public Allocator::Allocated
             left_add_expr->pos = pos;
             left_string_expr = NULL;
             to_str_call_expr = NULL;
-            if(!p->lexer.expectCurrent(TOKEN_RBRACE))
+            if(!p->lexer.expectCurrent("parse_template_string_literal", TOKEN_RBRACE))
             {
                 goto err;
             }
@@ -5683,7 +6043,7 @@ struct Parser: public Allocator::Allocated
                     goto err;
                 }
 
-                if(!p->lexer.expectCurrent(TOKEN_COLON))
+                if(!p->lexer.expectCurrent("parse_map_literal", TOKEN_COLON))
                 {
                     goto err;
                 }
@@ -5707,7 +6067,7 @@ struct Parser: public Allocator::Allocated
                     break;
                 }
 
-                if(!p->lexer.expectCurrent(TOKEN_COMMA))
+                if(!p->lexer.expectCurrent("parse_map_literal", TOKEN_COMMA))
                 {
                     goto err;
                 }
@@ -5778,7 +6138,7 @@ struct Parser: public Allocator::Allocated
             Expression* expr;
             p->lexer.nextToken();
             expr = parse_expression(p, PRECEDENCE_LOWEST);
-            if(!expr || !p->lexer.expectCurrent(TOKEN_RPAREN))
+            if(!expr || !p->lexer.expectCurrent("parse_grouped_expression", TOKEN_RPAREN))
             {
                 Expression::destroyExpression(expr);
                 return NULL;
@@ -5829,7 +6189,7 @@ struct Parser: public Allocator::Allocated
         {
             bool ok;
             Ident* ident;
-            if(!p->lexer.expectCurrent(TOKEN_LPAREN))
+            if(!p->lexer.expectCurrent("parse_function_parameters", TOKEN_LPAREN))
             {
                 return false;
             }
@@ -5839,7 +6199,7 @@ struct Parser: public Allocator::Allocated
                 p->lexer.nextToken();
                 return true;
             }
-            if(!p->lexer.expectCurrent(TOKEN_IDENT))
+            if(!p->lexer.expectCurrent("parse_function_parameters->first", TOKEN_IDENT))
             {
                 return false;
             }
@@ -5858,7 +6218,7 @@ struct Parser: public Allocator::Allocated
             while(p->lexer.currentTokenIs(TOKEN_COMMA))
             {
                 p->lexer.nextToken();
-                if(!p->lexer.expectCurrent(TOKEN_IDENT))
+                if(!p->lexer.expectCurrent("parse_function_parameters->next", TOKEN_IDENT))
                 {
                     return false;
                 }
@@ -5875,7 +6235,7 @@ struct Parser: public Allocator::Allocated
                 }
                 p->lexer.nextToken();
             }
-            if(!p->lexer.expectCurrent(TOKEN_RPAREN))
+            if(!p->lexer.expectCurrent("parse_function_parameters", TOKEN_RPAREN))
             {
                 return false;
             }
@@ -5909,7 +6269,7 @@ struct Parser: public Allocator::Allocated
             bool ok;
             PtrArray* res;
             Expression* arg_expr;
-            if(!p->lexer.expectCurrent(start_token))
+            if(!p->lexer.expectCurrent("parse_expression_list", start_token))
             {
                 return NULL;
             }
@@ -5950,7 +6310,7 @@ struct Parser: public Allocator::Allocated
                     goto err;
                 }
             }
-            if(!p->lexer.expectCurrent(end_token))
+            if(!p->lexer.expectCurrent("parse_expression_list", end_token))
             {
                 goto err;
             }
@@ -5971,7 +6331,7 @@ struct Parser: public Allocator::Allocated
             {
                 return NULL;
             }
-            if(!p->lexer.expectCurrent(TOKEN_RBRACKET))
+            if(!p->lexer.expectCurrent("parse_index_expression", TOKEN_RBRACKET))
             {
                 Expression::destroyExpression(index);
                 return NULL;
@@ -6089,7 +6449,7 @@ struct Parser: public Allocator::Allocated
             {
                 return NULL;
             }
-            if(!p->lexer.expectCurrent(TOKEN_COLON))
+            if(!p->lexer.expectCurrent("parse_ternary_expression", TOKEN_COLON))
             {
                 Expression::destroyExpression(if_true);
                 return NULL;
@@ -6223,7 +6583,7 @@ struct Parser: public Allocator::Allocated
         {
             p->lexer.nextToken();
 
-            if(!p->lexer.expectCurrent(TOKEN_IDENT))
+            if(!p->lexer.expectCurrent("parse_dot_expression", TOKEN_IDENT))
             {
                 return NULL;
             }
@@ -6580,6 +6940,728 @@ inline ObjectType Object::typeFromData(ObjectData* data)
 {
     return data->type;
 }
+
+
+struct Symbol: public Allocator::Allocated
+{
+    public:
+        struct BlockScope: public Allocator::Allocated
+        {
+            public:
+                static BlockScope* make(Allocator* alloc, int offset)
+                {
+                    BlockScope* new_scope;
+                    new_scope = alloc->allocate<BlockScope>();
+                    if(!new_scope)
+                    {
+                        return NULL;
+                    }
+                    memset(new_scope, 0, sizeof(BlockScope));
+                    new_scope->m_alloc = alloc;
+                    new_scope->store = Dictionary::make(alloc, Symbol::callback_copy, Symbol::callback_destroy);
+                    if(!new_scope->store)
+                    {
+                        new_scope->destroy();
+                        return NULL;
+                    }
+                    new_scope->num_definitions = 0;
+                    new_scope->offset = offset;
+                    return new_scope;
+                }
+
+                static void callback_destroy(BlockScope* bs)
+                {
+                    bs->destroy();
+                }
+
+                static BlockScope* callback_copy(BlockScope* bs)
+                {
+                    return bs->copy();
+                }
+
+            public:
+                Dictionary * store;
+                int offset;
+                int num_definitions;
+
+            public:
+                void destroy()
+                {
+                    this->store->destroyWithItems();
+                    this->m_alloc->release(this);
+                }
+
+                BlockScope* copy()
+                {
+                    BlockScope* copy;
+                    copy = this->m_alloc->allocate<BlockScope>();
+                    if(!copy)
+                    {
+                        return NULL;
+                    }
+                    memset(copy, 0, sizeof(BlockScope));
+                    copy->m_alloc = this->m_alloc;
+                    copy->num_definitions = this->num_definitions;
+                    copy->offset = this->offset;
+                    copy->store = this->store->copyWithItems();
+                    if(!copy->store)
+                    {
+                        copy->destroy();
+                        return NULL;
+                    }
+                    return copy;
+                }
+
+        };
+
+
+        struct GlobalStore: public Allocator::Allocated
+        {
+            public:
+                static GlobalStore* make(Allocator* alloc, GCMemory* mem)
+                {
+                    int i;
+                    bool ok;
+                    const char* name;
+                    Object builtin;
+                    GlobalStore* store;
+                    store = alloc->allocate<GlobalStore>();
+                    if(!store)
+                    {
+                        return NULL;
+                    }
+                    memset(store, 0, sizeof(GlobalStore));
+                    store->m_alloc = alloc;
+                    store->symbols = Dictionary::make(alloc, Symbol::callback_copy, Symbol::callback_destroy);
+                    if(!store->symbols)
+                    {
+                        goto err;
+                    }
+                    store->objects = Array::make<Object>(alloc);
+                    if(!store->objects)
+                    {
+                        goto err;
+                    }
+
+                    if(mem)
+                    {
+                        for(i = 0; i < builtins_count(); i++)
+                        {
+                            name = builtins_get_name(i);
+                            builtin = Object::makeNativeFunctionMemory(mem, name, builtins_get_fn(i), NULL, 0);
+                            if(builtin.isNull())
+                            {
+                                goto err;
+                            }
+                            ok = store->set(name, builtin);
+                            if(!ok)
+                            {
+                                goto err;
+                            }
+                        }
+                    }
+
+                    return store;
+                err:
+                    store->destroy();
+                    return NULL;
+                }
+
+            public:
+                Dictionary * symbols;
+                Array * objects;
+
+            public:
+                void destroy()
+                {
+                    if(!this)
+                    {
+                        return;
+                    }
+                    this->symbols->destroyWithItems();
+                    Array::destroy(this->objects);
+                    this->m_alloc->release(this);
+                }
+
+                const Symbol* getSymbol(const char* name) const
+                {
+                    return (Symbol*)this->symbols->get(name);
+                }
+
+                Object getObject(const char* name)
+                {
+                    const Symbol* symbol = this->getSymbol(name);
+                    if(!symbol)
+                    {
+                        return Object::makeNull();
+                    }
+                    APE_ASSERT(symbol->type == SYMBOL_APE_GLOBAL);
+                    Object* res = (Object*)this->objects->get(symbol->index);
+                    return *res;
+                }
+
+                bool set(const char* name, Object object)
+                {
+                    int ix;
+                    bool ok;
+                    Symbol* symbol;
+                    const Symbol* existing_symbol;
+                    existing_symbol = this->getSymbol(name);
+                    if(existing_symbol)
+                    {
+                        ok = this->objects->set(existing_symbol->index, &object);
+                        return ok;
+                    }
+                    ix = this->objects->count();
+                    ok = this->objects->add(&object);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+                    symbol = Symbol::make(this->m_alloc, name, SYMBOL_APE_GLOBAL, ix, false);
+                    if(!symbol)
+                    {
+                        goto err;
+                    }
+                    ok = this->symbols->set(name, symbol);
+                    if(!ok)
+                    {
+                        symbol->destroy();
+                        goto err;
+                    }
+                    return true;
+                err:
+                    this->objects->pop(NULL);
+                    return false;
+                }
+
+                Object getObjectAt(int ix, bool* out_ok)
+                {
+                    Object* res = (Object*)this->objects->get(ix);
+                    if(!res)
+                    {
+                        *out_ok = false;
+                        return Object::makeNull();
+                    }
+                    *out_ok = true;
+                    return *res;
+                }
+
+                bool setObjectAt(int ix, Object object)
+                {
+                    bool ok = this->objects->set(ix, &object);
+                    return ok;
+                }
+
+                Object* getObjectData()
+                {
+                    return (Object*)this->objects->data();
+                }
+
+                int count()
+                {
+                    return this->objects->count();
+                }
+        };
+
+        struct Table: public Allocator::Allocated
+        {
+            public:
+                static Table* make(Allocator* alloc, Table* outer, GlobalStore* global_store, int module_global_offset)
+                {
+                    bool ok;
+                    Table* table;
+                    table = alloc->allocate<Table>();
+                    if(!table)
+                    {
+                        return NULL;
+                    }
+                    memset(table, 0, sizeof(Table));
+                    table->m_alloc = alloc;
+                    table->max_num_definitions = 0;
+                    table->outer = outer;
+                    table->global_store = global_store;
+                    table->module_global_offset = module_global_offset;
+                    table->block_scopes = PtrArray::make(alloc);
+                    if(!table->block_scopes)
+                    {
+                        goto err;
+                    }
+                    table->free_symbols = PtrArray::make(alloc);
+                    if(!table->free_symbols)
+                    {
+                        goto err;
+                    }
+                    table->module_global_symbols = PtrArray::make(alloc);
+                    if(!table->module_global_symbols)
+                    {
+                        goto err;
+                    }
+                    ok = table->pushBlockScope();
+                    if(!ok)
+                    {
+                        goto err;
+                    }
+                    return table;
+                err:
+                    table->destroy();
+                    return NULL;
+                }
+
+            public:
+                Table* outer;
+                GlobalStore* global_store;
+                PtrArray * block_scopes;
+                PtrArray * free_symbols;
+                PtrArray * module_global_symbols;
+                int max_num_definitions;
+                int module_global_offset;
+
+            public:
+                void destroy()
+                {
+                    Allocator* alloc;
+                    while(this->block_scopes->count() > 0)
+                    {
+                        this->popBlockScope();
+                    }
+                    this->block_scopes->destroy();
+                    this->module_global_symbols->destroyWithItems(Symbol::callback_destroy);
+                    this->free_symbols->destroyWithItems(Symbol::callback_destroy);
+                    alloc = m_alloc;
+                    memset(this, 0, sizeof(Table));
+                    alloc->release(this);
+                }
+
+                Table* copy()
+                {
+                    Table* copy;
+                    copy = m_alloc->allocate<Table>();
+                    if(!copy)
+                    {
+                        return NULL;
+                    }
+                    memset(copy, 0, sizeof(Table));
+                    copy->m_alloc = m_alloc;
+                    copy->outer = this->outer;
+                    copy->global_store = this->global_store;
+                    copy->block_scopes = this->block_scopes->copyWithItems(BlockScope::callback_copy, BlockScope::callback_destroy);
+                    if(!copy->block_scopes)
+                    {
+                        goto err;
+                    }
+                    copy->free_symbols = this->free_symbols->copyWithItems(Symbol::callback_copy, Symbol::callback_destroy);
+                    if(!copy->free_symbols)
+                    {
+                        goto err;
+                    }
+                    copy->module_global_symbols = this->module_global_symbols->copyWithItems(Symbol::callback_copy, Symbol::callback_destroy);
+                    if(!copy->module_global_symbols)
+                    {
+                        goto err;
+                    }
+                    copy->max_num_definitions = this->max_num_definitions;
+                    copy->module_global_offset = this->module_global_offset;
+                    return copy;
+                err:
+                    copy->destroy();
+                    return NULL;
+                }
+
+                bool set(Symbol* symbol)
+                {
+                    BlockScope* top_scope;
+                    Symbol* existing;
+                    top_scope = (BlockScope*)this->block_scopes->top();
+                    existing= (Symbol*)top_scope->store->get(symbol->name);
+                    if(existing)
+                    {
+                        existing->destroy();
+                    }
+                    return top_scope->store->set(symbol->name, symbol);
+                }
+
+                int nextIndex()
+                {
+                    int ix;
+                    BlockScope* top_scope;
+                    top_scope = (BlockScope*)this->block_scopes->top();
+                    ix = top_scope->offset + top_scope->num_definitions;
+                    return ix;
+                }
+
+                int defCount()
+                {
+                    int i;
+                    int cn;
+                    BlockScope* scope;
+                    cn = 0;
+                    for(i = this->block_scopes->count() - 1; i >= 0; i--)
+                    {
+                        scope = (BlockScope*)this->block_scopes->get(i);
+                        cn += scope->num_definitions;
+                    }
+                    return cn;
+                }
+
+                bool addModuleSymbol(Symbol* symbol)
+                {
+                    bool ok;
+                    if(symbol->type != SYMBOL_MODULE_GLOBAL)
+                    {
+                        APE_ASSERT(false);
+                        return false;
+                    }
+                    if(this->isDefined(symbol->name))
+                    {
+                        return true;// todo: make sure it should be true in this case
+                    }
+                    Symbol* copy = symbol->copy();
+                    if(!copy)
+                    {
+                        return false;
+                    }
+                    ok = this->set(copy);
+                    if(!ok)
+                    {
+                        copy->destroy();
+                        return false;
+                    }
+                    return true;
+                }
+
+                const Symbol* define(const char* name, bool assignable)
+                {
+                    
+                    bool ok;
+                    bool global_symbol_added;
+                    int ix;
+                    int definitions_count;
+                    BlockScope* top_scope;
+                    SymbolType symbol_type;
+                    Symbol* symbol;
+                    Symbol* global_symbol_copy;
+                    const Symbol* global_symbol;
+                    global_symbol = this->global_store->getSymbol(name);
+                    if(global_symbol)
+                    {
+                        return NULL;
+                    }
+                    if(strchr(name, ':'))
+                    {
+                        return NULL;// module symbol
+                    }
+                    if(APE_STREQ(name, "this"))
+                    {
+                        return NULL;// "this" is reserved
+                    }
+                    symbol_type = this->outer == NULL ? SYMBOL_MODULE_GLOBAL : SYMBOL_LOCAL;
+                    ix = this->nextIndex();
+                    symbol = Symbol::make(m_alloc, name, symbol_type, ix, assignable);
+                    if(!symbol)
+                    {
+                        return NULL;
+                    }
+                    global_symbol_added = false;
+                    ok = false;
+                    if(symbol_type == SYMBOL_MODULE_GLOBAL && this->block_scopes->count() == 1)
+                    {
+                        global_symbol_copy = symbol->copy();
+                        if(!global_symbol_copy)
+                        {
+                            symbol->destroy();
+                            return NULL;
+                        }
+                        ok = this->module_global_symbols->add(global_symbol_copy);
+                        if(!ok)
+                        {
+                            global_symbol_copy->destroy();
+                            symbol->destroy();
+                            return NULL;
+                        }
+                        global_symbol_added = true;
+                    }
+
+                    ok = this->set(symbol);
+                    if(!ok)
+                    {
+                        if(global_symbol_added)
+                        {
+                            global_symbol_copy = (Symbol*)this->module_global_symbols->pop();
+                            global_symbol_copy->destroy();
+                        }
+                        symbol->destroy();
+                        return NULL;
+                    }
+                    top_scope = (BlockScope*)this->block_scopes->top();
+                    top_scope->num_definitions++;
+                    definitions_count = this->defCount();
+                    if(definitions_count > this->max_num_definitions)
+                    {
+                        this->max_num_definitions = definitions_count;
+                    }
+
+                    return symbol;
+                }
+
+                const Symbol* defineFree(const Symbol* original)
+                {
+                    bool ok;
+                    Symbol* symbol;
+                    Symbol* copy;
+                    copy = Symbol::make(m_alloc, original->name, original->type, original->index, original->assignable);
+                    if(!copy)
+                    {
+                        return NULL;
+                    }
+                    ok = this->free_symbols->add(copy);
+                    if(!ok)
+                    {
+                        copy->destroy();
+                        return NULL;
+                    }
+
+                    symbol = Symbol::make(m_alloc, original->name, SYMBOL_FREE, this->free_symbols->count() - 1, original->assignable);
+                    if(!symbol)
+                    {
+                        return NULL;
+                    }
+
+                    ok = this->set(symbol);
+                    if(!ok)
+                    {
+                        symbol->destroy();
+                        return NULL;
+                    }
+
+                    return symbol;
+                }
+
+                const Symbol* defineFunctionName(const char* name, bool assignable)
+                {
+                    bool ok;
+                    Symbol* symbol;
+                    if(strchr(name, ':'))
+                    {
+                        return NULL;// module symbol
+                    }
+                    symbol = Symbol::make(m_alloc, name, SYMBOL_FUNCTION, 0, assignable);
+                    if(!symbol)
+                    {
+                        return NULL;
+                    }
+                    ok = this->set(symbol);
+                    if(!ok)
+                    {
+                        symbol->destroy();
+                        return NULL;
+                    }
+
+                    return symbol;
+                }
+
+                const Symbol* defineThis()
+                {
+                    bool ok;
+                    Symbol* symbol;
+                    symbol = Symbol::make(m_alloc, "this", SYMBOL_THIS, 0, false);
+                    if(!symbol)
+                    {
+                        return NULL;
+                    }
+                    ok = this->set(symbol);
+                    if(!ok)
+                    {
+                        symbol->destroy();
+                        return NULL;
+                    }
+                    return symbol;
+                }
+
+                const Symbol* resolve(const char* name)
+                {
+                    int i;
+                    const Symbol* symbol;
+                    BlockScope* scope;
+                    scope = NULL;
+                    symbol = this->global_store->getSymbol(name);
+                    if(symbol)
+                    {
+                        return symbol;
+                    }
+                    for(i = this->block_scopes->count() - 1; i >= 0; i--)
+                    {
+                        scope = (BlockScope*)this->block_scopes->get(i);
+                        symbol = (Symbol*)scope->store->get(name);
+                        if(symbol)
+                        {
+                            break;
+                        }
+                    }
+                    if(symbol && symbol->type == SYMBOL_THIS)
+                    {
+                        symbol = this->defineFree(symbol);
+                    }
+
+                    if(!symbol && this->outer)
+                    {
+                        symbol = this->outer->resolve(name);
+                        if(!symbol)
+                        {
+                            return NULL;
+                        }
+                        if(symbol->type == SYMBOL_MODULE_GLOBAL || symbol->type == SYMBOL_APE_GLOBAL)
+                        {
+                            return symbol;
+                        }
+                        symbol = this->defineFree(symbol);
+                    }
+                    return symbol;
+                }
+
+                bool isDefined(const char* name)
+                {
+                    BlockScope* top_scope;
+                    const Symbol* symbol;
+                    // todo: rename to something more obvious
+                    symbol = this->global_store->getSymbol(name);
+                    if(symbol)
+                    {
+                        return true;
+                    }
+                    top_scope = (BlockScope*)this->block_scopes->top();
+                    symbol = (Symbol*)top_scope->store->get(name);
+                    if(symbol)
+                    {
+                        return true;
+                    }
+                    return false;
+                }
+
+                bool pushBlockScope()
+                {
+                    bool ok;
+                    int block_scope_offset;
+                    BlockScope* prev_block_scope;
+                    BlockScope* new_scope;
+                    block_scope_offset = 0;
+                    prev_block_scope = (BlockScope*)this->block_scopes->top();
+                    if(prev_block_scope)
+                    {
+                        block_scope_offset = this->module_global_offset + prev_block_scope->offset + prev_block_scope->num_definitions;
+                    }
+                    else
+                    {
+                        block_scope_offset = this->module_global_offset;
+                    }
+
+                    new_scope = BlockScope::make(m_alloc, block_scope_offset);
+                    if(!new_scope)
+                    {
+                        return false;
+                    }
+                    ok = this->block_scopes->push(new_scope);
+                    if(!ok)
+                    {
+                        new_scope->destroy();
+                        return false;
+                    }
+                    return true;
+                }
+
+                void popBlockScope()
+                {
+                    BlockScope* top_scope;
+                    top_scope = (BlockScope*)this->block_scopes->top();
+                    this->block_scopes->pop();
+                    top_scope->destroy();
+                }
+
+                BlockScope* getBlockScope()
+                {
+                    BlockScope* top_scope;
+                    top_scope = (BlockScope*)this->block_scopes->top();
+                    return top_scope;
+                }
+
+                bool isModuleGlobalScope()
+                {
+                    return this->outer == NULL;
+                }
+
+                bool isTopBlockScope()
+                {
+                    return this->block_scopes->count() == 1;
+                }
+
+                bool isTopGlobalScope()
+                {
+                    return this->isModuleGlobalScope() && this->isTopBlockScope();
+                }
+
+                int getModuleGlobalSymbolCount()
+                {
+                    return this->module_global_symbols->count();
+                }
+
+                const Symbol* getModuleGlobalSymbolAt(int ix)
+                {
+                    return (Symbol*)this->module_global_symbols->get(ix);
+                }
+        };
+
+    public:
+        static Symbol* make(Allocator* alloc, const char* name, SymbolType type, int index, bool assignable)
+        {
+            Symbol* symbol;
+            symbol = alloc->allocate<Symbol>();
+            if(!symbol)
+            {
+                return NULL;
+            }
+            memset(symbol, 0, sizeof(Symbol));
+            symbol->m_alloc = alloc;
+            symbol->name = ape_strdup(alloc, name);
+            if(!symbol->name)
+            {
+                alloc->release(symbol);
+                return NULL;
+            }
+            symbol->type = type;
+            symbol->index = index;
+            symbol->assignable = assignable;
+            return symbol;
+        }
+
+        static void callback_destroy(Symbol* sym)
+        {
+            sym->destroy();
+        }
+
+        static Symbol* callback_copy(Symbol* sym)
+        {
+            return sym->copy();
+        }
+
+    public:
+        SymbolType type;
+        char* name;
+        int index;
+        bool assignable;
+
+    public:
+        void destroy()
+        {
+            m_alloc->release(this->name);
+            m_alloc->release(this);
+        }
+
+        Symbol* copy()
+        {
+            return Symbol::make(m_alloc, this->name, this->type, this->index, this->assignable);
+        }
+};
+
 
 struct GCMemory: public Allocator::Allocated
 {
@@ -6990,13 +8072,6 @@ struct GCMemory: public Allocator::Allocated
 
 };
 
-struct BlockScope: public Allocator::Allocated
-{
-    Dictionary * store;
-    int offset;
-    int num_definitions;
-};
-
 
 struct OpcodeDefinition
 {
@@ -7023,16 +8098,8 @@ struct CompilationScope: public Allocator::Allocated
 };
 
 
-struct TracebackItem
-{
-    char* function_name;
-    Position pos;
-};
 
-struct Traceback: public Allocator::Allocated
-{
-    Array * items;
-};
+
 
 struct Frame
 {
@@ -7050,7 +8117,7 @@ struct Frame
 struct VM: public Allocator::Allocated
 {
     public:
-        static VM* make(Allocator* alloc, const Config* config, GCMemory* mem, ErrorList* errors, GlobalStore* global_store)
+        static VM* make(Allocator* alloc, const Config* config, GCMemory* mem, ErrorList* errors, Symbol::GlobalStore* global_store)
         {
             VM* vm = alloc->allocate<VM>();
             if(!vm)
@@ -7109,7 +8176,7 @@ struct VM: public Allocator::Allocated
         const Config* config;
         GCMemory* mem;
         ErrorList* m_errors;
-        GlobalStore* global_store;
+        Symbol::GlobalStore* global_store;
         Object globals[VM_MAX_GLOBALS];
         int globals_count;
         Object stack[VM_STACK_SIZE];
@@ -7390,7 +8457,7 @@ struct VM: public Allocator::Allocated
         void runGarbageCollector(Array * constants)
         {
             this->mem->unmarkAll();
-            GCMemory::markObjects(global_store_get_object_data(this->global_store), global_store_get_object_count(this->global_store));
+            GCMemory::markObjects(this->global_store->getObjectData(), this->global_store->count());
             GCMemory::markObjects((Object*)constants->data(), constants->count());
             GCMemory::markObjects(this->globals, this->globals_count);
             for(int i = 0; i < this->frames_count; i++)
@@ -7458,27 +8525,27 @@ struct VM: public Allocator::Allocated
             Object res = native_fun->native_funcptr(this, native_fun->data, argc, args);
             if(m_errors->hasErrors() && !APE_STREQ(native_fun->name, "crash"))
             {
-                ErrorList::Error* err = m_errors->getLast();
+                auto err = m_errors->getLast();
                 err->pos = src_pos;
-                err->traceback = traceback_make(m_alloc);
+                err->traceback = Traceback::make(m_alloc);
                 if(err->traceback)
                 {
-                    traceback_append(err->traceback, native_fun->name, Position::invalid());
+                    err->traceback->append(native_fun->name, Position::invalid());
                 }
                 return Object::makeNull();
             }
             ObjectType res_type = res.type();
             if(res_type == APE_OBJECT_ERROR)
             {
-                Traceback* traceback = traceback_make(m_alloc);
+                Traceback* traceback = Traceback::make(m_alloc);
                 if(traceback)
                 {
                     // error builtin is treated in a special way
                     if(!APE_STREQ(native_fun->name, "error"))
                     {
-                        traceback_append(traceback, native_fun->name, Position::invalid());
+                        traceback->append(native_fun->name, Position::invalid());
                     }
-                    traceback_append_from_vm(traceback, this);
+                    traceback->append(this);
                     object_set_error_traceback(res, traceback);
                 }
             }
@@ -8210,7 +9277,7 @@ struct VM: public Allocator::Allocated
                     {
                         uint16_t ix = frame_read_uint16(this->current_frame);
                         bool ok = false;
-                        Object val = global_store_get_object_at(this->global_store, ix, &ok);
+                        Object val = this->global_store->getObjectAt(ix, &ok);
                         if(!ok)
                         {
                             m_errors->addFormat( APE_ERROR_RUNTIME, frame_src_position(this->current_frame),
@@ -8400,7 +9467,7 @@ struct VM: public Allocator::Allocated
             err:
                 if(m_errors->count() > 0)
                 {
-                    ErrorList::Error* err = m_errors->getLast();
+                    auto err = m_errors->getLast();
                     if(err->type == APE_ERROR_RUNTIME && m_errors->count() == 1)
                     {
                         int recover_frame_ix = -1;
@@ -8421,11 +9488,11 @@ struct VM: public Allocator::Allocated
                         {
                             if(!err->traceback)
                             {
-                                err->traceback = traceback_make(m_alloc);
+                                err->traceback = Traceback::make(m_alloc);
                             }
                             if(err->traceback)
                             {
-                                traceback_append_from_vm(err->traceback, this);
+                                err->traceback->append(this);
                             }
                             while(this->frames_count > (recover_frame_ix + 1))
                             {
@@ -8457,14 +9524,14 @@ struct VM: public Allocator::Allocated
         end:
             if(m_errors->count() > 0)
             {
-                ErrorList::Error* err = m_errors->getLast();
+                auto err = m_errors->getLast();
                 if(!err->traceback)
                 {
-                    err->traceback = traceback_make(m_alloc);
+                    err->traceback = Traceback::make(m_alloc);
                 }
                 if(err->traceback)
                 {
-                    traceback_append_from_vm(err->traceback, this);
+                    err->traceback->append(this);
                 }
             }
 
@@ -8478,690 +9545,6 @@ struct VM: public Allocator::Allocated
 
 
 
-struct StringBuffer: public Allocator::Allocated
-{
-    public:
-        static StringBuffer* make(Allocator* alloc)
-        {
-            return make(alloc, 1);
-        }
-
-        static StringBuffer* make(Allocator* alloc, unsigned int capacity)
-        {
-            StringBuffer* buf = alloc->allocate<StringBuffer>();
-            if(buf == NULL)
-            {
-                return NULL;
-            }
-            memset(buf, 0, sizeof(StringBuffer));
-            buf->m_alloc = alloc;
-            buf->m_failed = false;
-            buf->stringdata = (char*)alloc->allocate(capacity);
-            if(buf->stringdata == NULL)
-            {
-                alloc->release(buf);
-                return NULL;
-            }
-            buf->m_capacity = capacity;
-            buf->len = 0;
-            buf->stringdata[0] = '\0';
-            return buf;
-        }
-
-    public:
-        bool m_failed;
-        char* stringdata;
-        size_t m_capacity;
-        size_t len;
-
-    public:
-        void destroy()
-        {
-            if(this == NULL)
-            {
-                return;
-            }
-            m_alloc->release(this->stringdata);
-            m_alloc->release(this);
-        }
-
-        void clear()
-        {
-            if(m_failed)
-            {
-                return;
-            }
-            this->len = 0;
-            this->stringdata[0] = '\0';
-        }
-
-        bool append(const char* str)
-        {
-            if(m_failed)
-            {
-                return false;
-            }
-            size_t str_len = strlen(str);
-            if(str_len == 0)
-            {
-                return true;
-            }
-            size_t required_capacity = this->len + str_len + 1;
-            if(required_capacity > m_capacity)
-            {
-                bool ok = this->grow(required_capacity * 2);
-                if(!ok)
-                {
-                    return false;
-                }
-            }
-            memcpy(this->stringdata + this->len, str, str_len);
-            this->len = this->len + str_len;
-            this->stringdata[this->len] = '\0';
-            return true;
-        }
-
-        bool appendFormat(const char* fmt, ...)
-        {
-            if(m_failed)
-            {
-                return false;
-            }
-            va_list args;
-            va_start(args, fmt);
-            int to_write = vsnprintf(NULL, 0, fmt, args);
-            va_end(args);
-            if(to_write == 0)
-            {
-                return true;
-            }
-            size_t required_capacity = this->len + to_write + 1;
-            if(required_capacity > m_capacity)
-            {
-                bool ok = this->grow(required_capacity * 2);
-                if(!ok)
-                {
-                    return false;
-                }
-            }
-            va_start(args, fmt);
-            int written = vsprintf(this->stringdata + this->len, fmt, args);
-            (void)written;
-            va_end(args);
-            if(written != to_write)
-            {
-                return false;
-            }
-            this->len = this->len + to_write;
-            this->stringdata[this->len] = '\0';
-            return true;
-        }
-
-        const char* string() const
-        {
-            if(m_failed)
-            {
-                return NULL;
-            }
-            return this->stringdata;
-        }
-
-        size_t length() const
-        {
-            if(m_failed)
-            {
-                return 0;
-            }
-            return this->len;
-        }
-
-        char* getStringAndDestroy()
-        {
-            if(m_failed)
-            {
-                this->destroy();
-                return NULL;
-            }
-            char* res = this->stringdata;
-            this->stringdata = NULL;
-            this->destroy();
-            return res;
-        }
-
-        bool failed()
-        {
-            return m_failed;
-        }
-
-        bool grow(size_t new_capacity)
-        {
-            char* new_data = (char*)m_alloc->allocate(new_capacity);
-            if(new_data == NULL)
-            {
-                m_failed = true;
-                return false;
-            }
-            memcpy(new_data, this->stringdata, this->len);
-            new_data[this->len] = '\0';
-            m_alloc->release(this->stringdata);
-            this->stringdata = new_data;
-            m_capacity = new_capacity;
-            return true;
-        }
-
-};
-
-
-struct Symbol: public Allocator::Allocated
-{
-    public:
-        struct Table: public Allocator::Allocated
-        {
-            public:
-                static Table* make(Allocator* alloc, Table* outer, GlobalStore* global_store, int module_global_offset)
-                {
-                    bool ok;
-                    Table* table;
-                    table = alloc->allocate<Table>();
-                    if(!table)
-                    {
-                        return NULL;
-                    }
-                    memset(table, 0, sizeof(Table));
-                    table->m_alloc = alloc;
-                    table->max_num_definitions = 0;
-                    table->outer = outer;
-                    table->global_store = global_store;
-                    table->module_global_offset = module_global_offset;
-                    table->block_scopes = PtrArray::make(alloc);
-                    if(!table->block_scopes)
-                    {
-                        goto err;
-                    }
-                    table->free_symbols = PtrArray::make(alloc);
-                    if(!table->free_symbols)
-                    {
-                        goto err;
-                    }
-                    table->module_global_symbols = PtrArray::make(alloc);
-                    if(!table->module_global_symbols)
-                    {
-                        goto err;
-                    }
-                    ok = table->pushBlockScope();
-                    if(!ok)
-                    {
-                        goto err;
-                    }
-                    return table;
-                err:
-                    table->destroy();
-                    return NULL;
-                }
-
-            public:
-                Table* outer;
-                GlobalStore* global_store;
-                PtrArray * block_scopes;
-                PtrArray * free_symbols;
-                PtrArray * module_global_symbols;
-                int max_num_definitions;
-                int module_global_offset;
-
-            public:
-                void destroy()
-                {
-                    Allocator* alloc;
-                    while(this->block_scopes->count() > 0)
-                    {
-                        this->popBlockScope();
-                    }
-                    this->block_scopes->destroy();
-                    this->module_global_symbols->destroyWithItems(Symbol::callback_destroy);
-                    this->free_symbols->destroyWithItems(Symbol::callback_destroy);
-                    alloc = m_alloc;
-                    memset(this, 0, sizeof(Table));
-                    alloc->release(this);
-                }
-
-                Table* copy()
-                {
-                    Table* copy;
-                    copy = m_alloc->allocate<Table>();
-                    if(!copy)
-                    {
-                        return NULL;
-                    }
-                    memset(copy, 0, sizeof(Table));
-                    copy->m_alloc = m_alloc;
-                    copy->outer = this->outer;
-                    copy->global_store = this->global_store;
-                    copy->block_scopes = this->block_scopes->copyWithItems(block_scope_copy, block_scope_destroy);
-                    if(!copy->block_scopes)
-                    {
-                        goto err;
-                    }
-                    copy->free_symbols = this->free_symbols->copyWithItems(Symbol::callback_copy, Symbol::callback_destroy);
-                    if(!copy->free_symbols)
-                    {
-                        goto err;
-                    }
-                    copy->module_global_symbols = this->module_global_symbols->copyWithItems(Symbol::callback_copy, Symbol::callback_destroy);
-                    if(!copy->module_global_symbols)
-                    {
-                        goto err;
-                    }
-                    copy->max_num_definitions = this->max_num_definitions;
-                    copy->module_global_offset = this->module_global_offset;
-                    return copy;
-                err:
-                    copy->destroy();
-                    return NULL;
-                }
-
-                bool set(Symbol* symbol)
-                {
-                    BlockScope* top_scope;
-                    Symbol* existing;
-                    top_scope = (BlockScope*)this->block_scopes->top();
-                    existing= (Symbol*)top_scope->store->get(symbol->name);
-                    if(existing)
-                    {
-                        existing->destroy();
-                    }
-                    return top_scope->store->set(symbol->name, symbol);
-                }
-
-                int nextIndex()
-                {
-                    int ix;
-                    BlockScope* top_scope;
-                    top_scope = (BlockScope*)this->block_scopes->top();
-                    ix = top_scope->offset + top_scope->num_definitions;
-                    return ix;
-                }
-
-                int defCount()
-                {
-                    int i;
-                    int cn;
-                    BlockScope* scope;
-                    cn = 0;
-                    for(i = this->block_scopes->count() - 1; i >= 0; i--)
-                    {
-                        scope = (BlockScope*)this->block_scopes->get(i);
-                        cn += scope->num_definitions;
-                    }
-                    return cn;
-                }
-
-                bool addModuleSymbol(Symbol* symbol)
-                {
-                    bool ok;
-                    if(symbol->type != SYMBOL_MODULE_GLOBAL)
-                    {
-                        APE_ASSERT(false);
-                        return false;
-                    }
-                    if(this->isDefined(symbol->name))
-                    {
-                        return true;// todo: make sure it should be true in this case
-                    }
-                    Symbol* copy = symbol->copy();
-                    if(!copy)
-                    {
-                        return false;
-                    }
-                    ok = this->set(copy);
-                    if(!ok)
-                    {
-                        copy->destroy();
-                        return false;
-                    }
-                    return true;
-                }
-
-                const Symbol* define(const char* name, bool assignable)
-                {
-                    
-                    bool ok;
-                    bool global_symbol_added;
-                    int ix;
-                    int definitions_count;
-                    BlockScope* top_scope;
-                    SymbolType symbol_type;
-                    Symbol* symbol;
-                    Symbol* global_symbol_copy;
-                    const Symbol* global_symbol;
-                    global_symbol = global_store_get_symbol(this->global_store, name);
-                    if(global_symbol)
-                    {
-                        return NULL;
-                    }
-                    if(strchr(name, ':'))
-                    {
-                        return NULL;// module symbol
-                    }
-                    if(APE_STREQ(name, "this"))
-                    {
-                        return NULL;// "this" is reserved
-                    }
-                    symbol_type = this->outer == NULL ? SYMBOL_MODULE_GLOBAL : SYMBOL_LOCAL;
-                    ix = this->nextIndex();
-                    symbol = Symbol::make(m_alloc, name, symbol_type, ix, assignable);
-                    if(!symbol)
-                    {
-                        return NULL;
-                    }
-                    global_symbol_added = false;
-                    ok = false;
-                    if(symbol_type == SYMBOL_MODULE_GLOBAL && this->block_scopes->count() == 1)
-                    {
-                        global_symbol_copy = symbol->copy();
-                        if(!global_symbol_copy)
-                        {
-                            symbol->destroy();
-                            return NULL;
-                        }
-                        ok = this->module_global_symbols->add(global_symbol_copy);
-                        if(!ok)
-                        {
-                            global_symbol_copy->destroy();
-                            symbol->destroy();
-                            return NULL;
-                        }
-                        global_symbol_added = true;
-                    }
-
-                    ok = this->set(symbol);
-                    if(!ok)
-                    {
-                        if(global_symbol_added)
-                        {
-                            global_symbol_copy = (Symbol*)this->module_global_symbols->pop();
-                            global_symbol_copy->destroy();
-                        }
-                        symbol->destroy();
-                        return NULL;
-                    }
-                    top_scope = (BlockScope*)this->block_scopes->top();
-                    top_scope->num_definitions++;
-                    definitions_count = this->defCount();
-                    if(definitions_count > this->max_num_definitions)
-                    {
-                        this->max_num_definitions = definitions_count;
-                    }
-
-                    return symbol;
-                }
-
-                const Symbol* defineFree(const Symbol* original)
-                {
-                    bool ok;
-                    Symbol* symbol;
-                    Symbol* copy;
-                    copy = Symbol::make(m_alloc, original->name, original->type, original->index, original->assignable);
-                    if(!copy)
-                    {
-                        return NULL;
-                    }
-                    ok = this->free_symbols->add(copy);
-                    if(!ok)
-                    {
-                        copy->destroy();
-                        return NULL;
-                    }
-
-                    symbol = Symbol::make(m_alloc, original->name, SYMBOL_FREE, this->free_symbols->count() - 1, original->assignable);
-                    if(!symbol)
-                    {
-                        return NULL;
-                    }
-
-                    ok = this->set(symbol);
-                    if(!ok)
-                    {
-                        symbol->destroy();
-                        return NULL;
-                    }
-
-                    return symbol;
-                }
-
-                const Symbol* defineFunctionName(const char* name, bool assignable)
-                {
-                    bool ok;
-                    Symbol* symbol;
-                    if(strchr(name, ':'))
-                    {
-                        return NULL;// module symbol
-                    }
-                    symbol = Symbol::make(m_alloc, name, SYMBOL_FUNCTION, 0, assignable);
-                    if(!symbol)
-                    {
-                        return NULL;
-                    }
-                    ok = this->set(symbol);
-                    if(!ok)
-                    {
-                        symbol->destroy();
-                        return NULL;
-                    }
-
-                    return symbol;
-                }
-
-                const Symbol* defineThis()
-                {
-                    bool ok;
-                    Symbol* symbol;
-                    symbol = Symbol::make(m_alloc, "this", SYMBOL_THIS, 0, false);
-                    if(!symbol)
-                    {
-                        return NULL;
-                    }
-                    ok = this->set(symbol);
-                    if(!ok)
-                    {
-                        symbol->destroy();
-                        return NULL;
-                    }
-                    return symbol;
-                }
-
-                const Symbol* resolve(const char* name)
-                {
-                    int i;
-                    const Symbol* symbol;
-                    BlockScope* scope;
-                    scope = NULL;
-                    symbol = global_store_get_symbol(this->global_store, name);
-                    if(symbol)
-                    {
-                        return symbol;
-                    }
-                    for(i = this->block_scopes->count() - 1; i >= 0; i--)
-                    {
-                        scope = (BlockScope*)this->block_scopes->get(i);
-                        symbol = (Symbol*)scope->store->get(name);
-                        if(symbol)
-                        {
-                            break;
-                        }
-                    }
-                    if(symbol && symbol->type == SYMBOL_THIS)
-                    {
-                        symbol = this->defineFree(symbol);
-                    }
-
-                    if(!symbol && this->outer)
-                    {
-                        symbol = this->outer->resolve(name);
-                        if(!symbol)
-                        {
-                            return NULL;
-                        }
-                        if(symbol->type == SYMBOL_MODULE_GLOBAL || symbol->type == SYMBOL_APE_GLOBAL)
-                        {
-                            return symbol;
-                        }
-                        symbol = this->defineFree(symbol);
-                    }
-                    return symbol;
-                }
-
-                bool isDefined(const char* name)
-                {
-                    BlockScope* top_scope;
-                    const Symbol* symbol;
-                    // todo: rename to something more obvious
-                    symbol = global_store_get_symbol(this->global_store, name);
-                    if(symbol)
-                    {
-                        return true;
-                    }
-                    top_scope = (BlockScope*)this->block_scopes->top();
-                    symbol = (Symbol*)top_scope->store->get(name);
-                    if(symbol)
-                    {
-                        return true;
-                    }
-                    return false;
-                }
-
-                bool pushBlockScope()
-                {
-                    bool ok;
-                    int block_scope_offset;
-                    BlockScope* prev_block_scope;
-                    BlockScope* new_scope;
-                    block_scope_offset = 0;
-                    prev_block_scope = (BlockScope*)this->block_scopes->top();
-                    if(prev_block_scope)
-                    {
-                        block_scope_offset = this->module_global_offset + prev_block_scope->offset + prev_block_scope->num_definitions;
-                    }
-                    else
-                    {
-                        block_scope_offset = this->module_global_offset;
-                    }
-
-                    new_scope = block_scope_make(m_alloc, block_scope_offset);
-                    if(!new_scope)
-                    {
-                        return false;
-                    }
-                    ok = this->block_scopes->push(new_scope);
-                    if(!ok)
-                    {
-                        block_scope_destroy(new_scope);
-                        return false;
-                    }
-                    return true;
-                }
-
-                void popBlockScope()
-                {
-                    BlockScope* top_scope;
-                    top_scope = (BlockScope*)this->block_scopes->top();
-                    this->block_scopes->pop();
-                    block_scope_destroy(top_scope);
-                }
-
-                BlockScope* getBlockScope()
-                {
-                    BlockScope* top_scope;
-                    top_scope = (BlockScope*)this->block_scopes->top();
-                    return top_scope;
-                }
-
-                bool isModuleGlobalScope()
-                {
-                    return this->outer == NULL;
-                }
-
-                bool isTopBlockScope()
-                {
-                    return this->block_scopes->count() == 1;
-                }
-
-                bool isTopGlobalScope()
-                {
-                    return this->isModuleGlobalScope() && this->isTopBlockScope();
-                }
-
-                int getModuleGlobalSymbolCount()
-                {
-                    return this->module_global_symbols->count();
-                }
-
-                const Symbol* getModuleGlobalSymbolAt(int ix)
-                {
-                    return (Symbol*)this->module_global_symbols->get(ix);
-                }
-
-
-        };
-
-
-
-    public:
-        static Symbol* make(Allocator* alloc, const char* name, SymbolType type, int index, bool assignable)
-        {
-            Symbol* symbol;
-            symbol = alloc->allocate<Symbol>();
-            if(!symbol)
-            {
-                return NULL;
-            }
-            memset(symbol, 0, sizeof(Symbol));
-            symbol->m_alloc = alloc;
-            symbol->name = ape_strdup(alloc, name);
-            if(!symbol->name)
-            {
-                alloc->release(symbol);
-                return NULL;
-            }
-            symbol->type = type;
-            symbol->index = index;
-            symbol->assignable = assignable;
-            return symbol;
-        }
-
-        static void callback_destroy(Symbol* sym)
-        {
-            sym->destroy();
-        }
-
-        static Symbol* callback_copy(Symbol* sym)
-        {
-            return sym->copy();
-        }
-
-    public:
-        SymbolType type;
-        char* name;
-        int index;
-        bool assignable;
-
-    public:
-        void destroy()
-        {
-            m_alloc->release(this->name);
-            m_alloc->release(this);
-        }
-
-        Symbol* copy()
-        {
-            return Symbol::make(m_alloc, this->name, this->type, this->index, this->assignable);
-        }
-};
-
-struct GlobalStore: public Allocator::Allocated
-{
-    Dictionary * symbols;
-    Array * objects;
-};
 
 struct Module: public Allocator::Allocated
 {
@@ -9196,7 +9579,7 @@ struct FileScope: public Allocator::Allocated
 struct Compiler: public Allocator::Allocated
 {
     public:
-        static Compiler* make(Allocator* alloc, const Config* config, GCMemory* mem, ErrorList* errors, PtrArray * files, GlobalStore* global_store)
+        static Compiler* make(Allocator* alloc, const Config* config, GCMemory* mem, ErrorList* errors, PtrArray * files, Symbol::GlobalStore* global_store)
         {
             bool ok;
             Compiler* comp;
@@ -9313,7 +9696,7 @@ struct Compiler: public Allocator::Allocated
         GCMemory* mem;
         ErrorList* m_errors;
         PtrArray * files;
-        GlobalStore* global_store;
+        Symbol::GlobalStore* global_store;
         Array * constants;
         CompilationScope* compilation_scope;
         PtrArray * file_scopes;
@@ -9522,7 +9905,7 @@ struct Compiler: public Allocator::Allocated
                                   GCMemory* mem,
                                   ErrorList* errors,
                                   PtrArray * files,
-                                  GlobalStore* global_store)
+                                  Symbol::GlobalStore* global_store)
         {
             bool ok;
             memset(this, 0, sizeof(Compiler));
@@ -11483,7 +11866,7 @@ struct Compiler: public Allocator::Allocated
             int global_offset = 0;
             if(prev_st)
             {
-                BlockScope* prev_st_top_scope = prev_st->getBlockScope();
+                Symbol::BlockScope* prev_st_top_scope = prev_st->getBlockScope();
                 global_offset = prev_st_top_scope->offset + prev_st_top_scope->num_definitions;
             }
 
@@ -11501,7 +11884,7 @@ struct Compiler: public Allocator::Allocated
         void popFileScope()
         {
             Symbol::Table* popped_st = this->getSymbolTable();
-            BlockScope* popped_st_top_scope = popped_st->getBlockScope();
+            Symbol::BlockScope* popped_st_top_scope = popped_st->getBlockScope();
             int popped_num_defs = popped_st_top_scope->num_definitions;
 
             while(this->getSymbolTable())
@@ -11521,7 +11904,7 @@ struct Compiler: public Allocator::Allocated
             if(this->file_scopes->count() > 0)
             {
                 Symbol::Table* current_st = this->getSymbolTable();
-                BlockScope* current_st_top_scope = current_st->getBlockScope();
+                Symbol::BlockScope* current_st_top_scope = current_st->getBlockScope();
                 current_st_top_scope->num_definitions += popped_num_defs;
             }
         }
@@ -11570,7 +11953,7 @@ struct Context
             {
                 goto err;
             }
-            ctx->global_store = global_store_make(&ctx->m_alloc, ctx->mem);
+            ctx->global_store = Symbol::GlobalStore::make(&ctx->m_alloc, ctx->mem);
             if(!ctx->global_store)
             {
                 goto err;
@@ -11597,7 +11980,7 @@ struct Context
         Allocator m_alloc;
         GCMemory* mem;
         PtrArray * files;
-        GlobalStore* global_store;
+        Symbol::GlobalStore* global_store;
         Compiler* compiler;
         VM* vm;
         ErrorList m_errors;
@@ -11620,7 +12003,7 @@ struct Context
         {
             this->vm->destroy();
             this->compiler->destroy();
-            global_store_destroy(this->global_store);
+            this->global_store->destroy();
             this->mem->destroy();
             this->files->destroyWithItems(compiled_file_destroy);
             m_errors.deinit();
@@ -11671,46 +12054,6 @@ struct Context
             APE_ASSERT(to_write == written);
             va_end(args);
             m_errors.addError( APE_ERROR_RUNTIME, Position::invalid(), res);
-        }
-
-        char* serializeError(const ErrorList::Error* err)
-        {
-            const char* type_str = ErrorList::toString(err->type);
-            const char* filename = err->getFilePath();
-            const char* line = err->getSource();
-            int line_num = err->getLine();
-            int col_num = err->getColumn();
-            StringBuffer* buf = StringBuffer::make(&m_alloc);
-            if(!buf)
-            {
-                return NULL;
-            }
-            if(line)
-            {
-                buf->append(line);
-                buf->append("\n");
-                if(col_num >= 0)
-                {
-                    for(int j = 0; j < (col_num - 1); j++)
-                    {
-                        buf->append(" ");
-                    }
-                    buf->append("^\n");
-                }
-            }
-            buf->appendFormat("%s ERROR in \"%s\" on %d:%d: %s\n", type_str, filename, line_num, col_num, err->message);
-            const Traceback* traceback = err->getTraceback();
-            if(traceback)
-            {
-                buf->appendFormat("Traceback:\n");
-                traceback_to_string((const Traceback*)err->getTraceback(), buf);
-            }
-            if(buf->failed())
-            {
-                buf->destroy();
-                return NULL;
-            }
-            return buf->getStringAndDestroy();
         }
 
         void releaseAllocated(void* ptr)
@@ -11856,7 +12199,7 @@ struct Context
 
         bool setGlobalConstant(const char* name, Object obj)
         {
-            return global_store_set(this->global_store, name, obj);
+            return this->global_store->set(name, obj);
         }
 
         Object getObject(const char* name)
@@ -11876,7 +12219,7 @@ struct Context
             else if(symbol->type == SYMBOL_APE_GLOBAL)
             {
                 bool ok = false;
-                res = global_store_get_object_at(this->global_store, symbol->index, &ok);
+                res = this->global_store->getObjectAt(symbol->index, &ok);
                 if(!ok)
                 {
                     m_errors.addFormat(APE_ERROR_USER, Position::invalid(), "Failed to get global object at %d", symbol->index);
@@ -11896,6 +12239,23 @@ struct Context
             return this->makeNamedNativeFunction("", fn, data);
         }
 };
+
+
+
+//impl::traceback
+bool Traceback::append(VM* vm)
+{
+    for(int i = vm->frames_count - 1; i >= 0; i--)
+    {
+        Frame* frame = &vm->frames[i];
+        bool ok = this->append(object_get_function_name(frame->function), frame_src_position(frame));
+        if(!ok)
+        {
+            return false;
+        }
+    }
+    return true;
+}
 
 //impl::object
 ObjectData* Object::allocObjectData(GCMemory* mem, ObjectType t)
@@ -12824,7 +13184,7 @@ void object_to_string(Object obj, StringBuffer* buf, bool quote_str)
                 if(traceback)
                 {
                     buf->append("Traceback:\n");
-                    traceback_to_string(traceback, buf);
+                    traceback->toString(buf);
                 }
             }
             break;
@@ -12834,27 +13194,6 @@ void object_to_string(Object obj, StringBuffer* buf, bool quote_str)
             }
             break;
     }
-}
-
-bool traceback_to_string(const Traceback* traceback, StringBuffer* buf)
-{
-    int i;
-    int depth;
-    depth = traceback->items->count();
-    for(i = 0; i < depth; i++)
-    {
-        TracebackItem* item = (TracebackItem*)traceback->items->get(i);
-        const char* filename = traceback_item_get_filepath(item);
-        if(item->pos.line >= 0 && item->pos.column >= 0)
-        {
-            buf->appendFormat("%s in %s on %d:%d\n", item->function_name, filename, item->pos.line, item->pos.column);
-        }
-        else
-        {
-            buf->appendFormat("%s\n", item->function_name);
-        }
-    }
-    return !buf->failed();
 }
 
 
@@ -12951,21 +13290,6 @@ static OpcodeDefinition g_definitions[OPCODE_MAX + 1] =
 };
 
 
-#if 0
-Object ape_object_to_object(Object obj)
-{
-    return (Object){ .handle = obj._internal };
-}
-
-Object object_to_ape_object(Object obj)
-{
-    return (Object){ ._internal = obj.handle };
-}
-
-#else
-    #define ape_object_to_object(o) o
-    #define object_to_ape_object(o) o
-#endif
 
 char* ape_stringf(Allocator* alloc, const char* format, ...)
 {
@@ -13288,9 +13612,6 @@ bool kg_streq(const char* a, const char* b)
     return strcmp(a, b) == 0;
 }
 
-
-
-
 CompiledFile* compiled_file_make(Allocator* alloc, const char* path)
 {
     CompiledFile* file = alloc->allocate<CompiledFile>();
@@ -13348,196 +13669,7 @@ void compiled_file_destroy(CompiledFile* file)
     file->m_alloc->release(file);
 }
 
-GlobalStore* global_store_make(Allocator* alloc, GCMemory* mem)
-{
-    int i;
-    bool ok;
-    const char* name;
-    Object builtin;
-    GlobalStore* store;
-    store = alloc->allocate<GlobalStore>();
-    if(!store)
-    {
-        return NULL;
-    }
-    memset(store, 0, sizeof(GlobalStore));
-    store->m_alloc = alloc;
-    store->symbols = Dictionary::make(alloc, Symbol::callback_copy, Symbol::callback_destroy);
-    if(!store->symbols)
-    {
-        goto err;
-    }
-    store->objects = Array::make<Object>(alloc);
-    if(!store->objects)
-    {
-        goto err;
-    }
-
-    if(mem)
-    {
-        for(i = 0; i < builtins_count(); i++)
-        {
-            name = builtins_get_name(i);
-            builtin = Object::makeNativeFunctionMemory(mem, name, builtins_get_fn(i), NULL, 0);
-            if(builtin.isNull())
-            {
-                goto err;
-            }
-            ok = global_store_set(store, name, builtin);
-            if(!ok)
-            {
-                goto err;
-            }
-        }
-    }
-
-    return store;
-err:
-    global_store_destroy(store);
-    return NULL;
-}
-
-void global_store_destroy(GlobalStore* store)
-{
-    if(!store)
-    {
-        return;
-    }
-    store->symbols->destroyWithItems();
-    Array::destroy(store->objects);
-    store->m_alloc->release(store);
-}
-
-const Symbol* global_store_get_symbol(GlobalStore* store, const char* name)
-{
-    return (Symbol*)store->symbols->get(name);
-}
-
-Object global_store_get_object(GlobalStore* store, const char* name)
-{
-    const Symbol* symbol = global_store_get_symbol(store, name);
-    if(!symbol)
-    {
-        return Object::makeNull();
-    }
-    APE_ASSERT(symbol->type == SYMBOL_APE_GLOBAL);
-    Object* res = (Object*)store->objects->get(symbol->index);
-    return *res;
-}
-
-bool global_store_set(GlobalStore* store, const char* name, Object object)
-{
-    int ix;
-    bool ok;
-    Symbol* symbol;
-    const Symbol* existing_symbol;
-    existing_symbol = global_store_get_symbol(store, name);
-    if(existing_symbol)
-    {
-        ok = store->objects->set(existing_symbol->index, &object);
-        return ok;
-    }
-    ix = store->objects->count();
-    ok = store->objects->add(&object);
-    if(!ok)
-    {
-        return false;
-    }
-    symbol = Symbol::make(store->m_alloc, name, SYMBOL_APE_GLOBAL, ix, false);
-    if(!symbol)
-    {
-        goto err;
-    }
-    ok = store->symbols->set(name, symbol);
-    if(!ok)
-    {
-        symbol->destroy();
-        goto err;
-    }
-    return true;
-err:
-    store->objects->pop(NULL);
-    return false;
-}
-
-Object global_store_get_object_at(GlobalStore* store, int ix, bool* out_ok)
-{
-    Object* res = (Object*)store->objects->get(ix);
-    if(!res)
-    {
-        *out_ok = false;
-        return Object::makeNull();
-    }
-    *out_ok = true;
-    return *res;
-}
-
-bool global_store_set_object_at(GlobalStore* store, int ix, Object object)
-{
-    bool ok = store->objects->set(ix, &object);
-    return ok;
-}
-
-Object* global_store_get_object_data(GlobalStore* store)
-{
-    return (Object*)store->objects->data();
-}
-
-int global_store_get_object_count(GlobalStore* store)
-{
-    return store->objects->count();
-}
-
-
-
 // INTERNAL
-BlockScope* block_scope_make(Allocator* alloc, int offset)
-{
-    BlockScope* new_scope;
-    new_scope = alloc->allocate<BlockScope>();
-    if(!new_scope)
-    {
-        return NULL;
-    }
-    memset(new_scope, 0, sizeof(BlockScope));
-    new_scope->m_alloc = alloc;
-    new_scope->store = Dictionary::make(alloc, Symbol::callback_copy, Symbol::callback_destroy);
-    if(!new_scope->store)
-    {
-        block_scope_destroy(new_scope);
-        return NULL;
-    }
-    new_scope->num_definitions = 0;
-    new_scope->offset = offset;
-    return new_scope;
-}
-
-void block_scope_destroy(BlockScope* scope)
-{
-    scope->store->destroyWithItems();
-    scope->m_alloc->release(scope);
-}
-
-BlockScope* block_scope_copy(BlockScope* scope)
-{
-    BlockScope* copy;
-    copy = scope->m_alloc->allocate<BlockScope>();
-    if(!copy)
-    {
-        return NULL;
-    }
-    memset(copy, 0, sizeof(BlockScope));
-    copy->m_alloc = scope->m_alloc;
-    copy->num_definitions = scope->num_definitions;
-    copy->offset = scope->offset;
-    copy->store = scope->store->copyWithItems();
-    if(!copy->store)
-    {
-        block_scope_destroy(copy);
-        return NULL;
-    }
-    return copy;
-}
 
 
 
@@ -14078,7 +14210,7 @@ void object_data_deinit(ObjectData* data)
         case APE_OBJECT_ERROR:
         {
             data->mem->m_alloc->release(data->error.message);
-            traceback_destroy(data->error.traceback);
+            data->error.traceback->destroy();
             break;
         }
         default:
@@ -15108,96 +15240,7 @@ bool object_data_string_reserve_capacity(ObjectData* data, int capacity)
 }
 
 
-Traceback* traceback_make(Allocator* alloc)
-{
-    Traceback* traceback = alloc->allocate<Traceback>();
-    if(!traceback)
-    {
-        return NULL;
-    }
-    memset(traceback, 0, sizeof(Traceback));
-    traceback->m_alloc = alloc;
-    traceback->items = Array::make<TracebackItem>(alloc);
-    if(!traceback->items)
-    {
-        traceback_destroy(traceback);
-        return NULL;
-    }
-    return traceback;
-}
 
-void traceback_destroy(Traceback* traceback)
-{
-    if(!traceback)
-    {
-        return;
-    }
-    for(int i = 0; i < traceback->items->count(); i++)
-    {
-        TracebackItem* item = (TracebackItem*)traceback->items->get(i);
-        traceback->m_alloc->release(item->function_name);
-    }
-    Array::destroy(traceback->items);
-    traceback->m_alloc->release(traceback);
-}
-
-bool traceback_append(Traceback* traceback, const char* function_name, Position pos)
-{
-    TracebackItem item;
-    item.function_name = ape_strdup(traceback->m_alloc, function_name);
-    if(!item.function_name)
-    {
-        return false;
-    }
-    item.pos = pos;
-    bool ok = traceback->items->add(&item);
-    if(!ok)
-    {
-        traceback->m_alloc->release(item.function_name);
-        return false;
-    }
-    return true;
-}
-
-bool traceback_append_from_vm(Traceback* traceback, VM* vm)
-{
-    for(int i = vm->frames_count - 1; i >= 0; i--)
-    {
-        Frame* frame = &vm->frames[i];
-        bool ok = traceback_append(traceback, object_get_function_name(frame->function), frame_src_position(frame));
-        if(!ok)
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
-
-
-const char* traceback_item_get_line(TracebackItem* item)
-{
-    if(!item->pos.file)
-    {
-        return NULL;
-    }
-    PtrArray* lines = item->pos.file->lines;
-    if(item->pos.line >= lines->count())
-    {
-        return NULL;
-    }
-    const char* line = (const char*)lines->get(item->pos.line);
-    return line;
-}
-
-const char* traceback_item_get_filepath(TracebackItem* item)
-{
-    if(!item->pos.file)
-    {
-        return NULL;
-    }
-    return item->pos.file->path;
-}
 
 bool frame_init(Frame* frame, Object function_obj, int base_pointer)
 {
@@ -15269,7 +15312,7 @@ Position frame_src_position(const Frame* frame)
 // Ape
 //-----------------------------------------------------------------------------
 
-
+//apefuncs
 
 void ape_program_destroy(Program* program)
 {
@@ -15490,70 +15533,6 @@ bool ape_object_map_has_key(Object ape_object, const char* key)
 // Ape traceback
 //-----------------------------------------------------------------------------
 
-int ape_traceback_get_depth(const Traceback* ape_traceback)
-{
-    const Traceback* traceback = (const Traceback*)ape_traceback;
-    return traceback->items->count();
-}
-
-const char* ape_traceback_get_filepath(const Traceback* ape_traceback, int depth)
-{
-    const Traceback* traceback = (const Traceback*)ape_traceback;
-    TracebackItem* item = (TracebackItem*)traceback->items->get(depth);
-    if(!item)
-    {
-        return NULL;
-    }
-    return traceback_item_get_filepath(item);
-}
-
-const char* ape_traceback_get_line(const Traceback* ape_traceback, int depth)
-{
-    const Traceback* traceback = (const Traceback*)ape_traceback;
-    TracebackItem* item = (TracebackItem*)traceback->items->get(depth);
-    if(!item)
-    {
-        return NULL;
-    }
-    return traceback_item_get_line(item);
-}
-
-int ape_traceback_get_line_number(const Traceback* ape_traceback, int depth)
-{
-    const Traceback* traceback = (const Traceback*)ape_traceback;
-    TracebackItem* item = (TracebackItem*)traceback->items->get(depth);
-    if(!item)
-    {
-        return -1;
-    }
-    return item->pos.line;
-}
-
-int ape_traceback_get_column_number(const Traceback* ape_traceback, int depth)
-{
-    const Traceback* traceback = (const Traceback*)ape_traceback;
-    TracebackItem* item = (TracebackItem*)traceback->items->get(depth);
-    if(!item)
-    {
-        return -1;
-    }
-    return item->pos.column;
-}
-
-const char* ape_traceback_get_function_name(const Traceback* ape_traceback, int depth)
-{
-    const Traceback* traceback;
-    TracebackItem* item;
-    traceback = (const Traceback*)ape_traceback;
-    item = (TracebackItem*)traceback->items->get(depth);
-    if(!item)
-    {
-        return "";
-    }
-    return item->function_name;
-}
-
-
 Object ape_native_fn_wrapper(VM* vm, void* data, int argc, Object* args)
 {
     Object res;
@@ -15654,46 +15633,6 @@ void ape_free(void* pctx, void* ptr)
     ctx->custom_allocator.release( ptr);
 }
 
-#if __has_include(<dirent.h>)
-#else
-    #define CORE_NODIRENT
-#endif
-
-
-#if 0
-    #define CHECK_ARGS(vm, generate_error, argc, args, ...) \
-        check_args( \
-            (vm), \
-            (generate_error), \
-            (argc), \
-            (args),  \
-            (sizeof((ObjectType[]){ __VA_ARGS__ }) / sizeof(ObjectType)), \
-            ((ObjectType*)((ObjectType[]){ __VA_ARGS__ })) \
-        )
-#else
-    #define CHECK_ARGS(vm, generate_error, argc, args, ...) \
-        check_args( \
-            (vm), \
-            (generate_error), \
-            (argc), \
-            (args),  \
-            (sizeof((int[]){ __VA_ARGS__ }) / sizeof(int)), \
-            typargs_to_array(__VA_ARGS__, -1) \
-        )
-#endif
-
-//Object object_make_native_function(GCMemory* mem, const char* name, NativeFNCallback fn, void* data, int data_len);
-#define make_fn_data(vm, name, fnc, dataptr, datasize) \
-    Object::makeNativeFunctionMemory(vm->mem, name, fnc, dataptr, datasize)
-
-#define make_fn(vm, name, fnc) \
-    make_fn_data(vm, name, fnc, NULL, 0)
-
-#define make_fn_entry_data(vm, map, name, fnc, dataptr, datasize) \
-    ape_object_set_map_value(map, name, make_fn(vm, name, fnc))
-
-#define make_fn_entry(vm, map, name, fnc) \
-    make_fn_entry_data(vm, map, name, fnc, NULL, 0)
 
 
 static ObjectType* typargs_to_array(int first, ...)
@@ -17083,7 +17022,7 @@ static void setup_namespace(VM* vm, const char* nsname, NatFunc_t* fnarray)
     {
         make_fn_entry(vm, map, fnarray[i].name, fnarray[i].fn);
     }
-    global_store_set(vm->global_store, nsname, map);
+    vm->global_store->set(nsname, map);
 }
 
 void builtins_install(VM* vm)
@@ -17129,11 +17068,6 @@ NativeFNCallback builtin_get_object(ObjectType objt, const char* idxname)
     }
     return NULL;
 }
-
-#if __has_include(<readline/readline.h>)
-#else
-    #define NO_READLINE
-#endif
 
 enum
 {
@@ -17243,9 +17177,17 @@ static void print_errors(Context* ctx)
     cn = ctx->errorCount();
     for (i = 0; i < cn; i++)
     {
+        auto buf = StringBuffer::make(&ctx->m_alloc);
         err = ctx->getError(i);
-        err_str = ctx->serializeError(err);
-        fprintf(stderr, "%s", err_str);
+        if(err->serialize(buf))
+        {
+            fprintf(stderr, "%s", buf->string());
+        }
+        else
+        {
+            fprintf(stderr, "ErrorList::Error::serialize() failed");
+        }
+        buf->destroy();
         ctx->releaseAllocated(err_str);
     }
 }

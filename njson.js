@@ -1,10 +1,7 @@
 
 JSON = {}
 Fiber = {}
-Fiber.abort = function(msg)
-{
-    println("!!!fail!!!");
-}
+
 
 JSON["isWhiteSpace"] = function(c)
 {
@@ -86,7 +83,7 @@ JSON["parseNumber"] = function (state)
     {
         state.m_index++;
     }
-    return (state.m_source.substring(startIndex, state.m_index)).toNumber();
+    return new Number(state.m_source.substring(startIndex, state.m_index));
 };
 
 JSON["parseString"] = function(state, quote)
@@ -222,12 +219,10 @@ JSON["parse"] = function(str)
     state.m_index = 0;
     state.nfirstchars = "-0123456789.";
     state.nchars = "-0123456789.eE";
-    //println(JSON)
-    r = JSON["parseValue"](state);
-    println(state);
-    return r
+    return JSON["parseValue"](state);
 };
 
+println = console.log
 src = "[1, 2, 3, {\"name\": \"john doe\", \"flags\": [4, 5, 6]}]";
 println("------------")
 println(JSON["parse"](src));
