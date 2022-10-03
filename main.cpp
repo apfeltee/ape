@@ -179,92 +179,6 @@ enum ObjectType
 };
 
 
-enum TokenType
-{
-    TOKEN_INVALID = 0,
-    TOKEN_EOF,
-
-    // Operators
-    TOKEN_ASSIGN,
-
-    TOKEN_PLUS_ASSIGN,
-    TOKEN_MINUS_ASSIGN,
-    TOKEN_ASTERISK_ASSIGN,
-    TOKEN_SLASH_ASSIGN,
-    TOKEN_PERCENT_ASSIGN,
-    TOKEN_BIT_AND_ASSIGN,
-    TOKEN_BIT_OR_ASSIGN,
-    TOKEN_BIT_XOR_ASSIGN,
-    TOKEN_LSHIFT_ASSIGN,
-    TOKEN_RSHIFT_ASSIGN,
-
-    TOKEN_QUESTION,
-
-    TOKEN_PLUS,
-    TOKEN_PLUS_PLUS,
-    TOKEN_MINUS,
-    TOKEN_MINUS_MINUS,
-    TOKEN_BANG,
-    TOKEN_ASTERISK,
-    TOKEN_SLASH,
-
-    TOKEN_LT,
-    TOKEN_LTE,
-    TOKEN_GT,
-    TOKEN_GTE,
-
-    TOKEN_EQ,
-    TOKEN_NOT_EQ,
-
-    TOKEN_AND,
-    TOKEN_OR,
-
-    TOKEN_BIT_AND,
-    TOKEN_BIT_OR,
-    TOKEN_BIT_XOR,
-    TOKEN_LSHIFT,
-    TOKEN_RSHIFT,
-
-    // Delimiters
-    TOKEN_COMMA,
-    TOKEN_SEMICOLON,
-    TOKEN_COLON,
-    TOKEN_LPAREN,
-    TOKEN_RPAREN,
-    TOKEN_LBRACE,
-    TOKEN_RBRACE,
-    TOKEN_LBRACKET,
-    TOKEN_RBRACKET,
-    TOKEN_DOT,
-    TOKEN_PERCENT,
-
-    // Keywords
-    TOKEN_FUNCTION,
-    TOKEN_CONST,
-    TOKEN_VAR,
-    TOKEN_TRUE,
-    TOKEN_FALSE,
-    TOKEN_IF,
-    TOKEN_ELSE,
-    TOKEN_RETURN,
-    TOKEN_WHILE,
-    TOKEN_BREAK,
-    TOKEN_FOR,
-    TOKEN_IN,
-    TOKEN_CONTINUE,
-    TOKEN_NULL,
-    TOKEN_IMPORT,
-    TOKEN_RECOVER,
-
-    // Identifiers and literals
-    TOKEN_IDENT,
-    TOKEN_NUMBER,
-    TOKEN_STRING,
-    TOKEN_TEMPLATE_STRING,
-
-    TOKEN_TYPE_MAX
-};
-
 
 enum Operator
 {
@@ -416,7 +330,6 @@ enum Precedence
 using opcode_t = uint8_t;
 
 
-enum /**/TokenType;
 enum /**/Operator;
 enum /**/SymbolType;
 enum /**/ObjectType;
@@ -676,8 +589,6 @@ const char *operator_to_string(Operator op);
 const char *expression_type_to_string(Expr_type type);
 void code_to_string(uint8_t *code, Position *source_positions, size_t code_size, StringBuffer *res);
 void object_to_string(Object obj, StringBuffer *buf, bool quote_str);
-
-const char *token_type_to_string(TokenType type);
 
 
 
@@ -2710,13 +2621,123 @@ struct ErrorList
 struct Token
 {
     public:
-        TokenType type;
+        enum class Type
+        {
+            TOKEN_INVALID = 0,
+            TOKEN_EOF,
+
+            // Operators
+            TOKEN_ASSIGN,
+
+            TOKEN_PLUS_ASSIGN,
+            TOKEN_MINUS_ASSIGN,
+            TOKEN_ASTERISK_ASSIGN,
+            TOKEN_SLASH_ASSIGN,
+            TOKEN_PERCENT_ASSIGN,
+            TOKEN_BIT_AND_ASSIGN,
+            TOKEN_BIT_OR_ASSIGN,
+            TOKEN_BIT_XOR_ASSIGN,
+            TOKEN_LSHIFT_ASSIGN,
+            TOKEN_RSHIFT_ASSIGN,
+
+            TOKEN_QUESTION,
+
+            TOKEN_PLUS,
+            TOKEN_PLUS_PLUS,
+            TOKEN_MINUS,
+            TOKEN_MINUS_MINUS,
+            TOKEN_BANG,
+            TOKEN_ASTERISK,
+            TOKEN_SLASH,
+
+            TOKEN_LT,
+            TOKEN_LTE,
+            TOKEN_GT,
+            TOKEN_GTE,
+
+            TOKEN_EQ,
+            TOKEN_NOT_EQ,
+
+            TOKEN_AND,
+            TOKEN_OR,
+
+            TOKEN_BIT_AND,
+            TOKEN_BIT_OR,
+            TOKEN_BIT_XOR,
+            TOKEN_LSHIFT,
+            TOKEN_RSHIFT,
+
+            // Delimiters
+            TOKEN_COMMA,
+            TOKEN_SEMICOLON,
+            TOKEN_COLON,
+            TOKEN_LPAREN,
+            TOKEN_RPAREN,
+            TOKEN_LBRACE,
+            TOKEN_RBRACE,
+            TOKEN_LBRACKET,
+            TOKEN_RBRACKET,
+            TOKEN_DOT,
+            TOKEN_PERCENT,
+
+            // Keywords
+            TOKEN_FUNCTION,
+            TOKEN_CONST,
+            TOKEN_VAR,
+            TOKEN_TRUE,
+            TOKEN_FALSE,
+            TOKEN_IF,
+            TOKEN_ELSE,
+            TOKEN_RETURN,
+            TOKEN_WHILE,
+            TOKEN_BREAK,
+            TOKEN_FOR,
+            TOKEN_IN,
+            TOKEN_CONTINUE,
+            TOKEN_NULL,
+            TOKEN_IMPORT,
+            TOKEN_RECOVER,
+
+            // Identifiers and literals
+            TOKEN_IDENT,
+            TOKEN_NUMBER,
+            TOKEN_STRING,
+            TOKEN_TEMPLATE_STRING,
+
+            TOKEN_TYPE_MAX
+        };
+
+    public:
+
+        static const char* typeToString(Token::Type type)
+        {
+            static const char* g_type_names[] =
+            {
+                "ILLEGAL",  "EOF",   "=",        "+=",     "-=",
+                "*=",       "/=",    "%=",       "&=",     "|=",
+                "^=",       "<<=",   ">>=",      "?",      "+",
+                "++",       "-",     "--",       "!",      "*",
+                "/",        "<",     "<=",       ">",      ">=",
+                "==",       "!=",    "&&",       "||",     "&",
+                "|",        "^",     "<<",       ">>",     ",",
+                ";",        ":",     "(",        ")",      "{",
+                "}",        "[",     "]",        ".",      "%",
+                "FUNCTION", "CONST", "VAR",      "TRUE",   "FALSE",
+                "IF",       "ELSE",  "RETURN",   "WHILE",  "BREAK",
+                "FOR",      "IN",    "CONTINUE", "NULL",   "IMPORT",
+                "RECOVER",  "IDENT", "NUMBER",   "STRING", "TEMPLATE_STRING",
+            };
+            return g_type_names[int(type)];
+        }
+
+    public:
+        Type type;
         const char* literal;
         int len;
         Position pos;
 
     public:
-        void init(TokenType type, const char* literal, int len)
+        void init(Type type, const char* literal, int len)
         {
             this->type = type;
             this->literal = literal;
@@ -2790,9 +2811,9 @@ struct Lexer: public Allocator::Allocated
             m_continuetplstring = false;
 
             memset(&m_prevstate, 0, sizeof(m_prevstate));
-            m_prevtoken.init(TOKEN_INVALID, NULL, 0);
-            m_currtoken.init(TOKEN_INVALID, NULL, 0);
-            m_peektoken.init(TOKEN_INVALID, NULL, 0);
+            m_prevtoken.init(Token::Type::TOKEN_INVALID, NULL, 0);
+            m_currtoken.init(Token::Type::TOKEN_INVALID, NULL, 0);
+            m_peektoken.init(Token::Type::TOKEN_INVALID, NULL, 0);
 
             return true;
         }
@@ -2807,12 +2828,12 @@ struct Lexer: public Allocator::Allocated
             m_continuetplstring = true;
         }
 
-        bool currentTokenIs(TokenType type)
+        bool currentTokenIs(Token::Type type)
         {
             return m_currtoken.type == type;
         }
 
-        bool peekTokenIs(TokenType type)
+        bool peekTokenIs(Token::Type type)
         {
             return m_peektoken.type == type;
         }
@@ -2827,14 +2848,14 @@ struct Lexer: public Allocator::Allocated
 
         bool previousToken()
         {
-            if(m_prevtoken.type == TOKEN_INVALID)
+            if(m_prevtoken.type == Token::Type::TOKEN_INVALID)
             {
                 return false;
             }
 
             m_peektoken = m_currtoken;
             m_currtoken = m_prevtoken;
-            m_prevtoken.init(TOKEN_INVALID, NULL, 0);
+            m_prevtoken.init(Token::Type::TOKEN_INVALID, NULL, 0);
 
             m_currchar = m_prevstate.currchar;
             m_currcolumn = m_prevstate.currcolumn;
@@ -2861,7 +2882,7 @@ struct Lexer: public Allocator::Allocated
                 }
 
                 Token out_tok;
-                out_tok.type = TOKEN_INVALID;
+                out_tok.type = Token::Type::TOKEN_INVALID;
                 out_tok.literal = m_sourcedata + m_position;
                 out_tok.len = 1;
                 out_tok.pos = Position::make(m_compiledfile, m_currline, m_currcolumn);
@@ -2871,18 +2892,18 @@ struct Lexer: public Allocator::Allocated
                 switch(c)
                 {
                     case '\0':
-                        out_tok.init(TOKEN_EOF, "EOF", 3);
+                        out_tok.init(Token::Type::TOKEN_EOF, "EOF", 3);
                         break;
                     case '=':
                     {
                         if(this->peekChar() == '=')
                         {
-                            out_tok.init(TOKEN_EQ, "==", 2);
+                            out_tok.init(Token::Type::TOKEN_EQ, "==", 2);
                             this->readChar();
                         }
                         else
                         {
-                            out_tok.init(TOKEN_ASSIGN, "=", 1);
+                            out_tok.init(Token::Type::TOKEN_ASSIGN, "=", 1);
                         }
                         break;
                     }
@@ -2890,17 +2911,17 @@ struct Lexer: public Allocator::Allocated
                     {
                         if(this->peekChar() == '&')
                         {
-                            out_tok.init(TOKEN_AND, "&&", 2);
+                            out_tok.init(Token::Type::TOKEN_AND, "&&", 2);
                             this->readChar();
                         }
                         else if(this->peekChar() == '=')
                         {
-                            out_tok.init(TOKEN_BIT_AND_ASSIGN, "&=", 2);
+                            out_tok.init(Token::Type::TOKEN_BIT_AND_ASSIGN, "&=", 2);
                             this->readChar();
                         }
                         else
                         {
-                            out_tok.init(TOKEN_BIT_AND, "&", 1);
+                            out_tok.init(Token::Type::TOKEN_BIT_AND, "&", 1);
                         }
                         break;
                     }
@@ -2908,17 +2929,17 @@ struct Lexer: public Allocator::Allocated
                     {
                         if(this->peekChar() == '|')
                         {
-                            out_tok.init(TOKEN_OR, "||", 2);
+                            out_tok.init(Token::Type::TOKEN_OR, "||", 2);
                             this->readChar();
                         }
                         else if(this->peekChar() == '=')
                         {
-                            out_tok.init(TOKEN_BIT_OR_ASSIGN, "|=", 2);
+                            out_tok.init(Token::Type::TOKEN_BIT_OR_ASSIGN, "|=", 2);
                             this->readChar();
                         }
                         else
                         {
-                            out_tok.init(TOKEN_BIT_OR, "|", 1);
+                            out_tok.init(Token::Type::TOKEN_BIT_OR, "|", 1);
                         }
                         break;
                     }
@@ -2926,12 +2947,12 @@ struct Lexer: public Allocator::Allocated
                     {
                         if(this->peekChar() == '=')
                         {
-                            out_tok.init(TOKEN_BIT_XOR_ASSIGN, "^=", 2);
+                            out_tok.init(Token::Type::TOKEN_BIT_XOR_ASSIGN, "^=", 2);
                             this->readChar();
                         }
                         else
                         {
-                            out_tok.init(TOKEN_BIT_XOR, "^", 1);
+                            out_tok.init(Token::Type::TOKEN_BIT_XOR, "^", 1);
                             break;
                         }
                         break;
@@ -2940,17 +2961,17 @@ struct Lexer: public Allocator::Allocated
                     {
                         if(this->peekChar() == '=')
                         {
-                            out_tok.init(TOKEN_PLUS_ASSIGN, "+=", 2);
+                            out_tok.init(Token::Type::TOKEN_PLUS_ASSIGN, "+=", 2);
                             this->readChar();
                         }
                         else if(this->peekChar() == '+')
                         {
-                            out_tok.init(TOKEN_PLUS_PLUS, "++", 2);
+                            out_tok.init(Token::Type::TOKEN_PLUS_PLUS, "++", 2);
                             this->readChar();
                         }
                         else
                         {
-                            out_tok.init(TOKEN_PLUS, "+", 1);
+                            out_tok.init(Token::Type::TOKEN_PLUS, "+", 1);
                             break;
                         }
                         break;
@@ -2959,17 +2980,17 @@ struct Lexer: public Allocator::Allocated
                     {
                         if(this->peekChar() == '=')
                         {
-                            out_tok.init(TOKEN_MINUS_ASSIGN, "-=", 2);
+                            out_tok.init(Token::Type::TOKEN_MINUS_ASSIGN, "-=", 2);
                             this->readChar();
                         }
                         else if(this->peekChar() == '-')
                         {
-                            out_tok.init(TOKEN_MINUS_MINUS, "--", 2);
+                            out_tok.init(Token::Type::TOKEN_MINUS_MINUS, "--", 2);
                             this->readChar();
                         }
                         else
                         {
-                            out_tok.init(TOKEN_MINUS, "-", 1);
+                            out_tok.init(Token::Type::TOKEN_MINUS, "-", 1);
                             break;
                         }
                         break;
@@ -2978,12 +2999,12 @@ struct Lexer: public Allocator::Allocated
                     {
                         if(this->peekChar() == '=')
                         {
-                            out_tok.init(TOKEN_NOT_EQ, "!=", 2);
+                            out_tok.init(Token::Type::TOKEN_NOT_EQ, "!=", 2);
                             this->readChar();
                         }
                         else
                         {
-                            out_tok.init(TOKEN_BANG, "!", 1);
+                            out_tok.init(Token::Type::TOKEN_BANG, "!", 1);
                         }
                         break;
                     }
@@ -2991,12 +3012,12 @@ struct Lexer: public Allocator::Allocated
                     {
                         if(this->peekChar() == '=')
                         {
-                            out_tok.init(TOKEN_ASTERISK_ASSIGN, "*=", 2);
+                            out_tok.init(Token::Type::TOKEN_ASTERISK_ASSIGN, "*=", 2);
                             this->readChar();
                         }
                         else
                         {
-                            out_tok.init(TOKEN_ASTERISK, "*", 1);
+                            out_tok.init(Token::Type::TOKEN_ASTERISK, "*", 1);
                             break;
                         }
                         break;
@@ -3014,12 +3035,12 @@ struct Lexer: public Allocator::Allocated
                         }
                         else if(this->peekChar() == '=')
                         {
-                            out_tok.init(TOKEN_SLASH_ASSIGN, "/=", 2);
+                            out_tok.init(Token::Type::TOKEN_SLASH_ASSIGN, "/=", 2);
                             this->readChar();
                         }
                         else
                         {
-                            out_tok.init(TOKEN_SLASH, "/", 1);
+                            out_tok.init(Token::Type::TOKEN_SLASH, "/", 1);
                             break;
                         }
                         break;
@@ -3028,7 +3049,7 @@ struct Lexer: public Allocator::Allocated
                     {
                         if(this->peekChar() == '=')
                         {
-                            out_tok.init(TOKEN_LTE, "<=", 2);
+                            out_tok.init(Token::Type::TOKEN_LTE, "<=", 2);
                             this->readChar();
                         }
                         else if(this->peekChar() == '<')
@@ -3036,17 +3057,17 @@ struct Lexer: public Allocator::Allocated
                             this->readChar();
                             if(this->peekChar() == '=')
                             {
-                                out_tok.init(TOKEN_LSHIFT_ASSIGN, "<<=", 3);
+                                out_tok.init(Token::Type::TOKEN_LSHIFT_ASSIGN, "<<=", 3);
                                 this->readChar();
                             }
                             else
                             {
-                                out_tok.init(TOKEN_LSHIFT, "<<", 2);
+                                out_tok.init(Token::Type::TOKEN_LSHIFT, "<<", 2);
                             }
                         }
                         else
                         {
-                            out_tok.init(TOKEN_LT, "<", 1);
+                            out_tok.init(Token::Type::TOKEN_LT, "<", 1);
                             break;
                         }
                         break;
@@ -3055,7 +3076,7 @@ struct Lexer: public Allocator::Allocated
                     {
                         if(this->peekChar() == '=')
                         {
-                            out_tok.init(TOKEN_GTE, ">=", 2);
+                            out_tok.init(Token::Type::TOKEN_GTE, ">=", 2);
                             this->readChar();
                         }
                         else if(this->peekChar() == '>')
@@ -3063,63 +3084,63 @@ struct Lexer: public Allocator::Allocated
                             this->readChar();
                             if(this->peekChar() == '=')
                             {
-                                out_tok.init(TOKEN_RSHIFT_ASSIGN, ">>=", 3);
+                                out_tok.init(Token::Type::TOKEN_RSHIFT_ASSIGN, ">>=", 3);
                                 this->readChar();
                             }
                             else
                             {
-                                out_tok.init(TOKEN_RSHIFT, ">>", 2);
+                                out_tok.init(Token::Type::TOKEN_RSHIFT, ">>", 2);
                             }
                         }
                         else
                         {
-                            out_tok.init(TOKEN_GT, ">", 1);
+                            out_tok.init(Token::Type::TOKEN_GT, ">", 1);
                         }
                         break;
                     }
                     case ',':
-                        out_tok.init(TOKEN_COMMA, ",", 1);
+                        out_tok.init(Token::Type::TOKEN_COMMA, ",", 1);
                         break;
                     case ';':
-                        out_tok.init(TOKEN_SEMICOLON, ";", 1);
+                        out_tok.init(Token::Type::TOKEN_SEMICOLON, ";", 1);
                         break;
                     case ':':
-                        out_tok.init(TOKEN_COLON, ":", 1);
+                        out_tok.init(Token::Type::TOKEN_COLON, ":", 1);
                         break;
                     case '(':
-                        out_tok.init(TOKEN_LPAREN, "(", 1);
+                        out_tok.init(Token::Type::TOKEN_LPAREN, "(", 1);
                         break;
                     case ')':
-                        out_tok.init(TOKEN_RPAREN, ")", 1);
+                        out_tok.init(Token::Type::TOKEN_RPAREN, ")", 1);
                         break;
                     case '{':
-                        out_tok.init(TOKEN_LBRACE, "{", 1);
+                        out_tok.init(Token::Type::TOKEN_LBRACE, "{", 1);
                         break;
                     case '}':
-                        out_tok.init(TOKEN_RBRACE, "}", 1);
+                        out_tok.init(Token::Type::TOKEN_RBRACE, "}", 1);
                         break;
                     case '[':
-                        out_tok.init(TOKEN_LBRACKET, "[", 1);
+                        out_tok.init(Token::Type::TOKEN_LBRACKET, "[", 1);
                         break;
                     case ']':
-                        out_tok.init(TOKEN_RBRACKET, "]", 1);
+                        out_tok.init(Token::Type::TOKEN_RBRACKET, "]", 1);
                         break;
                     case '.':
-                        out_tok.init(TOKEN_DOT, ".", 1);
+                        out_tok.init(Token::Type::TOKEN_DOT, ".", 1);
                         break;
                     case '?':
-                        out_tok.init(TOKEN_QUESTION, "?", 1);
+                        out_tok.init(Token::Type::TOKEN_QUESTION, "?", 1);
                         break;
                     case '%':
                     {
                         if(this->peekChar() == '=')
                         {
-                            out_tok.init(TOKEN_PERCENT_ASSIGN, "%=", 2);
+                            out_tok.init(Token::Type::TOKEN_PERCENT_ASSIGN, "%=", 2);
                             this->readChar();
                         }
                         else
                         {
-                            out_tok.init(TOKEN_PERCENT, "%", 1);
+                            out_tok.init(Token::Type::TOKEN_PERCENT, "%", 1);
                             break;
                         }
                         break;
@@ -3128,14 +3149,14 @@ struct Lexer: public Allocator::Allocated
                     {
                         this->readChar();
                         int len;
-                        const char* str = this->readString('"', false, NULL, &len);
+                        const char* str = this->scanString('"', false, NULL, &len);
                         if(str)
                         {
-                            out_tok.init(TOKEN_STRING, str, len);
+                            out_tok.init(Token::Type::TOKEN_STRING, str, len);
                         }
                         else
                         {
-                            out_tok.init(TOKEN_INVALID, NULL, 0);
+                            out_tok.init(Token::Type::TOKEN_INVALID, NULL, 0);
                         }
                         break;
                     }
@@ -3143,14 +3164,14 @@ struct Lexer: public Allocator::Allocated
                     {
                         this->readChar();
                         int len;
-                        const char* str = this->readString('\'', false, NULL, &len);
+                        const char* str = this->scanString('\'', false, NULL, &len);
                         if(str)
                         {
-                            out_tok.init(TOKEN_STRING, str, len);
+                            out_tok.init(Token::Type::TOKEN_STRING, str, len);
                         }
                         else
                         {
-                            out_tok.init(TOKEN_INVALID, NULL, 0);
+                            out_tok.init(Token::Type::TOKEN_INVALID, NULL, 0);
                         }
                         break;
                     }
@@ -3162,21 +3183,21 @@ struct Lexer: public Allocator::Allocated
                         }
                         int len;
                         bool template_found = false;
-                        const char* str = this->readString('`', true, &template_found, &len);
+                        const char* str = this->scanString('`', true, &template_found, &len);
                         if(str)
                         {
                             if(template_found)
                             {
-                                out_tok.init(TOKEN_TEMPLATE_STRING, str, len);
+                                out_tok.init(Token::Type::TOKEN_TEMPLATE_STRING, str, len);
                             }
                             else
                             {
-                                out_tok.init(TOKEN_STRING, str, len);
+                                out_tok.init(Token::Type::TOKEN_STRING, str, len);
                             }
                         }
                         else
                         {
-                            out_tok.init(TOKEN_INVALID, NULL, 0);
+                            out_tok.init(Token::Type::TOKEN_INVALID, NULL, 0);
                         }
                         break;
                     }
@@ -3185,16 +3206,16 @@ struct Lexer: public Allocator::Allocated
                         if(is_letter(m_currchar))
                         {
                             int ident_len = 0;
-                            const char* ident = this->readIdentifier(&ident_len);
-                            TokenType type = lookup_identifier(ident, ident_len);
+                            const char* ident = this->scanIdentifier(&ident_len);
+                            Token::Type type = lookup_identifier(ident, ident_len);
                             out_tok.init(type, ident, ident_len);
                             return out_tok;
                         }
                         else if(is_digit(m_currchar))
                         {
                             int number_len = 0;
-                            const char* number = this->readNumber(&number_len);
-                            out_tok.init(TOKEN_NUMBER, number, number_len);
+                            const char* number = this->scanNumber(&number_len);
+                            out_tok.init(Token::Type::TOKEN_NUMBER, number, number_len);
                             return out_tok;
                         }
                         break;
@@ -3203,14 +3224,14 @@ struct Lexer: public Allocator::Allocated
                 this->readChar();
                 if(this->failed())
                 {
-                    out_tok.init(TOKEN_INVALID, NULL, 0);
+                    out_tok.init(Token::Type::TOKEN_INVALID, NULL, 0);
                 }
                 m_continuetplstring = false;
                 return out_tok;
             }
         }
 
-        bool expectCurrent(const char* from, TokenType type)
+        bool expectCurrent(const char* from, Token::Type type)
         {
             if(this->failed())
             {
@@ -3219,8 +3240,8 @@ struct Lexer: public Allocator::Allocated
 
             if(!this->currentTokenIs(type))
             {
-                const char* expected_type_str = token_type_to_string(type);
-                const char* actual_type_str = token_type_to_string(m_currtoken.type);
+                const char* expected_type_str = Token::typeToString(type);
+                const char* actual_type_str = Token::typeToString(m_currtoken.type);
                 m_errors->addFormat(APE_ERROR_PARSING, m_currtoken.pos,
                                   "from %s: expected current token to be \"%s\", got \"%s\" instead", from, expected_type_str, actual_type_str);
                 return false;
@@ -3297,7 +3318,7 @@ struct Lexer: public Allocator::Allocated
             return false;
         }
 
-        const char* readIdentifier(int* out_len)
+        const char* scanIdentifier(int* out_len)
         {
             int position = m_position;
             int len = 0;
@@ -3319,7 +3340,7 @@ struct Lexer: public Allocator::Allocated
             return m_sourcedata + position;
         }
 
-        const char* readNumber(int* out_len)
+        const char* scanNumber(int* out_len)
         {
             char allowed[] = ".xXaAbBcCdDeEfF";
             int position = m_position;
@@ -3332,94 +3353,32 @@ struct Lexer: public Allocator::Allocated
             return m_sourcedata + position;
         }
 
-        //TODO: string parsing is kind of broken! in particular, it will not parse "\\", or "\""
-        const char* readString(const char delimiter, bool is_template, bool* out_template_found, int* out_len)
-        {
-            enum{ kTempSize = 512 };
-            int len;
-            int last;
-            int startpos;
-            bool escaped;
-            //char tmpsrc[kTempSize + 1] = {0};
-            *out_len = 0;
-            escaped = false;
-            startpos = m_position;
-            //fprintf(stderr, "in readString(startpos=%d) ...\n", startpos);
-            while(true)
-            {
-                if(m_currchar == '\0')
-                {
-                    m_errors->addFormat(APE_ERROR_PARSING, m_currtoken.pos, "unexpected EOF while parsing string");
-                    return NULL;
-                }
-                if((m_currchar == delimiter) && !escaped)
-                {
-                    break;
-                }
-                if(is_template && !escaped && (m_currchar == '$') && (this->peekChar() == '{'))
-                {
-                    *out_template_found = true;
-                    break;
-                }
-                escaped = false;
-                if((m_currchar == '\\'))
-                {
-                    /* this is completely ridiculous */
-                    //fprintf(stderr, "peekChar: 0=<%c>, 1=<%c>, 2=<%c>\n", peekChar(0), peekChar(1), peekChar(2));
-                    if((peekChar(0) == '\\') && (peekChar(1) == delimiter))
-                    {
-                        //fprintf(stderr, "readString: endscan!\n");
-                        readChar();
-                        readChar();
-                        goto endscan;
-                    }
-                    if((peekChar() != '\\'))
-                    {
-                        escaped = true;
-                    }
-                }
-                this->readChar();
-            }
-            endscan:
-            /* this is also ridiculous. */
-            last = m_sourcedata[startpos];
-            //memset(tmpsrc, 0, kTempSize);
-            //memcpy(tmpsrc, &m_sourcedata[startpos], m_position-startpos);
-            //fprintf(stderr, "readString(delimiter=(%d)%c, start=%d, source=<<<%s>>>): last=%c\n", delimiter, delimiter, startpos, tmpsrc, last);
-            if(last == delimiter)
-            {
-                //fprintf(stderr, "readString(): reading remainder...\n");
-                this->readChar();
-            }
-            len = m_position - startpos;
-            *out_len = len;
-            return m_sourcedata + startpos;
-        }
+        #include "scanstring.h"
 
-        static TokenType lookup_identifier(const char* ident, int len)
+        static Token::Type lookup_identifier(const char* ident, int len)
         {
             static struct
             {
                 const char* value;
                 int len;
-                TokenType type;
+                Token::Type type;
             } keywords[] = {
-                { "function", 8, TOKEN_FUNCTION },
-                { "const", 5, TOKEN_CONST },
-                { "var", 3, TOKEN_VAR },
-                { "true", 4, TOKEN_TRUE },
-                { "false", 5, TOKEN_FALSE },
-                { "if", 2, TOKEN_IF },
-                { "else", 4, TOKEN_ELSE },
-                { "return", 6, TOKEN_RETURN },
-                { "while", 5, TOKEN_WHILE },
-                { "break", 5, TOKEN_BREAK },
-                { "for", 3, TOKEN_FOR },
-                { "in", 2, TOKEN_IN },
-                { "continue", 8, TOKEN_CONTINUE },
-                { "null", 4, TOKEN_NULL },
-                { "import", 6, TOKEN_IMPORT },
-                { "recover", 7, TOKEN_RECOVER },
+                { "function", 8, Token::Type::TOKEN_FUNCTION },
+                { "const", 5, Token::Type::TOKEN_CONST },
+                { "var", 3, Token::Type::TOKEN_VAR },
+                { "true", 4, Token::Type::TOKEN_TRUE },
+                { "false", 5, Token::Type::TOKEN_FALSE },
+                { "if", 2, Token::Type::TOKEN_IF },
+                { "else", 4, Token::Type::TOKEN_ELSE },
+                { "return", 6, Token::Type::TOKEN_RETURN },
+                { "while", 5, Token::Type::TOKEN_WHILE },
+                { "break", 5, Token::Type::TOKEN_BREAK },
+                { "for", 3, Token::Type::TOKEN_FOR },
+                { "in", 2, Token::Type::TOKEN_IN },
+                { "continue", 8, Token::Type::TOKEN_CONTINUE },
+                { "null", 4, Token::Type::TOKEN_NULL },
+                { "import", 6, Token::Type::TOKEN_IMPORT },
+                { "recover", 7, Token::Type::TOKEN_RECOVER },
             };
 
             for(int i = 0; i < APE_ARRAY_LEN(keywords); i++)
@@ -3430,7 +3389,7 @@ struct Lexer: public Allocator::Allocated
                 }
             }
 
-            return TOKEN_IDENT;
+            return Token::Type::TOKEN_IDENT;
         }
 
         void skipSpace()
@@ -4664,152 +4623,152 @@ struct Expression: public Allocator::Allocated
 struct Parser: public Allocator::Allocated
 {
     public:
-        static Precedence get_precedence(TokenType tk)
+        static Precedence get_precedence(Token::Type tk)
         {
             switch(tk)
             {
-                case TOKEN_EQ:
+                case Token::Type::TOKEN_EQ:
                     return PRECEDENCE_EQUALS;
-                case TOKEN_NOT_EQ:
+                case Token::Type::TOKEN_NOT_EQ:
                     return PRECEDENCE_EQUALS;
-                case TOKEN_LT:
+                case Token::Type::TOKEN_LT:
                     return PRECEDENCE_LESSGREATER;
-                case TOKEN_LTE:
+                case Token::Type::TOKEN_LTE:
                     return PRECEDENCE_LESSGREATER;
-                case TOKEN_GT:
+                case Token::Type::TOKEN_GT:
                     return PRECEDENCE_LESSGREATER;
-                case TOKEN_GTE:
+                case Token::Type::TOKEN_GTE:
                     return PRECEDENCE_LESSGREATER;
-                case TOKEN_PLUS:
+                case Token::Type::TOKEN_PLUS:
                     return PRECEDENCE_SUM;
-                case TOKEN_MINUS:
+                case Token::Type::TOKEN_MINUS:
                     return PRECEDENCE_SUM;
-                case TOKEN_SLASH:
+                case Token::Type::TOKEN_SLASH:
                     return PRECEDENCE_PRODUCT;
-                case TOKEN_ASTERISK:
+                case Token::Type::TOKEN_ASTERISK:
                     return PRECEDENCE_PRODUCT;
-                case TOKEN_PERCENT:
+                case Token::Type::TOKEN_PERCENT:
                     return PRECEDENCE_PRODUCT;
-                case TOKEN_LPAREN:
+                case Token::Type::TOKEN_LPAREN:
                     return PRECEDENCE_POSTFIX;
-                case TOKEN_LBRACKET:
+                case Token::Type::TOKEN_LBRACKET:
                     return PRECEDENCE_POSTFIX;
-                case TOKEN_ASSIGN:
+                case Token::Type::TOKEN_ASSIGN:
                     return PRECEDENCE_ASSIGN;
-                case TOKEN_PLUS_ASSIGN:
+                case Token::Type::TOKEN_PLUS_ASSIGN:
                     return PRECEDENCE_ASSIGN;
-                case TOKEN_MINUS_ASSIGN:
+                case Token::Type::TOKEN_MINUS_ASSIGN:
                     return PRECEDENCE_ASSIGN;
-                case TOKEN_ASTERISK_ASSIGN:
+                case Token::Type::TOKEN_ASTERISK_ASSIGN:
                     return PRECEDENCE_ASSIGN;
-                case TOKEN_SLASH_ASSIGN:
+                case Token::Type::TOKEN_SLASH_ASSIGN:
                     return PRECEDENCE_ASSIGN;
-                case TOKEN_PERCENT_ASSIGN:
+                case Token::Type::TOKEN_PERCENT_ASSIGN:
                     return PRECEDENCE_ASSIGN;
-                case TOKEN_BIT_AND_ASSIGN:
+                case Token::Type::TOKEN_BIT_AND_ASSIGN:
                     return PRECEDENCE_ASSIGN;
-                case TOKEN_BIT_OR_ASSIGN:
+                case Token::Type::TOKEN_BIT_OR_ASSIGN:
                     return PRECEDENCE_ASSIGN;
-                case TOKEN_BIT_XOR_ASSIGN:
+                case Token::Type::TOKEN_BIT_XOR_ASSIGN:
                     return PRECEDENCE_ASSIGN;
-                case TOKEN_LSHIFT_ASSIGN:
+                case Token::Type::TOKEN_LSHIFT_ASSIGN:
                     return PRECEDENCE_ASSIGN;
-                case TOKEN_RSHIFT_ASSIGN:
+                case Token::Type::TOKEN_RSHIFT_ASSIGN:
                     return PRECEDENCE_ASSIGN;
-                case TOKEN_DOT:
+                case Token::Type::TOKEN_DOT:
                     return PRECEDENCE_POSTFIX;
-                case TOKEN_AND:
+                case Token::Type::TOKEN_AND:
                     return PRECEDENCE_LOGICAL_AND;
-                case TOKEN_OR:
+                case Token::Type::TOKEN_OR:
                     return PRECEDENCE_LOGICAL_OR;
-                case TOKEN_BIT_OR:
+                case Token::Type::TOKEN_BIT_OR:
                     return PRECEDENCE_BIT_OR;
-                case TOKEN_BIT_XOR:
+                case Token::Type::TOKEN_BIT_XOR:
                     return PRECEDENCE_BIT_XOR;
-                case TOKEN_BIT_AND:
+                case Token::Type::TOKEN_BIT_AND:
                     return PRECEDENCE_BIT_AND;
-                case TOKEN_LSHIFT:
+                case Token::Type::TOKEN_LSHIFT:
                     return PRECEDENCE_SHIFT;
-                case TOKEN_RSHIFT:
+                case Token::Type::TOKEN_RSHIFT:
                     return PRECEDENCE_SHIFT;
-                case TOKEN_QUESTION:
+                case Token::Type::TOKEN_QUESTION:
                     return PRECEDENCE_TERNARY;
-                case TOKEN_PLUS_PLUS:
+                case Token::Type::TOKEN_PLUS_PLUS:
                     return PRECEDENCE_INCDEC;
-                case TOKEN_MINUS_MINUS:
+                case Token::Type::TOKEN_MINUS_MINUS:
                     return PRECEDENCE_INCDEC;
                 default:
                     return PRECEDENCE_LOWEST;
             }
         }
 
-        static Operator token_to_operator(TokenType tk)
+        static Operator token_to_operator(Token::Type tk)
         {
             switch(tk)
             {
-                case TOKEN_ASSIGN:
+                case Token::Type::TOKEN_ASSIGN:
                     return OPERATOR_ASSIGN;
-                case TOKEN_PLUS:
+                case Token::Type::TOKEN_PLUS:
                     return OPERATOR_PLUS;
-                case TOKEN_MINUS:
+                case Token::Type::TOKEN_MINUS:
                     return OPERATOR_MINUS;
-                case TOKEN_BANG:
+                case Token::Type::TOKEN_BANG:
                     return OPERATOR_BANG;
-                case TOKEN_ASTERISK:
+                case Token::Type::TOKEN_ASTERISK:
                     return OPERATOR_ASTERISK;
-                case TOKEN_SLASH:
+                case Token::Type::TOKEN_SLASH:
                     return OPERATOR_SLASH;
-                case TOKEN_LT:
+                case Token::Type::TOKEN_LT:
                     return OPERATOR_LT;
-                case TOKEN_LTE:
+                case Token::Type::TOKEN_LTE:
                     return OPERATOR_LTE;
-                case TOKEN_GT:
+                case Token::Type::TOKEN_GT:
                     return OPERATOR_GT;
-                case TOKEN_GTE:
+                case Token::Type::TOKEN_GTE:
                     return OPERATOR_GTE;
-                case TOKEN_EQ:
+                case Token::Type::TOKEN_EQ:
                     return OPERATOR_EQ;
-                case TOKEN_NOT_EQ:
+                case Token::Type::TOKEN_NOT_EQ:
                     return OPERATOR_NOT_EQ;
-                case TOKEN_PERCENT:
+                case Token::Type::TOKEN_PERCENT:
                     return OPERATOR_MODULUS;
-                case TOKEN_AND:
+                case Token::Type::TOKEN_AND:
                     return OPERATOR_LOGICAL_AND;
-                case TOKEN_OR:
+                case Token::Type::TOKEN_OR:
                     return OPERATOR_LOGICAL_OR;
-                case TOKEN_PLUS_ASSIGN:
+                case Token::Type::TOKEN_PLUS_ASSIGN:
                     return OPERATOR_PLUS;
-                case TOKEN_MINUS_ASSIGN:
+                case Token::Type::TOKEN_MINUS_ASSIGN:
                     return OPERATOR_MINUS;
-                case TOKEN_ASTERISK_ASSIGN:
+                case Token::Type::TOKEN_ASTERISK_ASSIGN:
                     return OPERATOR_ASTERISK;
-                case TOKEN_SLASH_ASSIGN:
+                case Token::Type::TOKEN_SLASH_ASSIGN:
                     return OPERATOR_SLASH;
-                case TOKEN_PERCENT_ASSIGN:
+                case Token::Type::TOKEN_PERCENT_ASSIGN:
                     return OPERATOR_MODULUS;
-                case TOKEN_BIT_AND_ASSIGN:
+                case Token::Type::TOKEN_BIT_AND_ASSIGN:
                     return OPERATOR_BIT_AND;
-                case TOKEN_BIT_OR_ASSIGN:
+                case Token::Type::TOKEN_BIT_OR_ASSIGN:
                     return OPERATOR_BIT_OR;
-                case TOKEN_BIT_XOR_ASSIGN:
+                case Token::Type::TOKEN_BIT_XOR_ASSIGN:
                     return OPERATOR_BIT_XOR;
-                case TOKEN_LSHIFT_ASSIGN:
+                case Token::Type::TOKEN_LSHIFT_ASSIGN:
                     return OPERATOR_LSHIFT;
-                case TOKEN_RSHIFT_ASSIGN:
+                case Token::Type::TOKEN_RSHIFT_ASSIGN:
                     return OPERATOR_RSHIFT;
-                case TOKEN_BIT_AND:
+                case Token::Type::TOKEN_BIT_AND:
                     return OPERATOR_BIT_AND;
-                case TOKEN_BIT_OR:
+                case Token::Type::TOKEN_BIT_OR:
                     return OPERATOR_BIT_OR;
-                case TOKEN_BIT_XOR:
+                case Token::Type::TOKEN_BIT_XOR:
                     return OPERATOR_BIT_XOR;
-                case TOKEN_LSHIFT:
+                case Token::Type::TOKEN_LSHIFT:
                     return OPERATOR_LSHIFT;
-                case TOKEN_RSHIFT:
+                case Token::Type::TOKEN_RSHIFT:
                     return OPERATOR_RSHIFT;
-                case TOKEN_PLUS_PLUS:
+                case Token::Type::TOKEN_PLUS_PLUS:
                     return OPERATOR_PLUS;
-                case TOKEN_MINUS_MINUS:
+                case Token::Type::TOKEN_MINUS_MINUS:
                     return OPERATOR_MINUS;
                 default:
                 {
@@ -4887,7 +4846,7 @@ struct Parser: public Allocator::Allocated
         static Expression* wrap_expression_in_function_call(Allocator* alloc, Expression* expr, const char* function_name)
         {
             Token fn_token;
-            fn_token.init(TOKEN_IDENT, function_name, (int)strlen(function_name));
+            fn_token.init(Token::Type::TOKEN_IDENT, function_name, (int)strlen(function_name));
             fn_token.pos = expr->pos;
 
             Ident* ident = Ident::make(alloc, fn_token);
@@ -4949,56 +4908,56 @@ struct Parser: public Allocator::Allocated
             parser->config = config;
             parser->m_errors = errors;
 
-            parser->right_assoc_parse_fns[TOKEN_IDENT] = parse_identifier;
-            parser->right_assoc_parse_fns[TOKEN_NUMBER] = parse_number_literal;
-            parser->right_assoc_parse_fns[TOKEN_TRUE] = parse_bool_literal;
-            parser->right_assoc_parse_fns[TOKEN_FALSE] = parse_bool_literal;
-            parser->right_assoc_parse_fns[TOKEN_STRING] = parse_string_literal;
-            parser->right_assoc_parse_fns[TOKEN_TEMPLATE_STRING] = parse_template_string_literal;
-            parser->right_assoc_parse_fns[TOKEN_NULL] = parse_null_literal;
-            parser->right_assoc_parse_fns[TOKEN_BANG] = parse_prefix_expression;
-            parser->right_assoc_parse_fns[TOKEN_MINUS] = parse_prefix_expression;
-            parser->right_assoc_parse_fns[TOKEN_LPAREN] = parse_grouped_expression;
-            parser->right_assoc_parse_fns[TOKEN_FUNCTION] = parse_function_literal;
-            parser->right_assoc_parse_fns[TOKEN_LBRACKET] = parse_array_literal;
-            parser->right_assoc_parse_fns[TOKEN_LBRACE] = parse_map_literal;
-            parser->right_assoc_parse_fns[TOKEN_PLUS_PLUS] = parse_incdec_prefix_expression;
-            parser->right_assoc_parse_fns[TOKEN_MINUS_MINUS] = parse_incdec_prefix_expression;
-            parser->left_assoc_parse_fns[TOKEN_PLUS] = parse_infix_expression;
-            parser->left_assoc_parse_fns[TOKEN_MINUS] = parse_infix_expression;
-            parser->left_assoc_parse_fns[TOKEN_SLASH] = parse_infix_expression;
-            parser->left_assoc_parse_fns[TOKEN_ASTERISK] = parse_infix_expression;
-            parser->left_assoc_parse_fns[TOKEN_PERCENT] = parse_infix_expression;
-            parser->left_assoc_parse_fns[TOKEN_EQ] = parse_infix_expression;
-            parser->left_assoc_parse_fns[TOKEN_NOT_EQ] = parse_infix_expression;
-            parser->left_assoc_parse_fns[TOKEN_LT] = parse_infix_expression;
-            parser->left_assoc_parse_fns[TOKEN_LTE] = parse_infix_expression;
-            parser->left_assoc_parse_fns[TOKEN_GT] = parse_infix_expression;
-            parser->left_assoc_parse_fns[TOKEN_GTE] = parse_infix_expression;
-            parser->left_assoc_parse_fns[TOKEN_LPAREN] = parse_call_expression;
-            parser->left_assoc_parse_fns[TOKEN_LBRACKET] = parse_index_expression;
-            parser->left_assoc_parse_fns[TOKEN_ASSIGN] = parse_assign_expression;
-            parser->left_assoc_parse_fns[TOKEN_PLUS_ASSIGN] = parse_assign_expression;
-            parser->left_assoc_parse_fns[TOKEN_MINUS_ASSIGN] = parse_assign_expression;
-            parser->left_assoc_parse_fns[TOKEN_SLASH_ASSIGN] = parse_assign_expression;
-            parser->left_assoc_parse_fns[TOKEN_ASTERISK_ASSIGN] = parse_assign_expression;
-            parser->left_assoc_parse_fns[TOKEN_PERCENT_ASSIGN] = parse_assign_expression;
-            parser->left_assoc_parse_fns[TOKEN_BIT_AND_ASSIGN] = parse_assign_expression;
-            parser->left_assoc_parse_fns[TOKEN_BIT_OR_ASSIGN] = parse_assign_expression;
-            parser->left_assoc_parse_fns[TOKEN_BIT_XOR_ASSIGN] = parse_assign_expression;
-            parser->left_assoc_parse_fns[TOKEN_LSHIFT_ASSIGN] = parse_assign_expression;
-            parser->left_assoc_parse_fns[TOKEN_RSHIFT_ASSIGN] = parse_assign_expression;
-            parser->left_assoc_parse_fns[TOKEN_DOT] = parse_dot_expression;
-            parser->left_assoc_parse_fns[TOKEN_AND] = parse_logical_expression;
-            parser->left_assoc_parse_fns[TOKEN_OR] = parse_logical_expression;
-            parser->left_assoc_parse_fns[TOKEN_BIT_AND] = parse_infix_expression;
-            parser->left_assoc_parse_fns[TOKEN_BIT_OR] = parse_infix_expression;
-            parser->left_assoc_parse_fns[TOKEN_BIT_XOR] = parse_infix_expression;
-            parser->left_assoc_parse_fns[TOKEN_LSHIFT] = parse_infix_expression;
-            parser->left_assoc_parse_fns[TOKEN_RSHIFT] = parse_infix_expression;
-            parser->left_assoc_parse_fns[TOKEN_QUESTION] = parse_ternary_expression;
-            parser->left_assoc_parse_fns[TOKEN_PLUS_PLUS] = parse_incdec_postfix_expression;
-            parser->left_assoc_parse_fns[TOKEN_MINUS_MINUS] = parse_incdec_postfix_expression;
+            parser->right_assoc_parse_fns[int(Token::Type::TOKEN_IDENT)] = parse_identifier;
+            parser->right_assoc_parse_fns[int(Token::Type::TOKEN_NUMBER)] = parse_number_literal;
+            parser->right_assoc_parse_fns[int(Token::Type::TOKEN_TRUE)] = parse_bool_literal;
+            parser->right_assoc_parse_fns[int(Token::Type::TOKEN_FALSE)] = parse_bool_literal;
+            parser->right_assoc_parse_fns[int(Token::Type::TOKEN_STRING)] = parse_string_literal;
+            parser->right_assoc_parse_fns[int(Token::Type::TOKEN_TEMPLATE_STRING)] = parse_template_string_literal;
+            parser->right_assoc_parse_fns[int(Token::Type::TOKEN_NULL)] = parse_null_literal;
+            parser->right_assoc_parse_fns[int(Token::Type::TOKEN_BANG)] = parse_prefix_expression;
+            parser->right_assoc_parse_fns[int(Token::Type::TOKEN_MINUS)] = parse_prefix_expression;
+            parser->right_assoc_parse_fns[int(Token::Type::TOKEN_LPAREN)] = parse_grouped_expression;
+            parser->right_assoc_parse_fns[int(Token::Type::TOKEN_FUNCTION)] = parse_function_literal;
+            parser->right_assoc_parse_fns[int(Token::Type::TOKEN_LBRACKET)] = parse_array_literal;
+            parser->right_assoc_parse_fns[int(Token::Type::TOKEN_LBRACE)] = parse_map_literal;
+            parser->right_assoc_parse_fns[int(Token::Type::TOKEN_PLUS_PLUS)] = parse_incdec_prefix_expression;
+            parser->right_assoc_parse_fns[int(Token::Type::TOKEN_MINUS_MINUS)] = parse_incdec_prefix_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_PLUS)] = parse_infix_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_MINUS)] = parse_infix_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_SLASH)] = parse_infix_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_ASTERISK)] = parse_infix_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_PERCENT)] = parse_infix_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_EQ)] = parse_infix_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_NOT_EQ)] = parse_infix_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_LT)] = parse_infix_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_LTE)] = parse_infix_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_GT)] = parse_infix_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_GTE)] = parse_infix_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_LPAREN)] = parse_call_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_LBRACKET)] = parse_index_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_ASSIGN)] = parse_assign_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_PLUS_ASSIGN)] = parse_assign_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_MINUS_ASSIGN)] = parse_assign_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_SLASH_ASSIGN)] = parse_assign_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_ASTERISK_ASSIGN)] = parse_assign_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_PERCENT_ASSIGN)] = parse_assign_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_BIT_AND_ASSIGN)] = parse_assign_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_BIT_OR_ASSIGN)] = parse_assign_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_BIT_XOR_ASSIGN)] = parse_assign_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_LSHIFT_ASSIGN)] = parse_assign_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_RSHIFT_ASSIGN)] = parse_assign_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_DOT)] = parse_dot_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_AND)] = parse_logical_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_OR)] = parse_logical_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_BIT_AND)] = parse_infix_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_BIT_OR)] = parse_infix_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_BIT_XOR)] = parse_infix_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_LSHIFT)] = parse_infix_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_RSHIFT)] = parse_infix_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_QUESTION)] = parse_ternary_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_PLUS_PLUS)] = parse_incdec_postfix_expression;
+            parser->left_assoc_parse_fns[int(Token::Type::TOKEN_MINUS_MINUS)] = parse_incdec_postfix_expression;
 
             parser->depth = 0;
 
@@ -5009,8 +4968,8 @@ struct Parser: public Allocator::Allocated
         const Config* config;
         Lexer lexer;
         ErrorList* m_errors;
-        RightAssocParseFNCallback right_assoc_parse_fns[TOKEN_TYPE_MAX];
-        LeftAssocParseFNCallback left_assoc_parse_fns[TOKEN_TYPE_MAX];
+        RightAssocParseFNCallback right_assoc_parse_fns[int(Token::Type::TOKEN_TYPE_MAX)];
+        LeftAssocParseFNCallback left_assoc_parse_fns[int(Token::Type::TOKEN_TYPE_MAX)];
         int depth;
 
     public:
@@ -5041,9 +5000,9 @@ struct Parser: public Allocator::Allocated
             {
                 return NULL;
             }
-            while(!this->lexer.currentTokenIs( TOKEN_EOF))
+            while(!this->lexer.currentTokenIs( Token::Type::TOKEN_EOF))
             {
-                if(this->lexer.currentTokenIs(TOKEN_SEMICOLON))
+                if(this->lexer.currentTokenIs(Token::Type::TOKEN_SEMICOLON))
                 {
                     this->lexer.nextToken();
                     continue;
@@ -5079,40 +5038,40 @@ struct Parser: public Allocator::Allocated
             Expression* res = NULL;
             switch(p->lexer.m_currtoken.type)
             {
-                case TOKEN_VAR:
-                case TOKEN_CONST:
+                case Token::Type::TOKEN_VAR:
+                case Token::Type::TOKEN_CONST:
                 {
                     res = parse_define_statement(p);
                     break;
                 }
-                case TOKEN_IF:
+                case Token::Type::TOKEN_IF:
                 {
                     res = parse_if_statement(p);
                     break;
                 }
-                case TOKEN_RETURN:
+                case Token::Type::TOKEN_RETURN:
                 {
                     res = parse_return_statement(p);
                     break;
                 }
-                case TOKEN_WHILE:
+                case Token::Type::TOKEN_WHILE:
                 {
                     res = parse_while_loop_statement(p);
                     break;
                 }
-                case TOKEN_BREAK:
+                case Token::Type::TOKEN_BREAK:
                 {
                     res = parse_break_statement(p);
                     break;
                 }
-                case TOKEN_FOR:
+                case Token::Type::TOKEN_FOR:
                 {
                     res = parse_for_loop_statement(p);
                     break;
                 }
-                case TOKEN_FUNCTION:
+                case Token::Type::TOKEN_FUNCTION:
                 {
-                    if(p->lexer.peekTokenIs(TOKEN_IDENT))
+                    if(p->lexer.peekTokenIs(Token::Type::TOKEN_IDENT))
                     {
                         res = parse_function_statement(p);
                     }
@@ -5122,7 +5081,7 @@ struct Parser: public Allocator::Allocated
                     }
                     break;
                 }
-                case TOKEN_LBRACE:
+                case Token::Type::TOKEN_LBRACE:
                 {
                     if(p->config->repl_mode && p->depth == 0)
                     {
@@ -5134,17 +5093,17 @@ struct Parser: public Allocator::Allocated
                     }
                     break;
                 }
-                case TOKEN_CONTINUE:
+                case Token::Type::TOKEN_CONTINUE:
                 {
                     res = parse_continue_statement(p);
                     break;
                 }
-                case TOKEN_IMPORT:
+                case Token::Type::TOKEN_IMPORT:
                 {
                     res = parse_import_statement(p);
                     break;
                 }
-                case TOKEN_RECOVER:
+                case Token::Type::TOKEN_RECOVER:
                 {
                     res = parse_recover_statement(p);
                     break;
@@ -5170,9 +5129,9 @@ struct Parser: public Allocator::Allocated
             Expression* res;
             name_ident = NULL;
             value = NULL;
-            assignable = p->lexer.currentTokenIs(TOKEN_VAR);
+            assignable = p->lexer.currentTokenIs(Token::Type::TOKEN_VAR);
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent("parse_define_statement", TOKEN_IDENT))
+            if(!p->lexer.expectCurrent("parse_define_statement", Token::Type::TOKEN_IDENT))
             {
                 goto err;
             }
@@ -5182,7 +5141,7 @@ struct Parser: public Allocator::Allocated
                 goto err;
             }
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent("parse_define_statement", TOKEN_ASSIGN))
+            if(!p->lexer.expectCurrent("parse_define_statement", Token::Type::TOKEN_ASSIGN))
             {
                 goto err;
             }
@@ -5228,7 +5187,7 @@ struct Parser: public Allocator::Allocated
                 goto err;
             }
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent("parse_if_statement", TOKEN_LPAREN))
+            if(!p->lexer.expectCurrent("parse_if_statement", Token::Type::TOKEN_LPAREN))
             {
                 goto err;
             }
@@ -5249,7 +5208,7 @@ struct Parser: public Allocator::Allocated
             {
                 goto err;
             }
-            if(!p->lexer.expectCurrent("parse_if_statement", TOKEN_RPAREN))
+            if(!p->lexer.expectCurrent("parse_if_statement", Token::Type::TOKEN_RPAREN))
             {
                 goto err;
             }
@@ -5259,13 +5218,13 @@ struct Parser: public Allocator::Allocated
             {
                 goto err;
             }
-            while(p->lexer.currentTokenIs(TOKEN_ELSE))
+            while(p->lexer.currentTokenIs(Token::Type::TOKEN_ELSE))
             {
                 p->lexer.nextToken();
-                if(p->lexer.currentTokenIs(TOKEN_IF))
+                if(p->lexer.currentTokenIs(Token::Type::TOKEN_IF))
                 {
                     p->lexer.nextToken();
-                    if(!p->lexer.expectCurrent("parse_if_statement->else if", TOKEN_LPAREN))
+                    if(!p->lexer.expectCurrent("parse_if_statement->else if", Token::Type::TOKEN_LPAREN))
                     {
                         goto err;
                     }
@@ -5286,7 +5245,7 @@ struct Parser: public Allocator::Allocated
                     {
                         goto err;
                     }
-                    if(!p->lexer.expectCurrent("parse_if_statement->else if", TOKEN_RPAREN))
+                    if(!p->lexer.expectCurrent("parse_if_statement->else if", Token::Type::TOKEN_RPAREN))
                     {
                         goto err;
                     }
@@ -5324,7 +5283,7 @@ struct Parser: public Allocator::Allocated
             Expression* res;
             expr = NULL;
             p->lexer.nextToken();
-            if(!p->lexer.currentTokenIs(TOKEN_SEMICOLON) && !p->lexer.currentTokenIs(TOKEN_RBRACE) && !p->lexer.currentTokenIs(TOKEN_EOF))
+            if(!p->lexer.currentTokenIs(Token::Type::TOKEN_SEMICOLON) && !p->lexer.currentTokenIs(Token::Type::TOKEN_RBRACE) && !p->lexer.currentTokenIs(Token::Type::TOKEN_EOF))
             {
                 expr = parse_expression(p, PRECEDENCE_LOWEST);
                 if(!expr)
@@ -5376,7 +5335,7 @@ struct Parser: public Allocator::Allocated
             test = NULL;
             body = NULL;
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent("parse_while_loop_statement", TOKEN_LPAREN))
+            if(!p->lexer.expectCurrent("parse_while_loop_statement", Token::Type::TOKEN_LPAREN))
             {
                 goto err;
             }
@@ -5386,7 +5345,7 @@ struct Parser: public Allocator::Allocated
             {
                 goto err;
             }
-            if(!p->lexer.expectCurrent("parse_while_loop_statement", TOKEN_RPAREN))
+            if(!p->lexer.expectCurrent("parse_while_loop_statement", Token::Type::TOKEN_RPAREN))
             {
                 goto err;
             }
@@ -5443,7 +5402,7 @@ struct Parser: public Allocator::Allocated
             char* processed_name;
             Expression* res;
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent("parse_import_statement", TOKEN_STRING))
+            if(!p->lexer.expectCurrent("parse_import_statement", Token::Type::TOKEN_STRING))
             {
                 return NULL;
             }
@@ -5471,12 +5430,12 @@ struct Parser: public Allocator::Allocated
             error_ident = NULL;
             body = NULL;
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent("parse_recover_statement", TOKEN_LPAREN))
+            if(!p->lexer.expectCurrent("parse_recover_statement", Token::Type::TOKEN_LPAREN))
             {
                 return NULL;
             }
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent("parse_recover_statement", TOKEN_IDENT))
+            if(!p->lexer.expectCurrent("parse_recover_statement", Token::Type::TOKEN_IDENT))
             {
                 return NULL;
             }
@@ -5486,7 +5445,7 @@ struct Parser: public Allocator::Allocated
                 return NULL;
             }
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent("parse_recover_statement", TOKEN_RPAREN))
+            if(!p->lexer.expectCurrent("parse_recover_statement", Token::Type::TOKEN_RPAREN))
             {
                 goto err;
             }
@@ -5511,12 +5470,12 @@ struct Parser: public Allocator::Allocated
         static Expression* parse_for_loop_statement(Parser* p)
         {
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent("parse_for_loop_statement", TOKEN_LPAREN))
+            if(!p->lexer.expectCurrent("parse_for_loop_statement", Token::Type::TOKEN_LPAREN))
             {
                 return NULL;
             }
             p->lexer.nextToken();
-            if(p->lexer.currentTokenIs( TOKEN_IDENT) && p->lexer.peekTokenIs(TOKEN_IN))
+            if(p->lexer.currentTokenIs( Token::Type::TOKEN_IDENT) && p->lexer.peekTokenIs(Token::Type::TOKEN_IN))
             {
                 return parse_foreach(p);
             }
@@ -5537,7 +5496,7 @@ struct Parser: public Allocator::Allocated
                 goto err;
             }
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent("parse_foreach", TOKEN_IN))
+            if(!p->lexer.expectCurrent("parse_foreach", Token::Type::TOKEN_IN))
             {
                 goto err;
             }
@@ -5547,7 +5506,7 @@ struct Parser: public Allocator::Allocated
             {
                 goto err;
             }
-            if(!p->lexer.expectCurrent("parse_foreach", TOKEN_RPAREN))
+            if(!p->lexer.expectCurrent("parse_foreach", Token::Type::TOKEN_RPAREN))
             {
                 goto err;
             }
@@ -5582,7 +5541,7 @@ struct Parser: public Allocator::Allocated
             test = NULL;
             update = NULL;
             body = NULL;
-            if(!p->lexer.currentTokenIs(TOKEN_SEMICOLON))
+            if(!p->lexer.currentTokenIs(Token::Type::TOKEN_SEMICOLON))
             {
                 init = parse_statement(p);
                 if(!init)
@@ -5594,33 +5553,33 @@ struct Parser: public Allocator::Allocated
                     p->m_errors->addFormat(APE_ERROR_PARSING, init->pos, "for loop's init clause should be a define statement or an expression");
                     goto err;
                 }
-                if(!p->lexer.expectCurrent("parse_classic_for_loop->initial", TOKEN_SEMICOLON))
+                if(!p->lexer.expectCurrent("parse_classic_for_loop->initial", Token::Type::TOKEN_SEMICOLON))
                 {
                     goto err;
                 }
             }
             p->lexer.nextToken();
-            if(!p->lexer.currentTokenIs(TOKEN_SEMICOLON))
+            if(!p->lexer.currentTokenIs(Token::Type::TOKEN_SEMICOLON))
             {
                 test = parse_expression(p, PRECEDENCE_LOWEST);
                 if(!test)
                 {
                     goto err;
                 }
-                if(!p->lexer.expectCurrent("parse_classic_for_loop->condition", TOKEN_SEMICOLON))
+                if(!p->lexer.expectCurrent("parse_classic_for_loop->condition", Token::Type::TOKEN_SEMICOLON))
                 {
                     goto err;
                 }
             }
             p->lexer.nextToken();
-            if(!p->lexer.currentTokenIs(TOKEN_RPAREN))
+            if(!p->lexer.currentTokenIs(Token::Type::TOKEN_RPAREN))
             {
                 update = parse_expression(p, PRECEDENCE_LOWEST);
                 if(!update)
                 {
                     goto err;
                 }
-                if(!p->lexer.expectCurrent("parse_classic_for_loop", TOKEN_RPAREN))
+                if(!p->lexer.expectCurrent("parse_classic_for_loop", Token::Type::TOKEN_RPAREN))
                 {
                     goto err;
                 }
@@ -5656,7 +5615,7 @@ struct Parser: public Allocator::Allocated
             name_ident = NULL;
             pos = p->lexer.m_currtoken.pos;
             p->lexer.nextToken();
-            if(!p->lexer.expectCurrent("parse_function_statement", TOKEN_IDENT))
+            if(!p->lexer.expectCurrent("parse_function_statement", Token::Type::TOKEN_IDENT))
             {
                 goto err;
             }
@@ -5696,7 +5655,7 @@ struct Parser: public Allocator::Allocated
             PtrArray* statements;
             Expression* stmt;
             StmtBlock* res;
-            if(!p->lexer.expectCurrent("parse_code_block", TOKEN_LBRACE))
+            if(!p->lexer.expectCurrent("parse_code_block", Token::Type::TOKEN_LBRACE))
             {
                 return NULL;
             }
@@ -5707,14 +5666,14 @@ struct Parser: public Allocator::Allocated
             {
                 goto err;
             }
-            while(!p->lexer.currentTokenIs( TOKEN_RBRACE))
+            while(!p->lexer.currentTokenIs( Token::Type::TOKEN_RBRACE))
             {
-                if(p->lexer.currentTokenIs(TOKEN_EOF))
+                if(p->lexer.currentTokenIs(Token::Type::TOKEN_EOF))
                 {
                     p->m_errors->addError(APE_ERROR_PARSING, p->lexer.m_currtoken.pos, "Unexpected EOF");
                     goto err;
                 }
-                if(p->lexer.currentTokenIs(TOKEN_SEMICOLON))
+                if(p->lexer.currentTokenIs(Token::Type::TOKEN_SEMICOLON))
                 {
                     p->lexer.nextToken();
                     continue;
@@ -5754,12 +5713,12 @@ struct Parser: public Allocator::Allocated
             Expression* left_expr;
             Expression* new_left_expr;
             pos = p->lexer.m_currtoken.pos;
-            if(p->lexer.m_currtoken.type == TOKEN_INVALID)
+            if(p->lexer.m_currtoken.type == Token::Type::TOKEN_INVALID)
             {
                 p->m_errors->addError(APE_ERROR_PARSING, p->lexer.m_currtoken.pos, "Illegal token");
                 return NULL;
             }
-            parse_right_assoc = p->right_assoc_parse_fns[p->lexer.m_currtoken.type];
+            parse_right_assoc = p->right_assoc_parse_fns[int(p->lexer.m_currtoken.type)];
             if(!parse_right_assoc)
             {
                 literal = p->lexer.m_currtoken.copyLiteral(p->m_alloc);
@@ -5773,9 +5732,9 @@ struct Parser: public Allocator::Allocated
                 return NULL;
             }
             left_expr->pos = pos;
-            while(!p->lexer.currentTokenIs(TOKEN_SEMICOLON) && prec < get_precedence(p->lexer.m_currtoken.type))
+            while(!p->lexer.currentTokenIs(Token::Type::TOKEN_SEMICOLON) && prec < get_precedence(p->lexer.m_currtoken.type))
             {
-                parse_left_assoc = p->left_assoc_parse_fns[p->lexer.m_currtoken.type];
+                parse_left_assoc = p->left_assoc_parse_fns[int(p->lexer.m_currtoken.type)];
                 if(!parse_left_assoc)
                 {
                     return left_expr;
@@ -5836,7 +5795,7 @@ struct Parser: public Allocator::Allocated
         static Expression* parse_bool_literal(Parser* p)
         {
             Expression* res;
-            res = Expression::makeBoolLiteral(p->m_alloc, p->lexer.m_currtoken.type == TOKEN_TRUE);
+            res = Expression::makeBoolLiteral(p->m_alloc, p->lexer.m_currtoken.type == Token::Type::TOKEN_TRUE);
             p->lexer.nextToken();
             return res;
         }
@@ -5886,7 +5845,7 @@ struct Parser: public Allocator::Allocated
             }
             p->lexer.nextToken();
 
-            if(!p->lexer.expectCurrent("parse_template_string_literal", TOKEN_LBRACE))
+            if(!p->lexer.expectCurrent("parse_template_string_literal", Token::Type::TOKEN_LBRACE))
             {
                 goto err;
             }
@@ -5922,7 +5881,7 @@ struct Parser: public Allocator::Allocated
             left_add_expr->pos = pos;
             left_string_expr = NULL;
             to_str_call_expr = NULL;
-            if(!p->lexer.expectCurrent("parse_template_string_literal", TOKEN_RBRACE))
+            if(!p->lexer.expectCurrent("parse_template_string_literal", Token::Type::TOKEN_RBRACE))
             {
                 goto err;
             }
@@ -5967,7 +5926,7 @@ struct Parser: public Allocator::Allocated
         {
             PtrArray* array;
             Expression* res;
-            array = parse_expression_list(p, TOKEN_LBRACKET, TOKEN_RBRACKET, true);
+            array = parse_expression_list(p, Token::Type::TOKEN_LBRACKET, Token::Type::TOKEN_RBRACKET, true);
             if(!array)
             {
                 return NULL;
@@ -5997,10 +5956,10 @@ struct Parser: public Allocator::Allocated
                 goto err;
             }
             p->lexer.nextToken();
-            while(!p->lexer.currentTokenIs(TOKEN_RBRACE))
+            while(!p->lexer.currentTokenIs(Token::Type::TOKEN_RBRACE))
             {
                 key = NULL;
-                if(p->lexer.currentTokenIs(TOKEN_IDENT))
+                if(p->lexer.currentTokenIs(Token::Type::TOKEN_IDENT))
                 {
                     str = p->lexer.m_currtoken.copyLiteral(p->m_alloc);
                     key = Expression::makeStringLiteral(p->m_alloc, str);
@@ -6043,7 +6002,7 @@ struct Parser: public Allocator::Allocated
                     goto err;
                 }
 
-                if(!p->lexer.expectCurrent("parse_map_literal", TOKEN_COLON))
+                if(!p->lexer.expectCurrent("parse_map_literal", Token::Type::TOKEN_COLON))
                 {
                     goto err;
                 }
@@ -6062,12 +6021,12 @@ struct Parser: public Allocator::Allocated
                     goto err;
                 }
 
-                if(p->lexer.currentTokenIs(TOKEN_RBRACE))
+                if(p->lexer.currentTokenIs(Token::Type::TOKEN_RBRACE))
                 {
                     break;
                 }
 
-                if(!p->lexer.expectCurrent("parse_map_literal", TOKEN_COMMA))
+                if(!p->lexer.expectCurrent("parse_map_literal", Token::Type::TOKEN_COMMA))
                 {
                     goto err;
                 }
@@ -6138,7 +6097,7 @@ struct Parser: public Allocator::Allocated
             Expression* expr;
             p->lexer.nextToken();
             expr = parse_expression(p, PRECEDENCE_LOWEST);
-            if(!expr || !p->lexer.expectCurrent("parse_grouped_expression", TOKEN_RPAREN))
+            if(!expr || !p->lexer.expectCurrent("parse_grouped_expression", Token::Type::TOKEN_RPAREN))
             {
                 Expression::destroyExpression(expr);
                 return NULL;
@@ -6156,7 +6115,7 @@ struct Parser: public Allocator::Allocated
             p->depth++;
             params = NULL;
             body = NULL;
-            if(p->lexer.currentTokenIs(TOKEN_FUNCTION))
+            if(p->lexer.currentTokenIs(Token::Type::TOKEN_FUNCTION))
             {
                 p->lexer.nextToken();
             }
@@ -6189,17 +6148,17 @@ struct Parser: public Allocator::Allocated
         {
             bool ok;
             Ident* ident;
-            if(!p->lexer.expectCurrent("parse_function_parameters", TOKEN_LPAREN))
+            if(!p->lexer.expectCurrent("parse_function_parameters", Token::Type::TOKEN_LPAREN))
             {
                 return false;
             }
             p->lexer.nextToken();
-            if(p->lexer.currentTokenIs(TOKEN_RPAREN))
+            if(p->lexer.currentTokenIs(Token::Type::TOKEN_RPAREN))
             {
                 p->lexer.nextToken();
                 return true;
             }
-            if(!p->lexer.expectCurrent("parse_function_parameters->first", TOKEN_IDENT))
+            if(!p->lexer.expectCurrent("parse_function_parameters->first", Token::Type::TOKEN_IDENT))
             {
                 return false;
             }
@@ -6215,10 +6174,10 @@ struct Parser: public Allocator::Allocated
                 return false;
             }
             p->lexer.nextToken();
-            while(p->lexer.currentTokenIs(TOKEN_COMMA))
+            while(p->lexer.currentTokenIs(Token::Type::TOKEN_COMMA))
             {
                 p->lexer.nextToken();
-                if(!p->lexer.expectCurrent("parse_function_parameters->next", TOKEN_IDENT))
+                if(!p->lexer.expectCurrent("parse_function_parameters->next", Token::Type::TOKEN_IDENT))
                 {
                     return false;
                 }
@@ -6235,7 +6194,7 @@ struct Parser: public Allocator::Allocated
                 }
                 p->lexer.nextToken();
             }
-            if(!p->lexer.expectCurrent("parse_function_parameters", TOKEN_RPAREN))
+            if(!p->lexer.expectCurrent("parse_function_parameters", Token::Type::TOKEN_RPAREN))
             {
                 return false;
             }
@@ -6250,7 +6209,7 @@ struct Parser: public Allocator::Allocated
             PtrArray* args;
             Expression* res;
             function = left;
-            args = parse_expression_list(p, TOKEN_LPAREN, TOKEN_RPAREN, false);
+            args = parse_expression_list(p, Token::Type::TOKEN_LPAREN, Token::Type::TOKEN_RPAREN, false);
             if(!args)
             {
                 return NULL;
@@ -6264,7 +6223,7 @@ struct Parser: public Allocator::Allocated
             return res;
         }
 
-        static PtrArray* parse_expression_list(Parser* p, TokenType start_token, TokenType end_token, bool trailing_comma_allowed)
+        static PtrArray* parse_expression_list(Parser* p, Token::Type start_token, Token::Type end_token, bool trailing_comma_allowed)
         {
             bool ok;
             PtrArray* res;
@@ -6291,7 +6250,7 @@ struct Parser: public Allocator::Allocated
                 Expression::destroyExpression(arg_expr);
                 goto err;
             }
-            while(p->lexer.currentTokenIs(TOKEN_COMMA))
+            while(p->lexer.currentTokenIs(Token::Type::TOKEN_COMMA))
             {
                 p->lexer.nextToken();
                 if(trailing_comma_allowed && p->lexer.currentTokenIs(end_token))
@@ -6331,7 +6290,7 @@ struct Parser: public Allocator::Allocated
             {
                 return NULL;
             }
-            if(!p->lexer.expectCurrent("parse_index_expression", TOKEN_RBRACKET))
+            if(!p->lexer.expectCurrent("parse_index_expression", Token::Type::TOKEN_RBRACKET))
             {
                 Expression::destroyExpression(index);
                 return NULL;
@@ -6348,7 +6307,7 @@ struct Parser: public Allocator::Allocated
 
         static Expression* parse_assign_expression(Parser* p, Expression* left)
         {
-            TokenType assign_type;
+            Token::Type assign_type;
             Position pos;
             Operator op;
             Expression* source;
@@ -6366,16 +6325,16 @@ struct Parser: public Allocator::Allocated
             }
             switch(assign_type)
             {
-                case TOKEN_PLUS_ASSIGN:
-                case TOKEN_MINUS_ASSIGN:
-                case TOKEN_SLASH_ASSIGN:
-                case TOKEN_ASTERISK_ASSIGN:
-                case TOKEN_PERCENT_ASSIGN:
-                case TOKEN_BIT_AND_ASSIGN:
-                case TOKEN_BIT_OR_ASSIGN:
-                case TOKEN_BIT_XOR_ASSIGN:
-                case TOKEN_LSHIFT_ASSIGN:
-                case TOKEN_RSHIFT_ASSIGN:
+                case Token::Type::TOKEN_PLUS_ASSIGN:
+                case Token::Type::TOKEN_MINUS_ASSIGN:
+                case Token::Type::TOKEN_SLASH_ASSIGN:
+                case Token::Type::TOKEN_ASTERISK_ASSIGN:
+                case Token::Type::TOKEN_PERCENT_ASSIGN:
+                case Token::Type::TOKEN_BIT_AND_ASSIGN:
+                case Token::Type::TOKEN_BIT_OR_ASSIGN:
+                case Token::Type::TOKEN_BIT_XOR_ASSIGN:
+                case Token::Type::TOKEN_LSHIFT_ASSIGN:
+                case Token::Type::TOKEN_RSHIFT_ASSIGN:
                     {
                         op = token_to_operator(assign_type);
                         left_copy = Expression::copyExpression(left);
@@ -6394,7 +6353,7 @@ struct Parser: public Allocator::Allocated
                         source = new_source;
                     }
                     break;
-                case TOKEN_ASSIGN:
+                case Token::Type::TOKEN_ASSIGN:
                     {
                     }
                     break;
@@ -6449,7 +6408,7 @@ struct Parser: public Allocator::Allocated
             {
                 return NULL;
             }
-            if(!p->lexer.expectCurrent("parse_ternary_expression", TOKEN_COLON))
+            if(!p->lexer.expectCurrent("parse_ternary_expression", Token::Type::TOKEN_COLON))
             {
                 Expression::destroyExpression(if_true);
                 return NULL;
@@ -6474,7 +6433,7 @@ struct Parser: public Allocator::Allocated
         static Expression* parse_incdec_prefix_expression(Parser* p)
         {
             Expression* source;
-            TokenType operation_type;
+            Token::Type operation_type;
             Position pos;
             Operator op;
             Expression* dest;
@@ -6533,7 +6492,7 @@ struct Parser: public Allocator::Allocated
         static Expression* parse_incdec_postfix_expression(Parser* p, Expression* left)
         {
             Expression* source;
-            TokenType operation_type;
+            Token::Type operation_type;
             Position pos;
             Operator op;
             Expression* left_copy;
@@ -6583,7 +6542,7 @@ struct Parser: public Allocator::Allocated
         {
             p->lexer.nextToken();
 
-            if(!p->lexer.expectCurrent("parse_dot_expression", TOKEN_IDENT))
+            if(!p->lexer.expectCurrent("parse_dot_expression", Token::Type::TOKEN_IDENT))
             {
                 return NULL;
             }
@@ -12545,22 +12504,6 @@ void ident_destroy(Ident* ident)
 }
 
 
-static const char* g_type_names[] = {
-    "ILLEGAL",  "EOF",   "=",        "+=",     "-=",
-    "*=",       "/=",    "%=",       "&=",     "|=",
-    "^=",       "<<=",   ">>=",      "?",      "+",
-    "++",       "-",     "--",       "!",      "*",
-    "/",        "<",     "<=",       ">",      ">=",
-    "==",       "!=",    "&&",       "||",     "&",
-    "|",        "^",     "<<",       ">>",     ",",
-    ";",        ":",     "(",        ")",      "{",
-    "}",        "[",     "]",        ".",      "%",
-    "FUNCTION", "CONST", "VAR",      "TRUE",   "FALSE",
-    "IF",       "ELSE",  "RETURN",   "WHILE",  "BREAK",
-    "FOR",      "IN",    "CONTINUE", "NULL",   "IMPORT",
-    "RECOVER",  "IDENT", "NUMBER",   "STRING", "TEMPLATE_STRING",
-};
-
 static bool code_read_operands(OpcodeDefinition* def, uint8_t* instr, uint64_t out_operands[2])
 {
     int offset = 0;
@@ -13198,10 +13141,6 @@ void object_to_string(Object obj, StringBuffer* buf, bool quote_str)
 
 
 
-const char* token_type_to_string(TokenType type)
-{
-    return g_type_names[type];
-}
 /*
 SPDX-License-Identifier: MIT
 
