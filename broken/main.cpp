@@ -15986,6 +15986,7 @@ static Object cfn_chr(VM* vm, void* data, int argc, Object* args)
     return Object::makeString(vm->mem, str);
 }
 
+
 static Object cfn_range(VM* vm, void* data, int argc, Object* args)
 {
     (void)data;
@@ -16856,6 +16857,18 @@ static Object cfn_string_split(VM* vm, void* data, int argc, Object* args)
     return arr;
 }
 
+static Object cfn_bitnot(VM* vm, void* data, int argc, Object* args)
+{
+    (void)data;
+    if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER))
+    {
+        return Object::makeNull();
+    }
+    auto val = (int64_t)object_get_number(args[0]);
+    return Object::makeNumber(~val);
+}
+
+
 static NatFunc_t g_core_globalfuncs[] =
 {
     { "len", cfn_len },
@@ -16898,6 +16911,7 @@ static NatFunc_t g_core_globalfuncs[] =
     { "is_native_function", cfn_is_native_function },
 
     // Math
+    { "bitnot", cfn_bitnot },
 
 
 };

@@ -1,10 +1,10 @@
-fn shift(arr) {
+function shift(arr) {
     var res = arr[0]
     remove_at(arr, 0)
     return res
 }
 
-fn merge(left, right) {
+function merge(left, right) {
     var arr = []
     while (len(left) > 0 && len(right) > 0) {
         if (left[0] < right[0]) {
@@ -20,7 +20,7 @@ fn merge(left, right) {
     return arr
 }
 
-fn split(arr, at) {
+function split(arr, at) {
     var left = []
     var right = []
     for (var i = 0; i < len(arr); i++) {
@@ -33,7 +33,7 @@ fn split(arr, at) {
     return { left: left, right: right }
 }
 
-fn mergeSort(arr) {
+function mergeSort(arr) {
     const half = len(arr) / 2
     
     if (len(arr) < 2) {

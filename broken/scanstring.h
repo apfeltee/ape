@@ -17,7 +17,7 @@
                 readChar();
                 goto endscan;
             }*/
-            #if 1
+            #if 0
             while(true)
             {
                 auto peek0 = peekChar(0);

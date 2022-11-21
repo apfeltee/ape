@@ -1,48 +1,32 @@
 
-EXTDIR = ./util
-INCFLAGS = -I$(EXTDIR)
+INCFLAGS =
 
-CC = clang
-#CXX = g++ -std=c++20 -fdata-sections -ffunction-sections -Wl,--gc-sections -Wl,--print-gc-sections -Wl,--demangle -Wl,-z,stack-size=0 
-CXX = g++ -std=c++20 -Wl,-z,stack-size=0 -flto -fno-asynchronous-unwind-tables -ffunction-sections -Wl,--gc-sections
-#CXX = g++ -std=c++20
+WFLAGS = -Wunused -Wunused-macros -Wunused-but-set-variable -Wunused-function -Wunused-label -Wunused-local-typedefs -Wunused-parameter -Wunused-value -Wunused-variable -Wunused-local-typedefs
+#EXTRAFLAGS = -fdata-sections -ffunction-sections -Wl,--gc-sections -Wl,--print-gc-sections
+
+CC = gcc -Wall -Wextra  $(WFLAGS)
 # ricing intensifies
-WARNFLAGS = -Wall -Wextra
-#WARNFLAGS = -w
 #CFLAGS = $(INCFLAGS) -Ofast -march=native -flto -ffast-math -funroll-loops
-DEBUGFLAGS = -O0 -g3 -ggdb3
-CFLAGS = $(INCFLAGS) $(WARNFLAGS) $(DEBUGFLAGS)
-CXXFLAGS = $(CFLAGS) $(WARNFLAGS)
-
-# disable stack entirely? it *should* match up to the ANSI C version.
-EXTRALFLAGS = 
-
-LDFLAGS = $(EXTRALFLAGS) -flto -ldl -lm  -lreadline -lpthread
-#LDFLAGS =
+CFLAGS = $(INCFLAGS) -O0 -g3 -ggdb3
+LDFLAGS = -flto -ldl -lm  -lreadline -lpthread
 target = run
 
 src = \
-	$(wildcard *.cpp)
+	$(wildcard *.c) \
 
-obj = $(src:.cpp=.o)
+obj = $(src:.c=.o)
 dep = $(obj:.o=.d)
 
 
 $(target): $(obj)
-	$(CXX) -o $@ $^ $(LDFLAGS)
+	$(CC) -o $@ $^ $(LDFLAGS)
 
 -include $(dep)
 
 # rule to generate a dep file by using the C preprocessor
 # (see man cpp for details on the -MM and -MT options)
-%.d: %.cpp
-	$(CXX) $(CFLAGS) $< -MM -MT $(@:.d=.o) -MF $@
-
 %.d: %.c
 	$(CC) $(CFLAGS) $< -MM -MT $(@:.d=.o) -MF $@
-
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $(DBGFLAGS) -o $@ $<
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $(DBGFLAGS) -o $@ $<
@@ -56,8 +40,7 @@ cleandep:
 	rm -f $(dep)
 
 .PHONY: rebuild
-rebuild: clean cleandep
-	$(MAKE) $(target)
+rebuild: clean cleandep $(target)
 
 .PHONY: sanity
 sanity:

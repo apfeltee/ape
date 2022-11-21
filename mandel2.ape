@@ -63,7 +63,9 @@ function run()
         for(j = 0; j < 2 * steps; j++)
         {
             x = do_add(xmin, do_mul(of_int(j), deltax))
-            if(inside(x, y))
+            ins = inside(x, y);
+            //println(`ins=${ins}`);
+            if(ins == true)
             {
                 print("#")
             }
