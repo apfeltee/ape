@@ -513,7 +513,7 @@ static ApeObject_t cfn_substr(ApeVM_t* vm, void* data, int argc, ApeObject_t* ar
         end = len;
     }
     nlen = end;
-    //fprintf(stderr, "substr: len=%d, begin=%d, end=%d, nlen=%d\n", len, begin, end, nlen);
+    fprintf(stderr, "substr: len=%d, begin=%d, end=%d, nlen=%d\n", len, begin, end, nlen);
     return object_make_string_len(vm->mem, str+begin, nlen);
 }
 
@@ -1489,10 +1489,8 @@ static NatFunc_t g_core_dirfuncs[]=
 static NatFunc_t g_core_stringfuncs[]=
 {
     {"split", cfn_string_split},
-
     #if 0
     {"trim", cfn_string_trim},
-
     #endif
     {NULL, NULL},
 };

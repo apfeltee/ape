@@ -39,7 +39,7 @@ static void vmpriv_setstackpointer(ApeVM_t *vm, int new_sp);
 static void vmpriv_pushthisstack(ApeVM_t *vm, ApeObject_t obj);
 static ApeObject_t vmpriv_popthisstack(ApeVM_t *vm);
 static ApeObject_t vmpriv_getthisstack(ApeVM_t *vm, int nth_item);
-static bool vmpriv_tryoverloadoperator(ApeVM_t *vm, ApeObject_t left, ApeObject_t right, opcode_t op, bool *out_overload_found);
+static bool vmpriv_tryoverloadoperator(ApeVM_t *vm, ApeObject_t left, ApeObject_t right, ApeOpByte_t op, bool *out_overload_found);
 static void vmpriv_setdefaultconfig(ApeContext_t *ape);
 static char *vmpriv_default_readfile(void *ctx, const char *filename);
 static size_t vmpriv_default_writefile(void *ctx, const char *path, const char *string, size_t string_size);
@@ -148,24 +148,25 @@ char* ape_strdup(ApeAllocator_t* alloc, const char* string)
     return ape_strndup(alloc, string, strlen(string));
 }
 
+// fixme
 uint64_t ape_double_to_uint64(ApeFloat_t val)
 {
     union
     {
-        uint64_t val_uint64;
-        ApeFloat_t val_double;
-    } temp = { .val_double = val };
-    return temp.val_uint64;
+        uint64_t fltcast_uint64;
+        ApeFloat_t fltcast_double;
+    } temp = { .fltcast_double = val };
+    return temp.fltcast_uint64;
 }
 
 ApeFloat_t ape_uint64_to_double(uint64_t val)
 {
     union
     {
-        uint64_t val_uint64;
-        ApeFloat_t val_double;
-    } temp = { .val_uint64 = val };
-    return temp.val_double;
+        uint64_t fltcast_uint64;
+        ApeFloat_t fltcast_double;
+    } temp = { .fltcast_uint64 = val };
+    return temp.fltcast_double;
 }
 
 bool ape_timer_platform_supported()
@@ -251,9 +252,9 @@ unsigned long collections_hash(const void* ptr, size_t len)
 {
     size_t i;
     unsigned long hash;
-    uint8_t val;
-    const uint8_t* ptr_u8;
-    ptr_u8 = (const uint8_t*)ptr;
+    ApeUShort_t val;
+    const ApeUShort_t* ptr_u8;
+    ptr_u8 = (const ApeUShort_t*)ptr;
     hash = 5381;
     for(i = 0; i < len; i++)
     {
@@ -543,7 +544,7 @@ unsigned int dict_get_cell_ix(const ApeDictionary_t* dict, const char* key, unsi
 unsigned long hash_string(const char* str)
 {
     unsigned long hash;
-    uint8_t c;
+    ApeUShort_t c;
     hash = 5381;
     while((c = *str++))
     {
@@ -1397,16 +1398,14 @@ void strbuf_destroy(ApeStringBuffer_t* buf)
     allocator_free(buf->alloc, buf);
 }
 
-bool strbuf_append(ApeStringBuffer_t* buf, const char* str)
+bool strbuf_appendn(ApeStringBuffer_t* buf, const char* str, size_t str_len)
 {
     bool ok;
-    size_t str_len;
     size_t required_capacity;
     if(buf->failed)
     {
         return false;
     }
-    str_len = strlen(str);
     if(str_len == 0)
     {
         return true;
@@ -1424,6 +1423,12 @@ bool strbuf_append(ApeStringBuffer_t* buf, const char* str)
     buf->len = buf->len + str_len;
     buf->stringdata[buf->len] = '\0';
     return true;
+}
+
+
+bool strbuf_append(ApeStringBuffer_t* buf, const char* str)
+{
+    return strbuf_appendn(buf, str, strlen(str));
 }
 
 bool strbuf_appendf(ApeStringBuffer_t* buf, const char* fmt, ...)
@@ -2476,7 +2481,7 @@ static int vmpriv_countnumdefs(ApeSymbolTable_t* table)
 }
 
 
-ApeOpcodeDefinition_t* opcode_lookup(opcode_t op)
+ApeOpcodeDefinition_t* opcode_lookup(ApeOpByte_t op)
 {
     if(op <= OPCODE_NONE || op >= OPCODE_MAX)
     {
@@ -2485,7 +2490,7 @@ ApeOpcodeDefinition_t* opcode_lookup(opcode_t op)
     return &g_definitions[op];
 }
 
-const char* opcode_get_name(opcode_t op)
+const char* opcode_get_name(ApeOpByte_t op)
 {
     if(op <= OPCODE_NONE || op >= OPCODE_MAX)
     {
@@ -2497,7 +2502,7 @@ const char* opcode_get_name(opcode_t op)
 #define APPEND_BYTE(n)                           \
     do                                           \
     {                                            \
-        val = (uint8_t)(operands[i] >> (n * 8)); \
+        val = (ApeUShort_t)(operands[i] >> (n * 8)); \
         ok = array_add(res, &val);               \
         if(!ok)                                  \
         {                                        \
@@ -2505,13 +2510,13 @@ const char* opcode_get_name(opcode_t op)
         }                                        \
     } while(0)
 
-int code_make(opcode_t op, int operands_count, uint64_t* operands, ApeArray_t* res)
+int code_make(ApeOpByte_t op, int operands_count, uint64_t* operands, ApeArray_t* res)
 {
     int i;
     int width;
     int instr_len;
     bool ok;
-    uint8_t val;
+    ApeUShort_t val;
     ApeOpcodeDefinition_t* def;
     def = opcode_lookup(op);
     if(!def)
@@ -2587,7 +2592,7 @@ ApeCompilationScope_t* compilation_scope_make(ApeAllocator_t* alloc, ApeCompilat
     memset(scope, 0, sizeof(ApeCompilationScope_t));
     scope->alloc = alloc;
     scope->outer = outer;
-    scope->bytecode = array_make(alloc, uint8_t);
+    scope->bytecode = array_make(alloc, ApeUShort_t);
     if(!scope->bytecode)
     {
         goto err;
@@ -2626,7 +2631,7 @@ ApeCompilationResult_t* compilation_scope_orphan_result(ApeCompilationScope_t* s
 {
     ApeCompilationResult_t* res;
     res = compilation_result_make(scope->alloc,
-        (uint8_t*)array_data(scope->bytecode),
+        (ApeUShort_t*)array_data(scope->bytecode),
         (ApePosition_t*)array_data(scope->src_positions),
         array_count(scope->bytecode)
     );
@@ -2639,7 +2644,7 @@ ApeCompilationResult_t* compilation_scope_orphan_result(ApeCompilationScope_t* s
     return res;
 }
 
-ApeCompilationResult_t* compilation_result_make(ApeAllocator_t* alloc, uint8_t* bytecode, ApePosition_t* src_positions, int count)
+ApeCompilationResult_t* compilation_result_make(ApeAllocator_t* alloc, ApeUShort_t* bytecode, ApePosition_t* src_positions, int count)
 {
     ApeCompilationResult_t* res;
     res = (ApeCompilationResult_t*)allocator_malloc(alloc, sizeof(ApeCompilationResult_t));
@@ -2984,8 +2989,9 @@ ApeObject_t object_make_from_data(ApeObjectType_t type, ApeObjectData_t* data)
     ApeObject_t object;
     object.handle = OBJECT_PATTERN;
     type_tag = vmpriv_gettypetag(type) & 0x7;
+    // assumes no pointer exceeds 48 bits
     object.handle |= (type_tag << 48);
-    object.handle |= (uintptr_t)data;// assumes no pointer exceeds 48 bits
+    object.handle |= (uintptr_t)data;
     return object;
 }
 
@@ -3959,6 +3965,10 @@ ApeObject_t object_get_array_value(ApeObject_t object, int ix)
     return *res;
 }
 
+/*
+* TODO: since this pushes NULLs before 'ix' if 'ix' is out of bounds, this
+* may be possibly extremely inefficient.
+*/
 bool object_set_array_value_at(ApeObject_t object, int ix, ApeObject_t val)
 {
     ApeArray_t* array;
@@ -3966,7 +3976,10 @@ bool object_set_array_value_at(ApeObject_t object, int ix, ApeObject_t val)
     array = object_get_allocated_array(object);
     if(ix < 0 || ix >= array_count(array))
     {
-        return false;
+        while(ix >= array_count(array))
+        {
+            object_add_array_value(object, object_make_null());
+        }
     }
     return array_set(array, ix, &val);
 }
@@ -4095,7 +4108,7 @@ ApeObject_t object_deep_copy_internal(ApeGCMemory_t* mem, ApeObject_t obj, ApeVa
     int len;
     bool ok;
     const char* str;
-    uint8_t* bytecode_copy;
+    ApeUShort_t* bytecode_copy;
     ApeFunction_t* function_copy;
     ApeFunction_t* function;
     ApePosition_t* src_positions_copy;
@@ -4149,12 +4162,12 @@ ApeObject_t object_deep_copy_internal(ApeGCMemory_t* mem, ApeObject_t obj, ApeVa
                 bytecode_copy = NULL;
                 src_positions_copy = NULL;
                 comp_res_copy = NULL;
-                bytecode_copy = (uint8_t*)allocator_malloc(mem->alloc, sizeof(uint8_t) * function->comp_result->count);
+                bytecode_copy = (ApeUShort_t*)allocator_malloc(mem->alloc, sizeof(ApeUShort_t) * function->comp_result->count);
                 if(!bytecode_copy)
                 {
                     return object_make_null();
                 }
-                memcpy(bytecode_copy, function->comp_result->bytecode, sizeof(uint8_t) * function->comp_result->count);
+                memcpy(bytecode_copy, function->comp_result->bytecode, sizeof(ApeUShort_t) * function->comp_result->count);
                 src_positions_copy = (ApePosition_t*)allocator_malloc(mem->alloc, sizeof(ApePosition_t) * function->comp_result->count);
                 if(!src_positions_copy)
                 {
@@ -4947,7 +4960,7 @@ ApeOpcodeValue_t frame_read_opcode(ApeFrame_t* frame)
 uint64_t frame_read_uint64(ApeFrame_t* frame)
 {
     uint64_t res;
-    const uint8_t* data;
+    const ApeUShort_t* data;
     data = frame->bytecode + frame->ip;
     frame->ip += 8;
     res = 0;
@@ -4964,15 +4977,15 @@ uint64_t frame_read_uint64(ApeFrame_t* frame)
 
 uint16_t frame_read_uint16(ApeFrame_t* frame)
 {
-    const uint8_t* data;
+    const ApeUShort_t* data;
     data = frame->bytecode + frame->ip;
     frame->ip += 2;
     return (data[0] << 8) | data[1];
 }
 
-uint8_t frame_read_uint8(ApeFrame_t* frame)
+ApeUShort_t frame_read_uint8(ApeFrame_t* frame)
 {
-    const uint8_t* data;
+    const ApeUShort_t* data;
     data = frame->bytecode + frame->ip;
     frame->ip++;
     return data[0];
@@ -5091,25 +5104,134 @@ bool vm_run(ApeVM_t* vm, ApeCompilationResult_t* comp_res, ApeArray_t * constant
     return res;
 }
 
+bool vmpriv_append_string(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeObjectType_t lefttype, ApeObjectType_t righttype)
+{
+    bool ok;
+    const char* leftstr;
+    const char* rightstr;
+    ApeObject_t objres;
+    ApeInt_t buflen;
+    ApeInt_t leftlen;
+    ApeInt_t rightlen;
+    ApeStringBuffer_t* allbuf;
+    ApeStringBuffer_t* tostrbuf;
+    (void)lefttype;
+    if(righttype == APE_OBJECT_STRING)
+    {
+        leftlen = (int)object_get_string_length(left);
+        rightlen = (int)object_get_string_length(right);
+        // avoid doing unnecessary copying by reusing the origin as-is
+        if(leftlen == 0)
+        {
+            stack_push(vm, right);
+        }
+        else if(rightlen == 0)
+        {
+            stack_push(vm, left);
+        }
+        else
+        {
+            leftstr = object_get_string(left);
+            rightstr = object_get_string(right);
+            objres = object_make_string_with_capacity(vm->mem, leftlen + rightlen);
+            if(object_is_null(objres))
+            {
+                return false;
+            }
+            ok = object_string_append(objres, leftstr, leftlen);
+            if(!ok)
+            {
+                return false;
+            }
+            ok = object_string_append(objres, rightstr, rightlen);
+            if(!ok)
+            {
+                return false;
+            }
+            stack_push(vm, objres);
+        }
+    }
+    else
+    {
+        /*
+        * when 'right' is not a string, stringify it, and create a new string.
+        * in short, this does 'left = left + tostring(right)'
+        * TODO: probably really inefficient.
+        */
+        allbuf = strbuf_make(vm->alloc);
+        tostrbuf = strbuf_make(vm->alloc);
+        strbuf_appendn(allbuf, object_get_string(left), object_get_string_length(left));
+        object_to_string(right, tostrbuf, false);
+        strbuf_appendn(allbuf, strbuf_get_string(tostrbuf), strbuf_get_length(tostrbuf));
+        buflen = strbuf_get_length(allbuf);
+        objres = object_make_string_with_capacity(vm->mem, buflen);
+        ok = object_string_append(objres, strbuf_get_string(allbuf), buflen);
+        strbuf_destroy(tostrbuf);
+        strbuf_destroy(allbuf);
+        if(!ok)
+        {
+            return false;
+        }
+        stack_push(vm, objres);
+    }
+    return true;
+}
+
+/*
+* TODO: there is A LOT of code in this function.
+* some could be easily split into other functions.
+*/
 bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constants)
 {
+    bool checktime;
+    bool isoverloaded;
+    bool ok;
+    bool overloadfound;
+    bool resval;
+    const ApeFunction_t* constfunction;
+    const char* indextypename;
+    const char* keytypename;
+    const char* left_type_name;
+    const char* left_type_string;
 
-    ApeError_t* err;
-    ApeFrame_t new_frame;
-    ApeFrame_t* frame;
-    ApeFunction_t* function_function;
+    const char* opcode_name;
+    const char* operand_type_string;
+    const char* right_type_name;
+    const char* right_type_string;
+    const char* str;
+    const char* type_name;
+    int elapsed_ms;
+    int i;
+    int ix;
+    int leftlen;
+    int len;
+    int recover_frame_ix;
+    int64_t leftint;
+    int64_t rightint;
+    uint16_t constant_ix;
+    uint16_t count;
+    uint16_t items_count;
+    uint16_t kvp_count;
+    uint16_t recover_ip;
+    int64_t val;
+    int64_t pos;
+    unsigned time_check_counter;
+    unsigned time_check_interval;
+    ApeUShort_t free_ix;
+    ApeUShort_t num_args;
+    ApeUShort_t num_free;
     ApeFloat_t comparison_res;
     ApeFloat_t leftval;
-    ApeFloat_t max_exec_time_ms;
+    ApeFloat_t maxexecms;
     ApeFloat_t res;
     ApeFloat_t rightval;
-    ApeFloat_t val_double;
+    ApeFloat_t valdouble;
     ApeObjectType_t constant_type;
-    ApeObjectType_t index_type;
-    ApeObjectType_t key_type;
-    ApeObjectType_t left_type;
+    ApeObjectType_t indextype;
+    ApeObjectType_t keytype;
+    ApeObjectType_t lefttype;
     ApeObjectType_t operand_type;
-    ApeObjectType_t right_type;
+    ApeObjectType_t righttype;
     ApeObjectType_t type;
     ApeObject_t array_obj;
     ApeObject_t callee;
@@ -5135,48 +5257,10 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
     ApeObject_t* kv_pairs;
     ApeOpcodeValue_t opcode;
     ApeTimer_t timer;
-    bool check_time;
-    bool is_overloaded;
-    bool ok;
-    bool overload_found;
-    bool res_val;
-    const ApeFunction_t* constant_function;
-    const char* index_type_name;
-    const char* key_type_name;
-    const char* left_type_name;
-    const char* left_type_string;
-    const char* leftstr;
-    const char* opcode_name;
-    const char* operand_type_string;
-    const char* right_type_name;
-    const char* right_type_string;
-    const char* rightstr;
-    const char* str;
-    const char* type_name;
-    int elapsed_ms;
-    int i;
-    int ix;
-    int left_len;
-    int len;
-    int recover_frame_ix;
-    int right_len;
-    int64_t leftint;
-    int64_t rightint;
-    uint16_t constant_ix;
-    uint16_t count;
-    uint16_t items_count;
-    uint16_t kvp_count;
-    uint16_t recover_ip;
-    int64_t val;
-    uint8_t free_ix;
-    uint8_t num_args;
-    uint8_t num_free;
-    int64_t pos;
-    unsigned time_check_counter;
-    unsigned time_check_interval;
-
-
-
+    ApeFrame_t* frame;
+    ApeError_t* err;
+    ApeFrame_t new_frame;
+    ApeFunction_t* function_function;
     if(vm->running)
     {
         errors_add_error(vm->errors, APE_ERROR_USER, src_pos_invalid, "VM is already executing code");
@@ -5192,22 +5276,22 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
     ok = push_frame(vm, new_frame);
     if(!ok)
     {
-        errors_add_error(vm->errors, APE_ERROR_USER, src_pos_invalid, "Pushing frame failed");
+        errors_add_error(vm->errors, APE_ERROR_USER, src_pos_invalid, "pushing frame failed");
         return false;
     }
     vm->running = true;
     vm->last_popped = object_make_null();
-    check_time = false;
-    max_exec_time_ms = 0;
+    checktime = false;
+    maxexecms = 0;
     if(vm->config)
     {
-        check_time = vm->config->max_execution_time_set;
-        max_exec_time_ms = vm->config->max_execution_time_ms;
+        checktime = vm->config->max_execution_time_set;
+        maxexecms = vm->config->max_execution_time_ms;
     }
     time_check_interval = 1000;
     time_check_counter = 0;
     memset(&timer, 0, sizeof(ApeTimer_t));
-    if(check_time)
+    if(checktime)
     {
         timer = ape_timer_start();
     }
@@ -5223,7 +5307,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     if(!constant)
                     {
                         errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                          "Constant at %d not found", constant_ix);
+                                          "constant at %d not found", constant_ix);
                         goto err;
                     }
                     stack_push(vm, *constant);
@@ -5242,8 +5326,17 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                 {
                     right = stack_pop(vm);
                     left = stack_pop(vm);
-                    left_type = object_get_type(left);
-                    right_type = object_get_type(right);
+                    // NULL to 0 coercion
+                    if(object_is_numeric(left) && object_is_null(right))
+                    {
+                        right = object_make_number(0);
+                    }
+                    if(object_is_numeric(right) && object_is_null(left))
+                    {
+                        left = object_make_number(0);
+                    }
+                    lefttype = object_get_type(left);
+                    righttype = object_get_type(right);
                     if(object_is_numeric(left) && object_is_numeric(right))
                     {
                         rightval = object_get_number(right);
@@ -5312,60 +5405,34 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                         }
                         stack_push(vm, object_make_number(res));
                     }
-                    else if(left_type == APE_OBJECT_STRING && right_type == APE_OBJECT_STRING && opcode == OPCODE_ADD)
+                    else if(lefttype == APE_OBJECT_STRING && ((righttype == APE_OBJECT_STRING) || (righttype == APE_OBJECT_NUMBER)) && opcode == OPCODE_ADD)
                     {
-                        left_len = (int)object_get_string_length(left);
-                        right_len = (int)object_get_string_length(right);
-                        if(left_len == 0)
+                        ok = vmpriv_append_string(vm, left, right, lefttype, righttype);
+                        if(!ok)
                         {
-                            stack_push(vm, right);
-                        }
-                        else if(right_len == 0)
-                        {
-                            stack_push(vm, left);
-                        }
-                        else
-                        {
-                            leftstr = object_get_string(left);
-                            rightstr = object_get_string(right);
-                            objres = object_make_string_with_capacity(vm->mem, left_len + right_len);
-                            if(object_is_null(objres))
-                            {
-                                goto err;
-                            }
-                            ok = object_string_append(objres, leftstr, left_len);
-                            if(!ok)
-                            {
-                                goto err;
-                            }
-                            ok = object_string_append(objres, rightstr, right_len);
-                            if(!ok)
-                            {
-                                goto err;
-                            }
-                            stack_push(vm, objres);
+                            goto err;
                         }
                     }
-                    else if((left_type == APE_OBJECT_ARRAY) && opcode == OPCODE_ADD)
+                    else if((lefttype == APE_OBJECT_ARRAY) && opcode == OPCODE_ADD)
                     {
                         object_add_array_value(left, right);
                         stack_push(vm, left);
                     }
                     else
                     {
-                        overload_found = false;
-                        ok = vmpriv_tryoverloadoperator(vm, left, right, opcode, &overload_found);
+                        overloadfound = false;
+                        ok = vmpriv_tryoverloadoperator(vm, left, right, opcode, &overloadfound);
                         if(!ok)
                         {
                             goto err;
                         }
-                        if(!overload_found)
+                        if(!overloadfound)
                         {
                             opcode_name = opcode_get_name(opcode);
-                            left_type_name = object_get_type_name(left_type);
-                            right_type_name = object_get_type_name(right_type);
+                            left_type_name = object_get_type_name(lefttype);
+                            right_type_name = object_get_type_name(righttype);
                             errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                              "Invalid operand types for %s, got %s and %s", opcode_name, left_type_name,
+                                              "invalid operand types for %s, got %s and %s", opcode_name, left_type_name,
                                               right_type_name);
                             goto err;
                         }
@@ -5392,13 +5459,13 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                 {
                     right = stack_pop(vm);
                     left = stack_pop(vm);
-                    is_overloaded = false;
-                    ok = vmpriv_tryoverloadoperator(vm, left, right, OPCODE_COMPARE, &is_overloaded);
+                    isoverloaded = false;
+                    ok = vmpriv_tryoverloadoperator(vm, left, right, OPCODE_COMPARE, &isoverloaded);
                     if(!ok)
                     {
                         goto err;
                     }
-                    if(!is_overloaded)
+                    if(!isoverloaded)
                     {
                         comparison_res = object_compare(left, right, &ok);
                         if(ok || opcode == OPCODE_COMPARE_EQ)
@@ -5411,7 +5478,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                             right_type_string = object_get_type_name(object_get_type(right));
                             left_type_string = object_get_type_name(object_get_type(left));
                             errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                              "Cannot compare %s and %s", left_type_string, right_type_string);
+                                              "cannot compare %s and %s", left_type_string, right_type_string);
                             goto err;
                         }
                     }
@@ -5425,21 +5492,21 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                 {
                     value = stack_pop(vm);
                     comparison_res = object_get_number(value);
-                    res_val = false;
+                    resval = false;
                     switch(opcode)
                     {
                         case OPCODE_EQUAL:
-                            res_val = APE_DBLEQ(comparison_res, 0);
+                            resval = APE_DBLEQ(comparison_res, 0);
                             break;
                         case OPCODE_NOT_EQUAL:
-                            res_val = !APE_DBLEQ(comparison_res, 0);
+                            resval = !APE_DBLEQ(comparison_res, 0);
                             break;
                         case OPCODE_GREATER_THAN:
-                            res_val = comparison_res > 0;
+                            resval = comparison_res > 0;
                             break;
                         case OPCODE_GREATER_THAN_EQUAL:
                             {
-                                res_val = comparison_res > 0 || APE_DBLEQ(comparison_res, 0);
+                                resval = comparison_res > 0 || APE_DBLEQ(comparison_res, 0);
                             }
                             break;
                         default:
@@ -5448,7 +5515,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                             }
                             break;
                     }
-                    objres = object_make_bool(res_val);
+                    objres = object_make_bool(resval);
                     stack_push(vm, objres);
                 }
                 break;
@@ -5465,17 +5532,17 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     }
                     else
                     {
-                        overload_found = false;
-                        ok = vmpriv_tryoverloadoperator(vm, operand, object_make_null(), OPCODE_MINUS, &overload_found);
+                        overloadfound = false;
+                        ok = vmpriv_tryoverloadoperator(vm, operand, object_make_null(), OPCODE_MINUS, &overloadfound);
                         if(!ok)
                         {
                             goto err;
                         }
-                        if(!overload_found)
+                        if(!overloadfound)
                         {
                             operand_type_string = object_get_type_name(operand_type);
                             errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                              "Invalid operand type for MINUS, got %s", operand_type_string);
+                                              "invalid operand type for MINUS, got %s", operand_type_string);
                             goto err;
                         }
                     }
@@ -5498,13 +5565,13 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     }
                     else
                     {
-                        overload_found = false;
-                        ok = vmpriv_tryoverloadoperator(vm, operand, object_make_null(), OPCODE_BANG, &overload_found);
+                        overloadfound = false;
+                        ok = vmpriv_tryoverloadoperator(vm, operand, object_make_null(), OPCODE_BANG, &overloadfound);
                         if(!ok)
                         {
                             goto err;
                         }
-                        if(!overload_found)
+                        if(!overloadfound)
                         {
                             ApeObject_t objres = object_make_bool(false);
                             stack_push(vm, objres);
@@ -5621,10 +5688,10 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                         key = kv_pairs[i];
                         if(!object_is_hashable(key))
                         {
-                            key_type = object_get_type(key);
-                            key_type_name = object_get_type_name(key_type);
+                            keytype = object_get_type(key);
+                            keytypename = object_get_type_name(keytype);
                             errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                              "Key of type %s is not hashable", key_type_name);
+                                              "key of type %s is not hashable", keytypename);
                             goto err;
                         }
                         objval = kv_pairs[i + 1];
@@ -5653,10 +5720,10 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     #endif
                     index = stack_pop(vm);
                     left = stack_pop(vm);
-                    left_type = object_get_type(left);
-                    index_type = object_get_type(index);
-                    left_type_name = object_get_type_name(left_type);
-                    index_type_name = object_get_type_name(index_type);
+                    lefttype = object_get_type(left);
+                    indextype = object_get_type(index);
+                    left_type_name = object_get_type_name(lefttype);
+                    indextypename = object_get_type_name(indextype);
                     /*
                     * todo: object method lookup could be implemented here
                     */
@@ -5666,11 +5733,11 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                         ApeObject_t args[10];
                         ApeNativeFNCallback_t afn;
                         argc = 0;
-                        if(index_type == APE_OBJECT_STRING)
+                        if(indextype == APE_OBJECT_STRING)
                         {
                             idxname = object_get_string(index);
                             fprintf(stderr, "index is a string: name=%s\n", idxname);
-                            if((afn = builtin_get_object(left_type, idxname)) != NULL)
+                            if((afn = builtin_get_object(lefttype, idxname)) != NULL)
                             {
                                 fprintf(stderr, "got a callback: afn=%p\n", afn);
                                 //typedef ApeObject_t (*ApeNativeFNCallback_t)(ApeVM_t*, void*, int, ApeObject_t*);
@@ -5683,19 +5750,19 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     }
                     #endif
 
-                    if(left_type != APE_OBJECT_ARRAY && left_type != APE_OBJECT_MAP && left_type != APE_OBJECT_STRING)
+                    if(lefttype != APE_OBJECT_ARRAY && lefttype != APE_OBJECT_MAP && lefttype != APE_OBJECT_STRING)
                     {
                         errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                            "Type %s is not indexable (in OPCODE_GET_INDEX)", left_type_name);
+                            "type %s is not indexable (in OPCODE_GET_INDEX)", left_type_name);
                         goto err;
                     }
                     objres = object_make_null();
-                    if(left_type == APE_OBJECT_ARRAY)
+                    if(lefttype == APE_OBJECT_ARRAY)
                     {
-                        if(index_type != APE_OBJECT_NUMBER)
+                        if(indextype != APE_OBJECT_NUMBER)
                         {
                             errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                              "Cannot index %s with %s", left_type_name, index_type_name);
+                                              "cannot index %s with %s", left_type_name, indextypename);
                             goto err;
                         }
                         ix = (int)object_get_number(index);
@@ -5708,16 +5775,16 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                             objres = object_get_array_value(left, ix);
                         }
                     }
-                    else if(left_type == APE_OBJECT_MAP)
+                    else if(lefttype == APE_OBJECT_MAP)
                     {
                         objres = object_get_map_value_object(left, index);
                     }
-                    else if(left_type == APE_OBJECT_STRING)
+                    else if(lefttype == APE_OBJECT_STRING)
                     {
                         str = object_get_string(left);
-                        left_len = object_get_string_length(left);
+                        leftlen = object_get_string_length(left);
                         ix = (int)object_get_number(index);
-                        if(ix >= 0 && ix < left_len)
+                        if(ix >= 0 && ix < leftlen)
                         {
                             char res_str[2] = { str[ix], '\0' };
                             objres = object_make_string(vm->mem, res_str);
@@ -5731,38 +5798,38 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
             {
                 index = stack_pop(vm);
                 left = stack_pop(vm);
-                left_type = object_get_type(left);
-                index_type = object_get_type(index);
-                left_type_name = object_get_type_name(left_type);
-                index_type_name = object_get_type_name(index_type);
-                if(left_type != APE_OBJECT_ARRAY && left_type != APE_OBJECT_MAP && left_type != APE_OBJECT_STRING)
+                lefttype = object_get_type(left);
+                indextype = object_get_type(index);
+                left_type_name = object_get_type_name(lefttype);
+                indextypename = object_get_type_name(indextype);
+                if(lefttype != APE_OBJECT_ARRAY && lefttype != APE_OBJECT_MAP && lefttype != APE_OBJECT_STRING)
                 {
                     errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                      "Type %s is not indexable (in OPCODE_GET_VALUE_AT)", left_type_name);
+                                      "type %s is not indexable (in OPCODE_GET_VALUE_AT)", left_type_name);
                     goto err;
                 }
                 objres = object_make_null();
-                if(index_type != APE_OBJECT_NUMBER)
+                if(indextype != APE_OBJECT_NUMBER)
                 {
                     errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                      "Cannot index %s with %s", left_type_name, index_type_name);
+                                      "cannot index %s with %s", left_type_name, indextypename);
                     goto err;
                 }
                 ix = (int)object_get_number(index);
-                if(left_type == APE_OBJECT_ARRAY)
+                if(lefttype == APE_OBJECT_ARRAY)
                 {
                     objres = object_get_array_value(left, ix);
                 }
-                else if(left_type == APE_OBJECT_MAP)
+                else if(lefttype == APE_OBJECT_MAP)
                 {
                     objres = object_get_kv_pair_at(vm->mem, left, ix);
                 }
-                else if(left_type == APE_OBJECT_STRING)
+                else if(lefttype == APE_OBJECT_STRING)
                 {
                     str = object_get_string(left);
-                    left_len = object_get_string_length(left);
+                    leftlen = object_get_string_length(left);
                     ix = (int)object_get_number(index);
-                    if(ix >= 0 && ix < left_len)
+                    if(ix >= 0 && ix < leftlen)
                     {
                         char res_str[2] = { str[ix], '\0' };
                         objres = object_make_string(vm->mem, res_str);
@@ -5837,7 +5904,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                 if(!ok)
                 {
                     errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                      "Global value %d not found", ix);
+                                      "global value %d not found", ix);
                     goto err;
                 }
                 stack_push(vm, objval);
@@ -5851,7 +5918,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     if(!constant)
                     {
                         errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                          "Constant %d not found", constant_ix);
+                                          "constant %d not found", constant_ix);
                         goto err;
                     }
                     constant_type = object_get_type(*constant);
@@ -5862,9 +5929,9 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                                           "%s is not a function", type_name);
                         goto err;
                     }
-                    constant_function = object_get_function(*constant);
-                    function_obj = object_make_function(vm->mem, object_get_function_name(*constant), constant_function->comp_result,
-                                           false, constant_function->num_locals, constant_function->num_args, num_free);
+                    constfunction = object_get_function(*constant);
+                    function_obj = object_make_function(vm->mem, object_get_function_name(*constant), constfunction->comp_result,
+                                           false, constfunction->num_locals, constfunction->num_args, num_free);
                     if(object_is_null(function_obj))
                     {
                         goto err;
@@ -5903,23 +5970,23 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     index = stack_pop(vm);
                     left = stack_pop(vm);
                     new_value = stack_pop(vm);
-                    left_type = object_get_type(left);
-                    index_type = object_get_type(index);
-                    left_type_name = object_get_type_name(left_type);
-                    index_type_name = object_get_type_name(index_type);
-                    if(left_type != APE_OBJECT_ARRAY && left_type != APE_OBJECT_MAP)
+                    lefttype = object_get_type(left);
+                    indextype = object_get_type(index);
+                    left_type_name = object_get_type_name(lefttype);
+                    indextypename = object_get_type_name(indextype);
+                    if(lefttype != APE_OBJECT_ARRAY && lefttype != APE_OBJECT_MAP)
                     {
                         errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                          "Type %s is not indexable (in OPCODE_SET_INDEX)", left_type_name);
+                                          "type %s is not indexable (in OPCODE_SET_INDEX)", left_type_name);
                         goto err;
                     }
 
-                    if(left_type == APE_OBJECT_ARRAY)
+                    if(lefttype == APE_OBJECT_ARRAY)
                     {
-                        if(index_type != APE_OBJECT_NUMBER)
+                        if(indextype != APE_OBJECT_NUMBER)
                         {
                             errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                              "Cannot index %s with %s", left_type_name, index_type_name);
+                                              "cannot index %s with %s", left_type_name, indextypename);
                             goto err;
                         }
                         ix = (int)object_get_number(index);
@@ -5927,11 +5994,11 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                         if(!ok)
                         {
                             errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                             "Setting array item failed (index %d out of bounds of %d)", ix, object_get_array_length(left));
+                                             "setting array item failed (index %d out of bounds of %d)", ix, object_get_array_length(left));
                             goto err;
                         }
                     }
-                    else if(left_type == APE_OBJECT_MAP)
+                    else if(lefttype == APE_OBJECT_MAP)
                     {
                         old_value = object_get_map_value_object(left, index);
                         if(!check_assign(vm, old_value, new_value))
@@ -5973,7 +6040,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     {
                         type_name = object_get_type_name(type);
                         errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                                          "Cannot get length of %s", type_name);
+                                          "cannot get length of %s", type_name);
                         goto err;
                     }
                     stack_push(vm, object_make_number(len));
@@ -5982,8 +6049,8 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
             case OPCODE_NUMBER:
                 {
                     val = frame_read_uint64(vm->current_frame);
-                    val_double = ape_uint64_to_double(val);
-                    ApeObject_t obj = object_make_number(val_double);
+                    valdouble = ape_uint64_to_double(val);
+                    ApeObject_t obj = object_make_number(valdouble);
                     stack_push(vm, obj);
                 }
                 break;
@@ -5996,21 +6063,21 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
             default:
                 {
                     APE_ASSERT(false);
-                    errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Unknown opcode: 0x%x", opcode);
+                    errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "unknown opcode: 0x%x", opcode);
                     goto err;
                 }
                 break;
         }
-        if(check_time)
+        if(checktime)
         {
             time_check_counter++;
             if(time_check_counter > time_check_interval)
             {
                 elapsed_ms = (int)ape_timer_get_elapsed_ms(&timer);
-                if(elapsed_ms > max_exec_time_ms)
+                if(elapsed_ms > maxexecms)
                 {
                     errors_add_errorf(vm->errors, APE_ERROR_TIMEOUT, frame_src_position(vm->current_frame),
-                                      "Execution took more than %1.17g ms", max_exec_time_ms);
+                                      "execution took more than %1.17g ms", maxexecms);
                     goto err;
                 }
                 time_check_counter = 0;
@@ -6107,7 +6174,7 @@ bool vm_set_global(ApeVM_t* vm, int ix, ApeObject_t val)
     if(ix >= VM_MAX_GLOBALS)
     {
         APE_ASSERT(false);
-        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Global write out of range");
+        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "global write out of range");
         return false;
     }
     vm->globals[ix] = val;
@@ -6123,7 +6190,7 @@ ApeObject_t vm_get_global(ApeVM_t* vm, int ix)
     if(ix >= VM_MAX_GLOBALS)
     {
         APE_ASSERT(false);
-        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Global read out of range");
+        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "global read out of range");
         return object_make_null();
     }
     return vm->globals[ix];
@@ -6147,7 +6214,7 @@ void stack_push(ApeVM_t* vm, ApeObject_t obj)
     if(vm->sp >= VM_STACK_SIZE)
     {
         APE_ASSERT(false);
-        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Stack overflow");
+        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "stack overflow");
         return;
     }
     if(vm->current_frame)
@@ -6167,7 +6234,7 @@ ApeObject_t stack_pop(ApeVM_t* vm)
 #ifdef APE_DEBUG
     if(vm->sp == 0)
     {
-        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Stack underflow");
+        errors_add_error(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "stack underflow");
         APE_ASSERT(false);
         return object_make_null();
     }
@@ -6191,7 +6258,7 @@ ApeObject_t stack_get(ApeVM_t* vm, int nth_item)
 #ifdef APE_DEBUG
     if(ix < 0 || ix >= VM_STACK_SIZE)
     {
-        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Invalid stack index: %d", nth_item);
+        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "invalid stack index: %d", nth_item);
         APE_ASSERT(false);
         return object_make_null();
     }
@@ -6233,7 +6300,7 @@ static ApeObject_t vmpriv_getthisstack(ApeVM_t* vm, int nth_item)
 #ifdef APE_DEBUG
     if(ix < 0 || ix >= VM_THIS_STACK_SIZE)
     {
-        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Invalid this stack index: %d", nth_item);
+        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "invalid this stack index: %d", nth_item);
         APE_ASSERT(false);
         return object_make_null();
     }
@@ -6302,7 +6369,7 @@ bool call_object(ApeVM_t* vm, ApeObject_t callee, int num_args)
         if(num_args != callee_function->num_args)
         {
             errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
-                              "Invalid number of arguments to \"%s\", expected %d, got %d",
+                              "invalid number of arguments to \"%s\", expected %d, got %d",
                               object_get_function_name(callee), callee_function->num_args, num_args);
             return false;
         }
@@ -6310,13 +6377,13 @@ bool call_object(ApeVM_t* vm, ApeObject_t callee, int num_args)
         bool ok = frame_init(&callee_frame, callee, vm->sp - num_args);
         if(!ok)
         {
-            errors_add_error(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "Frame init failed in call_object");
+            errors_add_error(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "frame init failed in call_object");
             return false;
         }
         ok = push_frame(vm, callee_frame);
         if(!ok)
         {
-            errors_add_error(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "Pushing frame failed in call_object");
+            errors_add_error(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "pushing frame failed in call_object");
             return false;
         }
     }
@@ -6387,7 +6454,7 @@ bool check_assign(ApeVM_t* vm, ApeObject_t old_value, ApeObject_t new_value)
     if(old_value_type != new_value_type)
     {
         /*
-        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "Trying to assign variable of type %s to %s",
+        errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "trying to assign variable of type %s to %s",
                           object_get_type_name(new_value_type), object_get_type_name(old_value_type));
         return false;
         */
@@ -6395,17 +6462,17 @@ bool check_assign(ApeVM_t* vm, ApeObject_t old_value, ApeObject_t new_value)
     return true;
 }
 
-static bool vmpriv_tryoverloadoperator(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, opcode_t op, bool* out_overload_found)
+static bool vmpriv_tryoverloadoperator(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpByte_t op, bool* out_overload_found)
 {
     int num_operands;
     ApeObject_t key;
     ApeObject_t callee;
-    ApeObjectType_t left_type;
-    ApeObjectType_t right_type;
+    ApeObjectType_t lefttype;
+    ApeObjectType_t righttype;
     *out_overload_found = false;
-    left_type = object_get_type(left);
-    right_type = object_get_type(right);
-    if(left_type != APE_OBJECT_MAP && right_type != APE_OBJECT_MAP)
+    lefttype = object_get_type(left);
+    righttype = object_get_type(right);
+    if(lefttype != APE_OBJECT_MAP && righttype != APE_OBJECT_MAP)
     {
         *out_overload_found = false;
         return true;
@@ -6417,13 +6484,13 @@ static bool vmpriv_tryoverloadoperator(ApeVM_t* vm, ApeObject_t left, ApeObject_
     }
     key = vm->operator_oveload_keys[op];
     callee = object_make_null();
-    if(left_type == APE_OBJECT_MAP)
+    if(lefttype == APE_OBJECT_MAP)
     {
         callee = object_get_map_value_object(left, key);
     }
     if(!object_is_callable(callee))
     {
-        if(right_type == APE_OBJECT_MAP)
+        if(righttype == APE_OBJECT_MAP)
         {
             callee = object_get_map_value_object(right, key);
         }
@@ -6846,7 +6913,7 @@ char* ape_error_serialize(ApeContext_t* ape, const ApeError_t* err)
     const ApeTraceback_t* traceback = ape_error_get_traceback(err);
     if(traceback)
     {
-        strbuf_appendf(buf, "Traceback:\n");
+        strbuf_appendf(buf, "traceback:\n");
         traceback_to_string((const ApeTraceback_t*)ape_error_get_traceback(err), buf);
     }
     if(strbuf_failed(buf))
@@ -6994,7 +7061,7 @@ void* ape_malloc(void* ctx, size_t size)
     resptr = (void*)allocator_malloc(&ape->custom_allocator, size);
     if(!resptr)
     {
-        errors_add_error(&ape->errors, APE_ERROR_ALLOCATION, src_pos_invalid, "Allocation failed");
+        errors_add_error(&ape->errors, APE_ERROR_ALLOCATION, src_pos_invalid, "allocation failed");
     }
     return resptr;
 }

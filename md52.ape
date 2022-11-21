@@ -232,6 +232,7 @@ function md5(s)
 
 
 var demo = [
+  ["hello", "5d41402abc4b2a76b9719d911017c592"],
   ["message digest", "f96b697d7cb7938d525a2f31aaf161d0"],
   ["a", "0cc175b9c0f1b6a831c399e269772661"],
   ["abc", "900150983cd24fb0d6963f7d28e17f72"],

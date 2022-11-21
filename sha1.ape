@@ -1,0 +1,187 @@
+
+
+function unshiftright(a, b)
+{
+    var na = a;
+    var nb = b;
+    if((nb >= 32) || (nb < -32))
+    {
+        m = (nb / 32);
+        nb = nb - (m * 32);
+    }
+    if(nb < 0)
+    {
+        nb = 32 + nb;
+    }
+    if (nb == 0)
+    {
+        return ((na >> 1) & 0x7fffffff) * 2 + ((na >> nb) & 1);
+    }
+    if (na < 0) 
+    { 
+        na = (na >> 1); 
+        na = na & 0x7fffffff; 
+        na = na | 0x40000000; 
+        na = (na >> (nb - 1)); 
+    }
+    else
+    {
+        na = (na >> nb); 
+    }
+    return na; 
+}
+
+// Adapted from Chris Veness' SHA1 code at
+// http://www.movable-type.co.uk/scripts/sha1.html
+function f(s, x, y, z)
+{
+    if(s == 0)
+    {
+        return x & y ^ bitnot(x) & z;
+    }
+    else if(s == 1)
+    {
+        return x ^ y ^ z;
+    }
+    else if(s == 2)
+    {
+        return x & y ^ x & z ^ y & z;
+    }
+    else if(s == 3)
+    {
+            return x ^ y ^ z;
+    }
+}
+
+function ROTL(x, n)
+{
+    //return x << n | x >>> 32 - n;
+    return x << n | unshiftright(x, 32) - n;
+
+}
+
+
+function sha1_actual(bytes)
+{
+    var K = [0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xca62c1d6];
+    var H = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0];
+
+    append(bytes, 0x80);
+    var l = len(bytes) / 4 + 2;
+    var N = Math.ceil(l / 16);
+    var M = [];
+
+    for (var i = 0; i < N; i++)
+    {
+        //var arr = new Uint32Array(16);
+        arr = []
+        for(var j = 0; j < 16; j++)
+        {
+            append(arr, bytes[i * 64 + j * 4] << 24 | bytes[i * 64 + j * 4 + 1] << 16 | bytes[i * 64 + j * 4 + 2] << 8 | bytes[i * 64 + j * 4 + 3]);
+        }
+        M[i] = arr;
+    }
+    M[N - 1][14] = (len(bytes) - 1) * 8 / Math.pow(2, 32);
+    M[N - 1][14] = Math.floor(M[N - 1][14]);
+    M[N - 1][15] = (len(bytes) - 1) * 8 & 0xffffffff;
+    for(var i = 0; i < N; ++i)
+    {
+        //var W = new Uint32Array(80);
+        var W = [];
+        for (var t = 0; t < 16; ++t)
+        {
+            W[t] = M[i][t];
+        }
+        for (var t = 16; t < 80; ++t)
+        {
+            W[t] = ROTL(W[t - 3] ^ W[t - 8] ^ W[t - 14] ^ W[t - 16], 1);
+        }
+        var a = H[0];
+        var b = H[1];
+        var c = H[2];
+        var d = H[3];
+        var e = H[4];
+        for (var t = 0; t < 80; ++t)
+        {
+            var s = Math.floor(t / 20);
+            var T = ROTL(a, 5) + f(s, b, c, d) + e + K[s] + unshiftright(W[t], 0);
+            e = d;
+            d = c;
+            c = unshiftright(ROTL(b, 30), 0);
+            b = a;
+            a = T;
+        }
+        H[0] = H[0] + unshiftright(a, 0);
+        H[1] = H[1] + unshiftright(b, 0);
+        H[2] = H[2] + unshiftright(c, 0);
+        H[3] = H[3] + unshiftright(d, 0);
+        H[4] = H[4] + unshiftright(e, 0);
+    }
+    return [
+        H[0] >> 24 & 0xff,
+        H[0] >> 16 & 0xff,
+        H[0] >> 8 & 0xff,
+        H[0] & 0xff,
+        H[1] >> 24 & 0xff,
+        H[1] >> 16 & 0xff,
+        H[1] >> 8 & 0xff,
+        H[1] & 0xff,
+        H[2] >> 24 & 0xff,
+        H[2] >> 16 & 0xff,
+        H[2] >> 8 & 0xff,
+        H[2] & 0xff,
+        H[3] >> 24 & 0xff,
+        H[3] >> 16 & 0xff,
+        H[3] >> 8 & 0xff,
+        H[3] & 0xff,
+        H[4] >> 24 & 0xff,
+        H[4] >> 16 & 0xff,
+        H[4] >> 8 & 0xff,
+        H[4] & 0xff
+    ];
+}
+
+
+function sha1(s)
+{
+    var bytes = null;
+    var chars = String.split(s, "");
+    bytes = chars;
+    for(var i=0; i<len(chars); i++)
+    {
+        bytes[i] = ord(chars[i]);
+    }
+    var r = sha1_actual(chars);
+    var buf = "";
+    for(var i=0; i<len(r); i++)
+    {
+        buf += (r[i]);
+    }
+    return buf;
+}
+
+var demo = [
+    ["foo", "0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33"],
+    ["bar", "62cdb7020ff920e5aa642c3d4066950dd1f01f4d"],
+    ["hello world", "2aae6c35c94fcfb415dbe95f408b9ce91ee846ed"],
+    ["abcdx", "a96e144dfdc6380c8a4ae43bea1c81cb01215020"],
+    ["long text, some spaces, blah blah", "fc0aa2379ecce86eac0dc50d921ab2cef7030d12"],
+];
+
+for(var idx=0; idx<len(demo); idx++)
+{
+    var itm = demo[idx];
+    var k = itm[0];
+    var v = itm[1];
+    var ma = sha1(k);
+    //ma = "blah"
+    var m = ma;
+    //println("-- (", k, ") [", v, "] = (", len(ma), ") ", ma)
+    var okstr = "FAIL";
+    if(m == v)
+    {
+        okstr = "OK  ";
+    }
+    println(okstr, ": \"",k, "\" => ", m, "");
+
+}

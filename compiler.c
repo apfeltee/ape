@@ -3,13 +3,13 @@
 
 static const ApeSymbol_t *ccpriv_definesym(ApeCompiler_t *comp, ApePosition_t pos, const char *name, bool assignable, bool can_shadow);
 static void ccpriv_setsymtable(ApeCompiler_t *comp, ApeSymbolTable_t *table);
-static int ccpriv_emit(ApeCompiler_t *comp, opcode_t op, int operands_count, uint64_t *operands);
+static int ccpriv_emit(ApeCompiler_t *comp, ApeOpByte_t op, int operands_count, uint64_t *operands);
 static ApeCompilationScope_t *ccpriv_getcompscope(ApeCompiler_t *comp);
 static bool ccpriv_pushcompscope(ApeCompiler_t *comp);
 static void ccpriv_popcompscope(ApeCompiler_t *comp);
 static bool ccpriv_pushsymtable(ApeCompiler_t *comp, int global_offset);
 static void ccpriv_popsymtable(ApeCompiler_t *comp);
-static opcode_t ccpriv_getlastopcode(ApeCompiler_t *comp);
+static ApeOpByte_t ccpriv_getlastopcode(ApeCompiler_t *comp);
 static bool ccpriv_compilecode(ApeCompiler_t *comp, const char *code);
 static bool ccpriv_compilestmtlist(ApeCompiler_t *comp, ApePtrArray_t *statements);
 static bool ccpriv_importmodule(ApeCompiler_t *comp, const ApeStatement_t *import_stmt);
@@ -18,7 +18,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t *comp, ApeExpression_t *expr)
 static bool ccpriv_compilecodeblock(ApeCompiler_t *comp, const ApeCodeblock_t *block);
 static int ccpriv_addconstant(ApeCompiler_t *comp, ApeObject_t obj);
 static void ccpriv_moduint16operand(ApeCompiler_t *comp, int ip, uint16_t operand);
-static bool ccpriv_lastopcodeis(ApeCompiler_t *comp, opcode_t op);
+static bool ccpriv_lastopcodeis(ApeCompiler_t *comp, ApeOpByte_t op);
 static bool ccpriv_readsym(ApeCompiler_t *comp, const ApeSymbol_t *symbol);
 static bool ccpriv_writesym(ApeCompiler_t *comp, const ApeSymbol_t *symbol, bool define);
 static bool ccpriv_pushbreakip(ApeCompiler_t *comp, int ip);
@@ -402,7 +402,7 @@ err:
     return false;
 }
 
-static int ccpriv_emit(ApeCompiler_t* comp, opcode_t op, int operands_count, uint64_t* operands)
+static int ccpriv_emit(ApeCompiler_t* comp, ApeOpByte_t op, int operands_count, uint64_t* operands)
 {
     int i;
     int ip;
@@ -499,7 +499,7 @@ static void ccpriv_popsymtable(ApeCompiler_t* comp)
     symbol_table_destroy(current_table);
 }
 
-static opcode_t ccpriv_getlastopcode(ApeCompiler_t* comp)
+static ApeOpByte_t ccpriv_getlastopcode(ApeCompiler_t* comp)
 {
     ApeCompilationScope_t* current_scope;
     current_scope = ccpriv_getcompscope(comp);
@@ -1394,7 +1394,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
         {
             bool rearrange = false;
 
-            opcode_t op = OPCODE_NONE;
+            ApeOpByte_t op = OPCODE_NONE;
             switch(expr->infix.op)
             {
                 case OPERATOR_PLUS:
@@ -1640,7 +1640,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
                 goto error;
             }
 
-            opcode_t op = OPCODE_NONE;
+            ApeOpByte_t op = OPCODE_NONE;
             switch(expr->prefix.op)
             {
                 case OPERATOR_MINUS:
@@ -2092,15 +2092,15 @@ static void ccpriv_moduint16operand(ApeCompiler_t* comp, int ip, uint16_t operan
         APE_ASSERT(false);
         return;
     }
-    uint8_t hi = (uint8_t)(operand >> 8);
+    ApeUShort_t hi = (ApeUShort_t)(operand >> 8);
     array_set(bytecode, ip, &hi);
-    uint8_t lo = (uint8_t)(operand);
+    ApeUShort_t lo = (ApeUShort_t)(operand);
     array_set(bytecode, ip + 1, &lo);
 }
 
-static bool ccpriv_lastopcodeis(ApeCompiler_t* comp, opcode_t op)
+static bool ccpriv_lastopcodeis(ApeCompiler_t* comp, ApeOpByte_t op)
 {
-    opcode_t last_opcode = ccpriv_getlastopcode(comp);
+    ApeOpByte_t last_opcode = ccpriv_getlastopcode(comp);
     return last_opcode == op;
 }
 

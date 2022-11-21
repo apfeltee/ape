@@ -17,7 +17,7 @@ static const char* g_type_names[] = {
     "RECOVER",  "IDENT", "NUMBER",   "STRING", "TEMPLATE_STRING",
 };
 
-static bool code_read_operands(ApeOpcodeDefinition_t* def, uint8_t* instr, uint64_t out_operands[2])
+static bool code_read_operands(ApeOpcodeDefinition_t* def, ApeUShort_t* instr, uint64_t out_operands[2])
 {
     int offset = 0;
     for(int i = 0; i < def->num_operands; i++)
@@ -516,12 +516,12 @@ const char* expression_type_to_string(ApeExpr_type_t type)
     }
 }
 
-void code_to_string(uint8_t* code, ApePosition_t* source_positions, size_t code_size, ApeStringBuffer_t* res)
+void code_to_string(ApeUShort_t* code, ApePosition_t* source_positions, size_t code_size, ApeStringBuffer_t* res)
 {
     unsigned pos = 0;
     while(pos < code_size)
     {
-        uint8_t op = code[pos];
+        ApeUShort_t op = code[pos];
         ApeOpcodeDefinition_t* def = opcode_lookup(op);
         APE_ASSERT(def);
         if(source_positions)

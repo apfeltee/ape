@@ -15,6 +15,11 @@ function ord(s)
     return s.charCodeAt(0);
 }
 
+function chr(n)
+{
+    return String.fromCharCode(n);
+}
+
 function bitnot(n)
 {
     return (~n);
@@ -27,6 +32,11 @@ function substr(s, a, b=null)
         return s.substring(a);
     }
     return s.substring(a, b);
+}
+
+String.split = function(s, a)
+{
+    return s.split(a);
 }
 
 function println(...args)

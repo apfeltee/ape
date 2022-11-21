@@ -431,8 +431,13 @@ enum ApePrecedence_t
     PRECEDENCE_HIGHEST
 };
 
-typedef uint8_t opcode_t;
+typedef uint8_t ApeOpByte_t;
 typedef double ApeFloat_t;
+typedef int32_t ApeInt_t;
+typedef uint32_t ApeUInt_t;
+typedef int8_t ApeShort_t;
+typedef uint8_t ApeUShort_t;
+typedef size_t ApeSize_t;
 
 typedef enum ApeTokenType_t ApeTokenType_t;
 typedef enum ApeStatementType_t ApeStatementType_t;
@@ -833,9 +838,12 @@ struct ApeParser_t
 
 struct ApeObject_t
 {
-    uint64_t _internal;
+    uint64_t internal_padding;
+    //char internal_padding[64 * 8];
     union
     {
+        // assumes no pointer exceeds 48 bits
+        //uintptr_t handle;
         uint64_t handle;
         ApeFloat_t number;
     };
@@ -892,7 +900,7 @@ struct ApeNativeFunction_t
 {
     char* name;
     ApeNativeFNCallback_t native_funcptr;
-    //uint8_t data[NATIVE_FN_MAX_DATA_LEN];
+    //ApeUShort_t data[NATIVE_FN_MAX_DATA_LEN];
     void* data;
     int data_len;
 };
@@ -962,7 +970,7 @@ struct ApeOpcodeDefinition_t
 struct ApeCompilationResult_t
 {
     ApeAllocator_t* alloc;
-    uint8_t* bytecode;
+    ApeUShort_t* bytecode;
     ApePosition_t* src_positions;
     int count;
 };
@@ -975,7 +983,7 @@ struct ApeCompilationScope_t
     ApeArray_t * src_positions;
     ApeArray_t * break_ip_stack;
     ApeArray_t * continue_ip_stack;
-    opcode_t last_opcode;
+    ApeOpByte_t last_opcode;
 };
 
 struct ApeObjectDataPool_t
@@ -1013,7 +1021,7 @@ struct ApeFrame_t
     int ip;
     int base_pointer;
     const ApePosition_t* src_positions;
-    uint8_t* bytecode;
+    ApeUShort_t* bytecode;
     int src_ip;
     int bytecode_size;
     int recover_ip;
