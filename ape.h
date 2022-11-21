@@ -432,7 +432,7 @@ enum ApePrecedence_t
 };
 
 typedef uint8_t opcode_t;
-typedef double ApeInt_t;
+typedef double ApeFloat_t;
 
 typedef enum ApeTokenType_t ApeTokenType_t;
 typedef enum ApeStatementType_t ApeStatementType_t;
@@ -736,7 +736,7 @@ struct ApeExpression_t
     union
     {
         ApeIdent_t* ident;
-        ApeInt_t number_literal;
+        ApeFloat_t number_literal;
         bool bool_literal;
         char* string_literal;
         ApePtrArray_t * array;
@@ -837,7 +837,7 @@ struct ApeObject_t
     union
     {
         uint64_t handle;
-        ApeInt_t number;
+        ApeFloat_t number;
     };
 };
 

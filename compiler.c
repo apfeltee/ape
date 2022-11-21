@@ -1507,7 +1507,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
         }
         case EXPRESSION_NUMBER_LITERAL:
         {
-            ApeInt_t number = expr->number_literal;
+            ApeFloat_t number = expr->number_literal;
             ip = ccpriv_emit(comp, OPCODE_NUMBER, 1, (uint64_t[]){ (uint64_t)ape_double_to_uint64(number) });
             if(ip < 0)
             {

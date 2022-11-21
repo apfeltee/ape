@@ -54,7 +54,7 @@ ApeExpression_t* expression_make_ident(ApeAllocator_t* alloc, ApeIdent_t* ident)
     return res;
 }
 
-ApeExpression_t* expression_make_number_literal(ApeAllocator_t* alloc, ApeInt_t val)
+ApeExpression_t* expression_make_number_literal(ApeAllocator_t* alloc, ApeFloat_t val)
 {
     ApeExpression_t* res = expression_make(alloc, EXPRESSION_NUMBER_LITERAL);
     if(!res)
@@ -2029,7 +2029,7 @@ ApeExpression_t* parse_number_literal(ApeParser_t* p)
 {
     char* end;
     char* literal;
-    ApeInt_t number;
+    ApeFloat_t number;
     long parsed_len;
     number = 0;
     errno = 0;

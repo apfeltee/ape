@@ -545,7 +545,7 @@ void code_to_string(uint8_t* code, ApePosition_t* source_positions, size_t code_
         {
             if(op == OPCODE_NUMBER)
             {
-                ApeInt_t val_double = ape_uint64_to_double(operands[i]);
+                ApeFloat_t val_double = ape_uint64_to_double(operands[i]);
                 strbuf_appendf(res, " %1.17g", val_double);
             }
             else
@@ -578,7 +578,7 @@ void object_to_string(ApeObject_t obj, ApeStringBuffer_t* buf, bool quote_str)
         }
         case APE_OBJECT_NUMBER:
         {
-            ApeInt_t number = object_get_number(obj);
+            ApeFloat_t number = object_get_number(obj);
             strbuf_appendf(buf, "%1.10g", number);
             break;
         }

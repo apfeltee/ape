@@ -148,22 +148,22 @@ char* ape_strdup(ApeAllocator_t* alloc, const char* string)
     return ape_strndup(alloc, string, strlen(string));
 }
 
-uint64_t ape_double_to_uint64(ApeInt_t val)
+uint64_t ape_double_to_uint64(ApeFloat_t val)
 {
     union
     {
         uint64_t val_uint64;
-        ApeInt_t val_double;
+        ApeFloat_t val_double;
     } temp = { .val_double = val };
     return temp.val_uint64;
 }
 
-ApeInt_t ape_uint64_to_double(uint64_t val)
+ApeFloat_t ape_uint64_to_double(uint64_t val)
 {
     union
     {
         uint64_t val_uint64;
-        ApeInt_t val_double;
+        ApeFloat_t val_double;
     } temp = { .val_uint64 = val };
     return temp.val_double;
 }
@@ -190,7 +190,7 @@ ApeTimer_t ape_timer_start()
 #elif defined(APE_WINDOWS)
     LARGE_INTEGER li;
     QueryPerformanceFrequency(&li);// not sure what to do if it fails
-    timer.pc_frequency = (ApeInt_t)(li.QuadPart) / 1000.0;
+    timer.pc_frequency = (ApeFloat_t)(li.QuadPart) / 1000.0;
     QueryPerformanceCounter(&li);
     timer.start_time_ms = li.QuadPart / timer.pc_frequency;
 #elif defined(APE_EMSCRIPTEN)
@@ -199,21 +199,21 @@ ApeTimer_t ape_timer_start()
     return timer;
 }
 
-ApeInt_t ape_timer_get_elapsed_ms(const ApeTimer_t* timer)
+ApeFloat_t ape_timer_get_elapsed_ms(const ApeTimer_t* timer)
 {
 #if defined(APE_POSIX)
     struct timeval current_time;
     gettimeofday(&current_time, NULL);
     int time_s = (int)((int64_t)current_time.tv_sec - timer->start_offset);
-    ApeInt_t current_time_ms = (time_s * 1000) + (current_time.tv_usec / 1000.0);
+    ApeFloat_t current_time_ms = (time_s * 1000) + (current_time.tv_usec / 1000.0);
     return current_time_ms - timer->start_time_ms;
 #elif defined(APE_WINDOWS)
     LARGE_INTEGER li;
     QueryPerformanceCounter(&li);
-    ApeInt_t current_time_ms = li.QuadPart / timer->pc_frequency;
+    ApeFloat_t current_time_ms = li.QuadPart / timer->pc_frequency;
     return current_time_ms - timer->start_time_ms;
 #elif defined(APE_EMSCRIPTEN)
-    ApeInt_t current_time_ms = emscripten_get_now();
+    ApeFloat_t current_time_ms = emscripten_get_now();
     return current_time_ms - timer->start_time_ms;
 #else
     return 0;
@@ -2707,8 +2707,8 @@ ApeExpression_t* optimise_infix_expression(ApeExpression_t* expr)
     ApeExpression_t* right_optimised;
     ApeExpression_t* res;
     ApeAllocator_t* alloc;
-    ApeInt_t leftval;
-    ApeInt_t rightval;
+    ApeFloat_t leftval;
+    ApeFloat_t rightval;
     left = expr->infix.left;
     left_optimised = optimise_expression(left);
     if(left_optimised)
@@ -2794,27 +2794,27 @@ ApeExpression_t* optimise_infix_expression(ApeExpression_t* expr)
                 break;
             case OPERATOR_BIT_AND:
                 {
-                    res = expression_make_number_literal(alloc, (ApeInt_t)(leftint & rightint));
+                    res = expression_make_number_literal(alloc, (ApeFloat_t)(leftint & rightint));
                 }
                 break;
             case OPERATOR_BIT_OR:
                 {
-                    res = expression_make_number_literal(alloc, (ApeInt_t)(leftint | rightint));
+                    res = expression_make_number_literal(alloc, (ApeFloat_t)(leftint | rightint));
                 }
                 break;
             case OPERATOR_BIT_XOR:
                 {
-                    res = expression_make_number_literal(alloc, (ApeInt_t)(leftint ^ rightint));
+                    res = expression_make_number_literal(alloc, (ApeFloat_t)(leftint ^ rightint));
                 }
                 break;
             case OPERATOR_LSHIFT:
                 {
-                    res = expression_make_number_literal(alloc, (ApeInt_t)(leftint << rightint));
+                    res = expression_make_number_literal(alloc, (ApeFloat_t)(leftint << rightint));
                 }
                 break;
             case OPERATOR_RSHIFT:
                 {
-                    res = expression_make_number_literal(alloc, (ApeInt_t)(leftint >> rightint));
+                    res = expression_make_number_literal(alloc, (ApeFloat_t)(leftint >> rightint));
                 }
                 break;
             default:
@@ -2989,7 +2989,7 @@ ApeObject_t object_make_from_data(ApeObjectType_t type, ApeObjectData_t* data)
     return object;
 }
 
-ApeObject_t object_make_number(ApeInt_t val)
+ApeObject_t object_make_number(ApeFloat_t val)
 {
     ApeObject_t o = { .number = val };
     if((o.handle & OBJECT_PATTERN) == OBJECT_PATTERN)
@@ -3547,7 +3547,7 @@ ApeObject_t object_copy(ApeGCMemory_t* mem, ApeObject_t obj)
     return copy;
 }
 
-ApeInt_t object_compare(ApeObject_t a, ApeObject_t b, bool* out_ok)
+ApeFloat_t object_compare(ApeObject_t a, ApeObject_t b, bool* out_ok)
 {
     bool isnumeric;
     int a_len;
@@ -3558,8 +3558,8 @@ ApeInt_t object_compare(ApeObject_t a, ApeObject_t b, bool* out_ok)
     intptr_t b_data_val;
     const char* a_string;
     const char* b_string;
-    ApeInt_t leftval;
-    ApeInt_t rightval;
+    ApeFloat_t leftval;
+    ApeFloat_t rightval;
     ApeObjectType_t a_type;
     ApeObjectType_t b_type;
     if(a.handle == b.handle)
@@ -3601,7 +3601,7 @@ ApeInt_t object_compare(ApeObject_t a, ApeObject_t b, bool* out_ok)
     {
         a_data_val = (intptr_t)object_get_allocated_data(a);
         b_data_val = (intptr_t)object_get_allocated_data(b);
-        return (ApeInt_t)(a_data_val - b_data_val);
+        return (ApeFloat_t)(a_data_val - b_data_val);
     }
     else
     {
@@ -3613,7 +3613,7 @@ ApeInt_t object_compare(ApeObject_t a, ApeObject_t b, bool* out_ok)
 bool object_equals(ApeObject_t a, ApeObject_t b)
 {
     bool ok;
-    ApeInt_t res;
+    ApeFloat_t res;
     ApeObjectType_t a_type;
     ApeObjectType_t b_type;
     a_type = object_get_type(a);
@@ -3663,13 +3663,13 @@ bool object_get_bool(ApeObject_t obj)
     return obj.handle & (~OBJECT_HEADER_MASK);
 }
 
-ApeInt_t object_get_number(ApeObject_t obj)
+ApeFloat_t object_get_number(ApeObject_t obj)
 {
     if(object_is_number(obj))
     {// todo: optimise? always return number?
         return obj.number;
     }
-    return (ApeInt_t)(obj.handle & (~OBJECT_HEADER_MASK));
+    return (ApeFloat_t)(obj.handle & (~OBJECT_HEADER_MASK));
 }
 
 const char* object_get_string(ApeObject_t object)
@@ -4291,7 +4291,7 @@ bool object_equals_wrapped(const ApeObject_t* a_ptr, const ApeObject_t* b_ptr)
 unsigned long object_hash(ApeObject_t* obj_ptr)
 {
     bool bval;
-    ApeInt_t val;
+    ApeFloat_t val;
     ApeObject_t obj;
     ApeObjectType_t type;
     obj = *obj_ptr;
@@ -4338,7 +4338,7 @@ unsigned long object_hash_string(const char* str)
 }
 
 /* djb2 */
-unsigned long object_hash_double(ApeInt_t val)
+unsigned long object_hash_double(ApeFloat_t val)
 {
     uint32_t* val_ptr;
     unsigned long hash;
@@ -5098,12 +5098,12 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
     ApeFrame_t new_frame;
     ApeFrame_t* frame;
     ApeFunction_t* function_function;
-    ApeInt_t comparison_res;
-    ApeInt_t leftval;
-    ApeInt_t max_exec_time_ms;
-    ApeInt_t res;
-    ApeInt_t rightval;
-    ApeInt_t val_double;
+    ApeFloat_t comparison_res;
+    ApeFloat_t leftval;
+    ApeFloat_t max_exec_time_ms;
+    ApeFloat_t res;
+    ApeFloat_t rightval;
+    ApeFloat_t val_double;
     ApeObjectType_t constant_type;
     ApeObjectType_t index_type;
     ApeObjectType_t key_type;
@@ -5281,27 +5281,27 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                                 break;
                             case OPCODE_OR:
                                 {
-                                    res = (ApeInt_t)(leftint | rightint);
+                                    res = (ApeFloat_t)(leftint | rightint);
                                 }
                                 break;
                             case OPCODE_XOR:
                                 {
-                                    res = (ApeInt_t)(leftint ^ rightint);
+                                    res = (ApeFloat_t)(leftint ^ rightint);
                                 }
                                 break;
                             case OPCODE_AND:
                                 {
-                                    res = (ApeInt_t)(leftint & rightint);
+                                    res = (ApeFloat_t)(leftint & rightint);
                                 }
                                 break;
                             case OPCODE_LSHIFT:
                                 {
-                                    res = (ApeInt_t)(leftint << rightint);
+                                    res = (ApeFloat_t)(leftint << rightint);
                                 }
                                 break;
                             case OPCODE_RSHIFT:
                                 {
-                                    res = (ApeInt_t)(leftint >> rightint);
+                                    res = (ApeFloat_t)(leftint >> rightint);
                                 }
                                 break;
                             default:
@@ -6527,7 +6527,7 @@ void ape_set_repl_mode(ApeContext_t* ape, bool enabled)
     ape->config.repl_mode = enabled;
 }
 
-bool ape_set_timeout(ApeContext_t* ape, ApeInt_t max_execution_time_ms)
+bool ape_set_timeout(ApeContext_t* ape, ApeFloat_t max_execution_time_ms)
 {
     if(!ape_timer_platform_supported())
     {
@@ -6717,7 +6717,7 @@ bool ape_object_set_map_string(ApeObject_t obj, const char* key, const char* str
     return ape_object_set_map_value(obj, key, string_object);
 }
 
-bool ape_object_set_map_number(ApeObject_t obj, const char* key, ApeInt_t number)
+bool ape_object_set_map_number(ApeObject_t obj, const char* key, ApeFloat_t number)
 {
     ApeObject_t number_object = object_make_number(number);
     return ape_object_set_map_value(obj, key, number_object);

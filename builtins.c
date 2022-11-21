@@ -406,7 +406,7 @@ static ApeObject_t cfn_to_num(ApeVM_t* vm, void* data, int argc, ApeObject_t* ar
     {
         return object_make_null();
     }
-    ApeInt_t result = 0;
+    ApeFloat_t result = 0;
     const char* string = "";
     if(object_is_numeric(args[0]))
     {
@@ -456,7 +456,7 @@ static ApeObject_t cfn_chr(ApeVM_t* vm, void* data, int argc, ApeObject_t* args)
         return object_make_null();
     }
 
-    ApeInt_t val = object_get_number(args[0]);
+    ApeFloat_t val = object_get_number(args[0]);
 
     char c = (char)val;
     char str[2] = { c, '\0' };
@@ -830,7 +830,7 @@ static ApeObject_t cfn_random_seed(ApeVM_t* vm, void* data, int argc, ApeObject_
 static ApeObject_t cfn_random(ApeVM_t* vm, void* data, int argc, ApeObject_t* args)
 {
     (void)data;
-    ApeInt_t res = (ApeInt_t)rand() / RAND_MAX;
+    ApeFloat_t res = (ApeFloat_t)rand() / RAND_MAX;
     if(argc == 0)
     {
         return object_make_number(res);
@@ -841,14 +841,14 @@ static ApeObject_t cfn_random(ApeVM_t* vm, void* data, int argc, ApeObject_t* ar
         {
             return object_make_null();
         }
-        ApeInt_t min = object_get_number(args[0]);
-        ApeInt_t max = object_get_number(args[1]);
+        ApeFloat_t min = object_get_number(args[0]);
+        ApeFloat_t max = object_get_number(args[1]);
         if(min >= max)
         {
             errors_add_error(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "max is bigger than min");
             return object_make_null();
         }
-        ApeInt_t range = max - min;
+        ApeFloat_t range = max - min;
         res = min + (res * range);
         return object_make_number(res);
     }
@@ -1051,8 +1051,8 @@ static ApeObject_t cfn_sqrt(ApeVM_t* vm, void* data, int argc, ApeObject_t* args
     {
         return object_make_null();
     }
-    ApeInt_t arg = object_get_number(args[0]);
-    ApeInt_t res = sqrt(arg);
+    ApeFloat_t arg = object_get_number(args[0]);
+    ApeFloat_t res = sqrt(arg);
     return object_make_number(res);
 }
 
@@ -1063,9 +1063,9 @@ static ApeObject_t cfn_pow(ApeVM_t* vm, void* data, int argc, ApeObject_t* args)
     {
         return object_make_null();
     }
-    ApeInt_t arg1 = object_get_number(args[0]);
-    ApeInt_t arg2 = object_get_number(args[1]);
-    ApeInt_t res = pow(arg1, arg2);
+    ApeFloat_t arg1 = object_get_number(args[0]);
+    ApeFloat_t arg2 = object_get_number(args[1]);
+    ApeFloat_t res = pow(arg1, arg2);
     return object_make_number(res);
 }
 
@@ -1076,8 +1076,8 @@ static ApeObject_t cfn_sin(ApeVM_t* vm, void* data, int argc, ApeObject_t* args)
     {
         return object_make_null();
     }
-    ApeInt_t arg = object_get_number(args[0]);
-    ApeInt_t res = sin(arg);
+    ApeFloat_t arg = object_get_number(args[0]);
+    ApeFloat_t res = sin(arg);
     return object_make_number(res);
 }
 
@@ -1088,8 +1088,8 @@ static ApeObject_t cfn_cos(ApeVM_t* vm, void* data, int argc, ApeObject_t* args)
     {
         return object_make_null();
     }
-    ApeInt_t arg = object_get_number(args[0]);
-    ApeInt_t res = cos(arg);
+    ApeFloat_t arg = object_get_number(args[0]);
+    ApeFloat_t res = cos(arg);
     return object_make_number(res);
 }
 
@@ -1100,8 +1100,8 @@ static ApeObject_t cfn_tan(ApeVM_t* vm, void* data, int argc, ApeObject_t* args)
     {
         return object_make_null();
     }
-    ApeInt_t arg = object_get_number(args[0]);
-    ApeInt_t res = tan(arg);
+    ApeFloat_t arg = object_get_number(args[0]);
+    ApeFloat_t res = tan(arg);
     return object_make_number(res);
 }
 
@@ -1112,8 +1112,8 @@ static ApeObject_t cfn_log(ApeVM_t* vm, void* data, int argc, ApeObject_t* args)
     {
         return object_make_null();
     }
-    ApeInt_t arg = object_get_number(args[0]);
-    ApeInt_t res = log(arg);
+    ApeFloat_t arg = object_get_number(args[0]);
+    ApeFloat_t res = log(arg);
     return object_make_number(res);
 }
 
@@ -1124,8 +1124,8 @@ static ApeObject_t cfn_ceil(ApeVM_t* vm, void* data, int argc, ApeObject_t* args
     {
         return object_make_null();
     }
-    ApeInt_t arg = object_get_number(args[0]);
-    ApeInt_t res = ceil(arg);
+    ApeFloat_t arg = object_get_number(args[0]);
+    ApeFloat_t res = ceil(arg);
     return object_make_number(res);
 }
 
@@ -1136,8 +1136,8 @@ static ApeObject_t cfn_floor(ApeVM_t* vm, void* data, int argc, ApeObject_t* arg
     {
         return object_make_null();
     }
-    ApeInt_t arg = object_get_number(args[0]);
-    ApeInt_t res = floor(arg);
+    ApeFloat_t arg = object_get_number(args[0]);
+    ApeFloat_t res = floor(arg);
     return object_make_number(res);
 }
 
@@ -1148,8 +1148,8 @@ static ApeObject_t cfn_abs(ApeVM_t* vm, void* data, int argc, ApeObject_t* args)
     {
         return object_make_null();
     }
-    ApeInt_t arg = object_get_number(args[0]);
-    ApeInt_t res = fabs(arg);
+    ApeFloat_t arg = object_get_number(args[0]);
+    ApeFloat_t res = fabs(arg);
     return object_make_number(res);
 }
 
