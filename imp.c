@@ -26,6 +26,8 @@ THE SOFTWARE.
 
 #include "ape.h"
 
+static const ApePosition_t g_vmpriv_src_pos_invalid = { NULL, -1, -1 };
+
 static unsigned int vmpriv_upperpoweroftwo(unsigned int v);
 static void vmpriv_initerrors(ApeErrorList_t *errors);
 static void vmpriv_destroyerrors(ApeErrorList_t *errors);
@@ -280,7 +282,7 @@ static unsigned int vmpriv_upperpoweroftwo(unsigned int v)
 // Allocator
 //-----------------------------------------------------------------------------
 
-ApeAllocator_t allocator_make(ApeAllocatorMallocFNCallback_t malloc_fn, ApeAllocatorFreeFNCallback_t free_fn, void* ctx)
+ApeAllocator_t allocator_make(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t free_fn, void* ctx)
 {
     ApeAllocator_t alloc;
     alloc.malloc = malloc_fn;
@@ -309,7 +311,7 @@ void allocator_free(ApeAllocator_t* allocator, void* ptr)
 }
 
 // Public
-ApeDictionary_t* dict_make_(ApeAllocator_t* alloc, ApeDictItemCopyFNCallback_t copy_fn, ApeDictItemDestroyFNCallback_t destroy_fn)
+ApeDictionary_t* dict_make(ApeAllocator_t* alloc, ApeDataCallback_t copy_fn, ApeDataCallback_t destroy_fn)
 {
     bool ok;
     ApeDictionary_t* dict;
@@ -341,7 +343,7 @@ void dict_destroy(ApeDictionary_t* dict)
 
 void dict_destroy_with_items(ApeDictionary_t* dict)
 {
-    unsigned int i;
+    ApeSize_t i;
     if(!dict)
     {
         return;
@@ -358,7 +360,7 @@ void dict_destroy_with_items(ApeDictionary_t* dict)
 
 ApeDictionary_t* dict_copy_with_items(ApeDictionary_t* dict)
 {
-    int i;
+    ApeSize_t i;
     bool ok;
     const char* key;
     void* item;
@@ -369,7 +371,7 @@ ApeDictionary_t* dict_copy_with_items(ApeDictionary_t* dict)
     {
         return NULL;
     }
-    dict_copy = dict_make_(dict->alloc, dict->copy_fn, dict->destroy_fn);
+    dict_copy = dict_make(dict->alloc, (ApeDataCallback_t)dict->copy_fn, (ApeDataCallback_t)dict->destroy_fn);
     if(!dict_copy)
     {
         return NULL;
@@ -435,7 +437,7 @@ const char* dict_get_key_at(const ApeDictionary_t* dict, unsigned int ix)
     return dict->keys[ix];
 }
 
-int dict_count(const ApeDictionary_t* dict)
+ApeSize_t dict_count(const ApeDictionary_t* dict)
 {
     if(!dict)
     {
@@ -445,9 +447,9 @@ int dict_count(const ApeDictionary_t* dict)
 }
 
 // Private definitions
-bool dict_init(ApeDictionary_t* dict, ApeAllocator_t* alloc, unsigned int initial_capacity, ApeDictItemCopyFNCallback_t copy_fn, ApeDictItemDestroyFNCallback_t destroy_fn)
+bool dict_init(ApeDictionary_t* dict, ApeAllocator_t* alloc, unsigned int initial_capacity, ApeDataCallback_t copy_fn, ApeDataCallback_t destroy_fn)
 {
-    unsigned int i;
+    ApeSize_t i;
     dict->alloc = alloc;
     dict->cells = NULL;
     dict->keys = NULL;
@@ -484,7 +486,7 @@ error:
 
 void dict_deinit(ApeDictionary_t* dict, bool free_keys)
 {
-    unsigned int i;
+    ApeSize_t i;
     if(free_keys)
     {
         for(i = 0; i < dict->count; i++)
@@ -509,10 +511,10 @@ void dict_deinit(ApeDictionary_t* dict, bool free_keys)
 
 unsigned int dict_get_cell_ix(const ApeDictionary_t* dict, const char* key, unsigned long hash, bool* out_found)
 {
-    unsigned int i;
-    unsigned int ix;
-    unsigned int cell;
-    unsigned int cell_ix;
+    ApeSize_t i;
+    ApeSize_t ix;
+    ApeSize_t cell;
+    ApeSize_t cell_ix;
     unsigned long hash_to_check;
     const char* key_to_check;
     *out_found = false;
@@ -557,7 +559,7 @@ unsigned long hash_string(const char* str)
 bool dict_grow_and_rehash(ApeDictionary_t* dict)
 {
     bool ok;
-    unsigned int i;
+    ApeSize_t i;
     char* key;
     void* value;
     ApeDictionary_t new_dict;
@@ -673,12 +675,12 @@ void valdict_destroy(ApeValDictionary_t* dict)
     allocator_free(alloc, dict);
 }
 
-void valdict_set_hash_function(ApeValDictionary_t* dict, ApeCollectionsHashFNCallback_t hash_fn)
+void valdict_set_hash_function(ApeValDictionary_t* dict, ApeDataHashFunc_t hash_fn)
 {
     dict->_hash_key = hash_fn;
 }
 
-void valdict_set_equals_function(ApeValDictionary_t* dict, ApeCollectionsEqualsFNCallback_t equals_fn)
+void valdict_set_equals_function(ApeValDictionary_t* dict, ApeDataEqualsFunc_t equals_fn)
 {
     dict->_keys_equals = equals_fn;
 }
@@ -766,7 +768,7 @@ bool valdict_set_value_at(const ApeValDictionary_t* dict, unsigned int ix, const
     return true;
 }
 
-int valdict_count(const ApeValDictionary_t* dict)
+ApeSize_t valdict_count(const ApeValDictionary_t* dict)
 {
     if(!dict)
     {
@@ -777,7 +779,7 @@ int valdict_count(const ApeValDictionary_t* dict)
 
 void valdict_clear(ApeValDictionary_t* dict)
 {
-    unsigned int i;
+    ApeSize_t i;
     dict->count = 0;
     for(i = 0; i < dict->cell_capacity; i++)
     {
@@ -788,7 +790,7 @@ void valdict_clear(ApeValDictionary_t* dict)
 // Private definitions
 bool valdict_init(ApeValDictionary_t* dict, ApeAllocator_t* alloc, size_t key_size, size_t val_size, unsigned int initial_capacity)
 {
-    unsigned int i;
+    ApeSize_t i;
     dict->alloc = alloc;
     dict->key_size = key_size;
     dict->val_size = val_size;
@@ -847,11 +849,11 @@ void valdict_deinit(ApeValDictionary_t* dict)
 unsigned int valdict_get_cell_ix(const ApeValDictionary_t* dict, const void* key, unsigned long hash, bool* out_found)
 {
     bool are_equal;
-    unsigned int ofs;
-    unsigned int i;
-    unsigned int ix;
-    unsigned int cell;
-    unsigned int cell_ix;
+    ApeSize_t ofs;
+    ApeSize_t i;
+    ApeSize_t ix;
+    ApeSize_t cell;
+    ApeSize_t cell_ix;
     unsigned long hash_to_check;
     void* key_to_check;
     *out_found = false;
@@ -892,8 +894,8 @@ unsigned int valdict_get_cell_ix(const ApeValDictionary_t* dict, const void* key
 bool valdict_grow_and_rehash(ApeValDictionary_t* dict)
 {
     bool ok;
-    unsigned new_capacity;
-    unsigned int i;
+    ApeSize_t new_capacity;
+    ApeSize_t i;
     char* key;
     void* value;
     ApeValDictionary_t new_dict;
@@ -1116,7 +1118,7 @@ void* array_get(ApeArray_t* arr, unsigned int ix)
     return arr->arraydata + offset;
 }
 
-int array_count(const ApeArray_t* arr)
+ApeSize_t array_count(const ApeArray_t* arr)
 {
     if(!arr)
     {
@@ -1237,7 +1239,7 @@ void ptrarray_destroy(ApePtrArray_t* arr)
 }
 
 // todo: destroy and copy in make fn
-void ptrarray_destroy_with_items_(ApePtrArray_t* arr, ApePtrArrayItemDestroyFNCallback_t destroy_fn)
+void ptrarray_destroy_with_items(ApePtrArray_t* arr, ApeDataCallback_t destroy_fn)
 {
     if(arr == NULL)
     {
@@ -1245,15 +1247,15 @@ void ptrarray_destroy_with_items_(ApePtrArray_t* arr, ApePtrArrayItemDestroyFNCa
     }
     if(destroy_fn)
     {
-        ptrarray_clear_and_destroy_items_(arr, destroy_fn);
+        ptrarray_clear_and_destroy_items(arr, destroy_fn);
     }
     ptrarray_destroy(arr);
 }
 
-ApePtrArray_t* ptrarray_copy_with_items_(ApePtrArray_t* arr, ApePtrArrayItemCopyFNCallback_t copy_fn, ApePtrArrayItemDestroyFNCallback_t destroy_fn)
+ApePtrArray_t* ptrarray_copy_with_items(ApePtrArray_t* arr, ApeDataCallback_t copy_fn, ApeDataCallback_t destroy_fn)
 {
     bool ok;
-    int i;
+    ApeSize_t i;
     void* item;
     void* item_copy;
     ApePtrArray_t* arr_copy;
@@ -1278,7 +1280,7 @@ ApePtrArray_t* ptrarray_copy_with_items_(ApePtrArray_t* arr, ApePtrArrayItemCopy
     }
     return arr_copy;
 err:
-    ptrarray_destroy_with_items_(arr_copy, destroy_fn);
+    ptrarray_destroy_with_items(arr_copy, (ApeDataCallback_t)destroy_fn);
     return NULL;
 }
 
@@ -1305,7 +1307,7 @@ bool ptrarray_push(ApePtrArray_t* arr, void* ptr)
 
 void* ptrarray_pop(ApePtrArray_t* arr)
 {
-    int ix;
+    ApeSize_t ix;
     void* res;
     ix = ptrarray_count(arr) - 1;
     res = ptrarray_get(arr, ix);
@@ -1315,7 +1317,7 @@ void* ptrarray_pop(ApePtrArray_t* arr)
 
 void* ptrarray_top(ApePtrArray_t* arr)
 {
-    int count;
+    ApeSize_t count;
     count = ptrarray_count(arr);
     if(count == 0)
     {
@@ -1324,7 +1326,7 @@ void* ptrarray_top(ApePtrArray_t* arr)
     return ptrarray_get(arr, count - 1);
 }
 
-int ptrarray_count(const ApePtrArray_t* arr)
+ApeSize_t ptrarray_count(const ApePtrArray_t* arr)
 {
     if(!arr)
     {
@@ -1343,9 +1345,9 @@ void ptrarray_clear(ApePtrArray_t* arr)
     array_clear(&arr->arr);
 }
 
-void ptrarray_clear_and_destroy_items_(ApePtrArray_t* arr, ApePtrArrayItemDestroyFNCallback_t destroy_fn)
+void ptrarray_clear_and_destroy_items(ApePtrArray_t* arr, ApeDataCallback_t destroy_fn)
 {
-    int i;
+    ApeSize_t i;
     void* item;
     for(i = 0; i < ptrarray_count(arr); i++)
     {
@@ -1531,7 +1533,7 @@ bool strbuf_grow(ApeStringBuffer_t* buf, size_t new_capacity)
 
 ApePtrArray_t * kg_split_string(ApeAllocator_t* alloc, const char* str, const char* delimiter)
 {
-    int i;
+    ApeSize_t i;
     long len;
     bool ok;
     ApePtrArray_t* res;
@@ -1592,7 +1594,7 @@ err:
 
 char* kg_join(ApeAllocator_t* alloc, ApePtrArray_t * items, const char* with)
 {
-    int i;
+    ApeSize_t i;
     char* item;
     ApeStringBuffer_t* res;
     res = strbuf_make(alloc);
@@ -1614,7 +1616,7 @@ char* kg_join(ApeAllocator_t* alloc, ApePtrArray_t * items, const char* with)
 
 char* kg_canonicalise_path(ApeAllocator_t* alloc, const char* path)
 {
-    int i;
+    ApeSize_t i;
     char* joined;
     char* item;
     char* next_item;
@@ -1727,7 +1729,7 @@ void errors_add_errorf(ApeErrorList_t* errors, ApeErrorType_t type, ApePosition_
 
 void errors_clear(ApeErrorList_t* errors)
 {
-    int i;
+    ApeSize_t i;
     ApeError_t* error;
     for(i = 0; i < errors_get_count(errors); i++)
     {
@@ -1740,7 +1742,7 @@ void errors_clear(ApeErrorList_t* errors)
     errors->count = 0;
 }
 
-int errors_get_count(const ApeErrorList_t* errors)
+ApeSize_t errors_get_count(const ApeErrorList_t* errors)
 {
     return errors->count;
 }
@@ -1819,13 +1821,13 @@ error:
     return NULL;
 }
 
-void compiled_file_destroy(ApeCompiledFile_t* file)
+void* compiled_file_destroy(ApeCompiledFile_t* file)
 {
-    int i;
+    ApeSize_t i;
     void* item;
     if(!file)
     {
-        return;
+        return NULL;
     }
     for(i = 0; i < ptrarray_count(file->lines); i++)
     {
@@ -1836,11 +1838,12 @@ void compiled_file_destroy(ApeCompiledFile_t* file)
     allocator_free(file->alloc, file->dir_path);
     allocator_free(file->alloc, file->path);
     allocator_free(file->alloc, file);
+    return NULL;
 }
 
 ApeGlobalStore_t* global_store_make(ApeAllocator_t* alloc, ApeGCMemory_t* mem)
 {
-    int i;
+    ApeSize_t i;
     bool ok;
     const char* name;
     ApeObject_t builtin;
@@ -1852,7 +1855,7 @@ ApeGlobalStore_t* global_store_make(ApeAllocator_t* alloc, ApeGCMemory_t* mem)
     }
     memset(store, 0, sizeof(ApeGlobalStore_t));
     store->alloc = alloc;
-    store->symbols = dict_make(alloc, symbol_copy, symbol_destroy);
+    store->symbols = dict_make(alloc, (ApeDataCallback_t)symbol_copy, (ApeDataCallback_t)symbol_destroy);
     if(!store->symbols)
     {
         goto err;
@@ -1954,7 +1957,7 @@ ApeObject_t* global_store_get_object_data(ApeGlobalStore_t* store)
     return (ApeObject_t*)array_data(store->objects);
 }
 
-int global_store_get_object_count(ApeGlobalStore_t* store)
+ApeSize_t global_store_get_object_count(ApeGlobalStore_t* store)
 {
     return array_count(store->objects);
 }
@@ -1981,14 +1984,15 @@ ApeSymbol_t* symbol_make(ApeAllocator_t* alloc, const char* name, ApeSymbolType_
     return symbol;
 }
 
-void symbol_destroy(ApeSymbol_t* symbol)
+void* symbol_destroy(ApeSymbol_t* symbol)
 {
     if(!symbol)
     {
-        return;
+        return NULL;
     }
     allocator_free(symbol->alloc, symbol->name);
     allocator_free(symbol->alloc, symbol);
+    return NULL;
 }
 
 ApeSymbol_t* symbol_copy(ApeSymbol_t* symbol)
@@ -2049,8 +2053,8 @@ void symbol_table_destroy(ApeSymbolTable_t* table)
         symbol_table_pop_block_scope(table);
     }
     ptrarray_destroy(table->block_scopes);
-    ptrarray_destroy_with_items(table->module_global_symbols, symbol_destroy);
-    ptrarray_destroy_with_items(table->free_symbols, symbol_destroy);
+    ptrarray_destroy_with_items(table->module_global_symbols, (ApeDataCallback_t)symbol_destroy);
+    ptrarray_destroy_with_items(table->free_symbols, (ApeDataCallback_t)symbol_destroy);
     alloc = table->alloc;
     memset(table, 0, sizeof(ApeSymbolTable_t));
     allocator_free(alloc, table);
@@ -2068,17 +2072,17 @@ ApeSymbolTable_t* symbol_table_copy(ApeSymbolTable_t* table)
     copy->alloc = table->alloc;
     copy->outer = table->outer;
     copy->global_store = table->global_store;
-    copy->block_scopes = ptrarray_copy_with_items(table->block_scopes, block_scope_copy, block_scope_destroy);
+    copy->block_scopes = ptrarray_copy_with_items(table->block_scopes, (ApeDataCallback_t)block_scope_copy, (ApeDataCallback_t)block_scope_destroy);
     if(!copy->block_scopes)
     {
         goto err;
     }
-    copy->free_symbols = ptrarray_copy_with_items(table->free_symbols, symbol_copy, symbol_destroy);
+    copy->free_symbols = ptrarray_copy_with_items(table->free_symbols, (ApeDataCallback_t)symbol_copy, (ApeDataCallback_t)symbol_destroy);
     if(!copy->free_symbols)
     {
         goto err;
     }
-    copy->module_global_symbols = ptrarray_copy_with_items(table->module_global_symbols, symbol_copy, symbol_destroy);
+    copy->module_global_symbols = ptrarray_copy_with_items(table->module_global_symbols, (ApeDataCallback_t)symbol_copy, (ApeDataCallback_t)symbol_destroy);
     if(!copy->module_global_symbols)
     {
         goto err;
@@ -2123,7 +2127,7 @@ const ApeSymbol_t* symbol_table_define(ApeSymbolTable_t* table, const char* name
     bool ok;
     bool global_symbol_added;
     int ix;
-    int definitions_count;
+    ApeSize_t definitions_count;
     ApeBlockScope_t* top_scope;
     ApeSymbolType_t symbol_type;
     ApeSymbol_t* symbol;
@@ -2266,7 +2270,7 @@ const ApeSymbol_t* symbol_table_define_this(ApeSymbolTable_t* st)
 
 const ApeSymbol_t* symbol_table_resolve(ApeSymbolTable_t* table, const char* name)
 {
-    int i;
+    int64_t i;
     const ApeSymbol_t* symbol;
     ApeBlockScope_t* scope;
     scope = NULL;
@@ -2275,7 +2279,7 @@ const ApeSymbol_t* symbol_table_resolve(ApeSymbolTable_t* table, const char* nam
     {
         return symbol;
     }
-    for(i = ptrarray_count(table->block_scopes) - 1; i >= 0; i--)
+    for(i = (int64_t)ptrarray_count(table->block_scopes) - 1; i >= 0; i--)
     {
         scope = (ApeBlockScope_t*)ptrarray_get(table->block_scopes, i);
         symbol = (ApeSymbol_t*)dict_get(scope->store, name);
@@ -2385,7 +2389,7 @@ bool symbol_table_is_top_global_scope(ApeSymbolTable_t* table)
     return symbol_table_is_module_global_scope(table) && symbol_table_is_top_block_scope(table);
 }
 
-int symbol_table_get_module_global_symbol_count(const ApeSymbolTable_t* table)
+ApeSize_t symbol_table_get_module_global_symbol_count(const ApeSymbolTable_t* table)
 {
     return ptrarray_count(table->module_global_symbols);
 }
@@ -2406,7 +2410,7 @@ ApeBlockScope_t* block_scope_make(ApeAllocator_t* alloc, int offset)
     }
     memset(new_scope, 0, sizeof(ApeBlockScope_t));
     new_scope->alloc = alloc;
-    new_scope->store = dict_make(alloc, symbol_copy, symbol_destroy);
+    new_scope->store = dict_make(alloc, (ApeDataCallback_t)symbol_copy, (ApeDataCallback_t)symbol_destroy);
     if(!new_scope->store)
     {
         block_scope_destroy(new_scope);
@@ -2417,10 +2421,11 @@ ApeBlockScope_t* block_scope_make(ApeAllocator_t* alloc, int offset)
     return new_scope;
 }
 
-void block_scope_destroy(ApeBlockScope_t* scope)
+void* block_scope_destroy(ApeBlockScope_t* scope)
 {
     dict_destroy_with_items(scope->store);
     allocator_free(scope->alloc, scope);
+    return NULL;
 }
 
 ApeBlockScope_t* block_scope_copy(ApeBlockScope_t* scope)
@@ -2468,11 +2473,11 @@ static int vmpriv_nextsymbolindex(ApeSymbolTable_t* table)
 
 static int vmpriv_countnumdefs(ApeSymbolTable_t* table)
 {
-    int i;
+    int64_t i;
     int count;
     ApeBlockScope_t* scope;
     count = 0;
-    for(i = ptrarray_count(table->block_scopes) - 1; i >= 0; i--)
+    for(i = (int64_t)ptrarray_count(table->block_scopes) - 1; i >= 0; i--)
     {
         scope = (ApeBlockScope_t*)ptrarray_get(table->block_scopes, i);
         count += scope->num_definitions;
@@ -2510,9 +2515,9 @@ const char* opcode_get_name(ApeOpByte_t op)
         }                                        \
     } while(0)
 
-int code_make(ApeOpByte_t op, int operands_count, uint64_t* operands, ApeArray_t* res)
+int code_make(ApeOpByte_t op, ApeSize_t operands_count, uint64_t* operands, ApeArray_t* res)
 {
-    int i;
+    ApeSize_t i;
     int width;
     int instr_len;
     bool ok;
@@ -2905,15 +2910,16 @@ ApeModule_t* module_make(ApeAllocator_t* alloc, const char* name)
     return module;
 }
 
-void module_destroy(ApeModule_t* module)
+void* module_destroy(ApeModule_t* module)
 {
     if(!module)
     {
-        return;
+        return NULL;
     }
     allocator_free(module->alloc, module->name);
-    ptrarray_destroy_with_items(module->symbols, symbol_destroy);
+    ptrarray_destroy_with_items(module->symbols, (ApeDataCallback_t)symbol_destroy);
     allocator_free(module->alloc, module);
+    return NULL;
 }
 
 ApeModule_t* module_copy(ApeModule_t* src)
@@ -2932,7 +2938,7 @@ ApeModule_t* module_copy(ApeModule_t* src)
         module_destroy(copy);
         return NULL;
     }
-    copy->symbols = ptrarray_copy_with_items(src->symbols, symbol_copy, symbol_destroy);
+    copy->symbols = ptrarray_copy_with_items(src->symbols, (ApeDataCallback_t)symbol_copy, (ApeDataCallback_t)symbol_destroy);
     if(!copy->symbols)
     {
         module_destroy(copy);
@@ -3066,7 +3072,7 @@ ApeObject_t object_make_string_with_capacity(ApeGCMemory_t* mem, int capacity)
 }
 
 
-ApeObject_t object_make_native_function_memory(ApeGCMemory_t* mem, const char* name, ApeNativeFNCallback_t fn, void* data, int data_len)
+ApeObject_t object_make_native_function_memory(ApeGCMemory_t* mem, const char* name, ApeNativeFunc_t fn, void* data, int data_len)
 {
     ApeObjectData_t* obj;
     if(data_len > NATIVE_FN_MAX_DATA_LEN)
@@ -3144,8 +3150,8 @@ ApeObject_t object_make_map_with_capacity(ApeGCMemory_t* mem, unsigned capacity)
     {
         return object_make_null();
     }
-    valdict_set_hash_function(data->map, (ApeCollectionsHashFNCallback_t)object_hash);
-    valdict_set_equals_function(data->map, (ApeCollectionsEqualsFNCallback_t)object_equals_wrapped);
+    valdict_set_hash_function(data->map, (ApeDataHashFunc_t)object_hash);
+    valdict_set_equals_function(data->map, (ApeDataEqualsFunc_t)object_equals_wrapped);
     return object_make_from_data(APE_OBJECT_MAP, data);
 }
 
@@ -3181,7 +3187,7 @@ ApeObject_t object_make_error_no_copy(ApeGCMemory_t* mem, char* error)
 }
 
 ApeObject_t
-object_make_function(ApeGCMemory_t* mem, const char* name, ApeCompilationResult_t* comp_res, bool owns_data, int num_locals, int num_args, int free_vals_count)
+object_make_function(ApeGCMemory_t* mem, const char* name, ApeCompilationResult_t* comp_res, bool owns_data, int num_locals, int num_args, ApeSize_t free_vals_count)
 {
     ApeObjectData_t* data;
     data = gcmem_alloc_object_data(mem, APE_OBJECT_FUNCTION);
@@ -3454,7 +3460,7 @@ ApeObject_t object_deep_copy(ApeGCMemory_t* mem, ApeObject_t obj)
 
 ApeObject_t object_copy(ApeGCMemory_t* mem, ApeObject_t obj)
 {
-    int i;
+    ApeSize_t i;
     int len;
     bool ok;
     const char* str;
@@ -3641,7 +3647,7 @@ ApeExternalData_t* object_get_external_data(ApeObject_t object)
     return &data->external;
 }
 
-bool object_set_external_destroy_function(ApeObject_t object, ApeExternalDataDestroyFNCallback_t destroy_fn)
+bool object_set_external_destroy_function(ApeObject_t object, ApeDataCallback_t destroy_fn)
 {
     ApeExternalData_t* data;
     APE_ASSERT(object_get_type(object) == APE_OBJECT_EXTERNAL);
@@ -3934,7 +3940,7 @@ bool object_set_external_data(ApeObject_t object, void* ext_data)
     return true;
 }
 
-bool object_set_external_copy_function(ApeObject_t object, ApeExternalDataCopyFNCallback_t copy_fn)
+bool object_set_external_copy_function(ApeObject_t object, ApeDataCallback_t copy_fn)
 {
     ApeExternalData_t* data;
     APE_ASSERT(object_get_type(object) == APE_OBJECT_EXTERNAL);
@@ -3969,7 +3975,7 @@ ApeObject_t object_get_array_value(ApeObject_t object, int ix)
 * TODO: since this pushes NULLs before 'ix' if 'ix' is out of bounds, this
 * may be possibly extremely inefficient.
 */
-bool object_set_array_value_at(ApeObject_t object, int ix, ApeObject_t val)
+bool object_set_array_value_at(ApeObject_t object, ApeSize_t ix, ApeObject_t val)
 {
     ApeArray_t* array;
     APE_ASSERT(object_get_type(object) == APE_OBJECT_ARRAY);
@@ -4104,7 +4110,7 @@ ApeObject_t object_get_map_value_object(ApeObject_t object, ApeObject_t key)
 // INTERNAL
 ApeObject_t object_deep_copy_internal(ApeGCMemory_t* mem, ApeObject_t obj, ApeValDictionary_t * copies)
 {
-    int i;
+    ApeSize_t i;
     int len;
     bool ok;
     const char* str;
@@ -4460,7 +4466,7 @@ bool can_data_be_put_in_pool(ApeGCMemory_t* mem, ApeObjectData_t* data);
 
 ApeGCMemory_t* gcmem_make(ApeAllocator_t* alloc)
 {
-    int i;
+    ApeSize_t i;
     ApeGCMemory_t* mem;
     ApeObjectDataPool_t* pool;
     mem = (ApeGCMemory_t*)allocator_malloc(alloc, sizeof(ApeGCMemory_t));
@@ -4501,8 +4507,8 @@ error:
 
 void gcmem_destroy(ApeGCMemory_t* mem)
 {
-    int i;
-    int j;
+    ApeSize_t i;
+    ApeSize_t j;
     ApeObjectData_t* obj;
     ApeObjectData_t* data;
     ApeObjectDataPool_t* pool;
@@ -4607,7 +4613,7 @@ ApeObjectData_t* gcmem_get_object_data_from_pool(ApeGCMemory_t* mem, ApeObjectTy
 
 void gc_unmark_all(ApeGCMemory_t* mem)
 {
-    int i;
+    ApeSize_t i;
     ApeObjectData_t* data;
     for(i = 0; i < ptrarray_count(mem->objects); i++)
     {
@@ -4616,9 +4622,9 @@ void gc_unmark_all(ApeGCMemory_t* mem)
     }
 }
 
-void gc_mark_objects(ApeObject_t* objects, int count)
+void gc_mark_objects(ApeObject_t* objects, ApeSize_t count)
 {
-    int i;
+    ApeSize_t i;
     ApeObject_t obj;
     for(i = 0; i < count; i++)
     {
@@ -4629,8 +4635,8 @@ void gc_mark_objects(ApeObject_t* objects, int count)
 
 void gc_mark_object(ApeObject_t obj)
 {
-    int i;
-    int len;
+    ApeSize_t i;
+    ApeSize_t len;
     ApeObject_t key;
     ApeObject_t val;
     ApeObjectData_t* key_data;
@@ -4723,7 +4729,7 @@ void gc_mark_object(ApeObject_t obj)
 
 void gc_sweep(ApeGCMemory_t* mem)
 {
-    int i;
+    ApeSize_t i;
     bool ok;
     ApeObjectData_t* data;
     ApeObjectDataPool_t* pool;
@@ -4871,7 +4877,7 @@ ApeTraceback_t* traceback_make(ApeAllocator_t* alloc)
 
 void traceback_destroy(ApeTraceback_t* traceback)
 {
-    int i;
+    ApeSize_t i;
     ApeTracebackItem_t* item;
     if(!traceback)
     {
@@ -4907,7 +4913,7 @@ bool traceback_append(ApeTraceback_t* traceback, const char* function_name, ApeP
 
 bool traceback_append_from_vm(ApeTraceback_t* traceback, ApeVM_t* vm)
 {
-    int i;
+    int64_t i;
     bool ok;
     ApeFrame_t* frame;
     for(i = vm->frames_count - 1; i >= 0; i--)
@@ -4997,7 +5003,7 @@ ApePosition_t frame_src_position(const ApeFrame_t* frame)
     {
         return frame->src_positions[frame->src_ip];
     }
-    return src_pos_invalid;
+    return g_vmpriv_src_pos_invalid;
 }
 
 #define SET_OPERATOR_OVERLOAD_KEY(op, key)                   \
@@ -5013,7 +5019,7 @@ ApePosition_t frame_src_position(const ApeFrame_t* frame)
 
 ApeVM_t* vm_make(ApeAllocator_t* alloc, const ApeConfig_t* config, ApeGCMemory_t* mem, ApeErrorList_t* errors, ApeGlobalStore_t* global_store)
 {
-    int i;
+    ApeSize_t i;
     ApeVM_t* vm;
     ApeObject_t key_obj;
     vm = (ApeVM_t*)allocator_malloc(alloc, sizeof(ApeVM_t));
@@ -5072,7 +5078,7 @@ void vm_reset(ApeVM_t* vm)
     vm->this_sp = 0;
     while(vm->frames_count > 0)
     {
-        pop_frame(vm);
+        vmpriv_popframe(vm);
     }
 }
 
@@ -5081,7 +5087,7 @@ bool vm_run(ApeVM_t* vm, ApeCompilationResult_t* comp_res, ApeArray_t * constant
     bool res;
     int old_sp;
     int old_this_sp;
-    int old_frames_count;
+    ApeSize_t old_frames_count;
     ApeObject_t main_fn;
 #ifdef APE_DEBUG
     old_sp = vm->sp;
@@ -5093,11 +5099,11 @@ bool vm_run(ApeVM_t* vm, ApeCompilationResult_t* comp_res, ApeArray_t * constant
     {
         return false;
     }
-    stack_push(vm, main_fn);
+    vmpriv_pushstack(vm, main_fn);
     res = vm_execute_function(vm, main_fn, constants);
     while(vm->frames_count > old_frames_count)
     {
-        pop_frame(vm);
+        vmpriv_popframe(vm);
     }
     APE_ASSERT(vm->sp == old_sp);
     vm->this_sp = old_this_sp;
@@ -5123,11 +5129,11 @@ bool vmpriv_append_string(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeO
         // avoid doing unnecessary copying by reusing the origin as-is
         if(leftlen == 0)
         {
-            stack_push(vm, right);
+            vmpriv_pushstack(vm, right);
         }
         else if(rightlen == 0)
         {
-            stack_push(vm, left);
+            vmpriv_pushstack(vm, left);
         }
         else
         {
@@ -5148,7 +5154,7 @@ bool vmpriv_append_string(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeO
             {
                 return false;
             }
-            stack_push(vm, objres);
+            vmpriv_pushstack(vm, objres);
         }
     }
     else
@@ -5172,7 +5178,7 @@ bool vmpriv_append_string(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeO
         {
             return false;
         }
-        stack_push(vm, objres);
+        vmpriv_pushstack(vm, objres);
     }
     return true;
 }
@@ -5201,11 +5207,12 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
     const char* str;
     const char* type_name;
     int elapsed_ms;
-    int i;
+    ApeSize_t i;
     int ix;
     int leftlen;
     int len;
     int recover_frame_ix;
+    int64_t ui;
     int64_t leftint;
     int64_t rightint;
     uint16_t constant_ix;
@@ -5263,7 +5270,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
     ApeFunction_t* function_function;
     if(vm->running)
     {
-        errors_add_error(vm->errors, APE_ERROR_USER, src_pos_invalid, "VM is already executing code");
+        errors_add_error(vm->errors, APE_ERROR_USER, g_vmpriv_src_pos_invalid, "VM is already executing code");
         return false;
     }
     function_function = object_get_function(function);// naming is hard
@@ -5273,10 +5280,10 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
     {
         return false;
     }
-    ok = push_frame(vm, new_frame);
+    ok = vmpriv_pushframe(vm, new_frame);
     if(!ok)
     {
-        errors_add_error(vm->errors, APE_ERROR_USER, src_pos_invalid, "pushing frame failed");
+        errors_add_error(vm->errors, APE_ERROR_USER, g_vmpriv_src_pos_invalid, "pushing frame failed");
         return false;
     }
     vm->running = true;
@@ -5310,7 +5317,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                                           "constant at %d not found", constant_ix);
                         goto err;
                     }
-                    stack_push(vm, *constant);
+                    vmpriv_pushstack(vm, *constant);
                 }
                 break;
             case OPCODE_ADD:
@@ -5324,8 +5331,8 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
             case OPCODE_LSHIFT:
             case OPCODE_RSHIFT:
                 {
-                    right = stack_pop(vm);
-                    left = stack_pop(vm);
+                    right = vmpriv_popstack(vm);
+                    left = vmpriv_popstack(vm);
                     // NULL to 0 coercion
                     if(object_is_numeric(left) && object_is_null(right))
                     {
@@ -5403,7 +5410,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                                 }
                                 break;
                         }
-                        stack_push(vm, object_make_number(res));
+                        vmpriv_pushstack(vm, object_make_number(res));
                     }
                     else if(lefttype == APE_OBJECT_STRING && ((righttype == APE_OBJECT_STRING) || (righttype == APE_OBJECT_NUMBER)) && opcode == OPCODE_ADD)
                     {
@@ -5416,7 +5423,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     else if((lefttype == APE_OBJECT_ARRAY) && opcode == OPCODE_ADD)
                     {
                         object_add_array_value(left, right);
-                        stack_push(vm, left);
+                        vmpriv_pushstack(vm, left);
                     }
                     else
                     {
@@ -5441,24 +5448,24 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                 break;
             case OPCODE_POP:
                 {
-                    stack_pop(vm);
+                    vmpriv_popstack(vm);
                 }
                 break;
             case OPCODE_TRUE:
                 {
-                    stack_push(vm, object_make_bool(true));
+                    vmpriv_pushstack(vm, object_make_bool(true));
                 }
                 break;
             case OPCODE_FALSE:
                 {
-                    stack_push(vm, object_make_bool(false));
+                    vmpriv_pushstack(vm, object_make_bool(false));
                 }
                 break;
             case OPCODE_COMPARE:
             case OPCODE_COMPARE_EQ:
                 {
-                    right = stack_pop(vm);
-                    left = stack_pop(vm);
+                    right = vmpriv_popstack(vm);
+                    left = vmpriv_popstack(vm);
                     isoverloaded = false;
                     ok = vmpriv_tryoverloadoperator(vm, left, right, OPCODE_COMPARE, &isoverloaded);
                     if(!ok)
@@ -5471,7 +5478,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                         if(ok || opcode == OPCODE_COMPARE_EQ)
                         {
                             objres = object_make_number(comparison_res);
-                            stack_push(vm, objres);
+                            vmpriv_pushstack(vm, objres);
                         }
                         else
                         {
@@ -5490,7 +5497,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
             case OPCODE_GREATER_THAN:
             case OPCODE_GREATER_THAN_EQUAL:
                 {
-                    value = stack_pop(vm);
+                    value = vmpriv_popstack(vm);
                     comparison_res = object_get_number(value);
                     resval = false;
                     switch(opcode)
@@ -5516,19 +5523,19 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                             break;
                     }
                     objres = object_make_bool(resval);
-                    stack_push(vm, objres);
+                    vmpriv_pushstack(vm, objres);
                 }
                 break;
 
             case OPCODE_MINUS:
                 {
-                    operand = stack_pop(vm);
+                    operand = vmpriv_popstack(vm);
                     operand_type = object_get_type(operand);
                     if(operand_type == APE_OBJECT_NUMBER)
                     {
                         val = object_get_number(operand);
                         objres = object_make_number(-val);
-                        stack_push(vm, objres);
+                        vmpriv_pushstack(vm, objres);
                     }
                     else
                     {
@@ -5551,17 +5558,17 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
 
             case OPCODE_BANG:
                 {
-                    operand = stack_pop(vm);
+                    operand = vmpriv_popstack(vm);
                     type = object_get_type(operand);
                     if(type == APE_OBJECT_BOOL)
                     {
                         objres = object_make_bool(!object_get_bool(operand));
-                        stack_push(vm, objres);
+                        vmpriv_pushstack(vm, objres);
                     }
                     else if(type == APE_OBJECT_NULL)
                     {
                         objres = object_make_bool(true);
-                        stack_push(vm, objres);
+                        vmpriv_pushstack(vm, objres);
                     }
                     else
                     {
@@ -5574,7 +5581,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                         if(!overloadfound)
                         {
                             ApeObject_t objres = object_make_bool(false);
-                            stack_push(vm, objres);
+                            vmpriv_pushstack(vm, objres);
                         }
                     }
                 }
@@ -5590,7 +5597,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
             case OPCODE_JUMP_IF_FALSE:
                 {
                     pos = frame_read_uint16(vm->current_frame);
-                    testobj = stack_pop(vm);
+                    testobj = vmpriv_popstack(vm);
                     if(!object_get_bool(testobj))
                     {
                         vm->current_frame->ip = pos;
@@ -5601,7 +5608,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
             case OPCODE_JUMP_IF_TRUE:
                 {
                     pos = frame_read_uint16(vm->current_frame);
-                    testobj = stack_pop(vm);
+                    testobj = vmpriv_popstack(vm);
                     if(object_get_bool(testobj))
                     {
                         vm->current_frame->ip = pos;
@@ -5611,23 +5618,23 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
 
             case OPCODE_NULL:
                 {
-                    stack_push(vm, object_make_null());
+                    vmpriv_pushstack(vm, object_make_null());
                 }
                 break;
 
             case OPCODE_DEFINE_MODULE_GLOBAL:
             {
                 ix = frame_read_uint16(vm->current_frame);
-                objval = stack_pop(vm);
+                objval = vmpriv_popstack(vm);
                 vm_set_global(vm, ix, objval);
                 break;
             }
             case OPCODE_SET_MODULE_GLOBAL:
                 {
                     ix = frame_read_uint16(vm->current_frame);
-                    new_value = stack_pop(vm);
+                    new_value = vmpriv_popstack(vm);
                     old_value = vm_get_global(vm, ix);
-                    if(!check_assign(vm, old_value, new_value))
+                    if(!vmpriv_checkassign(vm, old_value, new_value))
                     {
                         goto err;
                     }
@@ -5639,7 +5646,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                 {
                     ix = frame_read_uint16(vm->current_frame);
                     global = vm->globals[ix];
-                    stack_push(vm, global);
+                    vmpriv_pushstack(vm, global);
                 }
                 break;
 
@@ -5662,7 +5669,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                         }
                     }
                     vmpriv_setstackpointer(vm, vm->sp - count);
-                    stack_push(vm, array_obj);
+                    vmpriv_pushstack(vm, array_obj);
                 }
                 break;
 
@@ -5702,14 +5709,14 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                         }
                     }
                     vmpriv_setstackpointer(vm, vm->sp - items_count);
-                    stack_push(vm, map_obj);
+                    vmpriv_pushstack(vm, map_obj);
                 }
                 break;
 
             case OPCODE_GET_THIS:
                 {
                     objval = vmpriv_getthisstack(vm, 0);
-                    stack_push(vm, objval);
+                    vmpriv_pushstack(vm, objval);
                 }
                 break;
 
@@ -5718,8 +5725,8 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     #if 0
                     const char* idxname;
                     #endif
-                    index = stack_pop(vm);
-                    left = stack_pop(vm);
+                    index = vmpriv_popstack(vm);
+                    left = vmpriv_popstack(vm);
                     lefttype = object_get_type(left);
                     indextype = object_get_type(index);
                     left_type_name = object_get_type_name(lefttype);
@@ -5731,7 +5738,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     {
                         int argc;
                         ApeObject_t args[10];
-                        ApeNativeFNCallback_t afn;
+                        ApeNativeFunc_t afn;
                         argc = 0;
                         if(indextype == APE_OBJECT_STRING)
                         {
@@ -5740,10 +5747,10 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                             if((afn = builtin_get_object(lefttype, idxname)) != NULL)
                             {
                                 fprintf(stderr, "got a callback: afn=%p\n", afn);
-                                //typedef ApeObject_t (*ApeNativeFNCallback_t)(ApeVM_t*, void*, int, ApeObject_t*);
+                                //typedef ApeObject_t (*ApeNativeFunc_t)(ApeVM_t*, void*, int, ApeObject_t*);
                                 args[argc] = left;
                                 argc++;
-                                stack_push(vm, afn(vm, NULL, argc, args));
+                                vmpriv_pushstack(vm, afn(vm, NULL, argc, args));
                                 break;
                             }
                         }
@@ -5790,14 +5797,14 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                             objres = object_make_string(vm->mem, res_str);
                         }
                     }
-                    stack_push(vm, objres);
+                    vmpriv_pushstack(vm, objres);
                 }
                 break;
 
             case OPCODE_GET_VALUE_AT:
             {
-                index = stack_pop(vm);
-                left = stack_pop(vm);
+                index = vmpriv_popstack(vm);
+                left = vmpriv_popstack(vm);
                 lefttype = object_get_type(left);
                 indextype = object_get_type(index);
                 left_type_name = object_get_type_name(lefttype);
@@ -5835,14 +5842,14 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                         objres = object_make_string(vm->mem, res_str);
                     }
                 }
-                stack_push(vm, objres);
+                vmpriv_pushstack(vm, objres);
                 break;
             }
             case OPCODE_CALL:
             {
                 num_args = frame_read_uint8(vm->current_frame);
-                callee = stack_get(vm, num_args);
-                ok = call_object(vm, callee, num_args);
+                callee = vmpriv_getstack(vm, num_args);
+                ok = vmpriv_callobject(vm, callee, num_args);
                 if(!ok)
                 {
                     goto err;
@@ -5851,22 +5858,22 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
             }
             case OPCODE_RETURN_VALUE:
             {
-                objres = stack_pop(vm);
-                ok = pop_frame(vm);
+                objres = vmpriv_popstack(vm);
+                ok = vmpriv_popframe(vm);
                 if(!ok)
                 {
                     goto end;
                 }
-                stack_push(vm, objres);
+                vmpriv_pushstack(vm, objres);
                 break;
             }
             case OPCODE_RETURN:
             {
-                ok = pop_frame(vm);
-                stack_push(vm, object_make_null());
+                ok = vmpriv_popframe(vm);
+                vmpriv_pushstack(vm, object_make_null());
                 if(!ok)
                 {
-                    stack_pop(vm);
+                    vmpriv_popstack(vm);
                     goto end;
                 }
                 break;
@@ -5874,15 +5881,15 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
             case OPCODE_DEFINE_LOCAL:
             {
                 pos = frame_read_uint8(vm->current_frame);
-                vm->stack[vm->current_frame->base_pointer + pos] = stack_pop(vm);
+                vm->stack[vm->current_frame->base_pointer + pos] = vmpriv_popstack(vm);
                 break;
             }
             case OPCODE_SET_LOCAL:
             {
                 pos = frame_read_uint8(vm->current_frame);
-                new_value = stack_pop(vm);
+                new_value = vmpriv_popstack(vm);
                 old_value = vm->stack[vm->current_frame->base_pointer + pos];
-                if(!check_assign(vm, old_value, new_value))
+                if(!vmpriv_checkassign(vm, old_value, new_value))
                 {
                     goto err;
                 }
@@ -5893,7 +5900,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
             {
                 pos = frame_read_uint8(vm->current_frame);
                 objval = vm->stack[vm->current_frame->base_pointer + pos];
-                stack_push(vm, objval);
+                vmpriv_pushstack(vm, objval);
                 break;
             }
             case OPCODE_GET_APE_GLOBAL:
@@ -5907,7 +5914,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                                       "global value %d not found", ix);
                     goto err;
                 }
-                stack_push(vm, objval);
+                vmpriv_pushstack(vm, objval);
                 break;
             }
             case OPCODE_FUNCTION:
@@ -5942,34 +5949,34 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                         object_set_function_free_val(function_obj, i, free_val);
                     }
                     vmpriv_setstackpointer(vm, vm->sp - num_free);
-                    stack_push(vm, function_obj);
+                    vmpriv_pushstack(vm, function_obj);
                 }
                 break;
             case OPCODE_GET_FREE:
                 {
                     free_ix = frame_read_uint8(vm->current_frame);
                     objval = object_get_function_free_val(vm->current_frame->function, free_ix);
-                    stack_push(vm, objval);
+                    vmpriv_pushstack(vm, objval);
                 }
                 break;
             case OPCODE_SET_FREE:
                 {
                     free_ix = frame_read_uint8(vm->current_frame);
-                    objval = stack_pop(vm);
+                    objval = vmpriv_popstack(vm);
                     object_set_function_free_val(vm->current_frame->function, free_ix, objval);
                 }
                 break;
             case OPCODE_CURRENT_FUNCTION:
                 {
                     current_function = vm->current_frame->function;
-                    stack_push(vm, current_function);
+                    vmpriv_pushstack(vm, current_function);
                 }
                 break;
             case OPCODE_SET_INDEX:
                 {
-                    index = stack_pop(vm);
-                    left = stack_pop(vm);
-                    new_value = stack_pop(vm);
+                    index = vmpriv_popstack(vm);
+                    left = vmpriv_popstack(vm);
+                    new_value = vmpriv_popstack(vm);
                     lefttype = object_get_type(left);
                     indextype = object_get_type(index);
                     left_type_name = object_get_type_name(lefttype);
@@ -6001,7 +6008,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     else if(lefttype == APE_OBJECT_MAP)
                     {
                         old_value = object_get_map_value_object(left, index);
-                        if(!check_assign(vm, old_value, new_value))
+                        if(!vmpriv_checkassign(vm, old_value, new_value))
                         {
                             goto err;
                         }
@@ -6015,13 +6022,13 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                 break;
             case OPCODE_DUP:
                 {
-                    objval = stack_get(vm, 0);
-                    stack_push(vm, objval);
+                    objval = vmpriv_getstack(vm, 0);
+                    vmpriv_pushstack(vm, objval);
                 }
                 break;
             case OPCODE_LEN:
                 {
-                    objval = stack_pop(vm);
+                    objval = vmpriv_popstack(vm);
                     len = 0;
                     type = object_get_type(objval);
                     if(type == APE_OBJECT_ARRAY)
@@ -6043,7 +6050,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                                           "cannot get length of %s", type_name);
                         goto err;
                     }
-                    stack_push(vm, object_make_number(len));
+                    vmpriv_pushstack(vm, object_make_number(len));
                 }
                 break;
             case OPCODE_NUMBER:
@@ -6051,7 +6058,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     val = frame_read_uint64(vm->current_frame);
                     valdouble = ape_uint64_to_double(val);
                     ApeObject_t obj = object_make_number(valdouble);
-                    stack_push(vm, obj);
+                    vmpriv_pushstack(vm, obj);
                 }
                 break;
             case OPCODE_SET_RECOVER:
@@ -6090,12 +6097,12 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
             if(err->type == APE_ERROR_RUNTIME && errors_get_count(vm->errors) == 1)
             {
                 recover_frame_ix = -1;
-                for(i = vm->frames_count - 1; i >= 0; i--)
+                for(ui = vm->frames_count - 1; ui >= 0; ui--)
                 {
-                    frame = &vm->frames[i];
+                    frame = &vm->frames[ui];
                     if(frame->recover_ip >= 0 && !frame->is_recovering)
                     {
-                        recover_frame_ix = i;
+                        recover_frame_ix = ui;
                         break;
                     }
                 }
@@ -6115,7 +6122,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     }
                     while(vm->frames_count > (recover_frame_ix + 1))
                     {
-                        pop_frame(vm);
+                        vmpriv_popframe(vm);
                     }
                     err_obj = object_make_error(vm->mem, err->message);
                     if(!object_is_null(err_obj))
@@ -6123,7 +6130,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                         object_set_error_traceback(err_obj, err->traceback);
                         err->traceback = NULL;
                     }
-                    stack_push(vm, err_obj);
+                    vmpriv_pushstack(vm, err_obj);
                     vm->current_frame->ip = vm->current_frame->recover_ip;
                     vm->current_frame->is_recovering = true;
                     errors_clear(vm->errors);
@@ -6136,7 +6143,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
         }
         if(gc_should_sweep(vm->mem))
         {
-            run_gc(vm, constants);
+            vmpriv_collectgarbage(vm, constants);
         }
     }
 end:
@@ -6153,7 +6160,7 @@ end:
         }
     }
 
-    run_gc(vm, constants);
+    vmpriv_collectgarbage(vm, constants);
 
     vm->running = false;
     return errors_get_count(vm->errors) == 0;
@@ -6169,7 +6176,7 @@ bool vm_has_errors(ApeVM_t* vm)
     return errors_get_count(vm->errors) > 0;
 }
 
-bool vm_set_global(ApeVM_t* vm, int ix, ApeObject_t val)
+bool vm_set_global(ApeVM_t* vm, ApeSize_t ix, ApeObject_t val)
 {
     if(ix >= VM_MAX_GLOBALS)
     {
@@ -6185,7 +6192,7 @@ bool vm_set_global(ApeVM_t* vm, int ix, ApeObject_t val)
     return true;
 }
 
-ApeObject_t vm_get_global(ApeVM_t* vm, int ix)
+ApeObject_t vm_get_global(ApeVM_t* vm, ApeSize_t ix)
 {
     if(ix >= VM_MAX_GLOBALS)
     {
@@ -6208,7 +6215,7 @@ static void vmpriv_setstackpointer(ApeVM_t* vm, int new_sp)
     vm->sp = new_sp;
 }
 
-void stack_push(ApeVM_t* vm, ApeObject_t obj)
+void vmpriv_pushstack(ApeVM_t* vm, ApeObject_t obj)
 {
 #ifdef APE_DEBUG
     if(vm->sp >= VM_STACK_SIZE)
@@ -6229,7 +6236,7 @@ void stack_push(ApeVM_t* vm, ApeObject_t obj)
     vm->sp++;
 }
 
-ApeObject_t stack_pop(ApeVM_t* vm)
+ApeObject_t vmpriv_popstack(ApeVM_t* vm)
 {
 #ifdef APE_DEBUG
     if(vm->sp == 0)
@@ -6252,7 +6259,7 @@ ApeObject_t stack_pop(ApeVM_t* vm)
     return objres;
 }
 
-ApeObject_t stack_get(ApeVM_t* vm, int nth_item)
+ApeObject_t vmpriv_getstack(ApeVM_t* vm, int nth_item)
 {
     int ix = vm->sp - 1 - nth_item;
 #ifdef APE_DEBUG
@@ -6308,7 +6315,7 @@ static ApeObject_t vmpriv_getthisstack(ApeVM_t* vm, int nth_item)
     return vm->this_stack[ix];
 }
 
-bool push_frame(ApeVM_t* vm, ApeFrame_t frame)
+bool vmpriv_pushframe(ApeVM_t* vm, ApeFrame_t frame)
 {
     if(vm->frames_count >= VM_MAX_FRAMES)
     {
@@ -6323,7 +6330,7 @@ bool push_frame(ApeVM_t* vm, ApeFrame_t frame)
     return true;
 }
 
-bool pop_frame(ApeVM_t* vm)
+bool vmpriv_popframe(ApeVM_t* vm)
 {
     vmpriv_setstackpointer(vm, vm->current_frame->base_pointer - 1);
     if(vm->frames_count <= 0)
@@ -6342,15 +6349,17 @@ bool pop_frame(ApeVM_t* vm)
     return true;
 }
 
-void run_gc(ApeVM_t* vm, ApeArray_t * constants)
+void vmpriv_collectgarbage(ApeVM_t* vm, ApeArray_t * constants)
 {
+    ApeSize_t i;
+    ApeFrame_t* frame;
     gc_unmark_all(vm->mem);
     gc_mark_objects(global_store_get_object_data(vm->global_store), global_store_get_object_count(vm->global_store));
     gc_mark_objects((ApeObject_t*)array_data(constants), array_count(constants));
     gc_mark_objects(vm->globals, vm->globals_count);
-    for(int i = 0; i < vm->frames_count; i++)
+    for(i = 0; i < vm->frames_count; i++)
     {
-        ApeFrame_t* frame = &vm->frames[i];
+        frame = &vm->frames[i];
         gc_mark_object(frame->function);
     }
     gc_mark_objects(vm->stack, vm->sp);
@@ -6360,12 +6369,19 @@ void run_gc(ApeVM_t* vm, ApeArray_t * constants)
     gc_sweep(vm->mem);
 }
 
-bool call_object(ApeVM_t* vm, ApeObject_t callee, int num_args)
+bool vmpriv_callobject(ApeVM_t* vm, ApeObject_t callee, int num_args)
 {
-    ApeObjectType_t callee_type = object_get_type(callee);
+    bool ok;
+    ApeObjectType_t callee_type;
+    ApeFunction_t* callee_function;
+    ApeFrame_t callee_frame;
+    ApeObject_t* stack_pos;
+    ApeObject_t objres;
+    const char* callee_type_name;
+    callee_type = object_get_type(callee);
     if(callee_type == APE_OBJECT_FUNCTION)
     {
-        ApeFunction_t* callee_function = object_get_function(callee);
+        callee_function = object_get_function(callee);
         if(num_args != callee_function->num_args)
         {
             errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
@@ -6373,41 +6389,40 @@ bool call_object(ApeVM_t* vm, ApeObject_t callee, int num_args)
                               object_get_function_name(callee), callee_function->num_args, num_args);
             return false;
         }
-        ApeFrame_t callee_frame;
-        bool ok = frame_init(&callee_frame, callee, vm->sp - num_args);
+        ok = frame_init(&callee_frame, callee, vm->sp - num_args);
         if(!ok)
         {
-            errors_add_error(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "frame init failed in call_object");
+            errors_add_error(vm->errors, APE_ERROR_RUNTIME, g_vmpriv_src_pos_invalid, "frame init failed in vmpriv_callobject");
             return false;
         }
-        ok = push_frame(vm, callee_frame);
+        ok = vmpriv_pushframe(vm, callee_frame);
         if(!ok)
         {
-            errors_add_error(vm->errors, APE_ERROR_RUNTIME, src_pos_invalid, "pushing frame failed in call_object");
+            errors_add_error(vm->errors, APE_ERROR_RUNTIME, g_vmpriv_src_pos_invalid, "pushing frame failed in vmpriv_callobject");
             return false;
         }
     }
     else if(callee_type == APE_OBJECT_NATIVE_FUNCTION)
     {
-        ApeObject_t* stack_pos = vm->stack + vm->sp - num_args;
-        ApeObject_t objres = call_native_function(vm, callee, frame_src_position(vm->current_frame), num_args, stack_pos);
+        stack_pos = vm->stack + vm->sp - num_args;
+        objres = vmpriv_callnativefunction(vm, callee, frame_src_position(vm->current_frame), num_args, stack_pos);
         if(vm_has_errors(vm))
         {
             return false;
         }
         vmpriv_setstackpointer(vm, vm->sp - num_args - 1);
-        stack_push(vm, objres);
+        vmpriv_pushstack(vm, objres);
     }
     else
     {
-        const char* callee_type_name = object_get_type_name(callee_type);
+        callee_type_name = object_get_type_name(callee_type);
         errors_add_errorf(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "%s object is not callable", callee_type_name);
         return false;
     }
     return true;
 }
 
-ApeObject_t call_native_function(ApeVM_t* vm, ApeObject_t callee, ApePosition_t src_pos, int argc, ApeObject_t* args)
+ApeObject_t vmpriv_callnativefunction(ApeVM_t* vm, ApeObject_t callee, ApePosition_t src_pos, int argc, ApeObject_t* args)
 {
     ApeNativeFunction_t* native_fun = object_get_native_function(callee);
     ApeObject_t objres = native_fun->native_funcptr(vm, native_fun->data, argc, args);
@@ -6418,7 +6433,7 @@ ApeObject_t call_native_function(ApeVM_t* vm, ApeObject_t callee, ApePosition_t 
         err->traceback = traceback_make(vm->alloc);
         if(err->traceback)
         {
-            traceback_append(err->traceback, native_fun->name, src_pos_invalid);
+            traceback_append(err->traceback, native_fun->name, g_vmpriv_src_pos_invalid);
         }
         return object_make_null();
     }
@@ -6431,7 +6446,7 @@ ApeObject_t call_native_function(ApeVM_t* vm, ApeObject_t callee, ApePosition_t 
             // error builtin is treated in a special way
             if(!APE_STREQ(native_fun->name, "error"))
             {
-                traceback_append(traceback, native_fun->name, src_pos_invalid);
+                traceback_append(traceback, native_fun->name, g_vmpriv_src_pos_invalid);
             }
             traceback_append_from_vm(traceback, vm);
             object_set_error_traceback(objres, traceback);
@@ -6440,7 +6455,7 @@ ApeObject_t call_native_function(ApeVM_t* vm, ApeObject_t callee, ApePosition_t 
     return objres;
 }
 
-bool check_assign(ApeVM_t* vm, ApeObject_t old_value, ApeObject_t new_value)
+bool vmpriv_checkassign(ApeVM_t* vm, ApeObject_t old_value, ApeObject_t new_value)
 {
     ApeObjectType_t old_value_type;
     ApeObjectType_t new_value_type;
@@ -6501,13 +6516,13 @@ static bool vmpriv_tryoverloadoperator(ApeVM_t* vm, ApeObject_t left, ApeObject_
         }
     }
     *out_overload_found = true;
-    stack_push(vm, callee);
-    stack_push(vm, left);
+    vmpriv_pushstack(vm, callee);
+    vmpriv_pushstack(vm, left);
     if(num_operands == 2)
     {
-        stack_push(vm, right);
+        vmpriv_pushstack(vm, right);
     }
-    return call_object(vm, callee, num_operands);
+    return vmpriv_callobject(vm, callee, num_operands);
 }
 
 //-----------------------------------------------------------------------------
@@ -6518,9 +6533,9 @@ ApeContext_t* ape_make(void)
     return ape_make_ex(NULL, NULL, NULL);
 }
 
-ApeContext_t* ape_make_ex(ApeMallocFNCallback_t malloc_fn, ApeFreeFNCallback_t free_fn, void* ctx)
+ApeContext_t* ape_make_ex(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t free_fn, void* ctx)
 {
-    ApeAllocator_t custom_alloc = allocator_make((ApeAllocatorMallocFNCallback_t)malloc_fn, (ApeAllocatorFreeFNCallback_t)free_fn, ctx);
+    ApeAllocator_t custom_alloc = allocator_make((ApeMemAllocFunc_t)malloc_fn, (ApeMemFreeFunc_t)free_fn, ctx);
 
     ApeContext_t* ape = (ApeContext_t*)allocator_malloc(&custom_alloc, sizeof(ApeContext_t));
     if(!ape)
@@ -6616,19 +6631,19 @@ bool ape_set_timeout(ApeContext_t* ape, ApeFloat_t max_execution_time_ms)
     return true;
 }
 
-void ape_set_stdout_write_function(ApeContext_t* ape, ApeStdoutWriteFNCallback_t stdout_write, void* context)
+void ape_set_stdout_write_function(ApeContext_t* ape, ApeIOStdoutWriteFunc_t stdout_write, void* context)
 {
     ape->config.stdio.write.write = stdout_write;
     ape->config.stdio.write.context = context;
 }
 
-void ape_set_file_write_function(ApeContext_t* ape, ApeWriteFileFNCallback_t file_write, void* context)
+void ape_set_file_write_function(ApeContext_t* ape, ApeIOWriteFunc_t file_write, void* context)
 {
     ape->config.fileio.write_file.write_file = file_write;
     ape->config.fileio.write_file.context = context;
 }
 
-void ape_set_file_read_function(ApeContext_t* ape, ApeReadFileFNCallback_t file_read, void* context)
+void ape_set_file_read_function(ApeContext_t* ape, ApeIOReadFunc_t file_read, void* context)
 {
     ape->config.fileio.read_file.read_file = file_read;
     ape->config.fileio.read_file.context = context;
@@ -6703,7 +6718,7 @@ bool ape_has_errors(const ApeContext_t* ape)
     return ape_errors_count(ape) > 0;
 }
 
-int ape_errors_count(const ApeContext_t* ape)
+ApeSize_t ape_errors_count(const ApeContext_t* ape)
 {
     return errors_get_count(&ape->errors);
 }
@@ -6718,7 +6733,7 @@ const ApeError_t* ape_get_error(const ApeContext_t* ape, int index)
     return (const ApeError_t*)vmpriv_errorsgetc(&ape->errors, index);
 }
 
-bool ape_set_native_function(ApeContext_t* ape, const char* name, ApeUserFNCallback_t fn, void* data)
+bool ape_set_native_function(ApeContext_t* ape, const char* name, ApeNativeWrapFunc_t fn, void* data)
 {
     ApeObject_t obj = ape_object_make_native_function_with_name(ape, name, fn, data);
     if(object_is_null(obj))
@@ -6939,11 +6954,11 @@ void ape_deinit(ApeContext_t* ape)
     compiler_destroy(ape->compiler);
     global_store_destroy(ape->global_store);
     gcmem_destroy(ape->mem);
-    ptrarray_destroy_with_items(ape->files, compiled_file_destroy);
+    ptrarray_destroy_with_items(ape->files, (ApeDataCallback_t)compiled_file_destroy);
     vmpriv_destroyerrors(&ape->errors);
 }
 
-ApeObject_t ape_native_fn_wrapper(ApeVM_t* vm, void* data, int argc, ApeObject_t* args)
+static ApeObject_t vmpriv_wrapnativefunc(ApeVM_t* vm, void* data, int argc, ApeObject_t* args)
 {
     ApeObject_t objres;
     ApeNativeFuncWrapper_t* wrapper;
@@ -6958,14 +6973,14 @@ ApeObject_t ape_native_fn_wrapper(ApeVM_t* vm, void* data, int argc, ApeObject_t
     return objres;
 }
 
-ApeObject_t ape_object_make_native_function_with_name(ApeContext_t* ape, const char* name, ApeUserFNCallback_t fn, void* data)
+ApeObject_t ape_object_make_native_function_with_name(ApeContext_t* ape, const char* name, ApeNativeWrapFunc_t fn, void* data)
 {
     ApeNativeFuncWrapper_t wrapper;
     memset(&wrapper, 0, sizeof(ApeNativeFuncWrapper_t));
     wrapper.wrapped_funcptr = fn;
     wrapper.ape = ape;
     wrapper.data = data;
-    ApeObject_t wrapper_native_function = object_make_native_function_memory(ape->mem, name, ape_native_fn_wrapper, &wrapper, sizeof(wrapper));
+    ApeObject_t wrapper_native_function = object_make_native_function_memory(ape->mem, name, vmpriv_wrapnativefunc, &wrapper, sizeof(wrapper));
     if(object_is_null(wrapper_native_function))
     {
         return object_make_null();
@@ -7061,7 +7076,7 @@ void* ape_malloc(void* ctx, size_t size)
     resptr = (void*)allocator_malloc(&ape->custom_allocator, size);
     if(!resptr)
     {
-        errors_add_error(&ape->errors, APE_ERROR_ALLOCATION, src_pos_invalid, "allocation failed");
+        errors_add_error(&ape->errors, APE_ERROR_ALLOCATION, g_vmpriv_src_pos_invalid, "allocation failed");
     }
     return resptr;
 }

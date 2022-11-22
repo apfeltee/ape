@@ -19,8 +19,9 @@ static const char* g_type_names[] = {
 
 static bool code_read_operands(ApeOpcodeDefinition_t* def, ApeUShort_t* instr, uint64_t out_operands[2])
 {
+    ApeSize_t i;
     int offset = 0;
-    for(int i = 0; i < def->num_operands; i++)
+    for(i = 0; i < def->num_operands; i++)
     {
         int operand_width = def->operand_widths[i];
         switch(operand_width)
@@ -76,7 +77,7 @@ static bool code_read_operands(ApeOpcodeDefinition_t* def, ApeUShort_t* instr, u
 
 char* statements_to_string(ApeAllocator_t* alloc, ApePtrArray_t * statements)
 {
-    int i;
+    ApeSize_t i;
     int count;
     const ApeStatement_t* stmt;
     ApeStringBuffer_t* buf;
@@ -100,7 +101,7 @@ char* statements_to_string(ApeAllocator_t* alloc, ApePtrArray_t * statements)
 
 void statement_to_string(const ApeStatement_t* stmt, ApeStringBuffer_t* buf)
 {
-    int i;
+    ApeSize_t i;
     const ApeDefineStmt_t* def_stmt;
     ApeIfCase_t* if_case;
     ApeIfCase_t* elif_case;
@@ -249,7 +250,7 @@ void statement_to_string(const ApeStatement_t* stmt, ApeStringBuffer_t* buf)
 
 void expression_to_string(ApeExpression_t* expr, ApeStringBuffer_t* buf)
 {
-    int i;
+    ApeSize_t i;
     ApeExpression_t* arr_expr;
     ApeMapLiteral_t* map;
     switch(expr->type)
@@ -361,7 +362,7 @@ void expression_to_string(ApeExpression_t* expr, ApeStringBuffer_t* buf)
             expression_to_string(call_expr->function, buf);
 
             strbuf_append(buf, "(");
-            for(int i = 0; i < ptrarray_count(call_expr->args); i++)
+            for(i = 0; i < ptrarray_count(call_expr->args); i++)
             {
                 ApeExpression_t* arg = (ApeExpression_t*)ptrarray_get(call_expr->args, i);
                 expression_to_string(arg, buf);
@@ -418,7 +419,7 @@ void expression_to_string(ApeExpression_t* expr, ApeStringBuffer_t* buf)
 
 void code_block_to_string(const ApeCodeblock_t* stmt, ApeStringBuffer_t* buf)
 {
-    int i;
+    ApeSize_t i;
     ApeStatement_t* istmt;
     strbuf_append(buf, "{ ");
     for(i = 0; i < ptrarray_count(stmt->statements); i++)
@@ -518,6 +519,7 @@ const char* expression_type_to_string(ApeExpr_type_t type)
 
 void code_to_string(ApeUShort_t* code, ApePosition_t* source_positions, size_t code_size, ApeStringBuffer_t* res)
 {
+    ApeSize_t i;
     unsigned pos = 0;
     while(pos < code_size)
     {
@@ -541,7 +543,7 @@ void code_to_string(ApeUShort_t* code, ApePosition_t* source_positions, size_t c
         {
             return;
         }
-        for(int i = 0; i < def->num_operands; i++)
+        for(i = 0; i < def->num_operands; i++)
         {
             if(op == OPCODE_NUMBER)
             {
@@ -561,7 +563,7 @@ void code_to_string(ApeUShort_t* code, ApePosition_t* source_positions, size_t c
 
 void object_to_string(ApeObject_t obj, ApeStringBuffer_t* buf, bool quote_str)
 {
-    int i;
+    ApeSize_t i;
     ApeObjectType_t type;
     type = object_get_type(obj);
     switch(type)
@@ -680,7 +682,7 @@ void object_to_string(ApeObject_t obj, ApeStringBuffer_t* buf, bool quote_str)
 
 bool traceback_to_string(const ApeTraceback_t* traceback, ApeStringBuffer_t* buf)
 {
-    int i;
+    ApeSize_t i;
     int depth;
     depth = array_count(traceback->items);
     for(i = 0; i < depth; i++)

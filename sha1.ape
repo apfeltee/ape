@@ -144,14 +144,14 @@ function sha1_actual(bytes)
 
 function sha1(s)
 {
-    var bytes = null;
+    var bytes = [];
     var chars = String.split(s, "");
-    bytes = chars;
     for(var i=0; i<len(chars); i++)
     {
         bytes[i] = ord(chars[i]);
     }
-    var r = sha1_actual(chars);
+    //println("bytes = ", bytes);
+    var r = sha1_actual(bytes);
     var buf = "";
     for(var i=0; i<len(r); i++)
     {

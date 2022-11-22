@@ -1,6 +1,8 @@
 
 #include "ape.h"
 
+static const ApePosition_t g_prspriv_src_pos_invalid = { NULL, -1, -1 };
+
 static ApePrecedence_t get_precedence(ApeTokenType_t tk);
 static ApeOperator_t token_to_operator(ApeTokenType_t tk);
 static char escape_char(const char c);
@@ -221,13 +223,12 @@ ApeExpression_t* expression_make_ternary(ApeAllocator_t* alloc, ApeExpression_t*
     return res;
 }
 
-void expression_destroy(ApeExpression_t* expr)
+void* expression_destroy(ApeExpression_t* expr)
 {
     if(!expr)
     {
-        return;
+        return NULL;
     }
-
     switch(expr->type)
     {
         case EXPRESSION_NONE:
@@ -256,13 +257,13 @@ void expression_destroy(ApeExpression_t* expr)
         }
         case EXPRESSION_ARRAY_LITERAL:
         {
-            ptrarray_destroy_with_items(expr->array, expression_destroy);
+            ptrarray_destroy_with_items(expr->array, (ApeDataCallback_t)expression_destroy);
             break;
         }
         case EXPRESSION_MAP_LITERAL:
         {
-            ptrarray_destroy_with_items(expr->map.keys, expression_destroy);
-            ptrarray_destroy_with_items(expr->map.values, expression_destroy);
+            ptrarray_destroy_with_items(expr->map.keys, (ApeDataCallback_t)expression_destroy);
+            ptrarray_destroy_with_items(expr->map.values, (ApeDataCallback_t)expression_destroy);
             break;
         }
         case EXPRESSION_PREFIX:
@@ -280,13 +281,13 @@ void expression_destroy(ApeExpression_t* expr)
         {
             ApeFnLiteral_t* fn = &expr->fn_literal;
             allocator_free(expr->alloc, fn->name);
-            ptrarray_destroy_with_items(fn->params, ident_destroy);
+            ptrarray_destroy_with_items(fn->params, (ApeDataCallback_t)ident_destroy);
             code_block_destroy(fn->body);
             break;
         }
         case EXPRESSION_CALL:
         {
-            ptrarray_destroy_with_items(expr->call_expr.args, expression_destroy);
+            ptrarray_destroy_with_items(expr->call_expr.args, (ApeDataCallback_t)expression_destroy);
             expression_destroy(expr->call_expr.function);
             break;
         }
@@ -317,6 +318,7 @@ void expression_destroy(ApeExpression_t* expr)
         }
     }
     allocator_free(expr->alloc, expr);
+    return NULL;
 }
 
 ApeExpression_t* expression_copy(ApeExpression_t* expr)
@@ -380,7 +382,7 @@ ApeExpression_t* expression_copy(ApeExpression_t* expr)
         }
         case EXPRESSION_ARRAY_LITERAL:
         {
-            ApePtrArray_t* values_copy = ptrarray_copy_with_items(expr->array, expression_copy, expression_destroy);
+            ApePtrArray_t* values_copy = ptrarray_copy_with_items(expr->array, (ApeDataCallback_t)expression_copy, (ApeDataCallback_t)expression_destroy);
             if(!values_copy)
             {
                 return NULL;
@@ -388,26 +390,26 @@ ApeExpression_t* expression_copy(ApeExpression_t* expr)
             res = expression_make_array_literal(expr->alloc, values_copy);
             if(!res)
             {
-                ptrarray_destroy_with_items(values_copy, expression_destroy);
+                ptrarray_destroy_with_items(values_copy, (ApeDataCallback_t)expression_destroy);
                 return NULL;
             }
             break;
         }
         case EXPRESSION_MAP_LITERAL:
         {
-            ApePtrArray_t* keys_copy = ptrarray_copy_with_items(expr->map.keys, expression_copy, expression_destroy);
-            ApePtrArray_t* values_copy = ptrarray_copy_with_items(expr->map.values, expression_copy, expression_destroy);
+            ApePtrArray_t* keys_copy = ptrarray_copy_with_items(expr->map.keys, (ApeDataCallback_t)expression_copy, (ApeDataCallback_t)expression_destroy);
+            ApePtrArray_t* values_copy = ptrarray_copy_with_items(expr->map.values, (ApeDataCallback_t)expression_copy, (ApeDataCallback_t)expression_destroy);
             if(!keys_copy || !values_copy)
             {
-                ptrarray_destroy_with_items(keys_copy, expression_destroy);
-                ptrarray_destroy_with_items(values_copy, expression_destroy);
+                ptrarray_destroy_with_items(keys_copy, (ApeDataCallback_t)expression_destroy);
+                ptrarray_destroy_with_items(values_copy, (ApeDataCallback_t)expression_destroy);
                 return NULL;
             }
             res = expression_make_map_literal(expr->alloc, keys_copy, values_copy);
             if(!res)
             {
-                ptrarray_destroy_with_items(keys_copy, expression_destroy);
-                ptrarray_destroy_with_items(values_copy, expression_destroy);
+                ptrarray_destroy_with_items(keys_copy, (ApeDataCallback_t)expression_destroy);
+                ptrarray_destroy_with_items(values_copy, (ApeDataCallback_t)expression_destroy);
                 return NULL;
             }
             break;
@@ -448,12 +450,12 @@ ApeExpression_t* expression_copy(ApeExpression_t* expr)
         }
         case EXPRESSION_FUNCTION_LITERAL:
         {
-            ApePtrArray_t* params_copy = ptrarray_copy_with_items(expr->fn_literal.params, ident_copy, ident_destroy);
+            ApePtrArray_t* params_copy = ptrarray_copy_with_items(expr->fn_literal.params, (ApeDataCallback_t)ident_copy,(ApeDataCallback_t) ident_destroy);
             ApeCodeblock_t* body_copy = code_block_copy(expr->fn_literal.body);
             char* name_copy = ape_strdup(expr->alloc, expr->fn_literal.name);
             if(!params_copy || !body_copy)
             {
-                ptrarray_destroy_with_items(params_copy, ident_destroy);
+                ptrarray_destroy_with_items(params_copy, (ApeDataCallback_t)ident_destroy);
                 code_block_destroy(body_copy);
                 allocator_free(expr->alloc, name_copy);
                 return NULL;
@@ -461,7 +463,7 @@ ApeExpression_t* expression_copy(ApeExpression_t* expr)
             res = expression_make_fn_literal(expr->alloc, params_copy, body_copy);
             if(!res)
             {
-                ptrarray_destroy_with_items(params_copy, ident_destroy);
+                ptrarray_destroy_with_items(params_copy, (ApeDataCallback_t)ident_destroy);
                 code_block_destroy(body_copy);
                 allocator_free(expr->alloc, name_copy);
                 return NULL;
@@ -472,18 +474,18 @@ ApeExpression_t* expression_copy(ApeExpression_t* expr)
         case EXPRESSION_CALL:
         {
             ApeExpression_t* function_copy = expression_copy(expr->call_expr.function);
-            ApePtrArray_t* args_copy = ptrarray_copy_with_items(expr->call_expr.args, expression_copy, expression_destroy);
+            ApePtrArray_t* args_copy = ptrarray_copy_with_items(expr->call_expr.args, (ApeDataCallback_t)expression_copy, (ApeDataCallback_t)expression_destroy);
             if(!function_copy || !args_copy)
             {
                 expression_destroy(function_copy);
-                ptrarray_destroy_with_items(expr->call_expr.args, expression_destroy);
+                ptrarray_destroy_with_items(expr->call_expr.args, (ApeDataCallback_t)expression_destroy);
                 return NULL;
             }
             res = expression_make_call(expr->alloc, function_copy, args_copy);
             if(!res)
             {
                 expression_destroy(function_copy);
-                ptrarray_destroy_with_items(expr->call_expr.args, expression_destroy);
+                ptrarray_destroy_with_items(expr->call_expr.args, (ApeDataCallback_t)expression_destroy);
                 return NULL;
             }
             break;
@@ -716,11 +718,11 @@ ApeStatement_t* statement_make_recover(ApeAllocator_t* alloc, ApeIdent_t* error_
     return res;
 }
 
-void statement_destroy(ApeStatement_t* stmt)
+void* statement_destroy(ApeStatement_t* stmt)
 {
     if(!stmt)
     {
-        return;
+        return NULL;
     }
     switch(stmt->type)
     {
@@ -737,7 +739,7 @@ void statement_destroy(ApeStatement_t* stmt)
         }
         case STATEMENT_IF:
         {
-            ptrarray_destroy_with_items(stmt->if_statement.cases, if_case_destroy);
+            ptrarray_destroy_with_items(stmt->if_statement.cases, (ApeDataCallback_t)if_case_destroy);
             code_block_destroy(stmt->if_statement.alternative);
             break;
         }
@@ -798,6 +800,7 @@ void statement_destroy(ApeStatement_t* stmt)
         }
     }
     allocator_free(stmt->alloc, stmt);
+    return NULL;
 }
 
 ApeStatement_t* statement_copy(const ApeStatement_t* stmt)
@@ -831,18 +834,18 @@ ApeStatement_t* statement_copy(const ApeStatement_t* stmt)
         }
         case STATEMENT_IF:
         {
-            ApePtrArray_t* cases_copy = ptrarray_copy_with_items(stmt->if_statement.cases, if_case_copy, if_case_destroy);
+            ApePtrArray_t* cases_copy = ptrarray_copy_with_items(stmt->if_statement.cases, (ApeDataCallback_t)if_case_copy, (ApeDataCallback_t)if_case_destroy);
             ApeCodeblock_t* alternative_copy = code_block_copy(stmt->if_statement.alternative);
             if(!cases_copy || !alternative_copy)
             {
-                ptrarray_destroy_with_items(cases_copy, if_case_destroy);
+                ptrarray_destroy_with_items(cases_copy, (ApeDataCallback_t)if_case_destroy);
                 code_block_destroy(alternative_copy);
                 return NULL;
             }
             res = statement_make_if(stmt->alloc, cases_copy, alternative_copy);
             if(res)
             {
-                ptrarray_destroy_with_items(cases_copy, if_case_destroy);
+                ptrarray_destroy_with_items(cases_copy, (ApeDataCallback_t)if_case_destroy);
                 code_block_destroy(alternative_copy);
                 return NULL;
             }
@@ -1021,14 +1024,15 @@ ApeCodeblock_t* code_block_make(ApeAllocator_t* alloc, ApePtrArray_t * statement
     return block;
 }
 
-void code_block_destroy(ApeCodeblock_t* block)
+void* code_block_destroy(ApeCodeblock_t* block)
 {
     if(!block)
     {
-        return;
+        return NULL;
     }
-    ptrarray_destroy_with_items(block->statements, statement_destroy);
+    ptrarray_destroy_with_items(block->statements, (ApeDataCallback_t)statement_destroy);
     allocator_free(block->alloc, block);
+    return NULL;
 }
 
 ApeCodeblock_t* code_block_copy(ApeCodeblock_t* block)
@@ -1037,7 +1041,7 @@ ApeCodeblock_t* code_block_copy(ApeCodeblock_t* block)
     {
         return NULL;
     }
-    ApePtrArray_t* statements_copy = ptrarray_copy_with_items(block->statements, statement_copy, statement_destroy);
+    ApePtrArray_t* statements_copy = ptrarray_copy_with_items(block->statements, (ApeDataCallback_t)statement_copy, (ApeDataCallback_t)statement_destroy);
     if(!statements_copy)
     {
         return NULL;
@@ -1045,27 +1049,23 @@ ApeCodeblock_t* code_block_copy(ApeCodeblock_t* block)
     ApeCodeblock_t* res = code_block_make(block->alloc, statements_copy);
     if(!res)
     {
-        ptrarray_destroy_with_items(statements_copy, statement_destroy);
+        ptrarray_destroy_with_items(statements_copy, (ApeDataCallback_t)statement_destroy);
         return NULL;
     }
     return res;
 }
 
-
-
-
-
-
-void ident_destroy(ApeIdent_t* ident)
+void* ident_destroy(ApeIdent_t* ident)
 {
     if(!ident)
     {
-        return;
+        return NULL;
     }
     allocator_free(ident->alloc, ident->value);
     ident->value = NULL;
-    ident->pos = src_pos_invalid;
+    ident->pos = g_prspriv_src_pos_invalid;
     allocator_free(ident->alloc, ident);
+    return NULL;
 }
 
 ApeIfCase_t* if_case_make(ApeAllocator_t* alloc, ApeExpression_t* test, ApeCodeblock_t* consequence)
@@ -1081,15 +1081,16 @@ ApeIfCase_t* if_case_make(ApeAllocator_t* alloc, ApeExpression_t* test, ApeCodeb
     return res;
 }
 
-void if_case_destroy(ApeIfCase_t* cond)
+void* if_case_destroy(ApeIfCase_t* cond)
 {
     if(!cond)
     {
-        return;
+        return NULL;
     }
     expression_destroy(cond->test);
     code_block_destroy(cond->consequence);
     allocator_free(cond->alloc, cond);
+    return NULL;
 }
 
 ApeIfCase_t* if_case_copy(ApeIfCase_t* if_case)
@@ -1135,7 +1136,7 @@ ApeExpression_t* expression_make(ApeAllocator_t* alloc, ApeExpr_type_t type)
     }
     res->alloc = alloc;
     res->type = type;
-    res->pos = src_pos_invalid;
+    res->pos = g_prspriv_src_pos_invalid;
     return res;
 }
 
@@ -1148,7 +1149,7 @@ ApeStatement_t* statement_make(ApeAllocator_t* alloc, ApeStatementType_t type)
     }
     res->alloc = alloc;
     res->type = type;
-    res->pos = src_pos_invalid;
+    res->pos = g_prspriv_src_pos_invalid;
     return res;
 }
 
@@ -1277,7 +1278,7 @@ ApePtrArray_t * parser_parse_all(ApeParser_t* parser, const char* input, ApeComp
 
     return statements;
 err:
-    ptrarray_destroy_with_items(statements, statement_destroy);
+    ptrarray_destroy_with_items(statements, (ApeDataCallback_t)statement_destroy);
     return NULL;
 }
 
@@ -1523,7 +1524,7 @@ ApeStatement_t* parse_if_statement(ApeParser_t* p)
     }
     return res;
 err:
-    ptrarray_destroy_with_items(cases, if_case_destroy);
+    ptrarray_destroy_with_items(cases, (ApeDataCallback_t)if_case_destroy);
     code_block_destroy(alternative);
     return NULL;
 }
@@ -1954,7 +1955,7 @@ ApeCodeblock_t* parse_code_block(ApeParser_t* p)
     return res;
 err:
     p->depth--;
-    ptrarray_destroy_with_items(statements, statement_destroy);
+    ptrarray_destroy_with_items(statements, (ApeDataCallback_t)statement_destroy);
     return NULL;
 }
 
@@ -2188,7 +2189,7 @@ ApeExpression_t* parse_array_literal(ApeParser_t* p)
     res = expression_make_array_literal(p->alloc, array);
     if(!res)
     {
-        ptrarray_destroy_with_items(array, expression_destroy);
+        ptrarray_destroy_with_items(array, (ApeDataCallback_t)expression_destroy);
         return NULL;
     }
     return res;
@@ -2297,8 +2298,8 @@ ApeExpression_t* parse_map_literal(ApeParser_t* p)
     }
     return res;
 err:
-    ptrarray_destroy_with_items(keys, expression_destroy);
-    ptrarray_destroy_with_items(values, expression_destroy);
+    ptrarray_destroy_with_items(keys, (ApeDataCallback_t)expression_destroy);
+    ptrarray_destroy_with_items(values, (ApeDataCallback_t)expression_destroy);
     return NULL;
 }
 
@@ -2393,7 +2394,7 @@ ApeExpression_t* parse_function_literal(ApeParser_t* p)
     return res;
 err:
     code_block_destroy(body);
-    ptrarray_destroy_with_items(params, ident_destroy);
+    ptrarray_destroy_with_items(params, (ApeDataCallback_t)ident_destroy);
     p->depth -= 1;
     return NULL;
 }
@@ -2471,7 +2472,7 @@ ApeExpression_t* parse_call_expression(ApeParser_t* p, ApeExpression_t* left)
     res = expression_make_call(p->alloc, function, args);
     if(!res)
     {
-        ptrarray_destroy_with_items(args, expression_destroy);
+        ptrarray_destroy_with_items(args, (ApeDataCallback_t)expression_destroy);
         return NULL;
     }
     return res;
@@ -2530,7 +2531,7 @@ ApePtrArray_t* parse_expression_list(ApeParser_t* p, ApeTokenType_t start_token,
     lexer_next_token(&p->lexer);
     return res;
 err:
-    ptrarray_destroy_with_items(res, expression_destroy);
+    ptrarray_destroy_with_items(res, (ApeDataCallback_t)expression_destroy);
     return NULL;
 }
 

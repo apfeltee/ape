@@ -17,6 +17,11 @@ src = \
 obj = $(src:.c=.o)
 dep = $(obj:.o=.d)
 
+all: prot.inc $(target)
+
+prot.inc: builtins.c compiler.c imp.c lexer.c parser.c tostring.c
+	echo > $@
+	cproto $^ > $@
 
 $(target): $(obj)
 	$(CC) -o $@ $^ $(LDFLAGS)

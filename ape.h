@@ -54,6 +54,24 @@ THE SOFTWARE.
 #include <errno.h>
 
 //#include <sys/time.h>
+#if defined(__linux__)
+    #define APE_LINUX
+    #define APE_POSIX
+#elif defined(_WIN32)
+    #define APE_WINDOWS
+#elif(defined(__APPLE__) && defined(__MACH__))
+    #define APE_APPLE
+    #define APE_POSIX
+#elif defined(__EMSCRIPTEN__)
+    #define APE_EMSCRIPTEN
+#endif
+
+#if defined(__unix__)
+    #include <unistd.h>
+    #if defined(_POSIX_VERSION)
+        #define APE_POSIX
+    #endif
+#endif
 
 #define APE_VERSION_MAJOR 0
 #define APE_VERSION_MINOR 14
@@ -85,39 +103,24 @@ THE SOFTWARE.
 #define APE_ERROR_MESSAGE_MAX_LENGTH 255
 
 
-#define dict_make(alloc, copy_fn, destroy_fn) \
-    dict_make_(alloc, (ApeDictItemCopyFNCallback_t)(copy_fn), (ApeDictItemDestroyFNCallback_t)(destroy_fn))
-
-
-
 #define valdict_make(allocator, key_type, val_type) valdict_make_(allocator, sizeof(key_type), sizeof(val_type))
 
 #define array_make(allocator, type) array_make_(allocator, sizeof(type))
-#define array_destroy_with_items(arr, fn) array_destroy_with_items_(arr, (ApeArrayItemDeinitFNCallback_t)(fn))
-#define array_clear_and_deinit_items(arr, fn) array_clear_and_deinit_items_(arr, (ApeArrayItemDeinitFNCallback_t)(fn))
-
-
-#define ptrarray_destroy_with_items(arr, fn) ptrarray_destroy_with_items_(arr, (ApePtrArrayItemDestroyFNCallback_t)(fn))
-#define ptrarray_clear_and_destroy_items(arr, fn) ptrarray_clear_and_destroy_items_(arr, (ApePtrArrayItemDestroyFNCallback_t)(fn))
-
-#define ptrarray_copy_with_items(arr, copy_fn, destroy_fn) \
-    ptrarray_copy_with_items_(arr, (ApePtrArrayItemCopyFNCallback_t)(copy_fn), (ApePtrArrayItemDestroyFNCallback_t)(destroy_fn))
-
 
 #define APE_STREQ(a, b) (strcmp((a), (b)) == 0)
 #define APE_STRNEQ(a, b, n) (strncmp((a), (b), (n)) == 0)
 #define APE_ARRAY_LEN(array) ((int)(sizeof(array) / sizeof(array[0])))
 
-/*
+#if 1
 #define APE_DBLEQ(a, b) \
     (fabs((a) - (b)) < DBL_EPSILON)
-*/
-#define APE_DBLEQ(a, b) \
-    ((a) == (b))
+#else
+    #define APE_DBLEQ(a, b) \
+        ((a) == (b))
+#endif
 
 #define APE_CALL(vm, function_name, ...) \
     vm_call(vm, (function_name), sizeof((ApeObject_t[]){ __VA_ARGS__ }) / sizeof(ApeObject_t), (ApeObject_t[]){ __VA_ARGS__ })
-
 
 #ifdef APE_DEBUG
     #define APE_ASSERT(x) assert((x))
@@ -127,32 +130,6 @@ THE SOFTWARE.
     #define APE_ASSERT(x) ((void)0)
     #define APE_LOG(...) ((void)0)
 #endif
-
-
-#if defined(__linux__)
-    #define APE_LINUX
-    #define APE_POSIX
-#elif defined(_WIN32)
-    #define APE_WINDOWS
-#elif(defined(__APPLE__) && defined(__MACH__))
-    #define APE_APPLE
-    #define APE_POSIX
-#elif defined(__EMSCRIPTEN__)
-    #define APE_EMSCRIPTEN
-#endif
-
-#if defined(__unix__)
-    #include <unistd.h>
-    #if defined(_POSIX_VERSION)
-        #define APE_POSIX
-    #endif
-#endif
-
-
-
-#define APE_IMPL_VERSION_MAJOR 0
-#define APE_IMPL_VERSION_MINOR 14
-#define APE_IMPL_VERSION_PATCH 0
 
 #ifdef COLLECTIONS_DEBUG
     #define COLLECTIONS_ASSERT(x) assert(x)
@@ -432,7 +409,7 @@ enum ApePrecedence_t
 };
 
 typedef uint8_t ApeOpByte_t;
-typedef double ApeFloat_t;
+typedef float ApeFloat_t;
 typedef int32_t ApeInt_t;
 typedef uint32_t ApeUInt_t;
 typedef int8_t ApeShort_t;
@@ -515,30 +492,23 @@ typedef struct ApeNativeFuncWrapper_t ApeNativeFuncWrapper_t;
 
 
 //typedef ApeObject_t (*ape_native_fn)(ApeContext_t* ape, void* data, int argc, ApeObject_t* args);
-typedef ApeObject_t (*ApeUserFNCallback_t)(ApeContext_t* ape, void* data, int argc, ApeObject_t* args);
-typedef ApeObject_t (*ApeNativeFNCallback_t)(ApeVM_t*, void*, int, ApeObject_t*);
+typedef ApeObject_t (*ApeNativeWrapFunc_t)(ApeContext_t* ape, void* data, int argc, ApeObject_t* args);
+typedef ApeObject_t (*ApeNativeFunc_t)(ApeVM_t*, void*, int, ApeObject_t*);
 
-typedef void* (*ApeMallocFNCallback_t)(void* ctx, size_t size);
-typedef void (*ApeFreeFNCallback_t)(void* ctx, void* ptr);
-typedef void (*ApeDataDestroyFNCallback_t)(void* data);
-typedef void* (*ApeDataCopyFNCallback_t)(void* data);
-typedef size_t (*ApeStdoutWriteFNCallback_t)(void* context, const void* data, size_t data_size);
-typedef char* (*ApeReadFileFNCallback_t)(void* context, const char* path);
-typedef size_t (*ApeWriteFileFNCallback_t)(void* context, const char* path, const char* string, size_t string_size);
-typedef unsigned long (*ApeCollectionsHashFNCallback_t)(const void* val);
-typedef bool (*ApeCollectionsEqualsFNCallback_t)(const void* a, const void* b);
-typedef void* (*ApeAllocatorMallocFNCallback_t)(void* ctx, size_t size);
-typedef void (*ApeAllocatorFreeFNCallback_t)(void* ctx, void* ptr);
-typedef void (*ApeDictItemDestroyFNCallback_t)(void* item);
-typedef void* (*ApeDictItemCopyFNCallback_t)(void* item);
-typedef void (*ApeArrayItemDeinitFNCallback_t)(void* item);
-typedef void (*ApePtrArrayItemDestroyFNCallback_t)(void* item);
-typedef void* (*ApePtrArrayItemCopyFNCallback_t)(void* item);
+typedef size_t (*ApeIOStdoutWriteFunc_t)(void* context, const void* data, size_t data_size);
+typedef char* (*ApeIOReadFunc_t)(void* context, const char* path);
+typedef size_t (*ApeIOWriteFunc_t)(void* context, const char* path, const char* string, size_t string_size);
+
+typedef void* (*ApeMemAllocFunc_t)(void* ctx, size_t size);
+typedef void (*ApeMemFreeFunc_t)(void* ctx, void* ptr);
+
+typedef unsigned long (*ApeDataHashFunc_t)(const void* val);
+typedef bool (*ApeDataEqualsFunc_t)(const void* a, const void* b);
+typedef void* (*ApeDataCallback_t)(void* item);
+
+
 typedef ApeExpression_t* (*ApeRightAssocParseFNCallback_t)(ApeParser_t* p);
 typedef ApeExpression_t* (*ApeLeftAssocParseFNCallback_t)(ApeParser_t* p, ApeExpression_t* expr);
-
-typedef void (*ApeExternalDataDestroyFNCallback_t)(void* data);
-typedef void* (*ApeExternalDataCopyFNCallback_t)(void* data);
 
 
 struct ApePosition_t
@@ -554,7 +524,7 @@ struct ApeConfig_t
     {
         struct
         {
-            ApeStdoutWriteFNCallback_t write;
+            ApeIOStdoutWriteFunc_t write;
             void* context;
         } write;
     } stdio;
@@ -563,13 +533,13 @@ struct ApeConfig_t
     {
         struct
         {
-            ApeReadFileFNCallback_t read_file;
+            ApeIOReadFunc_t read_file;
             void* context;
         } read_file;
 
         struct
         {
-            ApeWriteFileFNCallback_t write_file;
+            ApeIOWriteFunc_t write_file;
             void* context;
         } write_file;
     } fileio;
@@ -592,8 +562,8 @@ struct ApeTimer_t
 
 struct ApeAllocator_t
 {
-    ApeAllocatorMallocFNCallback_t malloc;
-    ApeAllocatorFreeFNCallback_t free;
+    ApeMemAllocFunc_t malloc;
+    ApeMemFreeFunc_t free;
     void* ctx;
 };
 
@@ -865,7 +835,7 @@ struct ApeFunction_t
     ApeCompilationResult_t* comp_result;
     int num_locals;
     int num_args;
-    int free_vals_count;
+    ApeSize_t free_vals_count;
     bool owns_data;
 };
 
@@ -873,8 +843,8 @@ struct ApeFunction_t
 struct ApeExternalData_t
 {
     void* data;
-    ApeExternalDataDestroyFNCallback_t data_destroy_fn;
-    ApeExternalDataCopyFNCallback_t data_copy_fn;
+    ApeDataCallback_t data_destroy_fn;
+    ApeDataCallback_t data_copy_fn;
 };
 
 struct ApeObjectError_t
@@ -899,7 +869,7 @@ struct ApeObjectString_t
 struct ApeNativeFunction_t
 {
     char* name;
-    ApeNativeFNCallback_t native_funcptr;
+    ApeNativeFunc_t native_funcptr;
     //ApeUShort_t data[NATIVE_FN_MAX_DATA_LEN];
     void* data;
     int data_len;
@@ -908,7 +878,7 @@ struct ApeNativeFunction_t
 
 struct ApeNativeFuncWrapper_t
 {
-    ApeUserFNCallback_t wrapped_funcptr;
+    ApeNativeWrapFunc_t wrapped_funcptr;
     ApeContext_t* ape;
     void* data;
 };
@@ -1036,13 +1006,13 @@ struct ApeVM_t
     ApeErrorList_t* errors;
     ApeGlobalStore_t* global_store;
     ApeObject_t globals[VM_MAX_GLOBALS];
-    int globals_count;
+    ApeSize_t globals_count;
     ApeObject_t stack[VM_STACK_SIZE];
     int sp;
     ApeObject_t this_stack[VM_THIS_STACK_SIZE];
     int this_sp;
     ApeFrame_t frames[VM_MAX_FRAMES];
-    int frames_count;
+    ApeSize_t frames_count;
     ApeObject_t last_popped;
     ApeFrame_t* current_frame;
     bool running;
@@ -1062,8 +1032,8 @@ struct ApeValDictionary_t
     unsigned int count;
     unsigned int item_capacity;
     unsigned int cell_capacity;
-    ApeCollectionsHashFNCallback_t _hash_key;
-    ApeCollectionsEqualsFNCallback_t _keys_equals;
+    ApeDataHashFunc_t _hash_key;
+    ApeDataEqualsFunc_t _keys_equals;
 };
 
 struct ApeDictionary_t
@@ -1077,8 +1047,8 @@ struct ApeDictionary_t
     unsigned int count;
     unsigned int item_capacity;
     unsigned int cell_capacity;
-    ApeDictItemCopyFNCallback_t copy_fn;
-    ApeDictItemDestroyFNCallback_t destroy_fn;
+    ApeDataCallback_t copy_fn;
+    ApeDataCallback_t destroy_fn;
 };
 
 struct ApeArray_t
@@ -1182,7 +1152,4 @@ struct ApeContext_t
 #ifdef __cplusplus
     APE_EXTERNC_END
 #endif
-
-static const ApePosition_t src_pos_invalid = { NULL, -1, -1 };
-static const ApePosition_t src_pos_zero = { NULL, 0, 0 };
 
