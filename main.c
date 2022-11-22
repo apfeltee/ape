@@ -117,13 +117,13 @@ static void print_errors(ApeContext_t *ape)
     int count;
     char *err_str;
     const ApeError_t *err;
-    count = ape_errors_count(ape);
+    count = context_errorcount(ape);
     for (i = 0; i < count; i++)
     {
-        err = ape_get_error(ape, i);
-        err_str = ape_error_serialize(ape, err);
+        err = context_get_error(ape, i);
+        err_str = context_error_tostring(ape, err);
         fprintf(stderr, "%s", err_str);
-        ape_free_allocated(ape, err_str);
+        context_free_allocated(ape, err_str);
     }
 }
 
@@ -159,8 +159,8 @@ static void do_repl(ApeContext_t* ape)
     char *line;
     char *object_str;
     ApeObject_t res;
-    ape_set_repl_mode(ape, true);
-    ape_set_timeout(ape, 100.0);
+    context_set_replmode(ape, true);
+    context_set_timeout(ape, 100.0);
     while(true)
     {
         line = readline(">> ");
@@ -169,8 +169,8 @@ static void do_repl(ApeContext_t* ape)
             continue;
         }
         add_history(line);
-        res = ape_execute(ape, line);
-        if (ape_has_errors(ape))
+        res = context_executesource(ape, line);
+        if (context_has_errors(ape))
         {
             print_errors(ape);
             free(line);
@@ -255,31 +255,31 @@ int main(int argc, char *argv[])
     ApeObject_t args_array;
     replexit = false;
     populate_flags(argc, 1, argv, "epI", &fx);
-    ape = ape_make();
+    ape = context_make();
     if(!parse_options(&opts, fx.flags, fx.fcnt))
     {
         fprintf(stderr, "failed to process command line flags.\n");
         return 1;
     }
-    ape_set_native_function(ape, "exit", exit_repl, &replexit);
+    context_set_nativefunction(ape, "exit", exit_repl, &replexit);
     if((fx.poscnt > 0) || (opts.codeline != NULL))
     {
         args_array = object_make_array(ape->mem);
         for(i=0; i<fx.poscnt; i++)
         {
-            ape_object_add_array_string(args_array, fx.positional[i]);
+            object_array_pushstring(args_array, fx.positional[i]);
         }
-        ape_set_global_constant(ape, "args", args_array);
+        context_set_global(ape, "args", args_array);
         if(opts.codeline)
         {
-            ape_execute(ape, opts.codeline);
+            context_executesource(ape, opts.codeline);
         }
         else
         {
             filename = fx.positional[0];
-            ape_execute_file(ape, filename);
+            context_executefile(ape, filename);
         }
-        if(ape_has_errors(ape))
+        if(context_has_errors(ape))
         {
             print_errors(ape);
         }
@@ -292,7 +292,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "no repl support compiled in\n");
         #endif
     }
-    ape_destroy(ape);
+    context_destroy(ape);
     return 0;
 }
 

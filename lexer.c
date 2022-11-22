@@ -33,7 +33,7 @@ void token_init(ApeToken_t* tok, ApeTokenType_t type, const char* literal, int l
 
 char* token_duplicate_literal(ApeAllocator_t* alloc, const ApeToken_t* tok)
 {
-    return ape_strndup(alloc, tok->literal, tok->len);
+    return util_strndup(alloc, tok->literal, tok->len);
 }
 
 bool lexer_init(ApeLexer_t* lex, ApeAllocator_t* alloc, ApeErrorList_t* errs, const char* input, ApeCompiledFile_t* file)
@@ -498,8 +498,8 @@ bool lexer_expect_current(ApeLexer_t* lex, ApeTokenType_t type)
 
     if(!lexer_cur_token_is(lex, type))
     {
-        const char* expected_type_str = token_type_to_string(type);
-        const char* actual_type_str = token_type_to_string(lex->cur_token.type);
+        const char* expected_type_str = tokentype_tostring(type);
+        const char* actual_type_str = tokentype_tostring(lex->cur_token.type);
         errors_add_errorf(lex->errors, APE_ERROR_PARSING, lex->cur_token.pos,
                           "Expected current token to be \"%s\", got \"%s\" instead", expected_type_str, actual_type_str);
         return false;
@@ -703,12 +703,12 @@ static bool lexpriv_addline(ApeLexer_t* lex, int offset)
     char* line = NULL;
     if(!new_line_ptr)
     {
-        line = ape_strdup(lex->alloc, line_start);
+        line = util_strdup(lex->alloc, line_start);
     }
     else
     {
         size_t line_len = new_line_ptr - line_start;
-        line = ape_strndup(lex->alloc, line_start, line_len);
+        line = util_strndup(lex->alloc, line_start, line_len);
     }
     if(!line)
     {

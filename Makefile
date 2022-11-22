@@ -2,7 +2,7 @@
 INCFLAGS =
 
 WFLAGS = -Wunused -Wunused-macros -Wunused-but-set-variable -Wunused-function -Wunused-label -Wunused-local-typedefs -Wunused-parameter -Wunused-value -Wunused-variable -Wunused-local-typedefs
-#EXTRAFLAGS = -fdata-sections -ffunction-sections -Wl,--gc-sections -Wl,--print-gc-sections
+EXTRAFLAGS = -fdata-sections -ffunction-sections -Wl,--gc-sections -Wl,--print-gc-sections
 
 CC = gcc -Wall -Wextra  $(WFLAGS)
 # ricing intensifies
@@ -11,22 +11,21 @@ CFLAGS = $(INCFLAGS) -O0 -g3 -ggdb3
 LDFLAGS = -flto -ldl -lm  -lreadline -lpthread
 target = run
 
-src = \
-	$(wildcard *.c) \
+srcfiles_all = $(wildcard *.c)
+objfiles_all = $(srcfiles_all:.c=.o)
+depfiles_all = $(objfiles_all:.o=.d)
+protofile = prot.inc
 
-obj = $(src:.c=.o)
-dep = $(obj:.o=.d)
+all: $(protofile) $(target)
 
-all: prot.inc $(target)
+$(protofile): $(srcfiles_all)
+	echo > $(protofile)
+	cproto $(srcfiles_all) > $(protofile)
 
-prot.inc: builtins.c compiler.c imp.c lexer.c parser.c tostring.c
-	echo > $@
-	cproto $^ > $@
+$(target): $(protofile) $(objfiles_all)
+	$(CC) -o $@ $(objfiles_all) $(LDFLAGS)
 
-$(target): $(obj)
-	$(CC) -o $@ $^ $(LDFLAGS)
-
--include $(dep)
+-include $(depfiles_all)
 
 # rule to generate a dep file by using the C preprocessor
 # (see man cpp for details on the -MM and -MT options)
@@ -38,15 +37,12 @@ $(target): $(obj)
 
 .PHONY: clean
 clean:
-	rm -f $(obj) $(target)
+	rm -f $(objfiles_all) $(target)
 
 .PHONY: cleandep
 cleandep:
-	rm -f $(dep)
+	rm -f $(depfiles_all)
 
 .PHONY: rebuild
 rebuild: clean cleandep $(target)
 
-.PHONY: sanity
-sanity:
-	./run sanity.msl

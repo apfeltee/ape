@@ -35,7 +35,7 @@ static ApeIdent_t* ident_copy(ApeIdent_t* ident)
         return NULL;
     }
     res->alloc = ident->alloc;
-    res->value = ape_strdup(ident->alloc, ident->value);
+    res->value = util_strdup(ident->alloc, ident->value);
     if(!res->value)
     {
         allocator_free(ident->alloc, res);
@@ -362,7 +362,7 @@ ApeExpression_t* expression_copy(ApeExpression_t* expr)
         }
         case EXPRESSION_STRING_LITERAL:
         {
-            char* string_copy = ape_strdup(expr->alloc, expr->string_literal);
+            char* string_copy = util_strdup(expr->alloc, expr->string_literal);
             if(!string_copy)
             {
                 return NULL;
@@ -452,7 +452,7 @@ ApeExpression_t* expression_copy(ApeExpression_t* expr)
         {
             ApePtrArray_t* params_copy = ptrarray_copy_with_items(expr->fn_literal.params, (ApeDataCallback_t)ident_copy,(ApeDataCallback_t) ident_destroy);
             ApeCodeblock_t* body_copy = code_block_copy(expr->fn_literal.body);
-            char* name_copy = ape_strdup(expr->alloc, expr->fn_literal.name);
+            char* name_copy = util_strdup(expr->alloc, expr->fn_literal.name);
             if(!params_copy || !body_copy)
             {
                 ptrarray_destroy_with_items(params_copy, (ApeDataCallback_t)ident_destroy);
@@ -971,7 +971,7 @@ ApeStatement_t* statement_copy(const ApeStatement_t* stmt)
         }
         case STATEMENT_IMPORT:
         {
-            char* path_copy = ape_strdup(stmt->alloc, stmt->import.path);
+            char* path_copy = util_strdup(stmt->alloc, stmt->import.path);
             if(!path_copy)
             {
                 return NULL;
@@ -1127,7 +1127,7 @@ err:
 }
 
 // INTERNAL
-ApeExpression_t* expression_make(ApeAllocator_t* alloc, ApeExpr_type_t type)
+ApeExpression_t* expression_make(ApeAllocator_t* alloc, ApeExprType_t type)
 {
     ApeExpression_t* res = (ApeExpression_t*)allocator_malloc(alloc, sizeof(ApeExpression_t));
     if(!res)
@@ -1405,7 +1405,7 @@ ApeStatement_t* parse_define_statement(ApeParser_t* p)
     }
     if(value->type == EXPRESSION_FUNCTION_LITERAL)
     {
-        value->fn_literal.name = ape_strdup(p->alloc, name_ident->value);
+        value->fn_literal.name = util_strdup(p->alloc, name_ident->value);
         if(!value->fn_literal.name)
         {
             goto err;
@@ -1886,7 +1886,7 @@ ApeStatement_t* parse_function_statement(ApeParser_t* p)
         goto err;
     }
     value->pos = pos;
-    value->fn_literal.name = ape_strdup(p->alloc, name_ident->value);
+    value->fn_literal.name = util_strdup(p->alloc, name_ident->value);
     if(!value->fn_literal.name)
     {
         goto err;

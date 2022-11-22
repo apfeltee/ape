@@ -384,7 +384,7 @@ bool compiler_init_shallow_copy(ApeCompiler_t* copy, ApeCompiler_t* src)
     {
 
         loaded_name = (const char*)ptrarray_get(src_loaded_module_names, i);
-        loaded_name_copy = ape_strdup(copy->alloc, loaded_name);
+        loaded_name_copy = util_strdup(copy->alloc, loaded_name);
         if(!loaded_name_copy)
         {
             goto err;
@@ -526,7 +526,7 @@ static bool ccpriv_compilecode(ApeCompiler_t* comp, const char* code)
     // Left for debugging purposes
     //    if (ok) {
     //        ApeStringBuffer_t *buf = strbuf_make(NULL);
-    //        code_to_string(array_data(comp->compilation_scope->bytecode),
+    //        code_tostring(array_data(comp->compilation_scope->bytecode),
     //                       array_data(comp->compilation_scope->src_positions),
     //                       array_count(comp->compilation_scope->bytecode), buf);
     //        puts(strbuf_get_string(buf));
@@ -698,7 +698,7 @@ static bool ccpriv_importmodule(ApeCompiler_t* comp, const ApeStatement_t* impor
             goto end;
         }
     }
-    name_copy = ape_strdup(comp->alloc, module_name);
+    name_copy = util_strdup(comp->alloc, module_name);
     if(!name_copy)
     {
         result = false;
@@ -1020,7 +1020,7 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
                 return false;
             }
 
-            ip = ccpriv_emit(comp, OPCODE_NUMBER, 1, (uint64_t[]){ (uint64_t)ape_double_to_uint64(1) });
+            ip = ccpriv_emit(comp, OPCODE_NUMBER, 1, (uint64_t[]){ (uint64_t)util_double_to_uint64(1) });
             if(ip < 0)
             {
                 return false;
@@ -1510,7 +1510,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
         case EXPRESSION_NUMBER_LITERAL:
         {
             ApeFloat_t number = expr->number_literal;
-            ip = ccpriv_emit(comp, OPCODE_NUMBER, 1, (uint64_t[]){ (uint64_t)ape_double_to_uint64(number) });
+            ip = ccpriv_emit(comp, OPCODE_NUMBER, 1, (uint64_t[]){ (uint64_t)util_double_to_uint64(number) });
             if(ip < 0)
             {
                 goto error;

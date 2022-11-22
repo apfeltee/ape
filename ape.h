@@ -278,7 +278,7 @@ enum ApeOperator_t
     OPERATOR_RSHIFT,
 };
 
-enum ApeExpr_type_t
+enum ApeExprType_t
 {
     EXPRESSION_NONE,
     EXPRESSION_IDENT,
@@ -409,102 +409,99 @@ enum ApePrecedence_t
 };
 
 typedef uint8_t ApeOpByte_t;
-typedef float ApeFloat_t;
+typedef double ApeFloat_t;
 typedef int32_t ApeInt_t;
 typedef uint32_t ApeUInt_t;
 typedef int8_t ApeShort_t;
 typedef uint8_t ApeUShort_t;
 typedef size_t ApeSize_t;
 
-typedef enum ApeTokenType_t ApeTokenType_t;
-typedef enum ApeStatementType_t ApeStatementType_t;
-typedef enum ApeOperator_t ApeOperator_t;
-typedef enum ApeSymbolType_t ApeSymbolType_t;
-typedef enum ApeObjectType_t ApeObjectType_t;
-typedef enum ApeExpr_type_t ApeExpr_type_t;
-typedef enum ApeOpcodeValue_t ApeOpcodeValue_t;
-typedef enum ApePrecedence_t ApePrecedence_t;
-typedef enum ApeObjectType_t ApeObjectType_t;
-typedef enum ApeErrorType_t ApeErrorType_t;
-typedef struct ApeContext_t ApeContext_t;
-typedef struct ApeProgram_t ApeProgram_t;
-typedef struct ApeVM_t ApeVM_t;
-typedef struct ApeConfig_t ApeConfig_t;
-typedef struct ApePosition_t ApePosition_t;
-typedef struct ApeTimer_t ApeTimer_t;
-typedef struct ApeAllocator_t ApeAllocator_t;
-typedef struct ApeError_t ApeError_t;
-typedef struct ApeErrorList_t ApeErrorList_t;
-typedef struct ApeToken_t ApeToken_t;
-typedef struct ApeCompiledFile_t ApeCompiledFile_t;
-typedef struct ApeLexer_t ApeLexer_t;
-typedef struct ApeCodeblock_t ApeCodeblock_t;
-typedef struct ApeMapLiteral_t ApeMapLiteral_t;
-typedef struct ApePrefixExpr_t ApePrefixExpr_t;
-typedef struct ApeInfixExpr_t ApeInfixExpr_t;
-typedef struct ApeIfCase_t ApeIfCase_t;
-typedef struct ApeFnLiteral_t ApeFnLiteral_t;
-typedef struct ApeCallExpr_t ApeCallExpr_t;
-typedef struct ApeIndexExpr_t ApeIndexExpr_t;
-typedef struct ApeAssignExpr_t ApeAssignExpr_t;
-typedef struct ApeLogicalExpr_t ApeLogicalExpr_t;
-typedef struct ApeTernaryExpr_t ApeTernaryExpr_t;
-typedef struct ApeIdent_t ApeIdent_t;
-typedef struct ApeExpression_t ApeExpression_t;
-typedef struct ApeDefineStmt_t ApeDefineStmt_t;
-typedef struct ApeIfStmt_t ApeIfStmt_t;
-typedef struct ApeWhileLoopStmt_t ApeWhileLoopStmt_t;
-typedef struct ApeForeachStmt_t ApeForeachStmt_t;
-typedef struct ApeForLoopStmt_t ApeForLoopStmt_t;
-typedef struct ApeImportStmt_t ApeImportStmt_t;
-typedef struct ApeRecoverStmt_t ApeRecoverStmt_t;
-typedef struct ApeStatement_t ApeStatement_t;
-typedef struct ApeParser_t ApeParser_t;
-typedef struct ApeObject_t ApeObject_t;
-typedef struct ApeFunction_t ApeFunction_t;
-typedef struct ApeNativeFunction_t ApeNativeFunction_t;
-typedef struct ApeExternalData_t ApeExternalData_t;
-typedef struct ApeObjectError_t ApeObjectError_t;
-typedef struct ApeObjectString_t ApeObjectString_t;
-typedef struct ApeObjectData_t ApeObjectData_t;
-typedef struct ApeSymbol_t ApeSymbol_t;
-typedef struct ApeBlockScope_t ApeBlockScope_t;
-typedef struct ApeSymbolTable_t ApeSymbolTable_t;
-typedef struct ApeOpcodeDefinition_t ApeOpcodeDefinition_t;
-typedef struct ApeCompilationResult_t ApeCompilationResult_t;
-typedef struct ApeCompilationScope_t ApeCompilationScope_t;
-typedef struct ApeObjectDataPool_t ApeObjectDataPool_t;
-typedef struct ApeGCMemory_t ApeGCMemory_t;
-typedef struct ApeTracebackItem_t ApeTracebackItem_t;
-typedef struct ApeTraceback_t ApeTraceback_t;
-typedef struct ApeFrame_t ApeFrame_t;
-typedef struct ApeValDictionary_t ApeValDictionary_t;
-typedef struct ApeDictionary_t ApeDictionary_t;
-typedef struct ApeArray_t ApeArray_t;
-typedef struct ApePtrDictionary_t ApePtrDictionary_t;
-typedef struct ApePtrArray_t ApePtrArray_t;
-typedef struct ApeStringBuffer_t ApeStringBuffer_t;
-typedef struct ApeGlobalStore_t ApeGlobalStore_t;
-typedef struct ApeModule_t ApeModule_t;
-typedef struct ApeFileScope_t ApeFileScope_t;
-typedef struct ApeCompiler_t ApeCompiler_t;
-typedef struct ApeNativeFuncWrapper_t ApeNativeFuncWrapper_t;
+typedef enum /**/ApeTokenType_t ApeTokenType_t;
+typedef enum /**/ApeStatementType_t ApeStatementType_t;
+typedef enum /**/ApeOperator_t ApeOperator_t;
+typedef enum /**/ApeSymbolType_t ApeSymbolType_t;
+typedef enum /**/ApeObjectType_t ApeObjectType_t;
+typedef enum /**/ApeExprType_t ApeExprType_t;
+typedef enum /**/ApeOpcodeValue_t ApeOpcodeValue_t;
+typedef enum /**/ApePrecedence_t ApePrecedence_t;
+typedef enum /**/ApeObjectType_t ApeObjectType_t;
+typedef enum /**/ApeErrorType_t ApeErrorType_t;
+typedef struct /**/ApeContext_t ApeContext_t;
+typedef struct /**/ApeProgram_t ApeProgram_t;
+typedef struct /**/ApeVM_t ApeVM_t;
+typedef struct /**/ApeConfig_t ApeConfig_t;
+typedef struct /**/ApePosition_t ApePosition_t;
+typedef struct /**/ApeTimer_t ApeTimer_t;
+typedef struct /**/ApeAllocator_t ApeAllocator_t;
+typedef struct /**/ApeError_t ApeError_t;
+typedef struct /**/ApeErrorList_t ApeErrorList_t;
+typedef struct /**/ApeToken_t ApeToken_t;
+typedef struct /**/ApeCompiledFile_t ApeCompiledFile_t;
+typedef struct /**/ApeLexer_t ApeLexer_t;
+typedef struct /**/ApeCodeblock_t ApeCodeblock_t;
+typedef struct /**/ApeMapLiteral_t ApeMapLiteral_t;
+typedef struct /**/ApePrefixExpr_t ApePrefixExpr_t;
+typedef struct /**/ApeInfixExpr_t ApeInfixExpr_t;
+typedef struct /**/ApeIfCase_t ApeIfCase_t;
+typedef struct /**/ApeFnLiteral_t ApeFnLiteral_t;
+typedef struct /**/ApeCallExpr_t ApeCallExpr_t;
+typedef struct /**/ApeIndexExpr_t ApeIndexExpr_t;
+typedef struct /**/ApeAssignExpr_t ApeAssignExpr_t;
+typedef struct /**/ApeLogicalExpr_t ApeLogicalExpr_t;
+typedef struct /**/ApeTernaryExpr_t ApeTernaryExpr_t;
+typedef struct /**/ApeIdent_t ApeIdent_t;
+typedef struct /**/ApeExpression_t ApeExpression_t;
+typedef struct /**/ApeDefineStmt_t ApeDefineStmt_t;
+typedef struct /**/ApeIfStmt_t ApeIfStmt_t;
+typedef struct /**/ApeWhileLoopStmt_t ApeWhileLoopStmt_t;
+typedef struct /**/ApeForeachStmt_t ApeForeachStmt_t;
+typedef struct /**/ApeForLoopStmt_t ApeForLoopStmt_t;
+typedef struct /**/ApeImportStmt_t ApeImportStmt_t;
+typedef struct /**/ApeRecoverStmt_t ApeRecoverStmt_t;
+typedef struct /**/ApeStatement_t ApeStatement_t;
+typedef struct /**/ApeParser_t ApeParser_t;
+typedef struct /**/ApeObject_t ApeObject_t;
+typedef struct /**/ApeFunction_t ApeFunction_t;
+typedef struct /**/ApeNativeFunction_t ApeNativeFunction_t;
+typedef struct /**/ApeExternalData_t ApeExternalData_t;
+typedef struct /**/ApeObjectError_t ApeObjectError_t;
+typedef struct /**/ApeObjectString_t ApeObjectString_t;
+typedef struct /**/ApeObjectData_t ApeObjectData_t;
+typedef struct /**/ApeSymbol_t ApeSymbol_t;
+typedef struct /**/ApeBlockScope_t ApeBlockScope_t;
+typedef struct /**/ApeSymbolTable_t ApeSymbolTable_t;
+typedef struct /**/ApeOpcodeDefinition_t ApeOpcodeDefinition_t;
+typedef struct /**/ApeCompilationResult_t ApeCompilationResult_t;
+typedef struct /**/ApeCompilationScope_t ApeCompilationScope_t;
+typedef struct /**/ApeObjectDataPool_t ApeObjectDataPool_t;
+typedef struct /**/ApeGCMemory_t ApeGCMemory_t;
+typedef struct /**/ApeTracebackItem_t ApeTracebackItem_t;
+typedef struct /**/ApeTraceback_t ApeTraceback_t;
+typedef struct /**/ApeFrame_t ApeFrame_t;
+typedef struct /**/ApeValDictionary_t ApeValDictionary_t;
+typedef struct /**/ApeDictionary_t ApeDictionary_t;
+typedef struct /**/ApeArray_t ApeArray_t;
+typedef struct /**/ApePtrDictionary_t ApePtrDictionary_t;
+typedef struct /**/ApePtrArray_t ApePtrArray_t;
+typedef struct /**/ApeStringBuffer_t ApeStringBuffer_t;
+typedef struct /**/ApeGlobalStore_t ApeGlobalStore_t;
+typedef struct /**/ApeModule_t ApeModule_t;
+typedef struct /**/ApeFileScope_t ApeFileScope_t;
+typedef struct /**/ApeCompiler_t ApeCompiler_t;
+typedef struct /**/ApeNativeFuncWrapper_t ApeNativeFuncWrapper_t;
 
 
-//typedef ApeObject_t (*ape_native_fn)(ApeContext_t* ape, void* data, int argc, ApeObject_t* args);
-typedef ApeObject_t (*ApeNativeWrapFunc_t)(ApeContext_t* ape, void* data, int argc, ApeObject_t* args);
+typedef ApeObject_t (*ApeWrappedNativeFunc_t)(ApeContext_t*, void*, int, ApeObject_t*);
 typedef ApeObject_t (*ApeNativeFunc_t)(ApeVM_t*, void*, int, ApeObject_t*);
 
-typedef size_t (*ApeIOStdoutWriteFunc_t)(void* context, const void* data, size_t data_size);
-typedef char* (*ApeIOReadFunc_t)(void* context, const char* path);
-typedef size_t (*ApeIOWriteFunc_t)(void* context, const char* path, const char* string, size_t string_size);
-
-typedef void* (*ApeMemAllocFunc_t)(void* ctx, size_t size);
-typedef void (*ApeMemFreeFunc_t)(void* ctx, void* ptr);
-
-typedef unsigned long (*ApeDataHashFunc_t)(const void* val);
-typedef bool (*ApeDataEqualsFunc_t)(const void* a, const void* b);
-typedef void* (*ApeDataCallback_t)(void* item);
+typedef size_t (*ApeIOStdoutWriteFunc_t)(void*, const void*, size_t);
+typedef char* (*ApeIOReadFunc_t)(void*, const char*);
+typedef size_t (*ApeIOWriteFunc_t)(void* context, const char*, const char*, size_t);
+typedef void* (*ApeMemAllocFunc_t)(void*, size_t);
+typedef void (*ApeMemFreeFunc_t)(void*, void*);
+typedef unsigned long (*ApeDataHashFunc_t)(const void*);
+typedef bool (*ApeDataEqualsFunc_t)(const void*, const void*);
+typedef void* (*ApeDataCallback_t)(void*);
 
 
 typedef ApeExpression_t* (*ApeRightAssocParseFNCallback_t)(ApeParser_t* p);
@@ -707,7 +704,7 @@ struct ApeIdent_t
 struct ApeExpression_t
 {
     ApeAllocator_t* alloc;
-    ApeExpr_type_t type;
+    ApeExprType_t type;
     union
     {
         ApeIdent_t* ident;
@@ -878,7 +875,7 @@ struct ApeNativeFunction_t
 
 struct ApeNativeFuncWrapper_t
 {
-    ApeNativeWrapFunc_t wrapped_funcptr;
+    ApeWrappedNativeFunc_t wrapped_funcptr;
     ApeContext_t* ape;
     void* data;
 };
