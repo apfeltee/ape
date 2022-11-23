@@ -79,40 +79,29 @@ def run_generate
   ofile = nil
   ofh = $stdout
   opts = OpenStruct.new({
-    onlystatics: true,
+    onlystatics: false,
     alsoinline: false,
+    prefix: "",
   })
-  prefix = "priv_"
   OptionParser.new{|prs|
-    prs.on("-h", "--help"){
-      [
-        "options:",
-        "  -h          this help",
-        "  -o<file>    write output to <file> instead of stdout",
-        "  -p<str>     set default prefix to <str>",
-        "  -f          also include non-statics",
-        "  -i          also include inline functions (may cause linker errors!)",
-      ].each{|s| puts(s) }
-      exit(0)
-    }
-    prs.on("-o<file>"){|v|
+    prs.on("-o<file>", "write output to <file> instead of stdout"){|v|
       ofile = File.open(v, "wb")
       ofh = ofile
     }
-    prs.on("-p<str>"){|v|
-      prefix = v
+    prs.on("-p<str>", "set prefix to <str>"){|v|
+      opts.prefix = v
     }
-    prs.on("-f"){
-      opts.onlystatics = false
+    prs.on("-s", "--static", "emit only static functions"){
+      opts.onlystatics = true
     }
-    prs.on("-i"){
+    prs.on("-i", "--inline", "also emit inline functions"){
       opts.alsoinline = true
     }
   }.parse!
   begin
     files = ARGV
     runcproto(files, opts).each do |old|
-      new = sprintf("%s_%s", prefix, old.gsub(/internal_/, ""))
+      new = sprintf("%s%s", opts.prefix, old.gsub(/internal_/, ""))
       if ofile != nil then
         $stderr.printf(" %p -> %p\n", old, new)
       end
@@ -156,13 +145,19 @@ def run_replace
       $stderr.printf("first file argument is expected to be a YAML file\n")
     end
   end
-  thefile = ARGV.shift
-  if (thefile == nil) || !File.file?(thefile) then
+  thefiles = ARGV
+  if thefiles.empty? then
     failcnt += 1
-    $stderr.printf("error: need a file that exists\n")
+    $stderr.printf("error: no files specified\n")
   end
-
+  thefiles.each do |file|
+    if !File.file?(file) then
+      failcnt += 1
+      $stderr.printf("error: file %p does not exist\n", file)
+    end
+  end
   begin
+    uniqnames = []
     rawnames = YAML.load(File.read("syms.yml"))
     if !rawnames.is_a?(Hash) then
       failcnt += 1
@@ -171,7 +166,13 @@ def run_replace
     rawnames.each do |k, v|
       failcnt += fail_if_not_sym(k)
       failcnt += fail_if_not_sym(v, k)
-      names[k] = v
+      if uniqnames.include?(v) then
+        failcnt += 1
+        $stderr.printf("error: name %p (from %p) conflicts with a previous one!\n", v, k)
+      else
+        names[k] = v
+        uniqnames.push(v)
+      end
     end
   rescue => ex
     failcnt += 1
@@ -181,20 +182,22 @@ def run_replace
     $stderr.printf("error: too many errors. cannot continue.\n")
     exit(1)
   end
-  base = File.basename(thefile)
-  ext = File.extname(base)
-  stem = File.basename(base, ext)
-  backuploc = File.join("_backup", sprintf("%s.backup_%s.%s", stem, Process.pid, ext[1 .. -1]))
-  if not File.directory?(bpdir = File.dirname(backuploc)) then
-    FileUtils.mkdir_p(bpdir)
+  thefiles.each do |thefile|
+    base = File.basename(thefile)
+    ext = File.extname(base)
+    stem = File.basename(base, ext)
+    backuploc = File.join("_backup", sprintf("%s.backup_%s.%s", stem, Process.pid, ext[1 .. -1]))
+    if not File.directory?(bpdir = File.dirname(backuploc)) then
+      FileUtils.mkdir_p(bpdir)
+    end
+    FileUtils.copy(thefile, backuploc)
+    $stderr.printf("backup is at %p\n", backuploc)
+    ## don't actually need gsub here, methinks
+    #mapping = names.map{|old, new| sprintf("%s=%s", old, new)}
+    #cmd = ["gsub", "-r", "-f", thefile, "-b", *mapping]
+    #system(*cmd)
+    do_gsub(thefile, names)
   end
-  FileUtils.copy(thefile, backuploc)
-  $stderr.printf("backup is at %p\n", backuploc)
-  ## don't actually need gsub here, methinks
-  #mapping = names.map{|old, new| sprintf("%s=%s", old, new)}
-  #cmd = ["gsub", "-r", "-f", thefile, "-b", *mapping]
-  #system(*cmd)
-  do_gsub(thefile, names)
   exit(0)
 end
 

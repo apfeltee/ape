@@ -20,7 +20,8 @@ all: $(protofile) $(target)
 
 $(protofile): $(srcfiles_all)
 	echo > $(protofile)
-	cproto $(srcfiles_all) > $(protofile)
+	cproto $(srcfiles_all) > $(protofile)_tmp
+	mv $(protofile)_tmp $(protofile)
 
 $(target): $(protofile) $(objfiles_all)
 	$(CC) -o $@ $(objfiles_all) $(LDFLAGS)

@@ -1,0 +1,836 @@
+
+#include "ape.h"
+
+// Public
+ApeValDictionary_t* valdict_make_(ApeAllocator_t* alloc, size_t key_size, size_t val_size)
+{
+    return valdict_makecapacity(alloc, DICT_INITIAL_SIZE, key_size, val_size);
+}
+
+ApeValDictionary_t* valdict_makecapacity(ApeAllocator_t* alloc, unsigned int min_capacity, size_t key_size, size_t val_size)
+{
+    bool ok;
+    ApeValDictionary_t* dict;
+    unsigned int capacity;
+    dict = (ApeValDictionary_t*)allocator_malloc(alloc, sizeof(ApeValDictionary_t));
+    capacity = util_upperpoweroftwo(min_capacity * 2);
+    if(!dict)
+    {
+        return NULL;
+    }
+    ok = valdict_init(dict, alloc, key_size, val_size, capacity);
+    if(!ok)
+    {
+        allocator_free(alloc, dict);
+        return NULL;
+    }
+    return dict;
+}
+
+void valdict_destroy(ApeValDictionary_t* dict)
+{
+    ApeAllocator_t* alloc;
+    if(!dict)
+    {
+        return;
+    }
+    alloc = dict->alloc;
+    valdict_deinit(dict);
+    allocator_free(alloc, dict);
+}
+
+void valdict_sethashfunction(ApeValDictionary_t* dict, ApeDataHashFunc_t hash_fn)
+{
+    dict->_hash_key = hash_fn;
+}
+
+void valdict_setequalsfunction(ApeValDictionary_t* dict, ApeDataEqualsFunc_t equals_fn)
+{
+    dict->_keys_equals = equals_fn;
+}
+
+bool valdict_set(ApeValDictionary_t* dict, void* key, void* value)
+{
+    bool ok;
+    bool found;
+    unsigned int last_ix;
+    unsigned int cell_ix;
+    unsigned int item_ix;
+    unsigned long hash;
+    hash = valdict_hashkey(dict, key);
+    found = false;
+    cell_ix = valdict_getcellindex(dict, key, hash, &found);
+    if(found)
+    {
+        item_ix = dict->cells[cell_ix];
+        valdict_setvalueat(dict, item_ix, value);
+        return true;
+    }
+    if(dict->count >= dict->item_capacity)
+    {
+        ok = valdict_growandrehash(dict);
+        if(!ok)
+        {
+            return false;
+        }
+        cell_ix = valdict_getcellindex(dict, key, hash, &found);
+    }
+    last_ix = dict->count;
+    dict->count++;
+    dict->cells[cell_ix] = last_ix;
+    valdict_setkeyat(dict, last_ix, key);
+    valdict_setvalueat(dict, last_ix, value);
+    dict->cell_ixs[last_ix] = cell_ix;
+    dict->hashes[last_ix] = hash;
+    return true;
+}
+
+void* valdict_get(const ApeValDictionary_t* dict, const void* key)
+{
+    bool found;
+    unsigned int item_ix;
+    unsigned long hash;
+    unsigned long cell_ix;
+    hash = valdict_hashkey(dict, key);
+    found = false;
+    cell_ix = valdict_getcellindex(dict, key, hash, &found);
+    if(!found)
+    {
+        return NULL;
+    }
+    item_ix = dict->cells[cell_ix];
+    return valdict_getvalueat(dict, item_ix);
+}
+
+void* valdict_getkeyat(const ApeValDictionary_t* dict, unsigned int ix)
+{
+    if(ix >= dict->count)
+    {
+        return NULL;
+    }
+    return (char*)dict->keys + (dict->key_size * ix);
+}
+
+void* valdict_getvalueat(const ApeValDictionary_t* dict, unsigned int ix)
+{
+    if(ix >= dict->count)
+    {
+        return NULL;
+    }
+    return (char*)dict->values + (dict->val_size * ix);
+}
+
+bool valdict_setvalueat(const ApeValDictionary_t* dict, unsigned int ix, const void* value)
+{
+    size_t offset;
+    if(ix >= dict->count)
+    {
+        return false;
+    }
+    offset = ix * dict->val_size;
+    memcpy((char*)dict->values + offset, value, dict->val_size);
+    return true;
+}
+
+ApeSize_t valdict_count(const ApeValDictionary_t* dict)
+{
+    if(!dict)
+    {
+        return 0;
+    }
+    return dict->count;
+}
+
+void valdict_clear(ApeValDictionary_t* dict)
+{
+    ApeSize_t i;
+    dict->count = 0;
+    for(i = 0; i < dict->cell_capacity; i++)
+    {
+        dict->cells[i] = VALDICT_INVALID_IX;
+    }
+}
+
+// Private definitions
+bool valdict_init(ApeValDictionary_t* dict, ApeAllocator_t* alloc, size_t key_size, size_t val_size, unsigned int initial_capacity)
+{
+    ApeSize_t i;
+    dict->alloc = alloc;
+    dict->key_size = key_size;
+    dict->val_size = val_size;
+    dict->cells = NULL;
+    dict->keys = NULL;
+    dict->values = NULL;
+    dict->cell_ixs = NULL;
+    dict->hashes = NULL;
+    dict->count = 0;
+    dict->cell_capacity = initial_capacity;
+    dict->item_capacity = (unsigned int)(initial_capacity * 0.7f);
+    dict->_keys_equals = NULL;
+    dict->_hash_key = NULL;
+    dict->cells = (unsigned int*)allocator_malloc(dict->alloc, dict->cell_capacity * sizeof(*dict->cells));
+    dict->keys = allocator_malloc(dict->alloc, dict->item_capacity * key_size);
+    dict->values = allocator_malloc(dict->alloc, dict->item_capacity * val_size);
+    dict->cell_ixs = (unsigned int*)allocator_malloc(dict->alloc, dict->item_capacity * sizeof(*dict->cell_ixs));
+    dict->hashes = (long unsigned int*)allocator_malloc(dict->alloc, dict->item_capacity * sizeof(*dict->hashes));
+    if(dict->cells == NULL || dict->keys == NULL || dict->values == NULL || dict->cell_ixs == NULL || dict->hashes == NULL)
+    {
+        goto error;
+    }
+    for(i = 0; i < dict->cell_capacity; i++)
+    {
+        dict->cells[i] = VALDICT_INVALID_IX;
+    }
+    return true;
+error:
+    allocator_free(dict->alloc, dict->cells);
+    allocator_free(dict->alloc, dict->keys);
+    allocator_free(dict->alloc, dict->values);
+    allocator_free(dict->alloc, dict->cell_ixs);
+    allocator_free(dict->alloc, dict->hashes);
+    return false;
+}
+
+void valdict_deinit(ApeValDictionary_t* dict)
+{
+    dict->key_size = 0;
+    dict->val_size = 0;
+    dict->count = 0;
+    dict->item_capacity = 0;
+    dict->cell_capacity = 0;
+    allocator_free(dict->alloc, dict->cells);
+    allocator_free(dict->alloc, dict->keys);
+    allocator_free(dict->alloc, dict->values);
+    allocator_free(dict->alloc, dict->cell_ixs);
+    allocator_free(dict->alloc, dict->hashes);
+    dict->cells = NULL;
+    dict->keys = NULL;
+    dict->values = NULL;
+    dict->cell_ixs = NULL;
+    dict->hashes = NULL;
+}
+
+unsigned int valdict_getcellindex(const ApeValDictionary_t* dict, const void* key, unsigned long hash, bool* out_found)
+{
+    bool are_equal;
+    ApeSize_t ofs;
+    ApeSize_t i;
+    ApeSize_t ix;
+    ApeSize_t cell;
+    ApeSize_t cell_ix;
+    unsigned long hash_to_check;
+    void* key_to_check;
+    *out_found = false;
+
+    //fprintf(stderr, "valdict_getcellindex: dict=%p, dict->cell_capacity=%d\n", dict, dict->cell_capacity);
+    ofs = 0;
+    if(dict->cell_capacity > 1)
+    {
+        ofs = (dict->cell_capacity - 1);
+    }
+    cell_ix = hash & ofs;
+    for(i = 0; i < dict->cell_capacity; i++)
+    {
+        cell = VALDICT_INVALID_IX;
+        ix = (cell_ix + i) & ofs;
+        //fprintf(stderr, "(cell_ix=%d + i=%d) & ofs=%d == %d\n", cell_ix, i, ofs, ix);
+        cell = dict->cells[ix];
+        if(cell == VALDICT_INVALID_IX)
+        {
+            return ix;
+        }
+        hash_to_check = dict->hashes[cell];
+        if(hash != hash_to_check)
+        {
+            continue;
+        }
+        key_to_check = valdict_getkeyat(dict, cell);
+        are_equal = valdict_keysareequal(dict, key, key_to_check);
+        if(are_equal)
+        {
+            *out_found = true;
+            return ix;
+        }
+    }
+    return VALDICT_INVALID_IX;
+}
+
+bool valdict_growandrehash(ApeValDictionary_t* dict)
+{
+    bool ok;
+    ApeSize_t new_capacity;
+    ApeSize_t i;
+    char* key;
+    void* value;
+    ApeValDictionary_t new_dict;
+    new_capacity = dict->cell_capacity == 0 ? DICT_INITIAL_SIZE : dict->cell_capacity * 2;
+    ok = valdict_init(&new_dict, dict->alloc, dict->key_size, dict->val_size, new_capacity);
+    if(!ok)
+    {
+        return false;
+    }
+    new_dict._keys_equals = dict->_keys_equals;
+    new_dict._hash_key = dict->_hash_key;
+    for(i = 0; i < dict->count; i++)
+    {
+        key = (char*)valdict_getkeyat(dict, i);
+        value = valdict_getvalueat(dict, i);
+        ok = valdict_set(&new_dict, key, value);
+        if(!ok)
+        {
+            valdict_deinit(&new_dict);
+            return false;
+        }
+    }
+    valdict_deinit(dict);
+    *dict = new_dict;
+    return true;
+}
+
+bool valdict_setkeyat(ApeValDictionary_t* dict, unsigned int ix, void* key)
+{
+    size_t offset;
+    if(ix >= dict->count)
+    {
+        return false;
+    }
+    offset = ix * dict->key_size;
+    memcpy((char*)dict->keys + offset, key, dict->key_size);
+    return true;
+}
+
+bool valdict_keysareequal(const ApeValDictionary_t* dict, const void* a, const void* b)
+{
+    if(dict->_keys_equals)
+    {
+        return dict->_keys_equals(a, b);
+    }
+    return memcmp(a, b, dict->key_size) == 0;
+}
+
+unsigned long valdict_hashkey(const ApeValDictionary_t* dict, const void* key)
+{
+    if(dict->_hash_key)
+    {
+        return dict->_hash_key(key);
+    }
+    return util_hashstring(key, dict->key_size);
+}
+
+void valdict_destroywithitems(ApeValDictionary_t* dict)
+{
+    ApeSize_t i;
+    void** vp;
+    if(!dict)
+    {
+        return;
+    }
+    if(dict->destroy_fn)
+    {
+        vp = (void**)(dict->values);
+        for(i = 0; i < dict->count; i++)
+        {
+            
+            dict->destroy_fn(vp[i]);
+        }
+    }
+    valdict_destroy(dict);
+}
+
+void valdict_setcopyfunc(ApeValDictionary_t* dict, ApeDataCallback_t fn)
+{
+    dict->copy_fn = fn;
+}
+
+void valdict_setdeletefunc(ApeValDictionary_t* dict, ApeDataCallback_t fn)
+{
+    dict->destroy_fn = fn;
+}
+
+ApeValDictionary_t* valdict_copywithitems(ApeValDictionary_t* dict)
+{
+    ApeSize_t i;
+    bool ok;
+    const char* key;
+    void* item;
+    void* item_copy;
+    ApeValDictionary_t* dict_copy;
+    ok = false;
+    if(!dict->copy_fn || !dict->destroy_fn)
+    {
+        return NULL;
+    }
+    dict_copy = valdict_make(dict->alloc, dict->key_size, dict->val_size);
+    valdict_setcopyfunc(dict_copy, (ApeDataCallback_t)dict->copy_fn);
+    valdict_setdeletefunc(dict_copy, (ApeDataCallback_t)dict->destroy_fn);
+
+    if(!dict_copy)
+    {
+        return NULL;
+    }
+    for(i = 0; i < valdict_count(dict); i++)
+    {
+        key = valdict_getkeyat(dict, i);
+        item = valdict_getvalueat(dict, i);
+        item_copy = dict_copy->copy_fn(item);
+        if(item && !item_copy)
+        {
+            valdict_destroywithitems(dict_copy);
+            return NULL;
+        }
+        ok = valdict_set(dict_copy, key, item_copy);
+        if(!ok)
+        {
+            dict_copy->destroy_fn(item_copy);
+            valdict_destroywithitems(dict_copy);
+            return NULL;
+        }
+    }
+    return dict_copy;
+}
+
+// Public
+ApeStrDictionary_t* strdict_make(ApeAllocator_t* alloc, ApeDataCallback_t copy_fn, ApeDataCallback_t destroy_fn)
+{
+    bool ok;
+    ApeStrDictionary_t* dict;
+    dict = (ApeStrDictionary_t*)allocator_malloc(alloc, sizeof(ApeStrDictionary_t));
+    if(dict == NULL)
+    {
+        return NULL;
+    }
+    ok = strdict_init(dict, alloc, DICT_INITIAL_SIZE, copy_fn, destroy_fn);
+    if(!ok)
+    {
+        allocator_free(alloc, dict);
+        return NULL;
+    }
+    return dict;
+}
+
+void strdict_destroy(ApeStrDictionary_t* dict)
+{
+    ApeAllocator_t* alloc;
+    if(!dict)
+    {
+        return;
+    }
+    alloc = dict->alloc;
+    strdict_deinit(dict, true);
+    allocator_free(alloc, dict);
+}
+
+void strdict_destroywithitems(ApeStrDictionary_t* dict)
+{
+    ApeSize_t i;
+    if(!dict)
+    {
+        return;
+    }
+    if(dict->destroy_fn)
+    {
+        for(i = 0; i < dict->count; i++)
+        {
+            dict->destroy_fn(dict->values[i]);
+        }
+    }
+    strdict_destroy(dict);
+}
+
+ApeStrDictionary_t* strdict_copywithitems(ApeStrDictionary_t* dict)
+{
+    ApeSize_t i;
+    bool ok;
+    const char* key;
+    void* item;
+    void* item_copy;
+    ApeStrDictionary_t* dict_copy;
+    ok = false;
+    if(!dict->copy_fn || !dict->destroy_fn)
+    {
+        return NULL;
+    }
+    dict_copy = strdict_make(dict->alloc, (ApeDataCallback_t)dict->copy_fn, (ApeDataCallback_t)dict->destroy_fn);
+    if(!dict_copy)
+    {
+        return NULL;
+    }
+    for(i = 0; i < strdict_count(dict); i++)
+    {
+        key = strdict_getkeyat(dict, i);
+        item = strdict_getvalueat(dict, i);
+        item_copy = dict_copy->copy_fn(item);
+        if(item && !item_copy)
+        {
+            strdict_destroywithitems(dict_copy);
+            return NULL;
+        }
+        ok = strdict_set(dict_copy, key, item_copy);
+        if(!ok)
+        {
+            dict_copy->destroy_fn(item_copy);
+            strdict_destroywithitems(dict_copy);
+            return NULL;
+        }
+    }
+    return dict_copy;
+}
+
+bool strdict_set(ApeStrDictionary_t* dict, const char* key, void* value)
+{
+    return strdict_setinternal(dict, key, NULL, value);
+}
+
+void* strdict_get(const ApeStrDictionary_t* dict, const char* key)
+{
+    bool found;
+    ApeSize_t klen;
+    unsigned int item_ix;
+    unsigned long cell_ix;
+    unsigned long hash;
+    klen = strlen(key);
+    hash = util_hashstring(key, klen);
+    found = false;
+    cell_ix = strdict_getcellindex(dict, key, hash, &found);
+    if(found == false)
+    {
+        return NULL;
+    }
+    item_ix = dict->cells[cell_ix];
+    return dict->values[item_ix];
+}
+
+void* strdict_getvalueat(const ApeStrDictionary_t* dict, unsigned int ix)
+{
+    if(ix >= dict->count)
+    {
+        return NULL;
+    }
+    return dict->values[ix];
+}
+
+const char* strdict_getkeyat(const ApeStrDictionary_t* dict, unsigned int ix)
+{
+    if(ix >= dict->count)
+    {
+        return NULL;
+    }
+    return dict->keys[ix];
+}
+
+ApeSize_t strdict_count(const ApeStrDictionary_t* dict)
+{
+    if(!dict)
+    {
+        return 0;
+    }
+    return dict->count;
+}
+
+// Private definitions
+bool strdict_init(ApeStrDictionary_t* dict, ApeAllocator_t* alloc, unsigned int initial_capacity, ApeDataCallback_t copy_fn, ApeDataCallback_t destroy_fn)
+{
+    ApeSize_t i;
+    dict->alloc = alloc;
+    dict->cells = NULL;
+    dict->keys = NULL;
+    dict->values = NULL;
+    dict->cell_ixs = NULL;
+    dict->hashes = NULL;
+    dict->count = 0;
+    dict->cell_capacity = initial_capacity;
+    dict->item_capacity = (unsigned int)(initial_capacity * 0.7f);
+    dict->copy_fn = copy_fn;
+    dict->destroy_fn = destroy_fn;
+    dict->cells = (unsigned int*)allocator_malloc(alloc, dict->cell_capacity * sizeof(*dict->cells));
+    dict->keys = (char**)allocator_malloc(alloc, dict->item_capacity * sizeof(*dict->keys));
+    dict->values = (void**)allocator_malloc(alloc, dict->item_capacity * sizeof(*dict->values));
+    dict->cell_ixs = (unsigned int*)allocator_malloc(alloc, dict->item_capacity * sizeof(*dict->cell_ixs));
+    dict->hashes = (long unsigned int*)allocator_malloc(alloc, dict->item_capacity * sizeof(*dict->hashes));
+    if(dict->cells == NULL || dict->keys == NULL || dict->values == NULL || dict->cell_ixs == NULL || dict->hashes == NULL)
+    {
+        goto error;
+    }
+    for(i = 0; i < dict->cell_capacity; i++)
+    {
+        dict->cells[i] = DICT_INVALID_IX;
+    }
+    return true;
+error:
+    allocator_free(dict->alloc, dict->cells);
+    allocator_free(dict->alloc, dict->keys);
+    allocator_free(dict->alloc, dict->values);
+    allocator_free(dict->alloc, dict->cell_ixs);
+    allocator_free(dict->alloc, dict->hashes);
+    return false;
+}
+
+void strdict_deinit(ApeStrDictionary_t* dict, bool free_keys)
+{
+    ApeSize_t i;
+    if(free_keys)
+    {
+        for(i = 0; i < dict->count; i++)
+        {
+            allocator_free(dict->alloc, dict->keys[i]);
+        }
+    }
+    dict->count = 0;
+    dict->item_capacity = 0;
+    dict->cell_capacity = 0;
+    allocator_free(dict->alloc, dict->cells);
+    allocator_free(dict->alloc, dict->keys);
+    allocator_free(dict->alloc, dict->values);
+    allocator_free(dict->alloc, dict->cell_ixs);
+    allocator_free(dict->alloc, dict->hashes);
+    dict->cells = NULL;
+    dict->keys = NULL;
+    dict->values = NULL;
+    dict->cell_ixs = NULL;
+    dict->hashes = NULL;
+}
+
+unsigned int strdict_getcellindex(const ApeStrDictionary_t* dict, const char* key, unsigned long hash, bool* out_found)
+{
+    ApeSize_t i;
+    ApeSize_t ix;
+    ApeSize_t cell;
+    ApeSize_t cell_ix;
+    unsigned long hash_to_check;
+    const char* key_to_check;
+    *out_found = false;
+    cell_ix = hash & (dict->cell_capacity - 1);
+    for(i = 0; i < dict->cell_capacity; i++)
+    {
+        ix = (cell_ix + i) & (dict->cell_capacity - 1);
+        cell = dict->cells[ix];
+        if(cell == DICT_INVALID_IX)
+        {
+            return ix;
+        }
+        hash_to_check = dict->hashes[cell];
+        if(hash != hash_to_check)
+        {
+            continue;
+        }
+        key_to_check = dict->keys[cell];
+        if(strcmp(key, key_to_check) == 0)
+        {
+            *out_found = true;
+            return ix;
+        }
+    }
+    return DICT_INVALID_IX;
+}
+
+
+bool strdict_growandrehash(ApeStrDictionary_t* dict)
+{
+    bool ok;
+    ApeSize_t i;
+    char* key;
+    void* value;
+    ApeStrDictionary_t new_dict;
+    ok = strdict_init(&new_dict, dict->alloc, dict->cell_capacity * 2, dict->copy_fn, dict->destroy_fn);
+    if(!ok)
+    {
+        return false;
+    }
+    for(i = 0; i < dict->count; i++)
+    {
+
+        key = dict->keys[i];
+        value = dict->values[i];
+        ok = strdict_setinternal(&new_dict, key, key, value);
+        if(!ok)
+        {
+            strdict_deinit(&new_dict, false);
+            return false;
+        }
+    }
+    strdict_deinit(dict, false);
+    *dict = new_dict;
+    return true;
+}
+
+bool strdict_setinternal(ApeStrDictionary_t* dict, const char* ckey, char* mkey, void* value)
+{
+    bool ok;
+    bool found;
+    ApeSize_t cklen;
+    char* key_copy;
+    unsigned long hash;
+    unsigned int cell_ix;
+    unsigned int item_ix;
+    cklen = strlen(ckey);
+    hash = util_hashstring(ckey, cklen);
+    found = false;
+    cell_ix = strdict_getcellindex(dict, ckey, hash, &found);
+    if(found)
+    {
+        item_ix = dict->cells[cell_ix];
+        dict->values[item_ix] = value;
+        return true;
+    }
+    if(dict->count >= dict->item_capacity)
+    {
+        ok = strdict_growandrehash(dict);
+        if(!ok)
+        {
+            return false;
+        }
+        cell_ix = strdict_getcellindex(dict, ckey, hash, &found);
+    }
+    if(mkey)
+    {
+        dict->keys[dict->count] = mkey;
+    }
+    else
+    {
+        key_copy = util_strdup(dict->alloc, ckey);
+        if(!key_copy)
+        {
+            return false;
+        }
+        dict->keys[dict->count] = key_copy;
+    }
+    dict->cells[cell_ix] = dict->count;
+    dict->values[dict->count] = value;
+    dict->cell_ixs[dict->count] = cell_ix;
+    dict->hashes[dict->count] = hash;
+    dict->count++;
+    return true;
+}
+
+ApeObject_t object_make_map(ApeGCMemory_t* mem)
+{
+    return object_make_mapcapacity(mem, 32);
+}
+
+ApeObject_t object_make_mapcapacity(ApeGCMemory_t* mem, unsigned capacity)
+{
+    ApeObjectData_t* data;
+    data = gcmem_get_object_data_from_pool(mem, APE_OBJECT_MAP);
+    if(data)
+    {
+        valdict_clear(data->map);
+        return object_make_from_data(APE_OBJECT_MAP, data);
+    }
+    data = gcmem_alloc_object_data(mem, APE_OBJECT_MAP);
+    if(!data)
+    {
+        return object_make_null();
+    }
+    data->map = valdict_makecapacity(mem->alloc, capacity, sizeof(ApeObject_t), sizeof(ApeObject_t));
+    if(!data->map)
+    {
+        return object_make_null();
+    }
+    valdict_sethashfunction(data->map, (ApeDataHashFunc_t)object_value_hash);
+    valdict_setequalsfunction(data->map, (ApeDataEqualsFunc_t)object_value_wrapequals);
+    return object_make_from_data(APE_OBJECT_MAP, data);
+}
+
+
+int object_map_getlength(ApeObject_t object)
+{
+    ApeObjectData_t* data;
+    APE_ASSERT(object_value_type(object) == APE_OBJECT_MAP);
+    data = object_value_allocated_data(object);
+    return valdict_count(data->map);
+}
+
+ApeObject_t object_map_getkeyat(ApeObject_t object, int ix)
+{
+    ApeObject_t* res;
+    ApeObjectData_t* data;
+    APE_ASSERT(object_value_type(object) == APE_OBJECT_MAP);
+    data = object_value_allocated_data(object);
+    res= (ApeObject_t*)valdict_getkeyat(data->map, ix);
+    if(!res)
+    {
+        return object_make_null();
+    }
+    return *res;
+}
+
+ApeObject_t object_map_getvalueat(ApeObject_t object, int ix)
+{
+    ApeObject_t* res;
+    ApeObjectData_t* data;
+    APE_ASSERT(object_value_type(object) == APE_OBJECT_MAP);
+    data = object_value_allocated_data(object);
+    res = (ApeObject_t*)valdict_getvalueat(data->map, ix);
+    if(!res)
+    {
+        return object_make_null();
+    }
+    return *res;
+}
+
+bool object_map_setvalue(ApeObject_t object, ApeObject_t key, ApeObject_t val)
+{
+    ApeObjectData_t* data;
+    APE_ASSERT(object_value_type(object) == APE_OBJECT_MAP);
+    data = object_value_allocated_data(object);
+    return valdict_set(data->map, &key, &val);
+}
+
+ApeObject_t object_map_getvalueobject(ApeObject_t object, ApeObject_t key)
+{
+    ApeObject_t* res;
+    ApeObjectData_t* data;
+    APE_ASSERT(object_value_type(object) == APE_OBJECT_MAP);
+    data = object_value_allocated_data(object);
+    res = (ApeObject_t*)valdict_get(data->map, &key);
+    if(!res)
+    {
+        return object_make_null();
+    }
+    return *res;
+}
+
+bool object_map_setnamedvalue(ApeObject_t obj, const char* key, ApeObject_t value)
+{
+    ApeGCMemory_t* mem = object_value_getmem(obj);
+    if(!mem)
+    {
+        return false;
+    }
+    ApeObject_t key_object = object_make_string(mem, key);
+    if(object_value_isnull(key_object))
+    {
+        return false;
+    }
+    return object_map_setvalue(obj, key_object, value);
+}
+
+bool object_map_setnamedstring(ApeObject_t obj, const char* key, const char* string)
+{
+    ApeGCMemory_t* mem = object_value_getmem(obj);
+    if(!mem)
+    {
+        return false;
+    }
+    ApeObject_t string_object = object_make_string(mem, string);
+    if(object_value_isnull(string_object))
+    {
+        return false;
+    }
+    return object_map_setnamedvalue(obj, key, string_object);
+}
+
+bool object_map_setnamednumber(ApeObject_t obj, const char* key, ApeFloat_t number)
+{
+    ApeObject_t number_object = object_make_number(number);
+    return object_map_setnamedvalue(obj, key, number_object);
+}
+
+bool object_map_setnamedbool(ApeObject_t obj, const char* key, bool value)
+{
+    ApeObject_t bool_object = object_make_bool(value);
+    return object_map_setnamedvalue(obj, key, bool_object);
+}
+
+
+

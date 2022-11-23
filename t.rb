@@ -19,6 +19,7 @@ ape_object_set_map_bool
 ape_object_set_map_number
 ape_object_set_map_string
 ape_object_set_map_value
+
 array_add
 array_clear
 array_copy

@@ -78,7 +78,7 @@ static bool code_read_operands(ApeOpcodeDefinition_t* def, ApeUShort_t* instr, u
 char* statements_tostring(ApeAllocator_t* alloc, ApePtrArray_t * statements)
 {
     ApeSize_t i;
-    int count;
+    ApeSize_t count;
     const ApeStatement_t* stmt;
     ApeStringBuffer_t* buf;
     buf = strbuf_make(alloc);
@@ -96,7 +96,7 @@ char* statements_tostring(ApeAllocator_t* alloc, ApePtrArray_t * statements)
             strbuf_append(buf, "\n");
         }
     }
-    return strbuf_get_string_and_destroy(buf);
+    return strbuf_getstringanddestroy(buf);
 }
 
 void statement_tostring(const ApeStatement_t* stmt, ApeStringBuffer_t* buf)
@@ -565,7 +565,7 @@ void object_tostring(ApeObject_t obj, ApeStringBuffer_t* buf, bool quote_str)
 {
     ApeSize_t i;
     ApeObjectType_t type;
-    type = object_get_type(obj);
+    type = object_value_type(obj);
     switch(type)
     {
         case APE_OBJECT_FREED:
@@ -580,13 +580,13 @@ void object_tostring(ApeObject_t obj, ApeStringBuffer_t* buf, bool quote_str)
         }
         case APE_OBJECT_NUMBER:
         {
-            ApeFloat_t number = object_asnumber(obj);
+            ApeFloat_t number = object_value_asnumber(obj);
             strbuf_appendf(buf, "%1.10g", number);
             break;
         }
         case APE_OBJECT_BOOL:
         {
-            strbuf_append(buf, object_asbool(obj) ? "true" : "false");
+            strbuf_append(buf, object_value_asbool(obj) ? "true" : "false");
             break;
         }
         case APE_OBJECT_STRING:
@@ -610,7 +610,7 @@ void object_tostring(ApeObject_t obj, ApeStringBuffer_t* buf, bool quote_str)
 
         case APE_OBJECT_FUNCTION:
             {
-                const ApeFunction_t* function = object_asfunction(obj);
+                const ApeFunction_t* function = object_value_asfunction(obj);
                 strbuf_appendf(buf, "CompiledFunction: %s\n", object_function_getname(obj));
                 code_tostring(function->comp_result->bytecode, function->comp_result->src_positions, function->comp_result->count, buf);
             }
@@ -662,8 +662,8 @@ void object_tostring(ApeObject_t obj, ApeStringBuffer_t* buf, bool quote_str)
 
         case APE_OBJECT_ERROR:
             {
-                strbuf_appendf(buf, "ERROR: %s\n", object_get_error_message(obj));
-                ApeTraceback_t* traceback = object_get_error_traceback(obj);
+                strbuf_appendf(buf, "ERROR: %s\n", object_value_geterrormessage(obj));
+                ApeTraceback_t* traceback = object_value_geterrortraceback(obj);
                 APE_ASSERT(traceback);
                 if(traceback)
                 {
@@ -683,7 +683,7 @@ void object_tostring(ApeObject_t obj, ApeStringBuffer_t* buf, bool quote_str)
 bool traceback_tostring(const ApeTraceback_t* traceback, ApeStringBuffer_t* buf)
 {
     ApeSize_t i;
-    int depth;
+    ApeSize_t depth;
     depth = array_count(traceback->items);
     for(i = 0; i < depth; i++)
     {

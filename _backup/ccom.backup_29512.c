@@ -253,7 +253,7 @@ bool compiler_init(ApeCompiler_t* comp,
     {
         goto err;
     }
-    comp->modules = dict_make(alloc, (ApeDataCallback_t)module_copy, (ApeDataCallback_t)module_destroy);
+    comp->modules = strdict_make(alloc, (ApeDataCallback_t)module_copy, (ApeDataCallback_t)module_destroy);
     if(!comp->modules)
     {
         goto err;
@@ -268,7 +268,7 @@ bool compiler_init(ApeCompiler_t* comp,
     {
         goto err;
     }
-    comp->string_constants_positions = dict_make(comp->alloc, NULL, NULL);
+    comp->string_constants_positions = strdict_make(comp->alloc, NULL, NULL);
     if(!comp->string_constants_positions)
     {
         goto err;
@@ -288,12 +288,12 @@ void compiler_deinit(ApeCompiler_t* comp)
     {
         return;
     }
-    for(i = 0; i < dict_count(comp->string_constants_positions); i++)
+    for(i = 0; i < strdict_count(comp->string_constants_positions); i++)
     {
-        val = (int*)dict_get_value_at(comp->string_constants_positions, i);
+        val = (int*)strdict_get_value_at(comp->string_constants_positions, i);
         allocator_free(comp->alloc, val);
     }
-    dict_destroy(comp->string_constants_positions);
+    strdict_destroy(comp->string_constants_positions);
     while(ptrarray_count(comp->file_scopes) > 0)
     {
         ccpriv_popfilescope(comp);
@@ -302,7 +302,7 @@ void compiler_deinit(ApeCompiler_t* comp)
     {
         ccpriv_popcompscope(comp);
     }
-    dict_destroy_with_items(comp->modules);
+    strdict_destroy_with_items(comp->modules);
     array_destroy(comp->src_positions_stack);
     array_destroy(comp->constants);
     ptrarray_destroy(comp->file_scopes);
@@ -321,7 +321,7 @@ bool compiler_init_shallow_copy(ApeCompiler_t* copy, ApeCompiler_t* src)
     ApeSymbolTable_t* src_st;
     ApeSymbolTable_t* src_st_copy;
     ApeSymbolTable_t* copy_st;
-    ApeDictionary_t* modules_copy;
+    ApeStrDictionary_t* modules_copy;
     ApeArray_t* constants_copy;
     ApeFileScope_t* src_file_scope;
     ApeFileScope_t* copy_file_scope;
@@ -345,12 +345,12 @@ bool compiler_init_shallow_copy(ApeCompiler_t* copy, ApeCompiler_t* src)
     symbol_table_destroy(copy_st);
     copy_st = NULL;
     ccpriv_setsymtable(copy, src_st_copy);
-    modules_copy = dict_copy_with_items(src->modules);
+    modules_copy = strdict_copy_with_items(src->modules);
     if(!modules_copy)
     {
         goto err;
     }
-    dict_destroy_with_items(copy->modules);
+    strdict_destroy_with_items(copy->modules);
     copy->modules = modules_copy;
     constants_copy = array_copy(src->constants);
     if(!constants_copy)
@@ -359,17 +359,17 @@ bool compiler_init_shallow_copy(ApeCompiler_t* copy, ApeCompiler_t* src)
     }
     array_destroy(copy->constants);
     copy->constants = constants_copy;
-    for(i = 0; i < dict_count(src->string_constants_positions); i++)
+    for(i = 0; i < strdict_count(src->string_constants_positions); i++)
     {
-        key = (const char*)dict_get_key_at(src->string_constants_positions, i);
-        val = (int*)dict_get_value_at(src->string_constants_positions, i);
+        key = (const char*)strdict_get_key_at(src->string_constants_positions, i);
+        val = (int*)strdict_get_value_at(src->string_constants_positions, i);
         val_copy = (int*)allocator_malloc(src->alloc, sizeof(int));
         if(!val_copy)
         {
             goto err;
         }
         *val_copy = *val;
-        ok = dict_set(copy->string_constants_positions, key, val_copy);
+        ok = strdict_set(copy->string_constants_positions, key, val_copy);
         if(!ok)
         {
             allocator_free(src->alloc, val_copy);
@@ -583,7 +583,7 @@ static bool ccpriv_importmodule(ApeCompiler_t* comp, const ApeStatement_t* impor
     for(i = 0; i < ptrarray_count(file_scope->loaded_module_names); i++)
     {
         loaded_name = (const char*)ptrarray_get(file_scope->loaded_module_names, i);
-        if(kg_streq(loaded_name, module_name))
+        if(util_strequal(loaded_name, module_name))
         {
             errors_add_errorf(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos, "Module \"%s\" was already imported", module_name);
             result = false;
@@ -596,7 +596,7 @@ static bool ccpriv_importmodule(ApeCompiler_t* comp, const ApeStatement_t* impor
         result = false;
         goto end;
     }
-    if(kg_is_path_absolute(module_path))
+    if(util_is_absolutepath(module_path))
     {
         strbuf_appendf(filepath_buf, "%s.ape", module_path);
     }
@@ -611,7 +611,7 @@ static bool ccpriv_importmodule(ApeCompiler_t* comp, const ApeStatement_t* impor
         goto end;
     }
     filepath_non_canonicalised = strbuf_get_string(filepath_buf);
-    filepath = kg_canonicalise_path(comp->alloc, filepath_non_canonicalised);
+    filepath = util_canonicalisepath(comp->alloc, filepath_non_canonicalised);
     strbuf_destroy(filepath_buf);
     if(!filepath)
     {
@@ -635,7 +635,7 @@ static bool ccpriv_importmodule(ApeCompiler_t* comp, const ApeStatement_t* impor
             goto end;
         }
     }
-    module = (ApeModule_t*)dict_get(comp->modules, filepath);
+    module = (ApeModule_t*)strdict_get(comp->modules, filepath);
     if(!module)
     {
         // todo: create new module function
@@ -680,7 +680,7 @@ static bool ccpriv_importmodule(ApeCompiler_t* comp, const ApeStatement_t* impor
             module_add_symbol(module, symbol);
         }
         ccpriv_popfilescope(comp);
-        ok = dict_set(comp->modules, filepath, module);
+        ok = strdict_set(comp->modules, filepath, module);
         if(!ok)
         {
             module_destroy(module);
@@ -1521,7 +1521,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
         case EXPRESSION_STRING_LITERAL:
         {
             int pos = 0;
-            int* current_pos = (int*)dict_get(comp->string_constants_positions, expr->string_literal);
+            int* current_pos = (int*)strdict_get(comp->string_constants_positions, expr->string_literal);
             if(current_pos)
             {
                 pos = *current_pos;
@@ -1529,7 +1529,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
             else
             {
                 ApeObject_t obj = object_make_string(comp->mem, expr->string_literal);
-                if(object_is_null(obj))
+                if(object_value_isnull(obj))
                 {
                     goto error;
                 }
@@ -1547,7 +1547,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
                 }
 
                 *pos_val = pos;
-                ok = dict_set(comp->string_constants_positions, expr->string_literal, pos_val);
+                ok = strdict_set(comp->string_constants_positions, expr->string_literal, pos_val);
                 if(!ok)
                 {
                     allocator_free(comp->alloc, pos_val);
@@ -1783,7 +1783,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
 
             ApeObject_t obj = object_make_function(comp->mem, fn->name, comp_res, true, num_locals, ptrarray_count(fn->params), 0);
 
-            if(object_is_null(obj))
+            if(object_value_isnull(obj))
             {
                 ptrarray_destroy_with_items(free_symbols, (ApeDataCallback_t)symbol_destroy);
                 compilation_result_destroy(comp_res);

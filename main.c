@@ -120,10 +120,10 @@ static void print_errors(ApeContext_t *ape)
     count = context_errorcount(ape);
     for (i = 0; i < count; i++)
     {
-        err = context_get_error(ape, i);
-        err_str = context_error_tostring(ape, err);
+        err = context_geterror(ape, i);
+        err_str = context_errortostring(ape, err);
         fprintf(stderr, "%s", err_str);
-        context_free_allocated(ape, err_str);
+        context_freeallocated(ape, err_str);
     }
 }
 
@@ -159,8 +159,8 @@ static void do_repl(ApeContext_t* ape)
     char *line;
     char *object_str;
     ApeObject_t res;
-    context_set_replmode(ape, true);
-    context_set_timeout(ape, 100.0);
+    context_setreplmode(ape, true);
+    context_settimeout(ape, 100.0);
     while(true)
     {
         line = readline(">> ");
@@ -170,14 +170,14 @@ static void do_repl(ApeContext_t* ape)
         }
         add_history(line);
         res = context_executesource(ape, line);
-        if (context_has_errors(ape))
+        if (context_haserrors(ape))
         {
             print_errors(ape);
             free(line);
         }
         else
         {
-            object_str = object_serialize(&ape->alloc, res, &len);
+            object_str = object_value_serialize(&ape->alloc, res, &len);
             printf("%.*s\n", (int)len, object_str);
             free(object_str);
         }
@@ -261,7 +261,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "failed to process command line flags.\n");
         return 1;
     }
-    context_set_nativefunction(ape, "exit", exit_repl, &replexit);
+    context_setnativefunction(ape, "exit", exit_repl, &replexit);
     if((fx.poscnt > 0) || (opts.codeline != NULL))
     {
         args_array = object_make_array(ape->mem);
@@ -269,7 +269,7 @@ int main(int argc, char *argv[])
         {
             object_array_pushstring(args_array, fx.positional[i]);
         }
-        context_set_global(ape, "args", args_array);
+        context_setglobal(ape, "args", args_array);
         if(opts.codeline)
         {
             context_executesource(ape, opts.codeline);
@@ -279,7 +279,7 @@ int main(int argc, char *argv[])
             filename = fx.positional[0];
             context_executefile(ape, filename);
         }
-        if(context_has_errors(ape))
+        if(context_haserrors(ape))
         {
             print_errors(ape);
         }
