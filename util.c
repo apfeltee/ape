@@ -25,7 +25,6 @@ char* util_stringfmt(ApeAllocator_t* alloc, const char* format, ...)
     return res;
 }
 
-
 // fixme
 uint64_t util_double_to_uint64(ApeFloat_t val)
 {
@@ -102,10 +101,10 @@ ApeFloat_t util_timer_getelapsed(const ApeTimer_t* timer)
 #endif
 }
 
-char* util_strndup(ApeAllocator_t* alloc, const char* string, size_t n)
+char* util_strndup(ApeContext_t* ctx, const char* string, size_t n)
 {
     char* output_string;
-    output_string = (char*)allocator_malloc(alloc, n + 1);
+    output_string = (char*)allocator_malloc(&ctx->alloc, n + 1);
     if(!output_string)
     {
         return NULL;
@@ -115,13 +114,13 @@ char* util_strndup(ApeAllocator_t* alloc, const char* string, size_t n)
     return output_string;
 }
 
-char* util_strdup(ApeAllocator_t* alloc, const char* string)
+char* util_strdup(ApeContext_t* ctx, const char* string)
 {
     if(!string)
     {
         return NULL;
     }
-    return util_strndup(alloc, string, strlen(string));
+    return util_strndup(ctx, string, strlen(string));
 }
 
 /* djb2 */
@@ -165,15 +164,15 @@ unsigned int util_upperpoweroftwo(unsigned int v)
     return v;
 }
 
-char* util_default_readfile(void* ctx, const char* filename)
+char* util_default_readfile(void* ptr, const char* filename)
 {
     long pos;
     size_t size_read;
     size_t size_to_read;
     char* file_contents;
     FILE* fp;
-    ApeContext_t* ape;
-    ape = (ApeContext_t*)ctx;
+    ApeContext_t* ctx;
+    ctx = (ApeContext_t*)ptr;
     fp = fopen(filename, "r");
     size_to_read = 0;
     size_read = 0;
@@ -190,7 +189,7 @@ char* util_default_readfile(void* ctx, const char* filename)
     }
     size_to_read = pos;
     rewind(fp);
-    file_contents = (char*)allocator_malloc(&ape->alloc, sizeof(char) * (size_to_read + 1));
+    file_contents = (char*)allocator_malloc(&ctx->alloc, sizeof(char) * (size_to_read + 1));
     if(!file_contents)
     {
         fclose(fp);
@@ -229,28 +228,7 @@ size_t util_default_stdoutwrite(void* ctx, const void* data, size_t size)
     return fwrite(data, 1, size, stdout);
 }
 
-void* util_default_malloc(void* ctx, size_t size)
-{
-    void* resptr;
-    ApeContext_t* ape;
-    ape = (ApeContext_t*)ctx;
-    resptr = (void*)allocator_malloc(&ape->custom_allocator, size);
-    if(!resptr)
-    {
-        errorlist_add(&ape->errors, APE_ERROR_ALLOCATION, g_utilpriv_src_pos_invalid, "allocation failed");
-    }
-    return resptr;
-}
-
-void util_default_free(void* ctx, void* ptr)
-{
-    ApeContext_t* ape;
-    ape = (ApeContext_t*)ctx;
-    allocator_free(&ape->custom_allocator, ptr);
-}
-
-
-ApePtrArray_t * util_split_string(ApeAllocator_t* alloc, const char* str, const char* delimiter)
+ApePtrArray_t * util_split_string(ApeContext_t* ctx, const char* str, const char* delimiter)
 {
     ApeSize_t i;
     long len;
@@ -261,7 +239,7 @@ ApePtrArray_t * util_split_string(ApeAllocator_t* alloc, const char* str, const 
     const char* line_start;
     const char* line_end;
     ok = false;
-    res = ptrarray_make(alloc);
+    res = ptrarray_make(&ctx->alloc);
     rest = NULL;
     if(!str)
     {
@@ -272,7 +250,7 @@ ApePtrArray_t * util_split_string(ApeAllocator_t* alloc, const char* str, const 
     while(line_end != NULL)
     {
         len = line_end - line_start;
-        line = util_strndup(alloc, line_start, len);
+        line = util_strndup(ctx, line_start, len);
         if(!line)
         {
             goto err;
@@ -280,13 +258,13 @@ ApePtrArray_t * util_split_string(ApeAllocator_t* alloc, const char* str, const 
         ok = ptrarray_add(res, line);
         if(!ok)
         {
-            allocator_free(alloc, line);
+            allocator_free(&ctx->alloc, line);
             goto err;
         }
         line_start = line_end + 1;
         line_end = strstr(line_start, delimiter);
     }
-    rest = util_strdup(alloc, line_start);
+    rest = util_strdup(ctx, line_start);
     if(!rest)
     {
         goto err;
@@ -298,25 +276,25 @@ ApePtrArray_t * util_split_string(ApeAllocator_t* alloc, const char* str, const 
     }
     return res;
 err:
-    allocator_free(alloc, rest);
+    allocator_free(&ctx->alloc, rest);
     if(res)
     {
         for(i = 0; i < ptrarray_count(res); i++)
         {
             line = (char*)ptrarray_get(res, i);
-            allocator_free(alloc, line);
+            allocator_free(&ctx->alloc, line);
         }
     }
     ptrarray_destroy(res);
     return NULL;
 }
 
-char* util_join(ApeAllocator_t* alloc, ApePtrArray_t * items, const char* with)
+char* util_join(ApeContext_t* ctx, ApePtrArray_t * items, const char* with)
 {
     ApeSize_t i;
     char* item;
     ApeStringBuffer_t* res;
-    res = strbuf_make(alloc);
+    res = strbuf_make(ctx);
     if(!res)
     {
         return NULL;
@@ -333,7 +311,7 @@ char* util_join(ApeAllocator_t* alloc, ApePtrArray_t * items, const char* with)
     return strbuf_getstringanddestroy(res);
 }
 
-char* util_canonicalisepath(ApeAllocator_t* alloc, const char* path)
+char* util_canonicalisepath(ApeContext_t* ctx, const char* path)
 {
     ApeSize_t i;
     char* joined;
@@ -343,9 +321,9 @@ char* util_canonicalisepath(ApeAllocator_t* alloc, const char* path)
     ApePtrArray_t* split;
     if(!strchr(path, '/') || (!strstr(path, "/../") && !strstr(path, "./")))
     {
-        return util_strdup(alloc, path);
+        return util_strdup(ctx, path);
     }
-    split = util_split_string(alloc, path, "/");
+    split = util_split_string(ctx, path, "/");
     if(!split)
     {
         return NULL;
@@ -356,27 +334,27 @@ char* util_canonicalisepath(ApeAllocator_t* alloc, const char* path)
         next_item = (char*)ptrarray_get(split, i + 1);
         if(util_strequal(item, "."))
         {
-            allocator_free(alloc, item);
+            allocator_free(&ctx->alloc, item);
             ptrarray_removeat(split, i);
             i = -1;
             continue;
         }
         if(util_strequal(next_item, ".."))
         {
-            allocator_free(alloc, item);
-            allocator_free(alloc, next_item);
+            allocator_free(&ctx->alloc, item);
+            allocator_free(&ctx->alloc, next_item);
             ptrarray_removeat(split, i);
             ptrarray_removeat(split, i);
             i = -1;
             continue;
         }
     }
-    joined = util_join(alloc, split, "/");
+    joined = util_join(ctx, split, "/");
 
     for(i = 0; i < ptrarray_count(split); i++)
     {
         ptritem = (void*)ptrarray_get(split, i);
-        allocator_free(alloc, ptritem);
+        allocator_free(&ctx->alloc, ptritem);
     }
     ptrarray_destroy(split);
     return joined;

@@ -2,26 +2,26 @@
 #include "ape.h"
 
 // Public
-ApeValDictionary_t* valdict_make_(ApeAllocator_t* alloc, ApeSize_t key_size, ApeSize_t val_size)
+ApeValDictionary_t* valdict_make_(ApeContext_t* ctx, ApeSize_t key_size, ApeSize_t val_size)
 {
-    return valdict_makecapacity(alloc, DICT_INITIAL_SIZE, key_size, val_size);
+    return valdict_makecapacity(ctx, DICT_INITIAL_SIZE, key_size, val_size);
 }
 
-ApeValDictionary_t* valdict_makecapacity(ApeAllocator_t* alloc, ApeSize_t min_capacity, ApeSize_t key_size, ApeSize_t val_size)
+ApeValDictionary_t* valdict_makecapacity(ApeContext_t* ctx, ApeSize_t min_capacity, ApeSize_t key_size, ApeSize_t val_size)
 {
     bool ok;
     ApeValDictionary_t* dict;
     ApeSize_t capacity;
-    dict = (ApeValDictionary_t*)allocator_malloc(alloc, sizeof(ApeValDictionary_t));
+    dict = (ApeValDictionary_t*)allocator_malloc(&ctx->alloc, sizeof(ApeValDictionary_t));
     capacity = util_upperpoweroftwo(min_capacity * 2);
     if(!dict)
     {
         return NULL;
     }
-    ok = valdict_init(dict, alloc, key_size, val_size, capacity);
+    ok = valdict_init(dict, key_size, val_size, capacity);
     if(!ok)
     {
-        allocator_free(alloc, dict);
+        allocator_free(&ctx->alloc, dict);
         return NULL;
     }
     return dict;
@@ -152,10 +152,10 @@ void valdict_clear(ApeValDictionary_t* dict)
 }
 
 // Private definitions
-bool valdict_init(ApeValDictionary_t* dict, ApeAllocator_t* alloc, ApeSize_t key_size, ApeSize_t val_size, ApeSize_t initial_capacity)
+bool valdict_init(ApeValDictionary_t* dict, ApeSize_t key_size, ApeSize_t val_size, ApeSize_t initial_capacity)
 {
     ApeSize_t i;
-    dict->alloc = alloc;
+    dict->alloc = &dict->context->alloc;
     dict->key_size = key_size;
     dict->val_size = val_size;
     dict->cells = NULL;
@@ -264,7 +264,7 @@ bool valdict_growandrehash(ApeValDictionary_t* dict)
     void* value;
     ApeValDictionary_t new_dict;
     new_capacity = dict->cell_capacity == 0 ? DICT_INITIAL_SIZE : dict->cell_capacity * 2;
-    ok = valdict_init(&new_dict, dict->alloc, dict->key_size, dict->val_size, new_capacity);
+    ok = valdict_init(&new_dict, dict->key_size, dict->val_size, new_capacity);
     if(!ok)
     {
         return false;
@@ -360,7 +360,7 @@ ApeValDictionary_t* valdict_copywithitems(ApeValDictionary_t* dict)
     {
         return NULL;
     }
-    dict_copy = valdict_make(dict->alloc, dict->key_size, dict->val_size);
+    dict_copy = valdict_make(dict->context, dict->key_size, dict->val_size);
     valdict_setcopyfunc(dict_copy, (ApeDataCallback_t)dict->copy_fn);
     valdict_setdeletefunc(dict_copy, (ApeDataCallback_t)dict->destroy_fn);
 
@@ -687,7 +687,7 @@ bool strdict_setinternal(ApeStrDictionary_t* dict, const char* ckey, char* mkey,
     }
     else
     {
-        key_copy = util_strdup(dict->alloc, ckey);
+        key_copy = util_strdup(dict->context, ckey);
         if(!key_copy)
         {
             return false;
@@ -721,7 +721,7 @@ ApeObject_t object_make_mapcapacity(ApeGCMemory_t* mem, unsigned capacity)
     {
         return object_make_null();
     }
-    data->map = valdict_makecapacity(mem->alloc, capacity, sizeof(ApeObject_t), sizeof(ApeObject_t));
+    data->map = valdict_makecapacity(mem->context, capacity, sizeof(ApeObject_t), sizeof(ApeObject_t));
     if(!data->map)
     {
         return object_make_null();

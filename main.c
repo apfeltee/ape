@@ -111,26 +111,26 @@ static bool populate_flags(int argc, int begin, char** argv, const char* expectv
     return true;
 }
 
-static void print_errors(ApeContext_t *ape)
+static void print_errors(ApeContext_t *ctx)
 {
     int i;
     int count;
     char *err_str;
     const ApeError_t *err;
-    count = context_errorcount(ape);
+    count = context_errorcount(ctx);
     for (i = 0; i < count; i++)
     {
-        err = context_geterror(ape, i);
-        err_str = context_errortostring(ape, err);
+        err = context_geterror(ctx, i);
+        err_str = context_errortostring(ctx, err);
         fprintf(stderr, "%s", err_str);
-        context_freeallocated(ape, err_str);
+        context_freeallocated(ctx, err_str);
     }
 }
 
-static ApeObject_t exit_repl(ApeContext_t *ape, void *data, int argc, ApeObject_t *args)
+static ApeObject_t exit_repl(ApeContext_t *ctx, void *data, int argc, ApeObject_t *args)
 {
     bool *exit_repl;
-    (void)ape;
+    (void)ctx;
     (void)argc;
     (void)args;
     exit_repl = (bool*)data;
@@ -153,14 +153,14 @@ static bool notjustspace(const char* line)
     return false;
 }
 
-static void do_repl(ApeContext_t* ape)
+static void do_repl(ApeContext_t* ctx)
 {
     size_t len;
     char *line;
     char *object_str;
     ApeObject_t res;
-    context_setreplmode(ape, true);
-    context_settimeout(ape, 100.0);
+    context_setreplmode(ctx, true);
+    context_settimeout(ctx, 100.0);
     while(true)
     {
         line = readline(">> ");
@@ -169,15 +169,15 @@ static void do_repl(ApeContext_t* ape)
             continue;
         }
         add_history(line);
-        res = context_executesource(ape, line);
-        if (context_haserrors(ape))
+        res = context_executesource(ctx, line, true);
+        if (context_haserrors(ctx))
         {
-            print_errors(ape);
+            print_errors(ctx);
             free(line);
         }
         else
         {
-            object_str = object_value_serialize(&ape->alloc, res, &len);
+            object_str = object_value_serialize(ctx, res, &len);
             printf("%.*s\n", (int)len, object_str);
             free(object_str);
         }
@@ -251,48 +251,48 @@ int main(int argc, char *argv[])
     const char* filename;
     FlagContext_t fx;
     Options_t opts;
-    ApeContext_t *ape;
+    ApeContext_t *ctx;
     ApeObject_t args_array;
     replexit = false;
     populate_flags(argc, 1, argv, "epI", &fx);
-    ape = context_make();
+    ctx = context_make();
     if(!parse_options(&opts, fx.flags, fx.fcnt))
     {
         fprintf(stderr, "failed to process command line flags.\n");
         return 1;
     }
-    context_setnativefunction(ape, "exit", exit_repl, &replexit);
+    context_setnativefunction(ctx, "exit", exit_repl, &replexit);
     if((fx.poscnt > 0) || (opts.codeline != NULL))
     {
-        args_array = object_make_array(ape->mem);
+        args_array = object_make_array(ctx->mem);
         for(i=0; i<fx.poscnt; i++)
         {
             object_array_pushstring(args_array, fx.positional[i]);
         }
-        context_setglobal(ape, "args", args_array);
+        context_setglobal(ctx, "args", args_array);
         if(opts.codeline)
         {
-            context_executesource(ape, opts.codeline);
+            context_executesource(ctx, opts.codeline, true);
         }
         else
         {
             filename = fx.positional[0];
-            context_executefile(ape, filename);
+            context_executefile(ctx, filename);
         }
-        if(context_haserrors(ape))
+        if(context_haserrors(ctx))
         {
-            print_errors(ape);
+            print_errors(ctx);
         }
     }
     else
     {
         #if !defined(NO_READLINE)
-            do_repl(ape);
+            do_repl(ctx);
         #else
             fprintf(stderr, "no repl support compiled in\n");
         #endif
     }
-    context_destroy(ape);
+    context_destroy(ctx);
     return 0;
 }
 

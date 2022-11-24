@@ -103,7 +103,7 @@ THE SOFTWARE.
 #define APE_ERROR_MESSAGE_MAX_LENGTH 255
 
 
-#define valdict_make(allocator, key_type, val_type) valdict_make_(allocator, sizeof(key_type), sizeof(val_type))
+#define valdict_make(ctx, key_type, val_type) valdict_make_(ctx, sizeof(key_type), sizeof(val_type))
 
 #define array_make(allocator, type) array_make_(allocator, sizeof(type))
 
@@ -323,7 +323,7 @@ enum ApeSymbolType_t
     SYMBOL_NONE = 0,
     SYMBOL_MODULE_GLOBAL,
     SYMBOL_LOCAL,
-    SYMBOL_APE_GLOBAL,
+    SYMBOL_CONTEXT_GLOBAL,
     SYMBOL_FREE,
     SYMBOL_FUNCTION,
     SYMBOL_THIS,
@@ -370,7 +370,7 @@ enum ApeOpcodeValue_t
     OPCODE_GET_LOCAL,
     OPCODE_DEFINE_LOCAL,
     OPCODE_SET_LOCAL,
-    OPCODE_GET_APE_GLOBAL,
+    OPCODE_GET_CONTEXT_GLOBAL,
     OPCODE_FUNCTION,
     OPCODE_GET_FREE,
     OPCODE_SET_FREE,
@@ -381,7 +381,7 @@ enum ApeOpcodeValue_t
     OPCODE_SET_RECOVER,
     OPCODE_OR,
     OPCODE_XOR,
-    OPCODE_AND,
+    OPCODE_BIT_AND,
     OPCODE_LSHIFT,
     OPCODE_RSHIFT,
     OPCODE_MAX,
@@ -410,8 +410,8 @@ enum ApePrecedence_t
 
 typedef uint8_t ApeOpByte_t;
 typedef double ApeFloat_t;
-typedef int32_t ApeInt_t;
-typedef uint32_t ApeUInt_t;
+typedef int64_t ApeInt_t;
+typedef uint64_t ApeUInt_t;
 typedef int8_t ApeShort_t;
 typedef uint8_t ApeUShort_t;
 typedef size_t ApeSize_t;
@@ -497,6 +497,7 @@ typedef ApeObject_t (*ApeNativeFunc_t)(ApeVM_t*, void*, ApeSize_t, ApeObject_t*)
 typedef size_t (*ApeIOStdoutWriteFunc_t)(void*, const void*, size_t);
 typedef char* (*ApeIOReadFunc_t)(void*, const char*);
 typedef size_t (*ApeIOWriteFunc_t)(void* context, const char*, const char*, size_t);
+typedef size_t (*ApeStrBufWriterFunc_t)(ApeContext_t*, void*, const char*, size_t);
 typedef void* (*ApeMemAllocFunc_t)(void*, size_t);
 typedef void (*ApeMemFreeFunc_t)(void*, void*);
 typedef unsigned long (*ApeDataHashFunc_t)(const void*);
@@ -588,6 +589,7 @@ struct ApeToken_t
 
 struct ApeCompiledFile_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     char* dir_path;
     char* path;
@@ -596,6 +598,7 @@ struct ApeCompiledFile_t
 
 struct ApeLexer_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeErrorList_t* errors;
     const char* input;
@@ -623,6 +626,7 @@ struct ApeLexer_t
 
 struct ApeCodeblock_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApePtrArray_t * statements;
 };
@@ -649,6 +653,7 @@ struct ApeInfixExpr_t
 
 struct ApeIfCase_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeExpression_t* test;
     ApeCodeblock_t* consequence;
@@ -696,6 +701,7 @@ struct ApeTernaryExpr_t
 
 struct ApeIdent_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     char* value;
     ApePosition_t pos;
@@ -703,6 +709,7 @@ struct ApeIdent_t
 
 struct ApeExpression_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeExprType_t type;
     union
@@ -772,6 +779,7 @@ struct ApeRecoverStmt_t
 
 struct ApeStatement_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeStatementType_t type;
     union
@@ -792,6 +800,7 @@ struct ApeStatement_t
 
 struct ApeParser_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     const ApeConfig_t* config;
     ApeLexer_t lexer;
@@ -876,7 +885,7 @@ struct ApeNativeFunction_t
 struct ApeNativeFuncWrapper_t
 {
     ApeWrappedNativeFunc_t wrapped_funcptr;
-    ApeContext_t* ape;
+    ApeContext_t* context;
     void* data;
 };
 
@@ -900,6 +909,7 @@ struct ApeObjectData_t
 
 struct ApeSymbol_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeSymbolType_t type;
     char* name;
@@ -909,6 +919,7 @@ struct ApeSymbol_t
 
 struct ApeBlockScope_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeStrDictionary_t * store;
     int offset;
@@ -917,6 +928,7 @@ struct ApeBlockScope_t
 
 struct ApeSymbolTable_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeSymbolTable_t* outer;
     ApeGlobalStore_t* global_store;
@@ -936,6 +948,7 @@ struct ApeOpcodeDefinition_t
 
 struct ApeCompilationResult_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeUShort_t* bytecode;
     ApePosition_t* src_positions;
@@ -944,6 +957,7 @@ struct ApeCompilationResult_t
 
 struct ApeCompilationScope_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeCompilationScope_t* outer;
     ApeArray_t * bytecode;
@@ -961,6 +975,7 @@ struct ApeObjectDataPool_t
 
 struct ApeGCMemory_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeSize_t allocations_since_sweep;
     ApePtrArray_t * objects;
@@ -978,6 +993,7 @@ struct ApeTracebackItem_t
 
 struct ApeTraceback_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeArray_t * items;
 };
@@ -997,6 +1013,7 @@ struct ApeFrame_t
 
 struct ApeVM_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     const ApeConfig_t* config;
     ApeGCMemory_t* mem;
@@ -1018,6 +1035,7 @@ struct ApeVM_t
 
 struct ApeValDictionary_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeSize_t key_size;
     ApeSize_t val_size;
@@ -1037,6 +1055,7 @@ struct ApeValDictionary_t
 
 struct ApeStrDictionary_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     unsigned int* cells;
     unsigned long* hashes;
@@ -1052,6 +1071,7 @@ struct ApeStrDictionary_t
 
 struct ApeArray_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     unsigned char* arraydata;
     unsigned char* data_allocated;
@@ -1063,27 +1083,34 @@ struct ApeArray_t
 
 struct ApePtrDictionary_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeValDictionary_t vd;
 };
 
 struct ApePtrArray_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeArray_t arr;
 };
 
 struct ApeStringBuffer_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     bool failed;
     char* stringdata;
     ApeSize_t capacity;
     ApeSize_t len;
+    void* iohandle;
+    ApeStrBufWriterFunc_t iowriter;
+    bool iomustclose;
 };
 
 struct ApeGlobalStore_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeStrDictionary_t * symbols;
     ApeArray_t * objects;
@@ -1091,6 +1118,7 @@ struct ApeGlobalStore_t
 
 struct ApeModule_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     char* name;
     ApePtrArray_t * symbols;
@@ -1098,6 +1126,7 @@ struct ApeModule_t
 
 struct ApeFileScope_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeParser_t* parser;
     ApeSymbolTable_t* symbol_table;
@@ -1107,6 +1136,7 @@ struct ApeFileScope_t
 
 struct ApeCompiler_t
 {
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
     const ApeConfig_t* config;
     ApeGCMemory_t* mem;
@@ -1124,7 +1154,7 @@ struct ApeCompiler_t
 
 struct ApeProgram_t
 {
-    ApeContext_t* ape;
+    ApeContext_t* context;
     ApeCompilationResult_t* comp_res;
 };
 

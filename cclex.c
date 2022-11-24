@@ -31,14 +31,15 @@ void token_init(ApeToken_t* tok, ApeTokenType_t type, const char* literal, int l
     tok->len = len;
 }
 
-char* token_duplicate_literal(ApeAllocator_t* alloc, const ApeToken_t* tok)
+char* token_duplicate_literal(ApeContext_t* ctx, const ApeToken_t* tok)
 {
-    return util_strndup(alloc, tok->literal, tok->len);
+    return util_strndup(ctx, tok->literal, tok->len);
 }
 
-bool lexer_init(ApeLexer_t* lex, ApeAllocator_t* alloc, ApeErrorList_t* errs, const char* input, ApeCompiledFile_t* file)
+bool lexer_init(ApeLexer_t* lex, ApeContext_t* ctx, ApeErrorList_t* errs, const char* input, ApeCompiledFile_t* file)
 {
-    lex->alloc = alloc;
+    lex->context = ctx;
+    lex->alloc = &ctx->alloc;
     lex->errors = errs;
     lex->input = input;
     lex->input_len = (int)strlen(input);
@@ -501,7 +502,7 @@ bool lexer_expect_current(ApeLexer_t* lex, ApeTokenType_t type)
         const char* expected_type_str = tokentype_tostring(type);
         const char* actual_type_str = tokentype_tostring(lex->cur_token.type);
         errorlist_addformat(lex->errors, APE_ERROR_PARSING, lex->cur_token.pos,
-                          "Expected current token to be \"%s\", got \"%s\" instead", expected_type_str, actual_type_str);
+                          "expected current token to be '%s', got '%s' instead", expected_type_str, actual_type_str);
         return false;
     }
     return true;
@@ -660,8 +661,12 @@ static ApeTokenType_t lexpriv_lookupident(const char* ident, int len)
         { "else", 4, TOKEN_ELSE },
         { "return", 6, TOKEN_RETURN },
         { "while", 5, TOKEN_WHILE },
-        { "break", 5, TOKEN_BREAK },       { "for", 3, TOKEN_FOR },       { "in", 2, TOKEN_IN },
-        { "continue", 8, TOKEN_CONTINUE }, { "null", 4, TOKEN_NULL },     { "import", 6, TOKEN_IMPORT },
+        { "break", 5, TOKEN_BREAK },
+        { "for", 3, TOKEN_FOR },
+        { "in", 2, TOKEN_IN },
+        { "continue", 8, TOKEN_CONTINUE },
+        { "null", 4, TOKEN_NULL },
+        { "import", 6, TOKEN_IMPORT },
         { "recover", 7, TOKEN_RECOVER },
     };
 
@@ -701,12 +706,12 @@ static bool lexpriv_addline(ApeLexer_t* lex, int offset)
     char* line = NULL;
     if(!new_line_ptr)
     {
-        line = util_strdup(lex->alloc, line_start);
+        line = util_strdup(lex->context, line_start);
     }
     else
     {
         size_t line_len = new_line_ptr - line_start;
-        line = util_strndup(lex->alloc, line_start, line_len);
+        line = util_strndup(lex->context, line_start, line_len);
     }
     if(!line)
     {

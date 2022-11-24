@@ -34,6 +34,17 @@ function substr(s, a, b=null)
     return s.substring(a, b);
 }
 
+function shiftleft(a, b)
+{
+    return (a << b);
+}
+
+function shiftright(a, b)
+{
+    return (a >> b);
+}
+
+
 String.split = function(s, a)
 {
     return s.split(a);

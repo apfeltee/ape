@@ -2,7 +2,7 @@
 #include "ape.h"
 
 static const char* g_type_names[] = {
-    "ILLEGAL",  "EOF",   "=",        "+=",     "-=",
+    "illegal",  "eof",   "=",        "+=",     "-=",
     "*=",       "/=",    "%=",       "&=",     "|=",
     "^=",       "<<=",   ">>=",      "?",      "+",
     "++",       "-",     "--",       "!",      "*",
@@ -11,11 +11,87 @@ static const char* g_type_names[] = {
     "|",        "^",     "<<",       ">>",     ",",
     ";",        ":",     "(",        ")",      "{",
     "}",        "[",     "]",        ".",      "%",
-    "FUNCTION", "CONST", "VAR",      "TRUE",   "FALSE",
-    "IF",       "ELSE",  "RETURN",   "WHILE",  "BREAK",
-    "FOR",      "IN",    "CONTINUE", "NULL",   "IMPORT",
-    "RECOVER",  "IDENT", "NUMBER",   "STRING", "TEMPLATE_STRING",
+    "function", "const", "var",      "true",   "false",
+    "if",       "else",  "return",   "while",  "break",
+    "for",      "in",    "continue", "null",   "import",
+    "recover",  "ident", "number",   "string", "templatestring",
 };
+
+/**/
+static ApeOpcodeDefinition_t g_definitions[OPCODE_MAX + 1] =
+{
+    { "none", 0, { 0 } },
+    { "constant", 1, { 2 } },
+    { "add", 0, { 0 } },
+    { "pop", 0, { 0 } },
+    { "sub", 0, { 0 } },
+    { "mul", 0, { 0 } },
+    { "div", 0, { 0 } },
+    { "mod", 0, { 0 } },
+    { "true", 0, { 0 } },
+    { "false", 0, { 0 } },
+    { "compare", 0, { 0 } },
+    { "compareeq", 0, { 0 } },
+    { "equal", 0, { 0 } },
+    { "notequal", 0, { 0 } },
+    { "greaterthan", 0, { 0 } },
+    { "greaterequal", 0, { 0 } },
+    { "minus", 0, { 0 } },
+    { "bang", 0, { 0 } },
+    { "jump", 1, { 2 } },
+    { "jumpiffalse", 1, { 2 } },
+    { "jumpiftrue", 1, { 2 } },
+    { "null", 0, { 0 } },
+    { "getmoduleglobal", 1, { 2 } },
+    { "setmoduleglobal", 1, { 2 } },
+    { "definemoduleglobal", 1, { 2 } },
+    { "array", 1, { 2 } },
+    { "mapstart", 1, { 2 } },
+    { "mapend", 1, { 2 } },
+    { "getthis", 0, { 0 } },
+    { "getindex", 0, { 0 } },
+    { "setindex", 0, { 0 } },
+    { "getvalue_at", 0, { 0 } },
+    { "call", 1, { 1 } },
+    { "returnvalue", 0, { 0 } },
+    { "return", 0, { 0 } },
+    { "getlocal", 1, { 1 } },
+    { "definelocal", 1, { 1 } },
+    { "setlocal", 1, { 1 } },
+    { "getcontextglobal", 1, { 2 } },
+    { "function", 2, { 2, 1 } },
+    { "getfree", 1, { 1 } },
+    { "setfree", 1, { 1 } },
+    { "currentfunction", 0, { 0 } },
+    { "dup", 0, { 0 } },
+    { "number", 1, { 8 } },
+    { "len", 0, { 0 } },
+    { "setrecover", 1, { 2 } },
+    { "or", 0, { 0 } },
+    { "xor", 0, { 0 } },
+    { "and", 0, { 0 } },
+    { "lshift", 0, { 0 } },
+    { "rshift", 0, { 0 } },
+    { "invalid_max", 0, { 0 } },
+};
+
+ApeOpcodeDefinition_t* opcode_lookup(ApeOpByte_t op)
+{
+    if(op <= OPCODE_NONE || op >= OPCODE_MAX)
+    {
+        return NULL;
+    }
+    return &g_definitions[op];
+}
+
+const char* opcode_get_name(ApeOpByte_t op)
+{
+    if(op <= OPCODE_NONE || op >= OPCODE_MAX)
+    {
+        return NULL;
+    }
+    return g_definitions[op].name;
+}
 
 static bool code_read_operands(ApeOpcodeDefinition_t* def, ApeUShort_t* instr, uint64_t out_operands[2])
 {
@@ -75,13 +151,13 @@ static bool code_read_operands(ApeOpcodeDefinition_t* def, ApeUShort_t* instr, u
     ;
 }
 
-char* statements_tostring(ApeAllocator_t* alloc, ApePtrArray_t * statements)
+char* statements_tostring(ApeContext_t* ctx, ApePtrArray_t * statements)
 {
     ApeSize_t i;
     ApeSize_t count;
     const ApeStatement_t* stmt;
     ApeStringBuffer_t* buf;
-    buf = strbuf_make(alloc);
+    buf = strbuf_make(ctx);
     if(!buf)
     {
         return NULL;
@@ -99,7 +175,7 @@ char* statements_tostring(ApeAllocator_t* alloc, ApePtrArray_t * statements)
     return strbuf_getstringanddestroy(buf);
 }
 
-void statement_tostring(const ApeStatement_t* stmt, ApeStringBuffer_t* buf)
+bool statement_tostring(const ApeStatement_t* stmt, ApeStringBuffer_t* buf)
 {
     ApeSize_t i;
     const ApeDefineStmt_t* def_stmt;
@@ -236,7 +312,7 @@ void statement_tostring(const ApeStatement_t* stmt, ApeStringBuffer_t* buf)
         }
         case STATEMENT_NONE:
         {
-            strbuf_append(buf, "STATEMENT_NONE");
+            strbuf_append(buf, "statement_none");
             break;
         }
         case STATEMENT_RECOVER:
@@ -246,9 +322,10 @@ void statement_tostring(const ApeStatement_t* stmt, ApeStringBuffer_t* buf)
             break;
         }
     }
+    return true;
 }
 
-void expression_tostring(ApeExpression_t* expr, ApeStringBuffer_t* buf)
+bool expression_tostring(ApeExpression_t* expr, ApeStringBuffer_t* buf)
 {
     ApeSize_t i;
     ApeExpression_t* arr_expr;
@@ -256,179 +333,179 @@ void expression_tostring(ApeExpression_t* expr, ApeStringBuffer_t* buf)
     switch(expr->type)
     {
         case EXPRESSION_IDENT:
-        {
-            strbuf_append(buf, expr->ident->value);
+            {
+                strbuf_append(buf, expr->ident->value);
+            }
             break;
-        }
         case EXPRESSION_NUMBER_LITERAL:
-        {
-            strbuf_appendf(buf, "%1.17g", expr->number_literal);
+            {
+                strbuf_appendf(buf, "%1.17g", expr->number_literal);
+            }
             break;
-        }
         case EXPRESSION_BOOL_LITERAL:
-        {
-            strbuf_appendf(buf, "%s", expr->bool_literal ? "true" : "false");
+            {
+                strbuf_appendf(buf, "%s", expr->bool_literal ? "true" : "false");
+            }
             break;
-        }
         case EXPRESSION_STRING_LITERAL:
-        {
-            strbuf_appendf(buf, "\"%s\"", expr->string_literal);
+            {
+                strbuf_appendf(buf, "\"%s\"", expr->string_literal);
+            }
             break;
-        }
         case EXPRESSION_NULL_LITERAL:
-        {
-            strbuf_append(buf, "null");
+            {
+                strbuf_append(buf, "null");
+            }
             break;
-        }
         case EXPRESSION_ARRAY_LITERAL:
-        {
-            strbuf_append(buf, "[");
-            for(i = 0; i < ptrarray_count(expr->array); i++)
             {
-                arr_expr = (ApeExpression_t*)ptrarray_get(expr->array, i);
-                expression_tostring(arr_expr, buf);
-                if(i < (ptrarray_count(expr->array) - 1))
+                strbuf_append(buf, "[");
+                for(i = 0; i < ptrarray_count(expr->array); i++)
                 {
-                    strbuf_append(buf, ", ");
+                    arr_expr = (ApeExpression_t*)ptrarray_get(expr->array, i);
+                    expression_tostring(arr_expr, buf);
+                    if(i < (ptrarray_count(expr->array) - 1))
+                    {
+                        strbuf_append(buf, ", ");
+                    }
                 }
+                strbuf_append(buf, "]");
             }
-            strbuf_append(buf, "]");
             break;
-        }
         case EXPRESSION_MAP_LITERAL:
-        {
-            map = &expr->map;
-            strbuf_append(buf, "{");
-            for(i = 0; i < ptrarray_count(map->keys); i++)
             {
-                ApeExpression_t* key_expr = (ApeExpression_t*)ptrarray_get(map->keys, i);
-                ApeExpression_t* val_expr = (ApeExpression_t*)ptrarray_get(map->values, i);
-                expression_tostring(key_expr, buf);
-                strbuf_append(buf, " : ");
-                expression_tostring(val_expr, buf);
-                if(i < (ptrarray_count(map->keys) - 1))
+                map = &expr->map;
+                strbuf_append(buf, "{");
+                for(i = 0; i < ptrarray_count(map->keys); i++)
                 {
-                    strbuf_append(buf, ", ");
+                    ApeExpression_t* key_expr = (ApeExpression_t*)ptrarray_get(map->keys, i);
+                    ApeExpression_t* val_expr = (ApeExpression_t*)ptrarray_get(map->values, i);
+                    expression_tostring(key_expr, buf);
+                    strbuf_append(buf, " : ");
+                    expression_tostring(val_expr, buf);
+                    if(i < (ptrarray_count(map->keys) - 1))
+                    {
+                        strbuf_append(buf, ", ");
+                    }
                 }
+                strbuf_append(buf, "}");
             }
-            strbuf_append(buf, "}");
             break;
-        }
         case EXPRESSION_PREFIX:
-        {
-            strbuf_append(buf, "(");
-            strbuf_append(buf, operator_tostring(expr->infix.op));
-            expression_tostring(expr->prefix.right, buf);
-            strbuf_append(buf, ")");
+            {
+                strbuf_append(buf, "(");
+                strbuf_append(buf, operator_tostring(expr->infix.op));
+                expression_tostring(expr->prefix.right, buf);
+                strbuf_append(buf, ")");
+            }
             break;
-        }
         case EXPRESSION_INFIX:
-        {
-            strbuf_append(buf, "(");
-            expression_tostring(expr->infix.left, buf);
-            strbuf_append(buf, " ");
-            strbuf_append(buf, operator_tostring(expr->infix.op));
-            strbuf_append(buf, " ");
-            expression_tostring(expr->infix.right, buf);
-            strbuf_append(buf, ")");
+            {
+                strbuf_append(buf, "(");
+                expression_tostring(expr->infix.left, buf);
+                strbuf_append(buf, " ");
+                strbuf_append(buf, operator_tostring(expr->infix.op));
+                strbuf_append(buf, " ");
+                expression_tostring(expr->infix.right, buf);
+                strbuf_append(buf, ")");
+            }
             break;
-        }
         case EXPRESSION_FUNCTION_LITERAL:
-        {
-            ApeFnLiteral_t* fn = &expr->fn_literal;
-
-            strbuf_append(buf, "fn");
-
-            strbuf_append(buf, "(");
-            for(i = 0; i < ptrarray_count(fn->params); i++)
             {
-                ApeIdent_t* param = (ApeIdent_t*)ptrarray_get(fn->params, i);
-                strbuf_append(buf, param->value);
-                if(i < (ptrarray_count(fn->params) - 1))
+                ApeFnLiteral_t* fn = &expr->fn_literal;
+                strbuf_append(buf, "fn");
+                strbuf_append(buf, "(");
+                for(i = 0; i < ptrarray_count(fn->params); i++)
                 {
-                    strbuf_append(buf, ", ");
+                    ApeIdent_t* param = (ApeIdent_t*)ptrarray_get(fn->params, i);
+                    strbuf_append(buf, param->value);
+                    if(i < (ptrarray_count(fn->params) - 1))
+                    {
+                        strbuf_append(buf, ", ");
+                    }
                 }
+                strbuf_append(buf, ") ");
+                codeblock_tostring(fn->body, buf);
             }
-            strbuf_append(buf, ") ");
-
-            codeblock_tostring(fn->body, buf);
-
             break;
-        }
         case EXPRESSION_CALL:
-        {
-            ApeCallExpr_t* call_expr = &expr->call_expr;
-
-            expression_tostring(call_expr->function, buf);
-
-            strbuf_append(buf, "(");
-            for(i = 0; i < ptrarray_count(call_expr->args); i++)
             {
-                ApeExpression_t* arg = (ApeExpression_t*)ptrarray_get(call_expr->args, i);
-                expression_tostring(arg, buf);
-                if(i < (ptrarray_count(call_expr->args) - 1))
+                ApeCallExpr_t* call_expr = &expr->call_expr;
+                expression_tostring(call_expr->function, buf);
+                strbuf_append(buf, "(");
+                for(i = 0; i < ptrarray_count(call_expr->args); i++)
                 {
-                    strbuf_append(buf, ", ");
+                    ApeExpression_t* arg = (ApeExpression_t*)ptrarray_get(call_expr->args, i);
+                    expression_tostring(arg, buf);
+                    if(i < (ptrarray_count(call_expr->args) - 1))
+                    {
+                        strbuf_append(buf, ", ");
+                    }
                 }
+                strbuf_append(buf, ")");
             }
-            strbuf_append(buf, ")");
-
             break;
-        }
         case EXPRESSION_INDEX:
-        {
-            strbuf_append(buf, "(");
-            expression_tostring(expr->index_expr.left, buf);
-            strbuf_append(buf, "[");
-            expression_tostring(expr->index_expr.index, buf);
-            strbuf_append(buf, "])");
+            {
+                strbuf_append(buf, "(");
+                expression_tostring(expr->index_expr.left, buf);
+                strbuf_append(buf, "[");
+                expression_tostring(expr->index_expr.index, buf);
+                strbuf_append(buf, "])");
+            }
             break;
-        }
         case EXPRESSION_ASSIGN:
-        {
-            expression_tostring(expr->assign.dest, buf);
-            strbuf_append(buf, " = ");
-            expression_tostring(expr->assign.source, buf);
+            {
+                expression_tostring(expr->assign.dest, buf);
+                strbuf_append(buf, " = ");
+                expression_tostring(expr->assign.source, buf);
+            }
             break;
-        }
         case EXPRESSION_LOGICAL:
-        {
-            expression_tostring(expr->logical.left, buf);
-            strbuf_append(buf, " ");
-            strbuf_append(buf, operator_tostring(expr->infix.op));
-            strbuf_append(buf, " ");
-            expression_tostring(expr->logical.right, buf);
+            {
+                expression_tostring(expr->logical.left, buf);
+                strbuf_append(buf, " ");
+                strbuf_append(buf, operator_tostring(expr->infix.op));
+                strbuf_append(buf, " ");
+                expression_tostring(expr->logical.right, buf);
+            }
             break;
-        }
         case EXPRESSION_TERNARY:
-        {
-            expression_tostring(expr->ternary.test, buf);
-            strbuf_append(buf, " ? ");
-            expression_tostring(expr->ternary.if_true, buf);
-            strbuf_append(buf, " : ");
-            expression_tostring(expr->ternary.if_false, buf);
+            {
+                expression_tostring(expr->ternary.test, buf);
+                strbuf_append(buf, " ? ");
+                expression_tostring(expr->ternary.if_true, buf);
+                strbuf_append(buf, " : ");
+                expression_tostring(expr->ternary.if_false, buf);
+            }
             break;
-        }
         case EXPRESSION_NONE:
-        {
-            strbuf_append(buf, "EXPRESSION_NONE");
+            {
+                strbuf_append(buf, "expression_none");
+            }
             break;
-        }
     }
+    return true;
 }
 
-void codeblock_tostring(const ApeCodeblock_t* stmt, ApeStringBuffer_t* buf)
+bool codeblock_tostring(const ApeCodeblock_t* stmt, ApeStringBuffer_t* buf)
 {
+    bool ok;
     ApeSize_t i;
     ApeStatement_t* istmt;
     strbuf_append(buf, "{ ");
     for(i = 0; i < ptrarray_count(stmt->statements); i++)
     {
         istmt = (ApeStatement_t*)ptrarray_get(stmt->statements, i);
-        statement_tostring(istmt, buf);
+        ok = statement_tostring(istmt, buf);
         strbuf_append(buf, "\n");
+        if(!ok)
+        {
+            return false;
+        }
     }
     strbuf_append(buf, " }");
+    return true;
 }
 
 const char* operator_tostring(ApeOperator_t op)
@@ -436,7 +513,7 @@ const char* operator_tostring(ApeOperator_t op)
     switch(op)
     {
         case OPERATOR_NONE:
-            return "OPERATOR_NONE";
+            return "operator_none";
         case OPERATOR_ASSIGN:
             return "=";
         case OPERATOR_PLUS:
@@ -474,8 +551,9 @@ const char* operator_tostring(ApeOperator_t op)
         case OPERATOR_RSHIFT:
             return ">>";
         default:
-            return "OPERATOR_UNKNOWN";
+            break;
     }
+    return "operator_unknown";
 }
 
 const char* expressiontype_tostring(ApeExprType_t type)
@@ -483,41 +561,47 @@ const char* expressiontype_tostring(ApeExprType_t type)
     switch(type)
     {
         case EXPRESSION_NONE:
-            return "NONE";
+            return "none";
         case EXPRESSION_IDENT:
-            return "IDENT";
+            return "identifier";
         case EXPRESSION_NUMBER_LITERAL:
-            return "INT_LITERAL";
+            return "litint";
         case EXPRESSION_BOOL_LITERAL:
-            return "BOOL_LITERAL";
+            return "litbool";
         case EXPRESSION_STRING_LITERAL:
-            return "STRING_LITERAL";
+            return "litstring";
         case EXPRESSION_ARRAY_LITERAL:
-            return "ARRAY_LITERAL";
+            return "litarray";
         case EXPRESSION_MAP_LITERAL:
-            return "MAP_LITERAL";
+            return "litmap";
         case EXPRESSION_PREFIX:
-            return "PREFIX";
+            return "prefix";
         case EXPRESSION_INFIX:
-            return "INFIX";
+            return "infix";
         case EXPRESSION_FUNCTION_LITERAL:
-            return "FN_LITERAL";
+            return "litfunc";
         case EXPRESSION_CALL:
-            return "CALL";
+            return "call";
         case EXPRESSION_INDEX:
-            return "INDEX";
+            return "index";
         case EXPRESSION_ASSIGN:
-            return "ASSIGN";
+            return "assign";
         case EXPRESSION_LOGICAL:
-            return "LOGICAL";
+            return "logical";
         case EXPRESSION_TERNARY:
-            return "TERNARY";
+            return "ternary";
         default:
-            return "UNKNOWN";
+            break;
     }
+    return "unknown";
 }
 
-void code_tostring(ApeUShort_t* code, ApePosition_t* source_positions, size_t code_size, ApeStringBuffer_t* res)
+bool compresult_tostring(ApeCompilationResult_t* res, ApeStringBuffer_t* buf)
+{
+    return code_tostring(res->bytecode, res->src_positions, res->count, buf);
+}
+
+bool code_tostring(ApeUShort_t* code, ApePosition_t* source_positions, size_t code_size, ApeStringBuffer_t* res)
 {
     ApeSize_t i;
     unsigned pos = 0;
@@ -541,7 +625,7 @@ void code_tostring(ApeUShort_t* code, ApePosition_t* source_positions, size_t co
         bool ok = code_read_operands(def, code + pos, operands);
         if(!ok)
         {
-            return;
+            return false;
         }
         for(i = 0; i < def->num_operands; i++)
         {
@@ -558,168 +642,7 @@ void code_tostring(ApeUShort_t* code, ApePosition_t* source_positions, size_t co
         }
         strbuf_append(res, "\n");
     }
-    return;
-}
-
-void object_tostring(ApeObject_t obj, ApeStringBuffer_t* buf, bool quote_str)
-{
-    ApeSize_t i;
-    ApeObjectType_t type;
-    type = object_value_type(obj);
-    switch(type)
-    {
-        case APE_OBJECT_FREED:
-        {
-            strbuf_append(buf, "FREED");
-            break;
-        }
-        case APE_OBJECT_NONE:
-        {
-            strbuf_append(buf, "NONE");
-            break;
-        }
-        case APE_OBJECT_NUMBER:
-        {
-            ApeFloat_t number = object_value_asnumber(obj);
-            strbuf_appendf(buf, "%1.10g", number);
-            break;
-        }
-        case APE_OBJECT_BOOL:
-        {
-            strbuf_append(buf, object_value_asbool(obj) ? "true" : "false");
-            break;
-        }
-        case APE_OBJECT_STRING:
-            {
-                const char* string = object_string_getdata(obj);
-                if(quote_str)
-                {
-                    strbuf_appendf(buf, "\"%s\"", string);
-                }
-                else
-                {
-                    strbuf_append(buf, string);
-                }
-            }
-            break;
-        case APE_OBJECT_NULL:
-            {
-                strbuf_append(buf, "null");
-            }
-            break;
-
-        case APE_OBJECT_FUNCTION:
-            {
-                const ApeFunction_t* function = object_value_asfunction(obj);
-                strbuf_appendf(buf, "CompiledFunction: %s\n", object_function_getname(obj));
-                code_tostring(function->comp_result->bytecode, function->comp_result->src_positions, function->comp_result->count, buf);
-            }
-            break;
-
-        case APE_OBJECT_ARRAY:
-            {
-                strbuf_append(buf, "[");
-                for(i = 0; i < object_array_getlength(obj); i++)
-                {
-                    ApeObject_t iobj = object_array_getvalue(obj, i);
-                    object_tostring(iobj, buf, true);
-                    if(i < (object_array_getlength(obj) - 1))
-                    {
-                        strbuf_append(buf, ", ");
-                    }
-                }
-                strbuf_append(buf, "]");
-            }
-            break;
-        case APE_OBJECT_MAP:
-            {
-                strbuf_append(buf, "{");
-                for(i = 0; i < object_map_getlength(obj); i++)
-                {
-                    ApeObject_t key = object_map_getkeyat(obj, i);
-                    ApeObject_t val = object_map_getvalueat(obj, i);
-                    object_tostring(key, buf, true);
-                    strbuf_append(buf, ": ");
-                    object_tostring(val, buf, true);
-                    if(i < (object_map_getlength(obj) - 1))
-                    {
-                        strbuf_append(buf, ", ");
-                    }
-                }
-                strbuf_append(buf, "}");
-            }
-            break;
-        case APE_OBJECT_NATIVE_FUNCTION:
-            {
-                strbuf_append(buf, "NATIVE_FUNCTION");
-            }
-            break;
-        case APE_OBJECT_EXTERNAL:
-            {
-                strbuf_append(buf, "EXTERNAL");
-            }
-            break;
-
-        case APE_OBJECT_ERROR:
-            {
-                strbuf_appendf(buf, "ERROR: %s\n", object_value_geterrormessage(obj));
-                ApeTraceback_t* traceback = object_value_geterrortraceback(obj);
-                APE_ASSERT(traceback);
-                if(traceback)
-                {
-                    strbuf_append(buf, "Traceback:\n");
-                    traceback_tostring(traceback, buf);
-                }
-            }
-            break;
-        case APE_OBJECT_ANY:
-            {
-                APE_ASSERT(false);
-            }
-            break;
-    }
-}
-
-bool traceback_tostring(const ApeTraceback_t* traceback, ApeStringBuffer_t* buf)
-{
-    ApeSize_t i;
-    ApeSize_t depth;
-    depth = array_count(traceback->items);
-    for(i = 0; i < depth; i++)
-    {
-        ApeTracebackItem_t* item = (ApeTracebackItem_t*)array_get(traceback->items, i);
-        const char* filename = traceback_item_get_filepath(item);
-        if(item->pos.line >= 0 && item->pos.column >= 0)
-        {
-            strbuf_appendf(buf, "%s in %s on %d:%d\n", item->function_name, filename, item->pos.line, item->pos.column);
-        }
-        else
-        {
-            strbuf_appendf(buf, "%s\n", item->function_name);
-        }
-    }
-    return !strbuf_failed(buf);
-}
-
-const char* ape_errortype_tostring(ApeErrorType_t type)
-{
-    switch(type)
-    {
-        case APE_ERROR_PARSING:
-            return "PARSING";
-        case APE_ERROR_COMPILATION:
-            return "COMPILATION";
-        case APE_ERROR_RUNTIME:
-            return "RUNTIME";
-        case APE_ERROR_TIMEOUT:
-            return "TIMEOUT";
-        case APE_ERROR_ALLOCATION:
-            return "ALLOCATION";
-        case APE_ERROR_USER:
-            return "USER";
-        default:
-            return "NONE";
-    }
+    return true;
 }
 
 const char* tokentype_tostring(ApeTokenType_t type)

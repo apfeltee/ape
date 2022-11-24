@@ -85,7 +85,7 @@ static bool check_args(ApeVM_t* vm, bool generate_error, ApeSize_t argc, ApeObje
         if(generate_error)
         {
             errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid,
-                              "Invalid number or arguments, got %d instead of %d", argc, expected_argc);
+                              "invalid number of arguments, got %d instead of %d", argc, expected_argc);
         }
         return false;
     }
@@ -100,13 +100,13 @@ static bool check_args(ApeVM_t* vm, bool generate_error, ApeSize_t argc, ApeObje
             if(generate_error)
             {
                 const char* type_str = object_value_typename(type);
-                char* expected_type_str = object_value_typeunionname(vm->alloc, expected_type);
+                char* expected_type_str = object_value_typeunionname(vm->context, expected_type);
                 if(!expected_type_str)
                 {
                     return false;
                 }
                 errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid,
-                                  "Invalid argument %d type, got %s, expected %s", i, type_str, expected_type_str);
+                                  "invalid argument %d type, got %s, expected %s", i, type_str, expected_type_str);
                 allocator_free(vm->alloc, expected_type_str);
             }
             return false;
@@ -329,7 +329,7 @@ static ApeObject_t cfn_println(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObjec
     {
         return object_make_null();// todo: runtime error?
     }
-    ApeStringBuffer_t* buf = strbuf_make(vm->alloc);
+    ApeStringBuffer_t* buf = strbuf_make(vm->context);
     if(!buf)
     {
         return object_make_null();
@@ -360,7 +360,7 @@ static ApeObject_t cfn_print(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     {
         return object_make_null();// todo: runtime error?
     }
-    ApeStringBuffer_t* buf = strbuf_make(vm->alloc);
+    ApeStringBuffer_t* buf = strbuf_make(vm->context);
     if(!buf)
     {
         return object_make_null();
@@ -388,7 +388,7 @@ static ApeObject_t cfn_to_str(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
         return object_make_null();
     }
     ApeObject_t arg = args[0];
-    ApeStringBuffer_t* buf = strbuf_make(vm->alloc);
+    ApeStringBuffer_t* buf = strbuf_make(vm->context);
     if(!buf)
     {
         return object_make_null();
@@ -449,7 +449,7 @@ static ApeObject_t cfn_to_num(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
     }
     return object_make_number(result);
 err:
-    errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "Cannot convert \"%s\" to number", string);
+    errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "cannot convert '%s' to number", string);
     return object_make_null();
 }
 
@@ -472,9 +472,13 @@ static ApeObject_t cfn_chr(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t*
 static ApeObject_t cfn_ord(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     (void)data;
-    if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING))
+    if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING | APE_OBJECT_NULL))
     {
         return object_make_null();
+    }
+    if(object_value_isnull(args[0]))
+    {
+        return object_make_number(0);
     }
     const char* str = object_string_getdata(args[0]);
     return object_make_number(str[0]);
@@ -535,7 +539,7 @@ static ApeObject_t cfn_range(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
             const char* type_str = object_value_typename(type);
             const char* expected_str = object_value_typename(APE_OBJECT_NUMBER);
             errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid,
-                              "Invalid argument %d passed to range, got %s instead of %s", i, type_str, expected_str);
+                              "invalid argument %d passed to range, got %s instead of %s", i, type_str, expected_str);
             return object_make_null();
         }
     }
@@ -560,7 +564,7 @@ static ApeObject_t cfn_range(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     }
     else
     {
-        errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "Invalid number of arguments passed to range, got %d", argc);
+        errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "invalid number of arguments passed to range, got %d", argc);
         return object_make_null();
     }
 
@@ -680,7 +684,7 @@ static ApeObject_t cfn_concat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
         if(item_type != APE_OBJECT_ARRAY)
         {
             const char* item_type_str = object_value_typename(item_type);
-            errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "Invalid argument 2 passed to concat, got %s", item_type_str);
+            errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "invalid argument 2 passed to concat, got %s", item_type_str);
             return object_make_null();
         }
         for(i = 0; i < object_array_getlength(args[1]); i++)
@@ -863,7 +867,7 @@ static ApeObject_t cfn_random(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
     }
     else
     {
-        errorlist_add(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "Invalid number or arguments");
+        errorlist_add(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "invalid number or arguments");
         return object_make_null();
     }
 }
@@ -942,7 +946,7 @@ static ApeObject_t cfn_slice(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     else
     {
         const char* type_str = object_value_typename(arg_type);
-        errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "Invalid argument 0 passed to slice, got %s instead", type_str);
+        errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "invalid argument 0 passed to slice, got %s instead", type_str);
         return object_make_null();
     }
 }
@@ -1358,7 +1362,6 @@ static ApeObject_t cfn_dir_readdir(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
 
 #endif
 
-//ApePtrArray_t * util_split_string(ApeAllocator_t* alloc, const char* str, const char* delimiter)
 static ApeObject_t cfn_string_split(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     size_t i;
@@ -1387,7 +1390,7 @@ static ApeObject_t cfn_string_split(ApeVM_t* vm, void* data, ApeSize_t argc, Ape
     }
     else
     {
-        parr = util_split_string(vm->alloc, str, delim);
+        parr = util_split_string(vm->context, str, delim);
         for(i=0; i<ptrarray_count(parr); i++)
         {
             itm = (char*)ptrarray_get(parr, i);
@@ -1410,6 +1413,47 @@ static ApeObject_t cfn_bitnot(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
     int64_t val = object_value_asnumber(args[0]);
     return object_make_number(~val);
 }
+
+static ApeObject_t cfn_shiftleft(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+{
+    (void)data;
+    if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER, APE_OBJECT_NUMBER))
+    {
+        return object_make_null();
+    }
+    int64_t v1 = object_value_asnumber(args[0]);
+    int64_t v2 = object_value_asnumber(args[1]);
+    return object_make_number((v1 << v2));
+}
+
+static ApeObject_t cfn_shiftright(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+{
+    (void)data;
+    if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER, APE_OBJECT_NUMBER))
+    {
+        return object_make_null();
+    }
+    int64_t v1 = object_value_asnumber(args[0]);
+    int64_t v2 = object_value_asnumber(args[1]);
+    return object_make_number((v1 >> v2));
+}
+
+static ApeObject_t cfn_eval(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+{
+    ApeSize_t slen;
+    const char* str;
+    ApeObject_t rt;
+    (void)data;
+    if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING))
+    {
+        return object_make_null();
+    }
+    str = object_string_getdata(args[0]);
+    slen = object_string_getlength(args[0]);
+    rt = context_executesource(vm->context, str, false);
+    return rt;
+}
+
 
 static NatFunc_t g_core_globalfuncs[] =
 {
@@ -1441,6 +1485,7 @@ static NatFunc_t g_core_globalfuncs[] =
     { "random_seed", cfn_random_seed },
     { "random", cfn_random },
     { "slice", cfn_slice },
+    { "eval", cfn_eval },
 
     // Type checks
     { "is_string", cfn_is_string },
@@ -1456,6 +1501,8 @@ static NatFunc_t g_core_globalfuncs[] =
 
     // Math
     { "bitnot", cfn_bitnot },
+    { "shiftleft", cfn_shiftleft },
+    { "shiftright", cfn_shiftright },
 
 };
 

@@ -2,227 +2,257 @@
 #include "ape.h"
 
 //implcontext
-ApeContext_t* context_make(void)
+ApeContext_t* context_make()
 {
     return context_make_ex(NULL, NULL, NULL);
 }
 
-ApeContext_t* context_make_ex(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t free_fn, void* ctx)
+ApeContext_t* context_make_ex(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t free_fn, void* optr)
 {
-    ApeContext_t* ape;
+    ApeContext_t* ctx;
     ApeAllocator_t custom_alloc;
-    custom_alloc = allocator_make((ApeMemAllocFunc_t)malloc_fn, (ApeMemFreeFunc_t)free_fn, ctx);
-    ape = (ApeContext_t*)allocator_malloc(&custom_alloc, sizeof(ApeContext_t));
-    if(!ape)
+
+
+    custom_alloc = allocator_make(malloc_fn, free_fn, optr);
+
+    ctx = (ApeContext_t*)allocator_malloc(&custom_alloc, sizeof(ApeContext_t));
+
+    if(!ctx)
     {
         return NULL;
     }
-    memset(ape, 0, sizeof(ApeContext_t));
-    ape->alloc = allocator_make(util_default_malloc, util_default_free, ape);
-    ape->custom_allocator = custom_alloc;
-    context_setdefaultconfig(ape);
-    errorlist_initerrors(&ape->errors);
-    ape->mem = gcmem_make(&ape->alloc);
-    if(!ape->mem)
+
+    memset(ctx, 0, sizeof(ApeContext_t));
+
+    {
+
+        //ctx->alloc = allocator_make(util_default_malloc, util_default_free, ctx);
+        ctx->alloc = allocator_make(NULL, NULL, ctx);
+
+        ctx->custom_allocator = custom_alloc;
+
+    }
+
+    context_setdefaultconfig(ctx);
+    errorlist_initerrors(&ctx->errors);
+    ctx->mem = gcmem_make(ctx);
+    if(!ctx->mem)
     {
         goto err;
     }
-    ape->files = ptrarray_make(&ape->alloc);
-    if(!ape->files)
+    ctx->files = ptrarray_make(&ctx->alloc);
+    if(!ctx->files)
     {
         goto err;
     }
-    ape->global_store = global_store_make(&ape->alloc, ape->mem);
-    if(!ape->global_store)
+    ctx->global_store = global_store_make(ctx, ctx->mem);
+    if(!ctx->global_store)
     {
         goto err;
     }
-    ape->compiler = compiler_make(&ape->alloc, &ape->config, ape->mem, &ape->errors, ape->files, ape->global_store);
-    if(!ape->compiler)
+    ctx->compiler = compiler_make(ctx, &ctx->config, ctx->mem, &ctx->errors, ctx->files, ctx->global_store);
+    if(!ctx->compiler)
     {
         goto err;
     }
-    ape->vm = vm_make(&ape->alloc, &ape->config, ape->mem, &ape->errors, ape->global_store);
-    if(!ape->vm)
+    ctx->vm = vm_make(&ctx->alloc, &ctx->config, ctx->mem, &ctx->errors, ctx->global_store);
+    if(!ctx->vm)
     {
         goto err;
     }
-    builtins_install(ape->vm);
-    return ape;
+    ctx->vm->context = ctx;
+    builtins_install(ctx->vm);
+    return ctx;
 err:
-    context_deinit(ape);
-    allocator_free(&custom_alloc, ape);
+    context_deinit(ctx);
+    allocator_free(&custom_alloc, ctx);
     return NULL;
 }
 
-void context_destroy(ApeContext_t* ape)
+void context_destroy(ApeContext_t* ctx)
 {
-    if(!ape)
+    if(!ctx)
     {
         return;
     }
-    context_deinit(ape);
-    ApeAllocator_t alloc = ape->alloc;
-    allocator_free(&alloc, ape);
+    context_deinit(ctx);
+    ApeAllocator_t alloc = ctx->alloc;
+    allocator_free(&alloc, ctx);
 }
 
-void context_freeallocated(ApeContext_t* ape, void* ptr)
+void context_freeallocated(ApeContext_t* ctx, void* ptr)
 {
-    allocator_free(&ape->alloc, ptr);
+    allocator_free(&ctx->alloc, ptr);
 }
 
-void context_setreplmode(ApeContext_t* ape, bool enabled)
+void context_setreplmode(ApeContext_t* ctx, bool enabled)
 {
-    ape->config.repl_mode = enabled;
+    ctx->config.repl_mode = enabled;
 }
 
-bool context_settimeout(ApeContext_t* ape, ApeFloat_t max_execution_time_ms)
+bool context_settimeout(ApeContext_t* ctx, ApeFloat_t max_execution_time_ms)
 {
     if(!util_timer_supported())
     {
-        ape->config.max_execution_time_ms = 0;
-        ape->config.max_execution_time_set = false;
+        ctx->config.max_execution_time_ms = 0;
+        ctx->config.max_execution_time_set = false;
         return false;
     }
 
     if(max_execution_time_ms >= 0)
     {
-        ape->config.max_execution_time_ms = max_execution_time_ms;
-        ape->config.max_execution_time_set = true;
+        ctx->config.max_execution_time_ms = max_execution_time_ms;
+        ctx->config.max_execution_time_set = true;
     }
     else
     {
-        ape->config.max_execution_time_ms = 0;
-        ape->config.max_execution_time_set = false;
+        ctx->config.max_execution_time_ms = 0;
+        ctx->config.max_execution_time_set = false;
     }
     return true;
 }
 
-void context_setstdoutwrite(ApeContext_t* ape, ApeIOStdoutWriteFunc_t stdout_write, void* context)
+void context_setstdoutwrite(ApeContext_t* ctx, ApeIOStdoutWriteFunc_t stdout_write, void* context)
 {
-    ape->config.stdio.write.write = stdout_write;
-    ape->config.stdio.write.context = context;
+    ctx->config.stdio.write.write = stdout_write;
+    ctx->config.stdio.write.context = context;
 }
 
-void context_setfilewrite(ApeContext_t* ape, ApeIOWriteFunc_t file_write, void* context)
+void context_setfilewrite(ApeContext_t* ctx, ApeIOWriteFunc_t file_write, void* context)
 {
-    ape->config.fileio.write_file.write_file = file_write;
-    ape->config.fileio.write_file.context = context;
+    ctx->config.fileio.write_file.write_file = file_write;
+    ctx->config.fileio.write_file.context = context;
 }
 
-void context_setfileread(ApeContext_t* ape, ApeIOReadFunc_t file_read, void* context)
+void context_setfileread(ApeContext_t* ctx, ApeIOReadFunc_t file_read, void* context)
 {
-    ape->config.fileio.read_file.read_file = file_read;
-    ape->config.fileio.read_file.context = context;
+    ctx->config.fileio.read_file.read_file = file_read;
+    ctx->config.fileio.read_file.context = context;
 }
 
-ApeObject_t context_executesource(ApeContext_t* ape, const char* code)
+void context_dumpbytecode(ApeContext_t* ctx, ApeCompilationResult_t* cres)
+{
+    const char* sdata;
+    ApeInt_t slen;
+    ApeStringBuffer_t* strbuf;
+    strbuf = strbuf_make(ctx);
+    compresult_tostring(cres, strbuf);
+    sdata = strbuf_getdata(strbuf);
+    slen = strbuf_getlength(strbuf);
+    fprintf(stderr, "compiled: <<<\n%.*s\n>>>\n", slen, sdata);
+    strbuf_destroy(strbuf);
+}
+
+ApeObject_t context_executesource(ApeContext_t* ctx, const char* code, bool alsoreset)
 {
     bool ok;
     ApeObject_t objres;
-    ApeCompilationResult_t* comp_res;
-    context_resetstate(ape);
-    comp_res = compiler_compile(ape->compiler, code);
-    if(!comp_res || errorlist_count(&ape->errors) > 0)
+    ApeCompilationResult_t* cres;
+    if(alsoreset)
+    {
+        context_resetstate(ctx);
+    }
+    cres = compiler_compile(ctx->compiler, code);
+    if(!cres || errorlist_count(&ctx->errors) > 0)
     {
         goto err;
     }
-    ok = vm_run(ape->vm, comp_res, compiler_get_constants(ape->compiler));
-    if(!ok || errorlist_count(&ape->errors) > 0)
+    //context_dumpbytecode(ctx, cres);
+    ok = vm_run(ctx->vm, cres, compiler_get_constants(ctx->compiler));
+    if(!ok || errorlist_count(&ctx->errors) > 0)
     {
         goto err;
     }
-    APE_ASSERT(ape->vm->sp == 0);
-    objres = vm_get_last_popped(ape->vm);
+    APE_ASSERT(ctx->vm->sp == 0);
+    objres = vm_get_last_popped(ctx->vm);
     if(object_value_type(objres) == APE_OBJECT_NONE)
     {
         goto err;
     }
-    compilation_result_destroy(comp_res);
+    compilation_result_destroy(cres);
     return objres;
 
 err:
-    compilation_result_destroy(comp_res);
+    compilation_result_destroy(cres);
     return object_make_null();
 }
 
-ApeObject_t context_executefile(ApeContext_t* ape, const char* path)
+ApeObject_t context_executefile(ApeContext_t* ctx, const char* path)
 {
     bool ok;
     ApeObject_t objres;
-    ApeCompilationResult_t* comp_res;
-    context_resetstate(ape);
-    comp_res = compiler_compile_file(ape->compiler, path);
-    if(!comp_res || errorlist_count(&ape->errors) > 0)
+    ApeCompilationResult_t* cres;
+    context_resetstate(ctx);
+    cres = compiler_compile_file(ctx->compiler, path);
+    if(!cres || errorlist_count(&ctx->errors) > 0)
     {
         goto err;
     }
-    ok = vm_run(ape->vm, comp_res, compiler_get_constants(ape->compiler));
-    if(!ok || errorlist_count(&ape->errors) > 0)
+    //context_dumpbytecode(ctx, cres);
+    ok = vm_run(ctx->vm, cres, compiler_get_constants(ctx->compiler));
+    if(!ok || errorlist_count(&ctx->errors) > 0)
     {
         goto err;
     }
-    APE_ASSERT(ape->vm->sp == 0);
-    objres = vm_get_last_popped(ape->vm);
+    APE_ASSERT(ctx->vm->sp == 0);
+    objres = vm_get_last_popped(ctx->vm);
     if(object_value_type(objres) == APE_OBJECT_NONE)
     {
         goto err;
     }
-    compilation_result_destroy(comp_res);
+    compilation_result_destroy(cres);
 
     return objres;
 
 err:
-    compilation_result_destroy(comp_res);
+    compilation_result_destroy(cres);
     return object_make_null();
 }
 
-
-
-bool context_haserrors(const ApeContext_t* ape)
+bool context_haserrors(const ApeContext_t* ctx)
 {
-    return context_errorcount(ape) > 0;
+    return context_errorcount(ctx) > 0;
 }
 
-ApeSize_t context_errorcount(const ApeContext_t* ape)
+ApeSize_t context_errorcount(const ApeContext_t* ctx)
 {
-    return errorlist_count(&ape->errors);
+    return errorlist_count(&ctx->errors);
 }
 
-void context_clearerrors(ApeContext_t* ape)
+void context_clearerrors(ApeContext_t* ctx)
 {
-    errorlist_clear(&ape->errors);
+    errorlist_clear(&ctx->errors);
 }
 
-const ApeError_t* context_geterror(const ApeContext_t* ape, int index)
+const ApeError_t* context_geterror(const ApeContext_t* ctx, int index)
 {
-    return (const ApeError_t*)errorlist_getat(&ape->errors, index);
+    return (const ApeError_t*)errorlist_getat(&ctx->errors, index);
 }
 
-bool context_setnativefunction(ApeContext_t* ape, const char* name, ApeWrappedNativeFunc_t fn, void* data)
+bool context_setnativefunction(ApeContext_t* ctx, const char* name, ApeWrappedNativeFunc_t fn, void* data)
 {
     ApeObject_t obj;
-    obj = context_makenamednative(ape, name, fn, data);
+    obj = context_makenamednative(ctx, name, fn, data);
     if(object_value_isnull(obj))
     {
         return false;
     }
-    return context_setglobal(ape, name, obj);
+    return context_setglobal(ctx, name, obj);
 }
 
-bool context_setglobal(ApeContext_t* ape, const char* name, ApeObject_t obj)
+bool context_setglobal(ApeContext_t* ctx, const char* name, ApeObject_t obj)
 {
-    return global_store_set(ape->global_store, name, obj);
+    return global_store_set(ctx->global_store, name, obj);
 }
 
-char* context_errortostring(ApeContext_t* ape, const ApeError_t* err)
+char* context_errortostring(ApeContext_t* ctx, const ApeError_t* err)
 {
     const char* type_str = error_gettypestring(err);
     const char* filename = error_getfile(err);
     const char* line = error_getsource(err);
     int line_num = error_getline(err);
     int col_num = error_getcolumn(err);
-    ApeStringBuffer_t* buf = strbuf_make(&ape->alloc);
+    ApeStringBuffer_t* buf = strbuf_make(ctx);
     if(!buf)
     {
         return NULL;
@@ -255,39 +285,39 @@ char* context_errortostring(ApeContext_t* ape, const ApeError_t* err)
     return strbuf_getstringanddestroy(buf);
 }
 
-void context_deinit(ApeContext_t* ape)
+void context_deinit(ApeContext_t* ctx)
 {
-    vm_destroy(ape->vm);
-    compiler_destroy(ape->compiler);
-    global_store_destroy(ape->global_store);
-    gcmem_destroy(ape->mem);
-    ptrarray_destroywithitems(ape->files, (ApeDataCallback_t)compiled_file_destroy);
-    errorlist_destroy(&ape->errors);
+    vm_destroy(ctx->vm);
+    compiler_destroy(ctx->compiler);
+    global_store_destroy(ctx->global_store);
+    gcmem_destroy(ctx->mem);
+    ptrarray_destroywithitems(ctx->files, (ApeDataCallback_t)compiled_file_destroy);
+    errorlist_destroy(&ctx->errors);
 }
 
-static ApeObject_t context_wrapnativefunc(ApeVM_t* vm, void* data, int argc, ApeObject_t* args)
+static ApeObject_t context_wrapnativefunc(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     ApeObject_t objres;
     ApeNativeFuncWrapper_t* wrapper;
     (void)vm;
     wrapper = (ApeNativeFuncWrapper_t*)data;
-    APE_ASSERT(vm == wrapper->ape->vm);
-    objres = wrapper->wrapped_funcptr(wrapper->ape, wrapper->data, argc, (ApeObject_t*)args);
-    if(context_haserrors(wrapper->ape))
+    APE_ASSERT(vm == wrapper->context->vm);
+    objres = wrapper->wrapped_funcptr(wrapper->context, wrapper->data, argc, (ApeObject_t*)args);
+    if(context_haserrors(wrapper->context))
     {
         return object_make_null();
     }
     return objres;
 }
 
-ApeObject_t context_makenamednative(ApeContext_t* ape, const char* name, ApeWrappedNativeFunc_t fn, void* data)
+ApeObject_t context_makenamednative(ApeContext_t* ctx, const char* name, ApeWrappedNativeFunc_t fn, void* data)
 {
     ApeNativeFuncWrapper_t wrapper;
     memset(&wrapper, 0, sizeof(ApeNativeFuncWrapper_t));
     wrapper.wrapped_funcptr = fn;
-    wrapper.ape = ape;
+    wrapper.context = ctx;
     wrapper.data = data;
-    ApeObject_t wrapper_native_function = object_make_native_function_memory(ape->mem, name, context_wrapnativefunc, &wrapper, sizeof(wrapper));
+    ApeObject_t wrapper_native_function = object_make_native_function_memory(ctx->mem, name, context_wrapnativefunc, &wrapper, sizeof(wrapper));
     if(object_value_isnull(wrapper_native_function))
     {
         return object_make_null();
@@ -295,19 +325,19 @@ ApeObject_t context_makenamednative(ApeContext_t* ape, const char* name, ApeWrap
     return wrapper_native_function;
 }
 
-void context_resetstate(ApeContext_t* ape)
+void context_resetstate(ApeContext_t* ctx)
 {
-    context_clearerrors(ape);
-    vm_reset(ape->vm);
+    context_clearerrors(ctx);
+    vm_reset(ctx->vm);
 }
 
-void context_setdefaultconfig(ApeContext_t* ape)
+void context_setdefaultconfig(ApeContext_t* ctx)
 {
-    memset(&ape->config, 0, sizeof(ApeConfig_t));
-    context_setreplmode(ape, false);
-    context_settimeout(ape, -1);
-    context_setfileread(ape, util_default_readfile, ape);
-    context_setfilewrite(ape, util_default_writefile, ape);
-    context_setstdoutwrite(ape, util_default_stdoutwrite, ape);
+    memset(&ctx->config, 0, sizeof(ApeConfig_t));
+    context_setreplmode(ctx, false);
+    context_settimeout(ctx, -1);
+    context_setfileread(ctx, util_default_readfile, ctx);
+    context_setfilewrite(ctx, util_default_writefile, ctx);
+    context_setstdoutwrite(ctx, util_default_stdoutwrite, ctx);
 }
 

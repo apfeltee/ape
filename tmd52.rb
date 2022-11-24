@@ -1,83 +1,66 @@
 
-function add32(a, b)
-{
+def add32(a, b)
     return (a + b) & 0xFFFFFFFF;
-}
+end
 
 
-function unshiftright(a, b)
-{
-    var na = a;
-    var nb = b;
-    if((nb >= 32) || (nb < -32))
-    {
+def unshiftright(a, b)
+    na = a;
+    nb = b;
+    if (nb >= 32) || (nb < -32) then
         m = (nb / 32);
         nb = nb - (m * 32);
-    }
-    if(nb < 0)
-    {
+    end
+    if(nb < 0) then
         nb = 32 + nb;
-    }
-    if (nb == 0)
-    {
+    end
+    if (nb == 0) then
         return ((na >> 1) & 0x7fffffff) * 2 + ((na >> nb) & 1);
-    }
-    if (na < 0) 
-    { 
-        na = (na >> 1); 
-        na = na & 0x7fffffff; 
-        na = na | 0x40000000; 
-        na = (na >> (nb - 1)); 
-    }
+    end
+    if (na < 0) then
+      na = (na >> 1); 
+      na = na & 0x7fffffff; 
+      na = na | 0x40000000; 
+      na = (na >> (nb - 1)); 
     else
-    {
         na = (na >> nb); 
-    }
+    end
     return na; 
-}
+end
 
-function cmn(q, a, b, x, s, t)
-{
+def cmn(q, a, b, x, s, t)
     a = add32(add32(a, q), add32(x, t));
-    var tmp1 = (a << s);
-    //var tmp2 = (a >>> (32 - s));
-    var tmp2 = unshiftright(a, (32 - s));
+    tmp1 = (a << s);
+    tmp2 = unshiftright(a, (32 - s));
     return add32(tmp1 | tmp2, b);
-}
+end
 
-function ff(a, b, c, d, x, s, t)
-{
-    var r = cmn((b & c) | (bitnot(b) & d), a, b, x, s, t);
-    //println("ff(", [a, b, c, d, x, s, t].join(","), ")=", r);
+def ff(a, b, c, d, x, s, t)
+    r = cmn((b & c) | ((~b) & d), a, b, x, s, t);
     return r;
-}
+end
 
-function gg(a, b, c, d, x, s, t)
-{
-    return cmn((b & d) | (c & bitnot(d)), a, b, x, s, t);
-}
+def gg(a, b, c, d, x, s, t)
+    return cmn((b & d) | (c & (~d)), a, b, x, s, t);
+end
 
-function hh(a, b, c, d, x, s, t)
-{
+def hh(a, b, c, d, x, s, t)
     return cmn((b ^ c) ^ d, a, b, x, s, t);
-}
+end
 
-function ii(a, b, c, d, x, s, t)
-{
-    var r = cmn(c ^ (b | bitnot(d)), a, b, x, s, t);
-    //println("ii(" + [a, b, c, d, x, s, t].join(",") + ")=", r)
-    return r;
-}
+def ii(a, b, c, d, x, s, t)
+  r = cmn(c ^ (b | (~d)), a, b, x, s, t);
+  return r;
+end
 
 
-function md5cycle(ox, ok)
-{
-    var x = ox;
-    var k = ok;
-    var a = x[0];
-    var b = x[1];
-    var c = x[2];
-    var d = x[3];
+def md5cycle(ox, ok)
+    x = ox;
+    k = ok;
+    a = x[0];
+    b = x[1];
+    c = x[2];
+    d = x[3];
     a = ff(a, b, c, d, k[0], 7, -680876936);
     d = ff(d, a, b, c, k[1], 12, -389564586);
     c = ff(c, d, a, b, k[2], 17, 606105819);
@@ -147,93 +130,84 @@ function md5cycle(ox, ok)
     x[2] = add32(c, x[2]);
     x[3] = add32(d, x[3]);
     return x;
-}
+end
+
+def md5blk(s)
+  i = 0;
+  md5blks = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  while i < 64 do
+    md5blks[(i >> 2)] = (s[i].ord + (s[i + 1].ord << 8) + (s[i + 2].ord << 16) + (s[i + 3].ord << 24));
+    i += 4
+  end
+  return md5blks;
+end
 
 
-
-function md5blk(s)
-{
-    var i = 0;
-    var md5blks = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    for (i = 0; i < 64; i += 4)
-    {
-        md5blks[i >> 2] = (ord(s[i]) + (ord(s[i + 1]) << 8) + (ord(s[i + 2]) << 16) + (ord(s[i + 3]) << 24));
-    }
-    //println("md5blks=", md5blks.join(", "))
-    return md5blks;
-}
-
-
-function md51(s)
-{
-    var txt = "*pad*";
-    var n = len(s);
-    var state = [1732584193, -271733879, -1732584194, 271733878];
-    var i = 0;
-    for (i = 64; i <= len(s); i += 64)
-    {
-        state = md5cycle(state, md5blk(substr(s, i - 64, i)));
-    }
-    s = substr(s, i - 64);
-    //println("substr=", s)
-    var tail = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    for (i = 0; i < len(s); i++)
-    {
-        var chtail = tail[i >> 2];
-        if(chtail == null)
-        {
+def md51(s)
+    txt = "*pad*";
+    n = s.length;
+    state = [1732584193, -271733879, -1732584194, 271733878];
+    i = 0;
+    i = 64;
+    while i < s.length do
+        chunk = s[i - 64 .. i]
+        state = md5cycle(state, md5blk(chunk));
+        i += 64
+    end
+    s = s[i - 64 .. -1]
+    tail = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    i = 0
+    while i < s.length do
+        chtail = tail[(i >> 2)];
+        if (chtail == nil) then
             chtail = 0;
-        }
-        tail[i >> 2] = chtail | (ord(s[i]) << ((i % 4) << 3));
-    }
-    tail[i >> 2] = tail[i >> 2] | (0x80 << ((i % 4) << 3));
+        end
+        tail[(i >> 2)] = chtail | ((s[i].ord) << ((i % 4) << 3));
+        i += 1
+    end
+    tail[(i >> 2)] = tail[(i >> 2)] | (0x80 << ((i % 4) << 3));
     if(i > 55)
-    {
         state = md5cycle(state, tail);
-        for (i = 0; i < 16; i++)
-        {
+        i = 0
+        while (i < 16) do
             tail[i] = 0;
-        }
-    }
+            i += 1
+        end
+    end
     tail[14] = n * 8;
     state = md5cycle(state, tail);
     return state;
-}
+end
 
-var hex_chr = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"];
+def rhex(n)
+  s = "";
+  j = 0;
+  hex_chr = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"];
+  while (j < 4) do
+    s += hex_chr[((n >> (j * 8 + 4))) & 0x0F] + hex_chr[((n >> (j * 8))) & 0x0F];
+    j += 1
+  end
+  return s;
+end
 
-function rhex(n)
-{
-    var s = "";
-    var j = 0;
-    for (; j < 4; j++)
-    {
-        s += hex_chr[(n >> (j * 8 + 4)) & 0x0F] + hex_chr[(n >> (j * 8)) & 0x0F];
-    }
-    return s;
-}
+def hex(x)
+  i = 0;
+  s = "";
+  while (i < x.length) do
+    s = s + rhex(x[i]);
+    i += 1
+  end
+  return s
+end
 
-function hex(x)
-{
-    var i = 0;
-    var s = "";
-    for(i = 0; i < len(x); i++)
-    {
-        s = s + rhex(x[i]);
-    }
-    //return x.join(" "[0]);
-    return s
-}
-
-function md5(s)
-{
-    var raw = md51(s);
-    println("raw: " + raw);
-    return hex(raw);
-}
+def md5(s)
+  raw = md51(s);
+  #println("-- raw: " + raw);
+  return hex(raw);
+end
 
 
-var demo = [
+demo = [
   ["hello", "5d41402abc4b2a76b9719d911017c592"],
   ["message digest", "f96b697d7cb7938d525a2f31aaf161d0"],
   ["a", "0cc175b9c0f1b6a831c399e269772661"],
@@ -243,20 +217,17 @@ var demo = [
   ["12345678901234567890123456789012345678901234567890123456789012345678901234567890", "57edf4a22be3c955ac49da2e2107b67a"]
 ];
 
-for(var idx=0; idx<len(demo); idx++)
-{
-    var itm = demo[idx];
-    var k = itm[0];
-    var v = itm[1];
-    var ma = md5(k);
-    //ma = "blah"
-    var m = ma;
-    //println("-- (", k, ") [", v, "] = (", len(ma), ") ", ma)
-    var okstr = "FAIL";
-    if(m == v)
-    {
-        okstr = "OK  ";
-    }
-    println(okstr, ": \"",k, "\" => ", m, "");
-
-}
+idx = 0
+while (idx < demo.length) do
+  itm = demo[idx];
+  idx += 1
+  k = itm[0];
+  v = itm[1];
+  ma = md5(k);
+  m = ma;
+  okstr = "FAIL";
+  if(m == v)
+      okstr = "OK  ";
+  end
+  print(okstr, ": \"",k, "\" => ", m, "\n");
+end

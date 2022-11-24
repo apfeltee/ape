@@ -61,17 +61,18 @@ function ROTL(x, n)
 }
 
 
-function sha1_actual(bytes)
+function sha1_actual(obytes)
 {
-    var K = [0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xca62c1d6];
-    var H = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0];
-
+    var bytes = obytes;
+    var constants = [0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xca62c1d6];
+    var hashs = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0];
     append(bytes, 0x80);
     var l = len(bytes) / 4 + 2;
-    var N = Math.ceil(l / 16);
-    var M = [];
+    var n = Math.ceil(l / 16);
+    println("n = ", n);
+    var mapping = [[]];
 
-    for (var i = 0; i < N; i++)
+    for (var i = 0; i < n; i++)
     {
         //var arr = new Uint32Array(16);
         arr = []
@@ -79,65 +80,65 @@ function sha1_actual(bytes)
         {
             append(arr, bytes[i * 64 + j * 4] << 24 | bytes[i * 64 + j * 4 + 1] << 16 | bytes[i * 64 + j * 4 + 2] << 8 | bytes[i * 64 + j * 4 + 3]);
         }
-        M[i] = arr;
+        mapping[i] = arr;
     }
-    M[N - 1][14] = (len(bytes) - 1) * 8 / Math.pow(2, 32);
-    M[N - 1][14] = Math.floor(M[N - 1][14]);
-    M[N - 1][15] = (len(bytes) - 1) * 8 & 0xffffffff;
-    for(var i = 0; i < N; ++i)
+    mapping[n - 1][14] = (len(bytes) - 1) * 8 / Math.pow(2, 32);
+    mapping[n - 1][14] = Math.floor(mapping[n - 1][14]);
+    mapping[n - 1][15] = (len(bytes) - 1) * 8 & 0xffffffff;
+    for(var i = 0; i < n; ++i)
     {
         //var W = new Uint32Array(80);
         var W = [];
         for (var t = 0; t < 16; ++t)
         {
-            W[t] = M[i][t];
+            W[t] = mapping[i][t];
         }
         for (var t = 16; t < 80; ++t)
         {
             W[t] = ROTL(W[t - 3] ^ W[t - 8] ^ W[t - 14] ^ W[t - 16], 1);
         }
-        var a = H[0];
-        var b = H[1];
-        var c = H[2];
-        var d = H[3];
-        var e = H[4];
+        var a = hashs[0];
+        var b = hashs[1];
+        var c = hashs[2];
+        var d = hashs[3];
+        var e = hashs[4];
         for (var t = 0; t < 80; ++t)
         {
             var s = Math.floor(t / 20);
-            var T = ROTL(a, 5) + f(s, b, c, d) + e + K[s] + unshiftright(W[t], 0);
+            var T = ROTL(a, 5) + f(s, b, c, d) + e + constants[s] + unshiftright(W[t], 0);
             e = d;
             d = c;
             c = unshiftright(ROTL(b, 30), 0);
             b = a;
             a = T;
         }
-        H[0] = H[0] + unshiftright(a, 0);
-        H[1] = H[1] + unshiftright(b, 0);
-        H[2] = H[2] + unshiftright(c, 0);
-        H[3] = H[3] + unshiftright(d, 0);
-        H[4] = H[4] + unshiftright(e, 0);
+        hashs[0] = hashs[0] + unshiftright(a, 0);
+        hashs[1] = hashs[1] + unshiftright(b, 0);
+        hashs[2] = hashs[2] + unshiftright(c, 0);
+        hashs[3] = hashs[3] + unshiftright(d, 0);
+        hashs[4] = hashs[4] + unshiftright(e, 0);
     }
     return [
-        H[0] >> 24 & 0xff,
-        H[0] >> 16 & 0xff,
-        H[0] >> 8 & 0xff,
-        H[0] & 0xff,
-        H[1] >> 24 & 0xff,
-        H[1] >> 16 & 0xff,
-        H[1] >> 8 & 0xff,
-        H[1] & 0xff,
-        H[2] >> 24 & 0xff,
-        H[2] >> 16 & 0xff,
-        H[2] >> 8 & 0xff,
-        H[2] & 0xff,
-        H[3] >> 24 & 0xff,
-        H[3] >> 16 & 0xff,
-        H[3] >> 8 & 0xff,
-        H[3] & 0xff,
-        H[4] >> 24 & 0xff,
-        H[4] >> 16 & 0xff,
-        H[4] >> 8 & 0xff,
-        H[4] & 0xff
+        hashs[0] >> 24 & 0xff,
+        hashs[0] >> 16 & 0xff,
+        hashs[0] >> 8 & 0xff,
+        hashs[0] & 0xff,
+        hashs[1] >> 24 & 0xff,
+        hashs[1] >> 16 & 0xff,
+        hashs[1] >> 8 & 0xff,
+        hashs[1] & 0xff,
+        hashs[2] >> 24 & 0xff,
+        hashs[2] >> 16 & 0xff,
+        hashs[2] >> 8 & 0xff,
+        hashs[2] & 0xff,
+        hashs[3] >> 24 & 0xff,
+        hashs[3] >> 16 & 0xff,
+        hashs[3] >> 8 & 0xff,
+        hashs[3] & 0xff,
+        hashs[4] >> 24 & 0xff,
+        hashs[4] >> 16 & 0xff,
+        hashs[4] >> 8 & 0xff,
+        hashs[4] & 0xff
     ];
 }
 
@@ -148,10 +149,12 @@ function sha1(s)
     var chars = String.split(s, "");
     for(var i=0; i<len(chars); i++)
     {
-        bytes[i] = ord(chars[i]);
+        var och = ord(chars[i]);
+        //bytes[i] = och;
+        append(bytes, och);
     }
-    //println("bytes = ", bytes);
     var r = sha1_actual(bytes);
+    println("r = ", r);
     var buf = "";
     for(var i=0; i<len(r); i++)
     {

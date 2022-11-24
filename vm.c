@@ -39,130 +39,39 @@ static ApeObject_t vmpriv_getthisstack(ApeVM_t *vm, int nth_item);
 static bool vmpriv_tryoverloadoperator(ApeVM_t *vm, ApeObject_t left, ApeObject_t right, ApeOpByte_t op, bool *out_overload_found);
 
 
-/**/
-static ApeOpcodeDefinition_t g_definitions[OPCODE_MAX + 1] =
-{
-    { "NONE", 0, { 0 } },
-    { "CONSTANT", 1, { 2 } },
-    { "ADD", 0, { 0 } },
-    { "POP", 0, { 0 } },
-    { "SUB", 0, { 0 } },
-    { "MUL", 0, { 0 } },
-    { "DIV", 0, { 0 } },
-    { "MOD", 0, { 0 } },
-    { "TRUE", 0, { 0 } },
-    { "FALSE", 0, { 0 } },
-    { "COMPARE", 0, { 0 } },
-    { "COMPARE_EQ", 0, { 0 } },
-    { "EQUAL", 0, { 0 } },
-    { "NOT_EQUAL", 0, { 0 } },
-    { "GREATER_THAN", 0, { 0 } },
-    { "GREATER_THAN_EQUAL", 0, { 0 } },
-    { "MINUS", 0, { 0 } },
-    { "BANG", 0, { 0 } },
-    { "JUMP", 1, { 2 } },
-    { "JUMP_IF_FALSE", 1, { 2 } },
-    { "JUMP_IF_TRUE", 1, { 2 } },
-    { "NULL", 0, { 0 } },
-    { "GET_MODULE_GLOBAL", 1, { 2 } },
-    { "SET_MODULE_GLOBAL", 1, { 2 } },
-    { "DEFINE_MODULE_GLOBAL", 1, { 2 } },
-    { "ARRAY", 1, { 2 } },
-    { "MAP_START", 1, { 2 } },
-    { "MAP_END", 1, { 2 } },
-    { "GET_THIS", 0, { 0 } },
-    { "GET_INDEX", 0, { 0 } },
-    { "SET_INDEX", 0, { 0 } },
-    { "GET_VALUE_AT", 0, { 0 } },
-    { "CALL", 1, { 1 } },
-    { "RETURN_VALUE", 0, { 0 } },
-    { "RETURN", 0, { 0 } },
-    { "GET_LOCAL", 1, { 1 } },
-    { "DEFINE_LOCAL", 1, { 1 } },
-    { "SET_LOCAL", 1, { 1 } },
-    { "GET_APE_GLOBAL", 1, { 2 } },
-    { "FUNCTION", 2, { 2, 1 } },
-    { "GET_FREE", 1, { 1 } },
-    { "SET_FREE", 1, { 1 } },
-    { "CURRENT_FUNCTION", 0, { 0 } },
-    { "DUP", 0, { 0 } },
-    { "NUMBER", 1, { 8 } },
-    { "LEN", 0, { 0 } },
-    { "SET_RECOVER", 1, { 2 } },
-    { "OR", 0, { 0 } },
-    { "XOR", 0, { 0 } },
-    { "AND", 0, { 0 } },
-    { "LSHIFT", 0, { 0 } },
-    { "RSHIFT", 0, { 0 } },
-    { "INVALID_MAX", 0, { 0 } },
-};
-
-
-
-//-----------------------------------------------------------------------------
-// Allocator
-//-----------------------------------------------------------------------------
-
-ApeAllocator_t allocator_make(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t free_fn, void* ctx)
-{
-    ApeAllocator_t alloc;
-    alloc.malloc = malloc_fn;
-    alloc.free = free_fn;
-    alloc.ctx = ctx;
-    return alloc;
-}
-
-void* allocator_malloc(ApeAllocator_t* allocator, size_t size)
-{
-    if(!allocator || !allocator->malloc)
-    {
-        return malloc(size);
-    }
-    return allocator->malloc(allocator->ctx, size);
-}
-
-void allocator_free(ApeAllocator_t* allocator, void* ptr)
-{
-    if(!allocator || !allocator->free)
-    {
-        free(ptr);
-        return;
-    }
-    allocator->free(allocator->ctx, ptr);
-}
-
-ApeCompiledFile_t* compiled_file_make(ApeAllocator_t* alloc, const char* path)
+ApeCompiledFile_t* compiled_file_make(ApeContext_t* ctx, const char* path)
 {
     size_t len;
     const char* last_slash_pos;
     ApeCompiledFile_t* file;
-    file = (ApeCompiledFile_t*)allocator_malloc(alloc, sizeof(ApeCompiledFile_t));
+    file = (ApeCompiledFile_t*)allocator_malloc(&ctx->alloc, sizeof(ApeCompiledFile_t));
     if(!file)
     {
         return NULL;
     }
     memset(file, 0, sizeof(ApeCompiledFile_t));
-    file->alloc = alloc;
+    file->context = ctx;
+    file->alloc = &ctx->alloc;
     last_slash_pos = strrchr(path, '/');
     if(last_slash_pos)
     {
         len = last_slash_pos - path + 1;
-        file->dir_path = util_strndup(alloc, path, len);
+        file->dir_path = util_strndup(ctx, path, len);
     }
     else
     {
-        file->dir_path = util_strdup(alloc, "");
+        file->dir_path = util_strdup(ctx, "");
     }
     if(!file->dir_path)
     {
         goto error;
     }
-    file->path = util_strdup(alloc, path);
+    file->path = util_strdup(ctx, path);
     if(!file->path)
     {
         goto error;
     }
-    file->lines = ptrarray_make(alloc);
+    file->lines = ptrarray_make(&ctx->alloc);
     if(!file->lines)
     {
         goto error;
@@ -193,26 +102,27 @@ void* compiled_file_destroy(ApeCompiledFile_t* file)
     return NULL;
 }
 
-ApeGlobalStore_t* global_store_make(ApeAllocator_t* alloc, ApeGCMemory_t* mem)
+ApeGlobalStore_t* global_store_make(ApeContext_t* ctx, ApeGCMemory_t* mem)
 {
     ApeSize_t i;
     bool ok;
     const char* name;
     ApeObject_t builtin;
     ApeGlobalStore_t* store;
-    store = (ApeGlobalStore_t*)allocator_malloc(alloc, sizeof(ApeGlobalStore_t));
+    store = (ApeGlobalStore_t*)allocator_malloc(&ctx->alloc, sizeof(ApeGlobalStore_t));
     if(!store)
     {
         return NULL;
     }
     memset(store, 0, sizeof(ApeGlobalStore_t));
-    store->alloc = alloc;
-    store->symbols = strdict_make(alloc, (ApeDataCallback_t)symbol_copy, (ApeDataCallback_t)symbol_destroy);
+    store->context = ctx;
+    store->alloc = &ctx->alloc;
+    store->symbols = strdict_make(&ctx->alloc, (ApeDataCallback_t)symbol_copy, (ApeDataCallback_t)symbol_destroy);
     if(!store->symbols)
     {
         goto err;
     }
-    store->objects = array_make(alloc, ApeObject_t);
+    store->objects = array_make(&ctx->alloc, ApeObject_t);
     if(!store->objects)
     {
         goto err;
@@ -274,7 +184,7 @@ bool global_store_set(ApeGlobalStore_t* store, const char* name, ApeObject_t obj
     {
         return false;
     }
-    symbol = symbol_make(store->alloc, name, SYMBOL_APE_GLOBAL, ix, false);
+    symbol = symbol_make(store->context, name, SYMBOL_CONTEXT_GLOBAL, ix, false);
     if(!symbol)
     {
         goto err;
@@ -313,20 +223,21 @@ ApeSize_t global_store_get_object_count(ApeGlobalStore_t* store)
     return array_count(store->objects);
 }
 
-ApeSymbol_t* symbol_make(ApeAllocator_t* alloc, const char* name, ApeSymbolType_t type, int index, bool assignable)
+ApeSymbol_t* symbol_make(ApeContext_t* ctx, const char* name, ApeSymbolType_t type, int index, bool assignable)
 {
     ApeSymbol_t* symbol;
-    symbol = (ApeSymbol_t*)allocator_malloc(alloc, sizeof(ApeSymbol_t));
+    symbol = (ApeSymbol_t*)allocator_malloc(&ctx->alloc, sizeof(ApeSymbol_t));
     if(!symbol)
     {
         return NULL;
     }
     memset(symbol, 0, sizeof(ApeSymbol_t));
-    symbol->alloc = alloc;
-    symbol->name = util_strdup(alloc, name);
+    symbol->context = ctx;
+    symbol->alloc = &ctx->alloc;
+    symbol->name = util_strdup(ctx, name);
     if(!symbol->name)
     {
-        allocator_free(alloc, symbol);
+        allocator_free(&ctx->alloc, symbol);
         return NULL;
     }
     symbol->type = type;
@@ -348,35 +259,36 @@ void* symbol_destroy(ApeSymbol_t* symbol)
 
 ApeSymbol_t* symbol_copy(ApeSymbol_t* symbol)
 {
-    return symbol_make(symbol->alloc, symbol->name, symbol->type, symbol->index, symbol->assignable);
+    return symbol_make(symbol->context, symbol->name, symbol->type, symbol->index, symbol->assignable);
 }
 
-ApeSymbolTable_t* symbol_table_make(ApeAllocator_t* alloc, ApeSymbolTable_t* outer, ApeGlobalStore_t* global_store, int module_global_offset)
+ApeSymbolTable_t* symbol_table_make(ApeContext_t* ctx, ApeSymbolTable_t* outer, ApeGlobalStore_t* global_store, int module_global_offset)
 {
     bool ok;
     ApeSymbolTable_t* table;
-    table = (ApeSymbolTable_t*)allocator_malloc(alloc, sizeof(ApeSymbolTable_t));
+    table = (ApeSymbolTable_t*)allocator_malloc(&ctx->alloc, sizeof(ApeSymbolTable_t));
     if(!table)
     {
         return NULL;
     }
     memset(table, 0, sizeof(ApeSymbolTable_t));
-    table->alloc = alloc;
+    table->context = ctx;
+    table->alloc = &ctx->alloc;
     table->max_num_definitions = 0;
     table->outer = outer;
     table->global_store = global_store;
     table->module_global_offset = module_global_offset;
-    table->block_scopes = ptrarray_make(alloc);
+    table->block_scopes = ptrarray_make(&ctx->alloc);
     if(!table->block_scopes)
     {
         goto err;
     }
-    table->free_symbols = ptrarray_make(alloc);
+    table->free_symbols = ptrarray_make(&ctx->alloc);
     if(!table->free_symbols)
     {
         goto err;
     }
-    table->module_global_symbols = ptrarray_make(alloc);
+    table->module_global_symbols = ptrarray_make(&ctx->alloc);
     if(!table->module_global_symbols)
     {
         goto err;
@@ -499,7 +411,7 @@ const ApeSymbol_t* symbol_table_define(ApeSymbolTable_t* table, const char* name
     }
     symbol_type = table->outer == NULL ? SYMBOL_MODULE_GLOBAL : SYMBOL_LOCAL;
     ix = vmpriv_nextsymbolindex(table);
-    symbol = symbol_make(table->alloc, name, symbol_type, ix, assignable);
+    symbol = symbol_make(table->context, name, symbol_type, ix, assignable);
     if(!symbol)
     {
         return NULL;
@@ -550,7 +462,7 @@ const ApeSymbol_t* symbol_table_define_free(ApeSymbolTable_t* st, const ApeSymbo
     bool ok;
     ApeSymbol_t* symbol;
     ApeSymbol_t* copy;
-    copy = symbol_make(st->alloc, original->name, original->type, original->index, original->assignable);
+    copy = symbol_make(st->context, original->name, original->type, original->index, original->assignable);
     if(!copy)
     {
         return NULL;
@@ -562,7 +474,7 @@ const ApeSymbol_t* symbol_table_define_free(ApeSymbolTable_t* st, const ApeSymbo
         return NULL;
     }
 
-    symbol = symbol_make(st->alloc, original->name, SYMBOL_FREE, ptrarray_count(st->free_symbols) - 1, original->assignable);
+    symbol = symbol_make(st->context, original->name, SYMBOL_FREE, ptrarray_count(st->free_symbols) - 1, original->assignable);
     if(!symbol)
     {
         return NULL;
@@ -586,7 +498,7 @@ const ApeSymbol_t* symbol_table_define_function_name(ApeSymbolTable_t* st, const
     {
         return NULL;// module symbol
     }
-    symbol = symbol_make(st->alloc, name, SYMBOL_FUNCTION, 0, assignable);
+    symbol = symbol_make(st->context, name, SYMBOL_FUNCTION, 0, assignable);
     if(!symbol)
     {
         return NULL;
@@ -605,7 +517,7 @@ const ApeSymbol_t* symbol_table_define_this(ApeSymbolTable_t* st)
 {
     bool ok;
     ApeSymbol_t* symbol;
-    symbol = symbol_make(st->alloc, "this", SYMBOL_THIS, 0, false);
+    symbol = symbol_make(st->context, "this", SYMBOL_THIS, 0, false);
     if(!symbol)
     {
         return NULL;
@@ -651,7 +563,7 @@ const ApeSymbol_t* symbol_table_resolve(ApeSymbolTable_t* table, const char* nam
         {
             return NULL;
         }
-        if(symbol->type == SYMBOL_MODULE_GLOBAL || symbol->type == SYMBOL_APE_GLOBAL)
+        if(symbol->type == SYMBOL_MODULE_GLOBAL || symbol->type == SYMBOL_CONTEXT_GLOBAL)
         {
             return symbol;
         }
@@ -696,7 +608,7 @@ bool symbol_table_push_block_scope(ApeSymbolTable_t* table)
         block_scope_offset = table->module_global_offset;
     }
 
-    new_scope = block_scope_make(table->alloc, block_scope_offset);
+    new_scope = block_scope_make(table->context, block_scope_offset);
     if(!new_scope)
     {
         return false;
@@ -751,17 +663,18 @@ const ApeSymbol_t* symbol_table_get_module_global_symbol_at(const ApeSymbolTable
 }
 
 // INTERNAL
-ApeBlockScope_t* block_scope_make(ApeAllocator_t* alloc, int offset)
+ApeBlockScope_t* block_scope_make(ApeContext_t* ctx, int offset)
 {
     ApeBlockScope_t* new_scope;
-    new_scope = (ApeBlockScope_t*)allocator_malloc(alloc, sizeof(ApeBlockScope_t));
+    new_scope = (ApeBlockScope_t*)allocator_malloc(&ctx->alloc, sizeof(ApeBlockScope_t));
     if(!new_scope)
     {
         return NULL;
     }
     memset(new_scope, 0, sizeof(ApeBlockScope_t));
-    new_scope->alloc = alloc;
-    new_scope->store = strdict_make(alloc, (ApeDataCallback_t)symbol_copy, (ApeDataCallback_t)symbol_destroy);
+    new_scope->context = ctx;
+    new_scope->alloc = &ctx->alloc;
+    new_scope->store = strdict_make(&ctx->alloc, (ApeDataCallback_t)symbol_copy, (ApeDataCallback_t)symbol_destroy);
     if(!new_scope->store)
     {
         block_scope_destroy(new_scope);
@@ -837,23 +750,6 @@ static int vmpriv_countnumdefs(ApeSymbolTable_t* table)
 }
 
 
-ApeOpcodeDefinition_t* opcode_lookup(ApeOpByte_t op)
-{
-    if(op <= OPCODE_NONE || op >= OPCODE_MAX)
-    {
-        return NULL;
-    }
-    return &g_definitions[op];
-}
-
-const char* opcode_get_name(ApeOpByte_t op)
-{
-    if(op <= OPCODE_NONE || op >= OPCODE_MAX)
-    {
-        return NULL;
-    }
-    return g_definitions[op].name;
-}
 
 #define APPEND_BYTE(n)                           \
     do                                           \
@@ -938,32 +834,34 @@ int code_make(ApeOpByte_t op, ApeSize_t operands_count, uint64_t* operands, ApeA
 }
 #undef APPEND_BYTE
 
-ApeCompilationScope_t* compilation_scope_make(ApeAllocator_t* alloc, ApeCompilationScope_t* outer)
+ApeCompilationScope_t* compilation_scope_make(ApeContext_t* ctx, ApeCompilationScope_t* outer)
 {
-    ApeCompilationScope_t* scope = (ApeCompilationScope_t*)allocator_malloc(alloc, sizeof(ApeCompilationScope_t));
+    ApeCompilationScope_t* scope;
+    scope = (ApeCompilationScope_t*)allocator_malloc(&ctx->alloc, sizeof(ApeCompilationScope_t));
     if(!scope)
     {
         return NULL;
     }
     memset(scope, 0, sizeof(ApeCompilationScope_t));
-    scope->alloc = alloc;
+    scope->context = ctx;
+    scope->alloc = &ctx->alloc;
     scope->outer = outer;
-    scope->bytecode = array_make(alloc, ApeUShort_t);
+    scope->bytecode = array_make(&ctx->alloc, ApeUShort_t);
     if(!scope->bytecode)
     {
         goto err;
     }
-    scope->src_positions = array_make(alloc, ApePosition_t);
+    scope->src_positions = array_make(&ctx->alloc, ApePosition_t);
     if(!scope->src_positions)
     {
         goto err;
     }
-    scope->break_ip_stack = array_make(alloc, int);
+    scope->break_ip_stack = array_make(&ctx->alloc, int);
     if(!scope->break_ip_stack)
     {
         goto err;
     }
-    scope->continue_ip_stack = array_make(alloc, int);
+    scope->continue_ip_stack = array_make(&ctx->alloc, int);
     if(!scope->continue_ip_stack)
     {
         goto err;
@@ -986,7 +884,7 @@ void compilation_scope_destroy(ApeCompilationScope_t* scope)
 ApeCompilationResult_t* compilation_scope_orphan_result(ApeCompilationScope_t* scope)
 {
     ApeCompilationResult_t* res;
-    res = compilation_result_make(scope->alloc,
+    res = compilation_result_make(scope->context,
         (ApeUShort_t*)array_data(scope->bytecode),
         (ApePosition_t*)array_data(scope->src_positions),
         array_count(scope->bytecode)
@@ -1000,16 +898,17 @@ ApeCompilationResult_t* compilation_scope_orphan_result(ApeCompilationScope_t* s
     return res;
 }
 
-ApeCompilationResult_t* compilation_result_make(ApeAllocator_t* alloc, ApeUShort_t* bytecode, ApePosition_t* src_positions, int count)
+ApeCompilationResult_t* compilation_result_make(ApeContext_t* ctx, ApeUShort_t* bytecode, ApePosition_t* src_positions, int count)
 {
     ApeCompilationResult_t* res;
-    res = (ApeCompilationResult_t*)allocator_malloc(alloc, sizeof(ApeCompilationResult_t));
+    res = (ApeCompilationResult_t*)allocator_malloc(&ctx->alloc, sizeof(ApeCompilationResult_t));
     if(!res)
     {
         return NULL;
     }
     memset(res, 0, sizeof(ApeCompilationResult_t));
-    res->alloc = alloc;
+    res->context = ctx;
+    res->alloc = &ctx->alloc;
     res->bytecode = bytecode;
     res->src_positions = src_positions;
     res->count = count;
@@ -1053,6 +952,7 @@ ApeExpression_t* optimise_expression(ApeExpression_t* expr)
 // INTERNAL
 ApeExpression_t* optimise_infix_expression(ApeExpression_t* expr)
 {
+    return NULL;
     bool left_is_numeric;
     bool right_is_numeric;
     bool left_is_string;
@@ -1098,84 +998,84 @@ ApeExpression_t* optimise_infix_expression(ApeExpression_t* expr)
         {
             case OPERATOR_PLUS:
                 {
-                    res = expression_make_number_literal(alloc, leftval + rightval);
+                    res = expression_make_number_literal(expr->context, leftval + rightval);
                 }
                 break;
             case OPERATOR_MINUS:
                 {
-                    res = expression_make_number_literal(alloc, leftval - rightval);
+                    res = expression_make_number_literal(expr->context, leftval - rightval);
                 }
                 break;
             case OPERATOR_ASTERISK:
                 {
-                    res = expression_make_number_literal(alloc, leftval * rightval);
+                    res = expression_make_number_literal(expr->context, leftval * rightval);
                 }
                 break;
             case OPERATOR_SLASH:
                 {
-                    res = expression_make_number_literal(alloc, leftval / rightval);
+                    res = expression_make_number_literal(expr->context, leftval / rightval);
                 }
                 break;
             case OPERATOR_LT:
                 {
-                    res = expression_make_bool_literal(alloc, leftval < rightval);
+                    res = expression_make_bool_literal(expr->context, leftval < rightval);
                 }
                 break;
             case OPERATOR_LTE:
                 {
-                    res = expression_make_bool_literal(alloc, leftval <= rightval);
+                    res = expression_make_bool_literal(expr->context, leftval <= rightval);
                 }
                 break;
             case OPERATOR_GT:
                 {
-                    res = expression_make_bool_literal(alloc, leftval > rightval);
+                    res = expression_make_bool_literal(expr->context, leftval > rightval);
                 }
                 break;
             case OPERATOR_GTE:
                 {
-                    res = expression_make_bool_literal(alloc, leftval >= rightval);
+                    res = expression_make_bool_literal(expr->context, leftval >= rightval);
                 }
                 break;
             case OPERATOR_EQ:
                 {
-                    res = expression_make_bool_literal(alloc, APE_DBLEQ(leftval, rightval));
+                    res = expression_make_bool_literal(expr->context, APE_DBLEQ(leftval, rightval));
                 }
                 break;
 
             case OPERATOR_NOT_EQ:
                 {
-                    res = expression_make_bool_literal(alloc, !APE_DBLEQ(leftval, rightval));
+                    res = expression_make_bool_literal(expr->context, !APE_DBLEQ(leftval, rightval));
                 }
                 break;
             case OPERATOR_MODULUS:
                 {
-                    //res = expression_make_number_literal(alloc, fmod(leftval, rightval));
-                    res = expression_make_number_literal(alloc, (leftint % rightint));
+                    //res = expression_make_number_literal(expr->context, fmod(leftval, rightval));
+                    res = expression_make_number_literal(expr->context, (leftint % rightint));
                 }
                 break;
             case OPERATOR_BIT_AND:
                 {
-                    res = expression_make_number_literal(alloc, (ApeFloat_t)(leftint & rightint));
+                    res = expression_make_number_literal(expr->context, (ApeFloat_t)(leftint & rightint));
                 }
                 break;
             case OPERATOR_BIT_OR:
                 {
-                    res = expression_make_number_literal(alloc, (ApeFloat_t)(leftint | rightint));
+                    res = expression_make_number_literal(expr->context, (ApeFloat_t)(leftint | rightint));
                 }
                 break;
             case OPERATOR_BIT_XOR:
                 {
-                    res = expression_make_number_literal(alloc, (ApeFloat_t)(leftint ^ rightint));
+                    res = expression_make_number_literal(expr->context, (ApeFloat_t)(leftint ^ rightint));
                 }
                 break;
             case OPERATOR_LSHIFT:
                 {
-                    res = expression_make_number_literal(alloc, (ApeFloat_t)(leftint << rightint));
+                    res = expression_make_number_literal(expr->context, (ApeFloat_t)(leftint << rightint));
                 }
                 break;
             case OPERATOR_RSHIFT:
                 {
-                    res = expression_make_number_literal(alloc, (ApeFloat_t)(leftint >> rightint));
+                    res = expression_make_number_literal(expr->context, (ApeFloat_t)(leftint >> rightint));
                 }
                 break;
             default:
@@ -1191,7 +1091,7 @@ ApeExpression_t* optimise_infix_expression(ApeExpression_t* expr)
         res_str = util_stringfmt(alloc, "%s%s", leftstr, rightstr);
         if(res_str)
         {
-            res = expression_make_string_literal(alloc, res_str);
+            res = expression_make_string_literal(expr->context, res_str);
             if(!res)
             {
                 allocator_free(alloc, res_str);
@@ -1222,11 +1122,11 @@ ApeExpression_t* optimise_prefix_expression(ApeExpression_t* expr)
     res = NULL;
     if(expr->prefix.op == OPERATOR_MINUS && right->type == EXPRESSION_NUMBER_LITERAL)
     {
-        res = expression_make_number_literal(expr->alloc, -right->number_literal);
+        res = expression_make_number_literal(expr->context, -right->number_literal);
     }
     else if(expr->prefix.op == OPERATOR_BANG && right->type == EXPRESSION_BOOL_LITERAL)
     {
-        res = expression_make_bool_literal(expr->alloc, !right->bool_literal);
+        res = expression_make_bool_literal(expr->context, !right->bool_literal);
     }
     expression_destroy(right_optimised);
     if(res)
@@ -1236,23 +1136,24 @@ ApeExpression_t* optimise_prefix_expression(ApeExpression_t* expr)
     return res;
 }
 
-ApeModule_t* module_make(ApeAllocator_t* alloc, const char* name)
+ApeModule_t* module_make(ApeContext_t* ctx, const char* name)
 {
     ApeModule_t* module;
-    module = (ApeModule_t*)allocator_malloc(alloc, sizeof(ApeModule_t));
+    module = (ApeModule_t*)allocator_malloc(&ctx->alloc, sizeof(ApeModule_t));
     if(!module)
     {
         return NULL;
     }
     memset(module, 0, sizeof(ApeModule_t));
-    module->alloc = alloc;
-    module->name = util_strdup(alloc, name);
+    module->context = ctx;
+    module->alloc = &ctx->alloc;
+    module->name = util_strdup(ctx, name);
     if(!module->name)
     {
         module_destroy(module);
         return NULL;
     }
-    module->symbols = ptrarray_make(alloc);
+    module->symbols = ptrarray_make(&ctx->alloc);
     if(!module->symbols)
     {
         module_destroy(module);
@@ -1283,7 +1184,7 @@ ApeModule_t* module_copy(ApeModule_t* src)
     }
     memset(copy, 0, sizeof(ApeModule_t));
     copy->alloc = src->alloc;
-    copy->name = util_strdup(copy->alloc, src->name);
+    copy->name = util_strdup(src->context, src->name);
     if(!copy->name)
     {
         module_destroy(copy);
@@ -1314,7 +1215,7 @@ bool module_add_symbol(ApeModule_t* module, const ApeSymbol_t* symbol)
     bool ok;
     ApeStringBuffer_t* name_buf;
     ApeSymbol_t* module_symbol;
-    name_buf = strbuf_make(module->alloc);
+    name_buf = strbuf_make(module->context);
     if(!name_buf)
     {
         return false;
@@ -1325,7 +1226,7 @@ bool module_add_symbol(ApeModule_t* module, const ApeSymbol_t* symbol)
         strbuf_destroy(name_buf);
         return false;
     }
-    module_symbol = symbol_make(module->alloc, strbuf_getdata(name_buf), SYMBOL_MODULE_GLOBAL, symbol->index, false);
+    module_symbol = symbol_make(module->context, strbuf_getdata(name_buf), SYMBOL_MODULE_GLOBAL, symbol->index, false);
     strbuf_destroy(name_buf);
     if(!module_symbol)
     {
@@ -1338,482 +1239,6 @@ bool module_add_symbol(ApeModule_t* module, const ApeSymbol_t* symbol)
         return false;
     }
     return true;
-}
-
-ApeObjectDataPool_t* get_pool_for_type(ApeGCMemory_t* mem, ApeObjectType_t type);
-bool can_data_be_put_in_pool(ApeGCMemory_t* mem, ApeObjectData_t* data);
-
-ApeGCMemory_t* gcmem_make(ApeAllocator_t* alloc)
-{
-    ApeSize_t i;
-    ApeGCMemory_t* mem;
-    ApeObjectDataPool_t* pool;
-    mem = (ApeGCMemory_t*)allocator_malloc(alloc, sizeof(ApeGCMemory_t));
-    if(!mem)
-    {
-        return NULL;
-    }
-    memset(mem, 0, sizeof(ApeGCMemory_t));
-    mem->alloc = alloc;
-    mem->objects = ptrarray_make(alloc);
-    if(!mem->objects)
-    {
-        goto error;
-    }
-    mem->objects_back = ptrarray_make(alloc);
-    if(!mem->objects_back)
-    {
-        goto error;
-    }
-    mem->objects_not_gced = array_make(alloc, ApeObject_t);
-    if(!mem->objects_not_gced)
-    {
-        goto error;
-    }
-    mem->allocations_since_sweep = 0;
-    mem->data_only_pool.count = 0;
-    for(i = 0; i < GCMEM_POOLS_NUM; i++)
-    {
-        pool = &mem->pools[i];
-        mem->pools[i].count = 0;
-        memset(pool, 0, sizeof(ApeObjectDataPool_t));
-    }
-    return mem;
-error:
-    gcmem_destroy(mem);
-    return NULL;
-}
-
-void gcmem_destroy(ApeGCMemory_t* mem)
-{
-    ApeSize_t i;
-    ApeSize_t j;
-    ApeObjectData_t* obj;
-    ApeObjectData_t* data;
-    ApeObjectDataPool_t* pool;
-    if(!mem)
-    {
-        return;
-    }
-    array_destroy(mem->objects_not_gced);
-    ptrarray_destroy(mem->objects_back);
-    for(i = 0; i < ptrarray_count(mem->objects); i++)
-    {
-        obj = (ApeObjectData_t*)ptrarray_get(mem->objects, i);
-        object_data_deinit(obj);
-        allocator_free(mem->alloc, obj);
-    }
-    ptrarray_destroy(mem->objects);
-    for(i = 0; i < GCMEM_POOLS_NUM; i++)
-    {
-        pool = &mem->pools[i];
-        for(j = 0; j < pool->count; j++)
-        {
-            data = pool->datapool[j];
-            object_data_deinit(data);
-            allocator_free(mem->alloc, data);
-        }
-        memset(pool, 0, sizeof(ApeObjectDataPool_t));
-    }
-    for(i = 0; i < mem->data_only_pool.count; i++)
-    {
-        allocator_free(mem->alloc, mem->data_only_pool.datapool[i]);
-    }
-    allocator_free(mem->alloc, mem);
-}
-
-ApeObjectData_t* gcmem_alloc_object_data(ApeGCMemory_t* mem, ApeObjectType_t type)
-{
-    bool ok;
-    ApeObjectData_t* data;
-    data = NULL;
-    mem->allocations_since_sweep++;
-    if(mem->data_only_pool.count > 0)
-    {
-        data = mem->data_only_pool.datapool[mem->data_only_pool.count - 1];
-        mem->data_only_pool.count--;
-    }
-    else
-    {
-        data = (ApeObjectData_t*)allocator_malloc(mem->alloc, sizeof(ApeObjectData_t));
-        if(!data)
-        {
-            return NULL;
-        }
-    }
-    memset(data, 0, sizeof(ApeObjectData_t));
-    APE_ASSERT(ptrarray_count(mem->objects_back) >= ptrarray_count(mem->objects));
-    // we want to make sure that appending to objects_back never fails in sweep
-    // so this only reserves space there.
-    ok = ptrarray_add(mem->objects_back, data);
-    if(!ok)
-    {
-        allocator_free(mem->alloc, data);
-        return NULL;
-    }
-    ok = ptrarray_add(mem->objects, data);
-    if(!ok)
-    {
-        allocator_free(mem->alloc, data);
-        return NULL;
-    }
-    data->mem = mem;
-    data->type = type;
-    return data;
-}
-
-ApeObjectData_t* gcmem_get_object_data_from_pool(ApeGCMemory_t* mem, ApeObjectType_t type)
-{
-    bool ok;
-    ApeObjectData_t* data;
-    ApeObjectDataPool_t* pool;
-    pool = get_pool_for_type(mem, type);
-    if(!pool || pool->count <= 0)
-    {
-        return NULL;
-    }
-    data = pool->datapool[pool->count - 1];
-    APE_ASSERT(ptrarray_count(mem->objects_back) >= ptrarray_count(mem->objects));
-    // we want to make sure that appending to objects_back never fails in sweep
-    // so this only reserves space there.
-    ok = ptrarray_add(mem->objects_back, data);
-    if(!ok)
-    {
-        return NULL;
-    }
-    ok = ptrarray_add(mem->objects, data);
-    if(!ok)
-    {
-        return NULL;
-    }
-    pool->count--;
-    return data;
-}
-
-void gc_unmark_all(ApeGCMemory_t* mem)
-{
-    ApeSize_t i;
-    ApeObjectData_t* data;
-    for(i = 0; i < ptrarray_count(mem->objects); i++)
-    {
-        data = (ApeObjectData_t*)ptrarray_get(mem->objects, i);
-        data->gcmark = false;
-    }
-}
-
-void gc_mark_objects(ApeObject_t* objects, ApeSize_t count)
-{
-    ApeSize_t i;
-    ApeObject_t obj;
-    for(i = 0; i < count; i++)
-    {
-        obj = objects[i];
-        gc_mark_object(obj);
-    }
-}
-
-void gc_mark_object(ApeObject_t obj)
-{
-    ApeSize_t i;
-    ApeSize_t len;
-    ApeObject_t key;
-    ApeObject_t val;
-    ApeObjectData_t* key_data;
-    ApeObjectData_t* val_data;
-    ApeFunction_t* function;
-    ApeObject_t free_val;
-    ApeObjectData_t* free_val_data;
-    ApeObjectData_t* data;
-    if(!object_value_isallocated(obj))
-    {
-        return;
-    }
-    data = object_value_allocated_data(obj);
-    if(data->gcmark)
-    {
-        return;
-    }
-    data->gcmark = true;
-    switch(data->type)
-    {
-        case APE_OBJECT_MAP:
-        {
-            len = object_map_getlength(obj);
-            for(i = 0; i < len; i++)
-            {
-                key = object_map_getkeyat(obj, i);
-                if(object_value_isallocated(key))
-                {
-
-                    key_data = object_value_allocated_data(key);
-                    if(!key_data->gcmark)
-                    {
-                        gc_mark_object(key);
-                    }
-                }
-                val = object_map_getvalueat(obj, i);
-                if(object_value_isallocated(val))
-                {
-
-                    val_data = object_value_allocated_data(val);
-                    if(!val_data->gcmark)
-                    {
-                        gc_mark_object(val);
-                    }
-                }
-            }
-            break;
-        }
-        case APE_OBJECT_ARRAY:
-            {
-                len = object_array_getlength(obj);
-                for(i = 0; i < len; i++)
-                {
-                    val = object_array_getvalue(obj, i);
-                    if(object_value_isallocated(val))
-                    {
-                        val_data = object_value_allocated_data(val);
-                        if(!val_data->gcmark)
-                        {
-                            gc_mark_object(val);
-                        }
-                    }
-                }
-            }
-            break;
-        case APE_OBJECT_FUNCTION:
-            {
-                function = object_value_asfunction(obj);
-                for(i = 0; i < function->free_vals_count; i++)
-                {
-                    free_val = object_function_getfreeval(obj, i);
-                    gc_mark_object(free_val);
-                    if(object_value_isallocated(free_val))
-                    {
-                        free_val_data = object_value_allocated_data(free_val);
-                        if(!free_val_data->gcmark)
-                        {
-                            gc_mark_object(free_val);
-                        }
-                    }
-                }
-            }
-            break;
-        default:
-            {
-            }
-            break;
-    }
-}
-
-void gc_sweep(ApeGCMemory_t* mem)
-{
-    ApeSize_t i;
-    bool ok;
-    ApeObjectData_t* data;
-    ApeObjectDataPool_t* pool;
-    ApePtrArray_t* objs_temp;
-    gc_mark_objects((ApeObject_t*)array_data(mem->objects_not_gced), array_count(mem->objects_not_gced));
-    APE_ASSERT(ptrarray_count(mem->objects_back) >= ptrarray_count(mem->objects));
-    ptrarray_clear(mem->objects_back);
-    for(i = 0; i < ptrarray_count(mem->objects); i++)
-    {
-        data = (ApeObjectData_t*)ptrarray_get(mem->objects, i);
-        if(data->gcmark)
-        {
-            // this should never fail because objects_back's size should be equal to objects
-            ok = ptrarray_add(mem->objects_back, data);
-            (void)ok;
-            APE_ASSERT(ok);
-        }
-        else
-        {
-            if(can_data_be_put_in_pool(mem, data))
-            {
-                pool = get_pool_for_type(mem, data->type);
-                pool->datapool[pool->count] = data;
-                pool->count++;
-            }
-            else
-            {
-                object_data_deinit(data);
-                if(mem->data_only_pool.count < GCMEM_POOL_SIZE)
-                {
-                    mem->data_only_pool.datapool[mem->data_only_pool.count] = data;
-                    mem->data_only_pool.count++;
-                }
-                else
-                {
-                    allocator_free(mem->alloc, data);
-                }
-            }
-        }
-    }
-    objs_temp = mem->objects;
-    mem->objects = mem->objects_back;
-    mem->objects_back = objs_temp;
-    mem->allocations_since_sweep = 0;
-}
-
-int gc_should_sweep(ApeGCMemory_t* mem)
-{
-    return mem->allocations_since_sweep > GCMEM_SWEEP_INTERVAL;
-}
-
-// INTERNAL
-ApeObjectDataPool_t* get_pool_for_type(ApeGCMemory_t* mem, ApeObjectType_t type)
-{
-    switch(type)
-    {
-        case APE_OBJECT_ARRAY:
-            {
-                return &mem->pools[0];
-            }
-            break;
-        case APE_OBJECT_MAP:
-            {
-                return &mem->pools[1];
-            }
-            break;
-        case APE_OBJECT_STRING:
-            {
-                return &mem->pools[2];
-            }
-            break;
-        default:
-            {
-            }
-            break;
-    }
-    return NULL;
-
-}
-
-bool can_data_be_put_in_pool(ApeGCMemory_t* mem, ApeObjectData_t* data)
-{
-    ApeObject_t obj;
-    ApeObjectDataPool_t* pool;
-    obj = object_make_from_data(data->type, data);
-    // this is to ensure that large objects won't be kept in pool indefinitely
-    switch(data->type)
-    {
-        case APE_OBJECT_ARRAY:
-            {
-                if(object_array_getlength(obj) > 1024)
-                {
-                    return false;
-                }
-            }
-            break;
-        case APE_OBJECT_MAP:
-            {
-                if(object_map_getlength(obj) > 1024)
-                {
-                    return false;
-                }
-            }
-            break;
-        case APE_OBJECT_STRING:
-            {
-                if(!data->string.is_allocated || data->string.capacity > 4096)
-                {
-                    return false;
-                }
-            }
-            break;
-        default:
-            {
-            }
-            break;
-    }
-    pool = get_pool_for_type(mem, data->type);
-    if(!pool || pool->count >= GCMEM_POOL_SIZE)
-    {
-        return false;
-    }
-    return true;
-}
-
-
-ApeTraceback_t* traceback_make(ApeAllocator_t* alloc)
-{
-    ApeTraceback_t* traceback;
-    traceback = (ApeTraceback_t*)allocator_malloc(alloc, sizeof(ApeTraceback_t));
-    if(!traceback)
-    {
-        return NULL;
-    }
-    memset(traceback, 0, sizeof(ApeTraceback_t));
-    traceback->alloc = alloc;
-    traceback->items = array_make(alloc, ApeTracebackItem_t);
-    if(!traceback->items)
-    {
-        traceback_destroy(traceback);
-        return NULL;
-    }
-    return traceback;
-}
-
-void traceback_destroy(ApeTraceback_t* traceback)
-{
-    ApeSize_t i;
-    ApeTracebackItem_t* item;
-    if(!traceback)
-    {
-        return;
-    }
-    for(i = 0; i < array_count(traceback->items); i++)
-    {
-        item = (ApeTracebackItem_t*)array_get(traceback->items, i);
-        allocator_free(traceback->alloc, item->function_name);
-    }
-    array_destroy(traceback->items);
-    allocator_free(traceback->alloc, traceback);
-}
-
-bool traceback_append(ApeTraceback_t* traceback, const char* function_name, ApePosition_t pos)
-{
-    bool ok;
-    ApeTracebackItem_t item;
-    item.function_name = util_strdup(traceback->alloc, function_name);
-    if(!item.function_name)
-    {
-        return false;
-    }
-    item.pos = pos;
-    ok = array_add(traceback->items, &item);
-    if(!ok)
-    {
-        allocator_free(traceback->alloc, item.function_name);
-        return false;
-    }
-    return true;
-}
-
-bool traceback_append_from_vm(ApeTraceback_t* traceback, ApeVM_t* vm)
-{
-    int64_t i;
-    bool ok;
-    ApeFrame_t* frame;
-    for(i = vm->frames_count - 1; i >= 0; i--)
-    {
-        frame = &vm->frames[i];
-        ok = traceback_append(traceback, object_function_getname(frame->function), frame_src_position(frame));
-        if(!ok)
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
-const char* traceback_item_get_filepath(ApeTracebackItem_t* item)
-{
-    if(!item->pos.file)
-    {
-        return NULL;
-    }
-    return item->pos.file->path;
 }
 
 bool frame_init(ApeFrame_t* frame, ApeObject_t function_obj, int base_pointer)
@@ -2149,7 +1574,7 @@ ApeObject_t vmpriv_callnativefunction(ApeVM_t* vm, ApeObject_t callee, ApePositi
     {
         ApeError_t* err = errorlist_lasterror(vm->errors);
         err->pos = src_pos;
-        err->traceback = traceback_make(vm->alloc);
+        err->traceback = traceback_make(vm->context);
         if(err->traceback)
         {
             traceback_append(err->traceback, native_fun->name, g_vmpriv_src_pos_invalid);
@@ -2159,7 +1584,7 @@ ApeObject_t vmpriv_callnativefunction(ApeVM_t* vm, ApeObject_t callee, ApePositi
     ApeObjectType_t res_type = object_value_type(objres);
     if(res_type == APE_OBJECT_ERROR)
     {
-        ApeTraceback_t* traceback = traceback_make(vm->alloc);
+        ApeTraceback_t* traceback = traceback_make(vm->context);
         if(traceback)
         {
             // error builtin is treated in a special way
@@ -2289,7 +1714,7 @@ ApeVM_t* vm_make(ApeAllocator_t* alloc, const ApeConfig_t* config, ApeGCMemory_t
     SET_OPERATOR_OVERLOAD_KEY(OPCODE_MOD, "__operator_mod__");
     SET_OPERATOR_OVERLOAD_KEY(OPCODE_OR, "__operator_or__");
     SET_OPERATOR_OVERLOAD_KEY(OPCODE_XOR, "__operator_xor__");
-    SET_OPERATOR_OVERLOAD_KEY(OPCODE_AND, "__operator_and__");
+    SET_OPERATOR_OVERLOAD_KEY(OPCODE_BIT_AND, "__operator_and__");
     SET_OPERATOR_OVERLOAD_KEY(OPCODE_LSHIFT, "__operator_lshift__");
     SET_OPERATOR_OVERLOAD_KEY(OPCODE_RSHIFT, "__operator_rshift__");
     SET_OPERATOR_OVERLOAD_KEY(OPCODE_MINUS, "__operator_minus__");
@@ -2404,8 +1829,8 @@ bool vmpriv_append_string(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeO
         * in short, this does 'left = left + tostring(right)'
         * TODO: probably really inefficient.
         */
-        allbuf = strbuf_make(vm->alloc);
-        tostrbuf = strbuf_make(vm->alloc);
+        allbuf = strbuf_make(vm->context);
+        tostrbuf = strbuf_make(vm->context);
         strbuf_appendn(allbuf, object_string_getdata(left), object_string_getlength(left));
         object_tostring(right, tostrbuf, false);
         strbuf_appendn(allbuf, strbuf_getdata(tostrbuf), strbuf_getlength(tostrbuf));
@@ -2465,13 +1890,13 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
     int64_t pos;
     unsigned time_check_counter;
     unsigned time_check_interval;
+    ApeInt_t bigres;
     ApeUShort_t free_ix;
     ApeUShort_t num_args;
     ApeUShort_t num_free;
     ApeFloat_t comparison_res;
     ApeFloat_t leftval;
     ApeFloat_t maxexecms;
-    ApeFloat_t res;
     ApeFloat_t rightval;
     ApeFloat_t valdouble;
     ApeObjectType_t constant_type;
@@ -2509,11 +1934,13 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
     ApeError_t* err;
     ApeFrame_t new_frame;
     ApeFunction_t* function_function;
+    #if 0
     if(vm->running)
     {
         errorlist_add(vm->errors, APE_ERROR_USER, g_vmpriv_src_pos_invalid, "VM is already executing code");
         return false;
     }
+    #endif
     function_function = object_value_asfunction(function);// naming is hard
     ok = false;
     ok = frame_init(&new_frame, function, vm->sp - function_function->num_args);
@@ -2568,7 +1995,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
             case OPCODE_MOD:
             case OPCODE_OR:
             case OPCODE_XOR:
-            case OPCODE_AND:
+            case OPCODE_BIT_AND:
             case OPCODE_LSHIFT:
             case OPCODE_RSHIFT:
                 {
@@ -2591,58 +2018,58 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                         leftval = object_value_asnumber(left);
                         leftint = (int64_t)leftval;
                         rightint = (int64_t)rightval;
-                        res = 0;
+                        bigres = 0;
                         switch(opcode)
                         {
                             case OPCODE_ADD:
                                 {
-                                    res = leftval + rightval;
+                                    bigres = leftval + rightval;
                                 }
                                 break;
                             case OPCODE_SUB:
                                 {
-                                    res = leftval - rightval;
+                                    bigres = leftval - rightval;
                                 }
                                 break;
                             case OPCODE_MUL:
                                 {
-                                    res = leftval * rightval;
+                                    bigres = leftval * rightval;
                                 }
                                 break;
                             case OPCODE_DIV:
                                 {
-                                    res = leftval / rightval;
+                                    bigres = leftval / rightval;
                                 }
                                 break;
                             case OPCODE_MOD:
                                 {
-                                    //res = fmod(leftval, rightval);
-                                    res = (leftint % rightint);
+                                    //bigres = fmod(leftval, rightval);
+                                    bigres = (leftint % rightint);
                                 }
                                 break;
                             case OPCODE_OR:
                                 {
-                                    res = (ApeFloat_t)(leftint | rightint);
+                                    bigres = (ApeFloat_t)(leftint | rightint);
                                 }
                                 break;
                             case OPCODE_XOR:
                                 {
-                                    res = (ApeFloat_t)(leftint ^ rightint);
+                                    bigres = (ApeFloat_t)(leftint ^ rightint);
                                 }
                                 break;
-                            case OPCODE_AND:
+                            case OPCODE_BIT_AND:
                                 {
-                                    res = (ApeFloat_t)(leftint & rightint);
+                                    bigres = (ApeFloat_t)(leftint & rightint);
                                 }
                                 break;
                             case OPCODE_LSHIFT:
                                 {
-                                    res = (ApeFloat_t)(leftint << rightint);
+                                    bigres = (ApeInt_t)(leftint << rightint);
                                 }
                                 break;
                             case OPCODE_RSHIFT:
                                 {
-                                    res = (ApeFloat_t)(leftint >> rightint);
+                                    bigres = (ApeInt_t)(leftint >> rightint);
                                 }
                                 break;
                             default:
@@ -2651,9 +2078,9 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                                 }
                                 break;
                         }
-                        vmpriv_pushstack(vm, object_make_number(res));
+                        vmpriv_pushstack(vm, object_make_number(bigres));
                     }
-                    else if(lefttype == APE_OBJECT_STRING && ((righttype == APE_OBJECT_STRING) || (righttype == APE_OBJECT_NUMBER)) && opcode == OPCODE_ADD)
+                    else if(lefttype == APE_OBJECT_STRING /*&& ((righttype == APE_OBJECT_STRING) || (righttype == APE_OBJECT_NUMBER))*/ && opcode == OPCODE_ADD)
                     {
                         ok = vmpriv_append_string(vm, left, right, lefttype, righttype);
                         if(!ok)
@@ -3144,7 +2571,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                 vmpriv_pushstack(vm, objval);
                 break;
             }
-            case OPCODE_GET_APE_GLOBAL:
+            case OPCODE_GET_CONTEXT_GLOBAL:
             {
                 ix = frame_read_uint16(vm->current_frame);
                 ok = false;
@@ -3264,7 +2691,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
             case OPCODE_DUP:
                 {
                     objval = vmpriv_getstack(vm, 0);
-                    vmpriv_pushstack(vm, objval);
+                    vmpriv_pushstack(vm, object_value_copyflat(vm->mem, objval));
                 }
                 break;
             case OPCODE_LEN:
@@ -3357,7 +2784,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                 {
                     if(!err->traceback)
                     {
-                        err->traceback = traceback_make(vm->alloc);
+                        err->traceback = traceback_make(vm->context);
                     }
                     if(err->traceback)
                     {
@@ -3395,7 +2822,7 @@ end:
         err = errorlist_lasterror(vm->errors);
         if(!err->traceback)
         {
-            err->traceback = traceback_make(vm->alloc);
+            err->traceback = traceback_make(vm->context);
         }
         if(err->traceback)
         {

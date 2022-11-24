@@ -1,11 +1,165 @@
 
 #include "ape.h"
 
+
+ApeTraceback_t* traceback_make(ApeContext_t* ctx)
+{
+    ApeTraceback_t* traceback;
+    traceback = (ApeTraceback_t*)allocator_malloc(&ctx->alloc, sizeof(ApeTraceback_t));
+    if(!traceback)
+    {
+        return NULL;
+    }
+    memset(traceback, 0, sizeof(ApeTraceback_t));
+    traceback->context = ctx;
+    traceback->alloc = &ctx->alloc;
+    traceback->items = array_make(&ctx->alloc, ApeTracebackItem_t);
+    if(!traceback->items)
+    {
+        traceback_destroy(traceback);
+        return NULL;
+    }
+    return traceback;
+}
+
+void traceback_destroy(ApeTraceback_t* traceback)
+{
+    ApeSize_t i;
+    ApeTracebackItem_t* item;
+    if(!traceback)
+    {
+        return;
+    }
+    for(i = 0; i < array_count(traceback->items); i++)
+    {
+        item = (ApeTracebackItem_t*)array_get(traceback->items, i);
+        allocator_free(traceback->alloc, item->function_name);
+    }
+    array_destroy(traceback->items);
+    allocator_free(traceback->alloc, traceback);
+}
+
+bool traceback_append(ApeTraceback_t* traceback, const char* function_name, ApePosition_t pos)
+{
+    bool ok;
+    ApeTracebackItem_t item;
+    item.function_name = util_strdup(traceback->context, function_name);
+    if(!item.function_name)
+    {
+        return false;
+    }
+    item.pos = pos;
+    ok = array_add(traceback->items, &item);
+    if(!ok)
+    {
+        allocator_free(traceback->alloc, item.function_name);
+        return false;
+    }
+    return true;
+}
+
+bool traceback_append_from_vm(ApeTraceback_t* traceback, ApeVM_t* vm)
+{
+    int64_t i;
+    bool ok;
+    ApeFrame_t* frame;
+    for(i = vm->frames_count - 1; i >= 0; i--)
+    {
+        frame = &vm->frames[i];
+        ok = traceback_append(traceback, object_function_getname(frame->function), frame_src_position(frame));
+        if(!ok)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+const char* traceback_item_get_filepath(ApeTracebackItem_t* item)
+{
+    if(!item->pos.file)
+    {
+        return NULL;
+    }
+    return item->pos.file->path;
+}
+
+bool traceback_tostring(const ApeTraceback_t* traceback, ApeStringBuffer_t* buf)
+{
+    ApeSize_t i;
+    ApeSize_t depth;
+    depth = array_count(traceback->items);
+    for(i = 0; i < depth; i++)
+    {
+        ApeTracebackItem_t* item = (ApeTracebackItem_t*)array_get(traceback->items, i);
+        const char* filename = traceback_item_get_filepath(item);
+        if(item->pos.line >= 0 && item->pos.column >= 0)
+        {
+            strbuf_appendf(buf, "%s in %s on %d:%d\n", item->function_name, filename, item->pos.line, item->pos.column);
+        }
+        else
+        {
+            strbuf_appendf(buf, "%s\n", item->function_name);
+        }
+    }
+    return !strbuf_failed(buf);
+}
+
+const char* errortype_tostring(ApeErrorType_t type)
+{
+    switch(type)
+    {
+        case APE_ERROR_PARSING:
+            return "PARSING";
+        case APE_ERROR_COMPILATION:
+            return "COMPILATION";
+        case APE_ERROR_RUNTIME:
+            return "RUNTIME";
+        case APE_ERROR_TIMEOUT:
+            return "TIMEOUT";
+        case APE_ERROR_ALLOCATION:
+            return "ALLOCATION";
+        case APE_ERROR_USER:
+            return "USER";
+        default:
+            return "NONE";
+    }
+}
+
+ApeErrorType_t error_gettype(const ApeError_t* ae)
+{
+    const ApeError_t* error = (const ApeError_t*)ae;
+    switch(error->type)
+    {
+        case APE_ERROR_NONE:
+            return APE_ERROR_NONE;
+        case APE_ERROR_PARSING:
+            return APE_ERROR_PARSING;
+        case APE_ERROR_COMPILATION:
+            return APE_ERROR_COMPILATION;
+        case APE_ERROR_RUNTIME:
+            return APE_ERROR_RUNTIME;
+        case APE_ERROR_TIMEOUT:
+            return APE_ERROR_TIMEOUT;
+        case APE_ERROR_ALLOCATION:
+            return APE_ERROR_ALLOCATION;
+        case APE_ERROR_USER:
+            return APE_ERROR_USER;
+        default:
+            return APE_ERROR_NONE;
+    }
+}
+
+const char* error_gettypestring(const ApeError_t* error)
+{
+    return errortype_tostring(error_gettype(error));
+}
+
 ApeObject_t object_make_error(ApeGCMemory_t* mem, const char* error)
 {
     char* error_str;
     ApeObject_t res;
-    error_str = util_strdup(mem->alloc, error);
+    error_str = util_strdup(mem->context, error);
     if(!error_str)
     {
         return object_make_null();
@@ -178,35 +332,6 @@ int error_getcolumn(const ApeError_t* ae)
         return -1;
     }
     return error->pos.column + 1;
-}
-
-ApeErrorType_t error_gettype(const ApeError_t* ae)
-{
-    const ApeError_t* error = (const ApeError_t*)ae;
-    switch(error->type)
-    {
-        case APE_ERROR_NONE:
-            return APE_ERROR_NONE;
-        case APE_ERROR_PARSING:
-            return APE_ERROR_PARSING;
-        case APE_ERROR_COMPILATION:
-            return APE_ERROR_COMPILATION;
-        case APE_ERROR_RUNTIME:
-            return APE_ERROR_RUNTIME;
-        case APE_ERROR_TIMEOUT:
-            return APE_ERROR_TIMEOUT;
-        case APE_ERROR_ALLOCATION:
-            return APE_ERROR_ALLOCATION;
-        case APE_ERROR_USER:
-            return APE_ERROR_USER;
-        default:
-            return APE_ERROR_NONE;
-    }
-}
-
-const char* error_gettypestring(const ApeError_t* error)
-{
-    return ape_errortype_tostring(error_gettype(error));
 }
 
 const ApeTraceback_t* error_gettraceback(const ApeError_t* ae)

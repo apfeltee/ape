@@ -50,34 +50,34 @@ static const ApeSymbol_t* ccpriv_definesym(ApeCompiler_t* comp, ApePosition_t po
         current_symbol = symbol_table_resolve(symbol_table, name);
         if(current_symbol)
         {
-            errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, pos, "Symbol \"%s\" is already defined", name);
+            errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, pos, "symbol '%s' is already defined", name);
             return NULL;
         }
     }
     symbol = symbol_table_define(symbol_table, name, assignable);
     if(!symbol)
     {
-        errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, pos, "Cannot define symbol \"%s\"", name);
+        errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, pos, "cannot define symbol '%s'", name);
         return NULL;
     }
     return symbol;
 }
 
 
-ApeCompiler_t*
-compiler_make(ApeAllocator_t* alloc, const ApeConfig_t* config, ApeGCMemory_t* mem, ApeErrorList_t* errors, ApePtrArray_t * files, ApeGlobalStore_t* global_store)
+ApeCompiler_t* compiler_make(ApeContext_t* ctx, const ApeConfig_t* config, ApeGCMemory_t* mem, ApeErrorList_t* errors, ApePtrArray_t * files, ApeGlobalStore_t* global_store)
 {
     bool ok;
     ApeCompiler_t* comp;
-    comp = (ApeCompiler_t*)allocator_malloc(alloc, sizeof(ApeCompiler_t));
+    comp = (ApeCompiler_t*)allocator_malloc(&ctx->alloc, sizeof(ApeCompiler_t));
     if(!comp)
     {
         return NULL;
     }
-    ok = compiler_init(comp, alloc, config, mem, errors, files, global_store);
+    comp->context = ctx;
+    ok = compiler_init(comp, &ctx->alloc, config, mem, errors, files, global_store);
     if(!ok)
     {
-        allocator_free(alloc, comp);
+        allocator_free(&ctx->alloc, comp);
         return NULL;
     }
     return comp;
@@ -150,16 +150,16 @@ ApeCompilationResult_t* compiler_compile_file(ApeCompiler_t* comp, const char* p
     res = NULL;
     if(!comp->config->fileio.read_file.read_file)
     {// todo: read code function
-        errorlist_add(comp->errors, APE_ERROR_COMPILATION, g_ccpriv_src_pos_invalid, "File read function not configured");
+        errorlist_add(comp->errors, APE_ERROR_COMPILATION, g_ccpriv_src_pos_invalid, "file read function not configured");
         goto err;
     }
     code = comp->config->fileio.read_file.read_file(comp->config->fileio.read_file.context, path);
     if(!code)
     {
-        errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, g_ccpriv_src_pos_invalid, "Reading file \"%s\" failed", path);
+        errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, g_ccpriv_src_pos_invalid, "reading file '%s' failed", path);
         goto err;
     }
-    file = compiled_file_make(comp->alloc, path);
+    file = compiled_file_make(comp->context, path);
     if(!file)
     {
         goto err;
@@ -384,7 +384,7 @@ bool compiler_init_shallow_copy(ApeCompiler_t* copy, ApeCompiler_t* src)
     {
 
         loaded_name = (const char*)ptrarray_get(src_loaded_module_names, i);
-        loaded_name_copy = util_strdup(copy->alloc, loaded_name);
+        loaded_name_copy = util_strdup(copy->context, loaded_name);
         if(!loaded_name_copy)
         {
             goto err;
@@ -443,7 +443,7 @@ static bool ccpriv_pushcompscope(ApeCompiler_t* comp)
     ApeCompilationScope_t* current_scope;
     ApeCompilationScope_t* new_scope;
     current_scope = ccpriv_getcompscope(comp);
-    new_scope = compilation_scope_make(comp->alloc, current_scope);
+    new_scope = compilation_scope_make(comp->context, current_scope);
     if(!new_scope)
     {
         return false;
@@ -471,7 +471,7 @@ static bool ccpriv_pushsymtable(ApeCompiler_t* comp, ApeInt_t global_offset)
         return false;
     }
     ApeSymbolTable_t* current_table = file_scope->symbol_table;
-    file_scope->symbol_table = symbol_table_make(comp->alloc, current_table, comp->global_store, global_offset);
+    file_scope->symbol_table = symbol_table_make(comp->context, current_table, comp->global_store, global_offset);
     if(!file_scope->symbol_table)
     {
         file_scope->symbol_table = current_table;
@@ -585,12 +585,12 @@ static bool ccpriv_importmodule(ApeCompiler_t* comp, const ApeStatement_t* impor
         loaded_name = (const char*)ptrarray_get(file_scope->loaded_module_names, i);
         if(util_strequal(loaded_name, module_name))
         {
-            errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos, "Module \"%s\" was already imported", module_name);
+            errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos, "module '%s' was already imported", module_name);
             result = false;
             goto end;
         }
     }
-    filepath_buf = strbuf_make(comp->alloc);
+    filepath_buf = strbuf_make(comp->context);
     if(!filepath_buf)
     {
         result = false;
@@ -611,7 +611,7 @@ static bool ccpriv_importmodule(ApeCompiler_t* comp, const ApeStatement_t* impor
         goto end;
     }
     filepath_non_canonicalised = strbuf_getdata(filepath_buf);
-    filepath = util_canonicalisepath(comp->alloc, filepath_non_canonicalised);
+    filepath = util_canonicalisepath(comp->context, filepath_non_canonicalised);
     strbuf_destroy(filepath_buf);
     if(!filepath)
     {
@@ -621,7 +621,7 @@ static bool ccpriv_importmodule(ApeCompiler_t* comp, const ApeStatement_t* impor
     symbol_table = compiler_get_symbol_table(comp);
     if(symbol_table->outer != NULL || ptrarray_count(symbol_table->block_scopes) > 1)
     {
-        errorlist_add(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos, "Modules can only be imported in global scope");
+        errorlist_add(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos, "modules can only be imported in global scope");
         result = false;
         goto end;
     }
@@ -630,7 +630,7 @@ static bool ccpriv_importmodule(ApeCompiler_t* comp, const ApeStatement_t* impor
         fs = (ApeFileScope_t*)ptrarray_get(comp->file_scopes, i);
         if(APE_STREQ(fs->file->path, filepath))
         {
-            errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos, "Cyclic reference of file \"%s\"", filepath);
+            errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos, "cyclic reference of file '%s'", filepath);
             result = false;
             goto end;
         }
@@ -642,18 +642,18 @@ static bool ccpriv_importmodule(ApeCompiler_t* comp, const ApeStatement_t* impor
         if(!comp->config->fileio.read_file.read_file)
         {
             errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos,
-                              "Cannot import module \"%s\", file read function not configured", filepath);
+                              "cannot import module '%s', file read function not configured", filepath);
             result = false;
             goto end;
         }
         code = comp->config->fileio.read_file.read_file(comp->config->fileio.read_file.context, filepath);
         if(!code)
         {
-            errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos, "Reading module file \"%s\" failed", filepath);
+            errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, import_stmt->pos, "reading module file '%s' failed", filepath);
             result = false;
             goto end;
         }
-        module = module_make(comp->alloc, module_name);
+        module = module_make(comp->context, module_name);
         if(!module)
         {
             result = false;
@@ -698,7 +698,7 @@ static bool ccpriv_importmodule(ApeCompiler_t* comp, const ApeStatement_t* impor
             goto end;
         }
     }
-    name_copy = util_strdup(comp->alloc, module_name);
+    name_copy = util_strdup(comp->context, module_name);
     if(!name_copy)
     {
         result = false;
@@ -731,6 +731,7 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
     ApeInt_t after_test_ip;
     ApeInt_t jump_to_after_body_ip;
     ApeInt_t after_body_ip;
+    ApeInt_t break_ip;
     bool ok;
 
     const ApeWhileLoopStmt_t* loop;
@@ -740,6 +741,8 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
     const ApeIfStmt_t* if_stmt;
     ApeArray_t* jump_to_end_ips;
     ApeIfCase_t* if_case;
+
+    break_ip = 0;
     ok = false;
     ip = -1;
     ok = array_push(comp->src_positions_stack, &stmt->pos);
@@ -848,7 +851,7 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
             {
                 if(compilation_scope->outer == NULL)
                 {
-                    errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "Nothing to return from");
+                    errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "nothing to return from");
                     return false;
                 }
                 ip = -1;
@@ -920,10 +923,10 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
 
         case STATEMENT_BREAK:
         {
-            ApeInt_t break_ip = ccpriv_getbreakip(comp);
+            break_ip = ccpriv_getbreakip(comp);
             if(break_ip < 0)
             {
-                errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "Nothing to break from.");
+                errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "nothing to break from");
                 return false;
             }
             ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (uint64_t[]){ (uint64_t)break_ip });
@@ -938,7 +941,7 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
             ApeInt_t continue_ip = ccpriv_getcontip(comp);
             if(continue_ip < 0)
             {
-                errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "Nothing to continue from.");
+                errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "nothing to continue from");
                 return false;
             }
             ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (uint64_t[]){ (uint64_t)continue_ip });
@@ -983,7 +986,7 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
                 if(!source_symbol)
                 {
                     errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, foreach->source->pos,
-                                      "Symbol \"%s\" could not be resolved", foreach->source->ident->value);
+                                      "symbol '%s' could not be resolved", foreach->source->ident->value);
                     return false;
                 }
             }
@@ -1293,14 +1296,14 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
 
             if(symbol_table_is_module_global_scope(symbol_table))
             {
-                errorlist_add(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "Recover statement cannot be defined in global scope");
+                errorlist_add(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "recover statement cannot be defined in global scope");
                 return false;
             }
 
             if(!symbol_table_is_top_block_scope(symbol_table))
             {
                 errorlist_add(comp->errors, APE_ERROR_COMPILATION, stmt->pos,
-                                 "Recover statement cannot be defined within other statements");
+                                 "recover statement cannot be defined within other statements");
                 return false;
             }
 
@@ -1346,7 +1349,7 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
 
             if(!ccpriv_lastopcodeis(comp, OPCODE_RETURN) && !ccpriv_lastopcodeis(comp, OPCODE_RETURN_VALUE))
             {
-                errorlist_add(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "Recover body must end with a return statement");
+                errorlist_add(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "recover body must end with a return statement");
                 return false;
             }
 
@@ -1441,7 +1444,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
                     op = OPCODE_XOR;
                     break;
                 case OPERATOR_BIT_AND:
-                    op = OPCODE_AND;
+                    op = OPCODE_BIT_AND;
                     break;
                 case OPERATOR_LSHIFT:
                     op = OPCODE_LSHIFT;
@@ -1451,7 +1454,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
                     break;
                 default:
                 {
-                    errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, expr->pos, "Unknown infix operator");
+                    errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, expr->pos, "unknown infix operator");
                     goto error;
                 }
             }
@@ -1653,7 +1656,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
                     break;
                 default:
                 {
-                    errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, expr->pos, "Unknown prefix operator.");
+                    errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, expr->pos, "unknown prefix operator.");
                     goto error;
                 }
             }
@@ -1671,7 +1674,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
             const ApeSymbol_t* symbol = symbol_table_resolve(symbol_table, ident->value);
             if(!symbol)
             {
-                errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, ident->pos, "Symbol \"%s\" could not be resolved",
+                errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, ident->pos, "symbol '%s' could not be resolved",
                                   ident->value);
                 goto error;
             }
@@ -1728,7 +1731,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
                 const ApeSymbol_t* fn_symbol = symbol_table_define_function_name(symbol_table, fn->name, false);
                 if(!fn_symbol)
                 {
-                    errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, expr->pos, "Cannot define symbol \"%s\"", fn->name);
+                    errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, expr->pos, "cannot define symbol '%s'", fn->name);
                     goto error;
                 }
             }
@@ -1736,7 +1739,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
             const ApeSymbol_t* this_symbol = symbol_table_define_this(symbol_table);
             if(!this_symbol)
             {
-                errorlist_add(comp->errors, APE_ERROR_COMPILATION, expr->pos, "Cannot define \"this\" symbol");
+                errorlist_add(comp->errors, APE_ERROR_COMPILATION, expr->pos, "cannot define symbol 'this'");
                 goto error;
             }
 
@@ -1850,7 +1853,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
             const ApeAssignExpr_t* assign = &expr->assign;
             if(assign->dest->type != EXPRESSION_IDENT && assign->dest->type != EXPRESSION_INDEX)
             {
-                errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos, "Expression is not assignable.");
+                errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos, "expression is not assignable");
                 goto error;
             }
 
@@ -1887,7 +1890,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
                 const ApeSymbol_t* symbol = symbol_table_resolve(symbol_table, ident->value);
                 if(!symbol)
                 {
-                    //errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos, "Symbol \"%s\" could not be resolved", ident->value);
+                    //errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos, "symbol '%s' could not be resolved", ident->value);
                     //goto error;
                     //symbol_table_define(ApeSymbolTable_t* table, const char* name, bool assignable)
                     symbol = symbol_table_define(symbol_table, ident->value, true);
@@ -1895,7 +1898,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
                 if(!symbol->assignable)
                 {
                     errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos,
-                                      "Symbol \"%s\" is not assignable", ident->value);
+                                      "symbol '%s' is not assignable", ident->value);
                     goto error;
                 }
                 ok = ccpriv_writesym(comp, symbol, false);
@@ -2114,9 +2117,9 @@ static bool ccpriv_readsym(ApeCompiler_t* comp, const ApeSymbol_t* symbol)
     {
         ip = ccpriv_emit(comp, OPCODE_GET_MODULE_GLOBAL, 1, (uint64_t[]){ (uint64_t)(symbol->index) });
     }
-    else if(symbol->type == SYMBOL_APE_GLOBAL)
+    else if(symbol->type == SYMBOL_CONTEXT_GLOBAL)
     {
-        ip = ccpriv_emit(comp, OPCODE_GET_APE_GLOBAL, 1, (uint64_t[]){ (uint64_t)(symbol->index) });
+        ip = ccpriv_emit(comp, OPCODE_GET_CONTEXT_GLOBAL, 1, (uint64_t[]){ (uint64_t)(symbol->index) });
     }
     else if(symbol->type == SYMBOL_LOCAL)
     {
@@ -2253,7 +2256,7 @@ static ApeFileScope_t* ccpriv_makefilescope(ApeCompiler_t* comp, ApeCompiledFile
     }
     memset(file_scope, 0, sizeof(ApeFileScope_t));
     file_scope->alloc = comp->alloc;
-    file_scope->parser = parser_make(comp->alloc, comp->config, comp->errors);
+    file_scope->parser = parser_make(comp->context, comp->config, comp->errors);
     if(!file_scope->parser)
     {
         goto err;
@@ -2292,7 +2295,7 @@ static bool ccpriv_pushfilescope(ApeCompiler_t* comp, const char* filepath)
         prev_st = compiler_get_symbol_table(comp);
     }
 
-    ApeCompiledFile_t* file = compiled_file_make(comp->alloc, filepath);
+    ApeCompiledFile_t* file = compiled_file_make(comp->context, filepath);
     if(!file)
     {
         return false;

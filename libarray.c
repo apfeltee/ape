@@ -25,6 +25,37 @@ ApeArray_t* array_makecapacity(ApeAllocator_t* alloc, ApeSize_t capacity, ApeSiz
     return arr;
 }
 
+
+bool array_initcapacity(ApeArray_t* arr, ApeAllocator_t* alloc, ApeSize_t capacity, ApeSize_t element_size)
+{
+    arr->alloc = alloc;
+    if(capacity > 0)
+    {
+        arr->data_allocated = (unsigned char*)allocator_malloc(arr->alloc, capacity * element_size);
+        memset(arr->data_allocated, 0, capacity * element_size);
+        arr->arraydata = arr->data_allocated;
+        if(!arr->data_allocated)
+        {
+            return false;
+        }
+    }
+    else
+    {
+        arr->data_allocated = NULL;
+        arr->arraydata = NULL;
+    }
+    arr->capacity = capacity;
+    arr->count = 0;
+    arr->element_size = element_size;
+    arr->lock_capacity = false;
+    return true;
+}
+
+void array_deinit(ApeArray_t* arr)
+{
+    allocator_free(arr->alloc, arr->data_allocated);
+}
+
 void array_destroy(ApeArray_t* arr)
 {
     ApeAllocator_t* alloc;
@@ -211,34 +242,6 @@ void array_orphandata(ApeArray_t* arr)
     array_initcapacity(arr, arr->alloc, 0, arr->element_size);
 }
 
-bool array_initcapacity(ApeArray_t* arr, ApeAllocator_t* alloc, ApeSize_t capacity, ApeSize_t element_size)
-{
-    arr->alloc = alloc;
-    if(capacity > 0)
-    {
-        arr->data_allocated = (unsigned char*)allocator_malloc(arr->alloc, capacity * element_size);
-        arr->arraydata = arr->data_allocated;
-        if(!arr->data_allocated)
-        {
-            return false;
-        }
-    }
-    else
-    {
-        arr->data_allocated = NULL;
-        arr->arraydata = NULL;
-    }
-    arr->capacity = capacity;
-    arr->count = 0;
-    arr->element_size = element_size;
-    arr->lock_capacity = false;
-    return true;
-}
-
-void array_deinit(ApeArray_t* arr)
-{
-    allocator_free(arr->alloc, arr->data_allocated);
-}
 
 //-----------------------------------------------------------------------------
 // Pointer Array
@@ -454,6 +457,10 @@ bool object_array_setat(ApeObject_t object, ApeInt_t ix, ApeObject_t val)
     array = object_array_getarray(object);
     if(ix < 0 || ix >= (ApeInt_t)array_count(array))
     {
+        if(ix < 0)
+        {
+            return false;
+        }
         while(ix >= array_count(array))
         {
             object_array_pushvalue(object, object_make_null());

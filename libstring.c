@@ -177,31 +177,73 @@ unsigned long object_string_gethash(ApeObject_t obj)
 }
 
 
-ApeStringBuffer_t* strbuf_make(ApeAllocator_t* alloc)
+ApeStringBuffer_t* strbuf_make(ApeContext_t* ctx)
 {
-    return strbuf_makecapacity(alloc, 1);
+    return strbuf_makecapacity(ctx, 1);
 }
 
-ApeStringBuffer_t* strbuf_makecapacity(ApeAllocator_t* alloc, ApeSize_t capacity)
+/*
+
+struct ApeStringBuffer_t
+{
+    ApeAllocator_t* alloc;
+    bool failed;
+    char* stringdata;
+    ApeSize_t capacity;
+    ApeSize_t len;
+    void* iohandle;
+    ApeStrBufWriterFunc_t iowriter;
+};
+*/
+ApeStringBuffer_t* strbuf_makedefault(ApeContext_t* ctx)
 {
     ApeStringBuffer_t* buf;
-    buf = (ApeStringBuffer_t*)allocator_malloc(alloc, sizeof(ApeStringBuffer_t));
+    buf = (ApeStringBuffer_t*)allocator_malloc(&ctx->alloc, sizeof(ApeStringBuffer_t));
     if(buf == NULL)
     {
         return NULL;
     }
     memset(buf, 0, sizeof(ApeStringBuffer_t));
-    buf->alloc = alloc;
+    buf->context = ctx;
+    buf->alloc = &ctx->alloc;
     buf->failed = false;
-    buf->stringdata = (char*)allocator_malloc(alloc, capacity);
+    buf->stringdata = NULL;
+    buf->capacity = 0;
+    buf->len = 0;
+    buf->iohandle = NULL;
+    buf->iowriter = NULL;
+    buf->iomustclose = false;
+    return buf;
+}
+
+ApeStringBuffer_t* strbuf_makecapacity(ApeContext_t* ctx, ApeSize_t capacity)
+{
+    ApeStringBuffer_t* buf;
+    buf = strbuf_makedefault(ctx);
+    buf->stringdata = (char*)allocator_malloc(&ctx->alloc, capacity);
     if(buf->stringdata == NULL)
     {
-        allocator_free(alloc, buf);
+        allocator_free(&ctx->alloc, buf);
         return NULL;
     }
     buf->capacity = capacity;
     buf->len = 0;
     buf->stringdata[0] = '\0';
+    return buf;
+}
+
+size_t strbuf_default_iowriter(ApeContext_t* ctx, void* hptr, const char* source, size_t len)
+{
+    return fwrite(source, sizeof(char), len, (FILE*)hptr);
+}
+
+ApeStringBuffer_t* strbuf_makeio(ApeContext_t* ctx, FILE* hnd, bool alsoclose)
+{
+    ApeStringBuffer_t* buf;
+    buf = strbuf_makedefault(ctx);
+    buf->iohandle = hnd;
+    buf->iowriter = strbuf_default_iowriter;
+    buf->iomustclose = alsoclose;
     return buf;
 }
 
@@ -211,9 +253,21 @@ void strbuf_destroy(ApeStringBuffer_t* buf)
     {
         return;
     }
-    allocator_free(buf->alloc, buf->stringdata);
-    allocator_free(buf->alloc, buf);
+    if(buf->iohandle != NULL)
+    {
+        if(buf->iomustclose)
+        {
+            fclose((FILE*)(buf->iohandle));
+        }
+    }
+    else
+    {
+        allocator_free(buf->alloc, buf->stringdata);
+        allocator_free(buf->alloc, buf);
+    }
 }
+
+//typedef size_t (*ApeStrBufWriteFunc_t)(ApeContext_t*, void*, const char*, size_t);
 
 bool strbuf_appendn(ApeStringBuffer_t* buf, const char* str, ApeSize_t str_len)
 {
@@ -225,6 +279,11 @@ bool strbuf_appendn(ApeStringBuffer_t* buf, const char* str, ApeSize_t str_len)
     }
     if(str_len == 0)
     {
+        return true;
+    }
+    if((buf->iohandle != NULL) && (buf->iowriter != NULL))
+    {
+        (buf->iowriter)(buf->context, buf->iohandle, str, str_len);
         return true;
     }
     required_capacity = buf->len + str_len + 1;
@@ -242,7 +301,6 @@ bool strbuf_appendn(ApeStringBuffer_t* buf, const char* str, ApeSize_t str_len)
     return true;
 }
 
-
 bool strbuf_append(ApeStringBuffer_t* buf, const char* str)
 {
     return strbuf_appendn(buf, str, strlen(str));
@@ -254,6 +312,7 @@ bool strbuf_appendf(ApeStringBuffer_t* buf, const char* fmt, ...)
     ApeInt_t written;
     ApeInt_t to_write;
     ApeSize_t required_capacity;
+    char* tbuf;
     va_list args;
     (void)written;
     if(buf->failed)
@@ -268,6 +327,7 @@ bool strbuf_appendf(ApeStringBuffer_t* buf, const char* fmt, ...)
         return true;
     }
     required_capacity = buf->len + to_write + 1;
+    /*
     if(required_capacity > buf->capacity)
     {
         ok = strbuf_grow(buf, required_capacity * 2);
@@ -285,7 +345,15 @@ bool strbuf_appendf(ApeStringBuffer_t* buf, const char* fmt, ...)
     }
     buf->len = buf->len + to_write;
     buf->stringdata[buf->len] = '\0';
-    return true;
+    */
+
+    tbuf = (char*)allocator_malloc(buf->alloc, required_capacity);
+    va_start(args, fmt);
+    written = vsnprintf(tbuf, required_capacity, fmt, args);
+    va_end(args);
+    ok = strbuf_appendn(buf, tbuf, written);
+    allocator_free(buf->alloc, tbuf);
+    return ok;
 }
 
 const char* strbuf_getdata(const ApeStringBuffer_t* buf)

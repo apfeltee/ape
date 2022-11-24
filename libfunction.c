@@ -12,7 +12,7 @@ object_make_function(ApeGCMemory_t* mem, const char* name, ApeCompilationResult_
     }
     if(owns_data)
     {
-        data->function.name = name ? util_strdup(mem->alloc, name) : util_strdup(mem->alloc, "anonymous");
+        data->function.name = name ? util_strdup(mem->context, name) : util_strdup(mem->context, "anonymous");
         if(!data->function.name)
         {
             return object_make_null();
@@ -50,7 +50,7 @@ ApeObject_t object_make_native_function_memory(ApeGCMemory_t* mem, const char* n
     {
         return object_make_null();
     }
-    obj->native_function.name = util_strdup(mem->alloc, name);
+    obj->native_function.name = util_strdup(mem->context, name);
     if(!obj->native_function.name)
     {
         return object_make_null();
