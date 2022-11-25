@@ -116,7 +116,7 @@ static void print_errors(ApeContext_t *ctx)
     int i;
     int count;
     char *err_str;
-    const ApeError_t *err;
+    ApeError_t *err;
     count = context_errorcount(ctx);
     for (i = 0; i < count; i++)
     {
@@ -127,7 +127,7 @@ static void print_errors(ApeContext_t *ctx)
     }
 }
 
-static ApeObject_t exit_repl(ApeContext_t *ctx, void *data, int argc, ApeObject_t *args)
+static ApeObject_t exit_repl(ApeContext_t *ctx, void *data, ApeSize_t argc, ApeObject_t *args)
 {
     bool *exit_repl;
     (void)ctx;

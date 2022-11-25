@@ -2,6 +2,107 @@
 #include <inttypes.h>
 #include "ape.h"
 
+ApeObject_t object_make_from_data(ApeObjectType_t type, ApeObjectData_t* data)
+{
+    uint64_t type_tag;
+    ApeObject_t object;
+    object.handle = OBJECT_PATTERN;
+    type_tag = object_value_typetag(type) & 0x7;
+    // assumes no pointer exceeds 48 bits
+    object.handle |= (type_tag << 48);
+    object.handle |= (uintptr_t)data;
+    return object;
+}
+
+ApeObject_t object_make_number(ApeFloat_t val)
+{
+    ApeObject_t o = { .number = val };
+    if((o.handle & OBJECT_PATTERN) == OBJECT_PATTERN)
+    {
+        o.handle = 0x7ff8000000000000;
+    }
+    return o;
+}
+
+ApeObject_t object_make_bool(bool val)
+{
+    return (ApeObject_t){ .handle = OBJECT_BOOL_HEADER | val };
+}
+
+ApeObject_t object_make_null()
+{
+    return (ApeObject_t){ .handle = OBJECT_NULL_PATTERN };
+}
+
+ApeObject_t object_make_external(ApeGCMemory_t* mem, void* data)
+{
+    ApeObjectData_t* obj;
+    obj = gcmem_alloc_object_data(mem, APE_OBJECT_EXTERNAL);
+    if(!obj)
+    {
+        return object_make_null();
+    }
+    obj->external.data = data;
+    obj->external.data_destroy_fn = NULL;
+    obj->external.data_copy_fn = NULL;
+    return object_make_from_data(APE_OBJECT_EXTERNAL, obj);
+}
+
+
+ApeObjectData_t* object_value_allocated_data(ApeObject_t object)
+{
+    APE_ASSERT(object_value_isallocated(object) || object_value_type(object) == APE_OBJECT_NULL);
+    return (ApeObjectData_t*)(object.handle & ~OBJECT_HEADER_MASK);
+}
+
+bool object_value_asbool(ApeObject_t obj)
+{
+    if(object_value_isnumber(obj))
+    {
+        return obj.handle;
+    }
+    return obj.handle & (~OBJECT_HEADER_MASK);
+}
+
+ApeFloat_t object_value_asnumber(ApeObject_t obj)
+{
+    if(object_value_isnumber(obj))
+    {// todo: optimise? always return number?
+        return obj.number;
+    }
+    return (ApeFloat_t)(obj.handle & (~OBJECT_HEADER_MASK));
+}
+
+
+ApeFunction_t* object_value_asfunction(ApeObject_t object)
+{
+    ApeObjectData_t* data;
+    APE_ASSERT(object_value_type(object) == APE_OBJECT_FUNCTION);
+    data = object_value_allocated_data(object);
+    return &data->function;
+}
+
+ApeNativeFunction_t* object_value_asnativefunction(ApeObject_t obj)
+{
+    ApeObjectData_t* data;
+    data = object_value_allocated_data(obj);
+    return &data->native_function;
+}
+
+ApeExternalData_t* object_value_asexternal(ApeObject_t object)
+{
+    ApeObjectData_t* data;
+    APE_ASSERT(object_value_type(object) == APE_OBJECT_EXTERNAL);
+    data = object_value_allocated_data(object);
+    return &data->external;
+}
+
+
+bool object_value_isallocated(ApeObject_t object)
+{
+    return (object.handle & OBJECT_ALLOCATED_HEADER) == OBJECT_ALLOCATED_HEADER;
+}
+
 bool object_value_isnumber(ApeObject_t o)
 {
     return (o.handle & OBJECT_PATTERN) != OBJECT_PATTERN;
@@ -26,10 +127,6 @@ bool object_value_iscallable(ApeObject_t obj)
     return type == APE_OBJECT_NATIVE_FUNCTION || type == APE_OBJECT_FUNCTION;
 }
 
-bool object_value_isallocated(ApeObject_t object)
-{
-    return (object.handle & OBJECT_ALLOCATED_HEADER) == OBJECT_ALLOCATED_HEADER;
-}
 
 bool object_value_ishashable(ApeObject_t obj)
 {
@@ -61,48 +158,7 @@ bool object_value_ishashable(ApeObject_t obj)
 
 }
 
-bool object_value_asbool(ApeObject_t obj)
-{
-    if(object_value_isnumber(obj))
-    {
-        return obj.handle;
-    }
-    return obj.handle & (~OBJECT_HEADER_MASK);
-}
-
-ApeFloat_t object_value_asnumber(ApeObject_t obj)
-{
-    if(object_value_isnumber(obj))
-    {// todo: optimise? always return number?
-        return obj.number;
-    }
-    return (ApeFloat_t)(obj.handle & (~OBJECT_HEADER_MASK));
-}
-
-ApeFunction_t* object_value_asfunction(ApeObject_t object)
-{
-    ApeObjectData_t* data;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_FUNCTION);
-    data = object_value_allocated_data(object);
-    return &data->function;
-}
-
-ApeNativeFunction_t* object_value_asnativefunction(ApeObject_t obj)
-{
-    ApeObjectData_t* data;
-    data = object_value_allocated_data(obj);
-    return &data->native_function;
-}
-
-ApeExternalData_t* object_value_asexternal(ApeObject_t object)
-{
-    ApeObjectData_t* data;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_EXTERNAL);
-    data = object_value_allocated_data(object);
-    return &data->external;
-}
-
-void object_tostring(ApeObject_t obj, ApeStringBuffer_t* buf, bool quote_str)
+void object_tostring(ApeObject_t obj, ApeWriter_t* buf, bool quote_str)
 {
     const char* sdata;
     ApeSize_t slen;
@@ -119,12 +175,12 @@ void object_tostring(ApeObject_t obj, ApeStringBuffer_t* buf, bool quote_str)
     {
         case APE_OBJECT_FREED:
             {
-                strbuf_append(buf, "FREED");
+                writer_append(buf, "FREED");
             }
             break;
         case APE_OBJECT_NONE:
             {
-                strbuf_append(buf, "NONE");
+                writer_append(buf, "NONE");
             }
             break;
         case APE_OBJECT_NUMBER:
@@ -133,98 +189,99 @@ void object_tostring(ApeObject_t obj, ApeStringBuffer_t* buf, bool quote_str)
                 #if 1
                 if(fltnum == ((ApeInt_t)fltnum))
                 {
-                    strbuf_appendf(buf, "%" PRId64, (ApeInt_t)fltnum);
+                    writer_appendf(buf, "%" PRId64, (ApeInt_t)fltnum);
                 }
                 else
                 {
-                    strbuf_appendf(buf, "%1.10g", fltnum);
+                    writer_appendf(buf, "%1.10g", fltnum);
                 }
                 #else
-                    strbuf_appendf(buf, "%1.10g", fltnum);
+                    writer_appendf(buf, "%1.10g", fltnum);
                 #endif
             }
             break;
         case APE_OBJECT_BOOL:
             {
-                strbuf_append(buf, object_value_asbool(obj) ? "true" : "false");
+                writer_append(buf, object_value_asbool(obj) ? "true" : "false");
             }
             break;
         case APE_OBJECT_STRING:
             {
                 sdata = object_string_getdata(obj);
+                slen = object_string_getlength(obj);
                 if(quote_str)
                 {
-                    strbuf_appendf(buf, "\"%s\"", sdata);
+                    writer_appendf(buf, "\"%s\"", sdata);
                 }
                 else
                 {
-                    strbuf_append(buf, sdata);
+                    writer_appendn(buf, sdata, slen);
                 }
             }
             break;
         case APE_OBJECT_NULL:
             {
-                strbuf_append(buf, "null");
+                writer_append(buf, "null");
             }
             break;
         case APE_OBJECT_FUNCTION:
             {
                 compfunc = object_value_asfunction(obj);
-                strbuf_appendf(buf, "CompiledFunction: %s\n", object_function_getname(obj));
+                writer_appendf(buf, "CompiledFunction: %s\n", object_function_getname(obj));
                 code_tostring(compfunc->comp_result->bytecode, compfunc->comp_result->src_positions, compfunc->comp_result->count, buf);
             }
             break;
         case APE_OBJECT_ARRAY:
             {
-                strbuf_append(buf, "[");
+                writer_append(buf, "[");
                 for(i = 0; i < object_array_getlength(obj); i++)
                 {
                     iobj = object_array_getvalue(obj, i);
                     object_tostring(iobj, buf, true);
                     if(i < (object_array_getlength(obj) - 1))
                     {
-                        strbuf_append(buf, ", ");
+                        writer_append(buf, ", ");
                     }
                 }
-                strbuf_append(buf, "]");
+                writer_append(buf, "]");
             }
             break;
         case APE_OBJECT_MAP:
             {
-                strbuf_append(buf, "{");
+                writer_append(buf, "{");
                 for(i = 0; i < object_map_getlength(obj); i++)
                 {
                     key = object_map_getkeyat(obj, i);
                     val = object_map_getvalueat(obj, i);
                     object_tostring(key, buf, true);
-                    strbuf_append(buf, ": ");
+                    writer_append(buf, ": ");
                     object_tostring(val, buf, true);
                     if(i < (object_map_getlength(obj) - 1))
                     {
-                        strbuf_append(buf, ", ");
+                        writer_append(buf, ", ");
                     }
                 }
-                strbuf_append(buf, "}");
+                writer_append(buf, "}");
             }
             break;
         case APE_OBJECT_NATIVE_FUNCTION:
             {
-                strbuf_append(buf, "NATIVE_FUNCTION");
+                writer_append(buf, "NATIVE_FUNCTION");
             }
             break;
         case APE_OBJECT_EXTERNAL:
             {
-                strbuf_append(buf, "EXTERNAL");
+                writer_append(buf, "EXTERNAL");
             }
             break;
         case APE_OBJECT_ERROR:
             {
-                strbuf_appendf(buf, "ERROR: %s\n", object_value_geterrormessage(obj));
+                writer_appendf(buf, "ERROR: %s\n", object_value_geterrormessage(obj));
                 traceback = object_value_geterrortraceback(obj);
                 APE_ASSERT(traceback);
                 if(traceback)
                 {
-                    strbuf_append(buf, "Traceback:\n");
+                    writer_append(buf, "Traceback:\n");
                     traceback_tostring(traceback, buf);
                 }
             }
@@ -338,52 +395,6 @@ uint64_t object_value_typetag(ApeObjectType_t type)
     return 4;
 }
 
-ApeObject_t object_make_from_data(ApeObjectType_t type, ApeObjectData_t* data)
-{
-    uint64_t type_tag;
-    ApeObject_t object;
-    object.handle = OBJECT_PATTERN;
-    type_tag = object_value_typetag(type) & 0x7;
-    // assumes no pointer exceeds 48 bits
-    object.handle |= (type_tag << 48);
-    object.handle |= (uintptr_t)data;
-    return object;
-}
-
-ApeObject_t object_make_number(ApeFloat_t val)
-{
-    ApeObject_t o = { .number = val };
-    if((o.handle & OBJECT_PATTERN) == OBJECT_PATTERN)
-    {
-        o.handle = 0x7ff8000000000000;
-    }
-    return o;
-}
-
-ApeObject_t object_make_bool(bool val)
-{
-    return (ApeObject_t){ .handle = OBJECT_BOOL_HEADER | val };
-}
-
-ApeObject_t object_make_null()
-{
-    return (ApeObject_t){ .handle = OBJECT_NULL_PATTERN };
-}
-
-ApeObject_t object_make_external(ApeGCMemory_t* mem, void* data)
-{
-    ApeObjectData_t* obj;
-    obj = gcmem_alloc_object_data(mem, APE_OBJECT_EXTERNAL);
-    if(!obj)
-    {
-        return object_make_null();
-    }
-    obj->external.data = data;
-    obj->external.data_destroy_fn = NULL;
-    obj->external.data_copy_fn = NULL;
-    return object_make_from_data(APE_OBJECT_EXTERNAL, obj);
-}
-
 void object_data_deinit(ApeObjectData_t* data)
 {
     switch(data->type)
@@ -468,9 +479,9 @@ ApeGCMemory_t* object_value_getmem(ApeObject_t obj)
         {                                                \
             if(in_between)                               \
             {                                            \
-                strbuf_append(res, "|");                 \
+                writer_append(res, "|");                 \
             }                                            \
-            strbuf_append(res, object_value_typename(t)); \
+            writer_append(res, object_value_typename(t)); \
             in_between = true;                           \
         }                                                \
     } while(0)
@@ -478,12 +489,12 @@ ApeGCMemory_t* object_value_getmem(ApeObject_t obj)
 char* object_value_typeunionname(ApeContext_t* ctx, const ApeObjectType_t type)
 {
     bool in_between;
-    ApeStringBuffer_t* res;
+    ApeWriter_t* res;
     if(type == APE_OBJECT_ANY || type == APE_OBJECT_NONE || type == APE_OBJECT_FREED)
     {
         return util_strdup(ctx, object_value_typename(type));
     }
-    res = strbuf_make(ctx);
+    res = writer_make(ctx);
     if(!res)
     {
         return NULL;
@@ -499,22 +510,22 @@ char* object_value_typeunionname(ApeContext_t* ctx, const ApeObjectType_t type)
     CHECK_TYPE(APE_OBJECT_FUNCTION);
     CHECK_TYPE(APE_OBJECT_EXTERNAL);
     CHECK_TYPE(APE_OBJECT_ERROR);
-    return strbuf_getstringanddestroy(res);
+    return writer_getstringanddestroy(res);
 }
 
 char* object_value_serialize(ApeContext_t* ctx, ApeObject_t object, ApeSize_t* lendest)
 {
     ApeSize_t l;
     char* string;
-    ApeStringBuffer_t* buf;
-    buf = strbuf_make(ctx);
+    ApeWriter_t* buf;
+    buf = writer_make(ctx);
     if(!buf)
     {
         return NULL;
     }
     object_tostring(object, buf, true);
     l = buf->len;
-    string = strbuf_getstringanddestroy(buf);
+    string = writer_getstringanddestroy(buf);
     if(lendest != NULL)
     {
         *lendest = l;
@@ -558,7 +569,7 @@ ApeObject_t object_get_kv_pair_at(ApeGCMemory_t* mem, ApeObject_t object, int ix
     ApeObjectData_t* data;
     APE_ASSERT(object_value_type(object) == APE_OBJECT_MAP);
     data = object_value_allocated_data(object);
-    if(ix >= valdict_count(data->map))
+    if(ix >= (ApeInt_t)valdict_count(data->map))
     {
         return object_make_null();
     }
@@ -589,7 +600,7 @@ ApeObject_t object_get_kv_pair_at(ApeGCMemory_t* mem, ApeObject_t object, int ix
 ApeObject_t object_value_internal_copydeep(ApeGCMemory_t* mem, ApeObject_t obj, ApeValDictionary_t * copies)
 {
     ApeSize_t i;
-    int len;
+    ApeSize_t len;
     bool ok;
     const char* str;
     ApeUShort_t* bytecode_copy;
@@ -838,7 +849,7 @@ ApeObject_t object_value_copydeep(ApeGCMemory_t* mem, ApeObject_t obj)
 ApeObject_t object_value_copyflat(ApeGCMemory_t* mem, ApeObject_t obj)
 {
     ApeSize_t i;
-    int len;
+    ApeSize_t len;
     bool ok;
     const char* str;
     void* data_copy;
@@ -1028,10 +1039,4 @@ bool object_value_setexternaldestroy(ApeObject_t object, ApeDataCallback_t destr
     }
     data->data_destroy_fn = destroy_fn;
     return true;
-}
-
-ApeObjectData_t* object_value_allocated_data(ApeObject_t object)
-{
-    APE_ASSERT(object_value_isallocated(object) || object_value_type(object) == APE_OBJECT_NULL);
-    return (ApeObjectData_t*)(object.handle & ~OBJECT_HEADER_MASK);
 }

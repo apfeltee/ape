@@ -378,7 +378,7 @@ ApeValDictionary_t* valdict_copywithitems(ApeValDictionary_t* dict)
             valdict_destroywithitems(dict_copy);
             return NULL;
         }
-        ok = valdict_set(dict_copy, key, item_copy);
+        ok = valdict_set(dict_copy, (void*)key, item_copy);
         if(!ok)
         {
             dict_copy->destroy_fn(item_copy);
@@ -390,19 +390,20 @@ ApeValDictionary_t* valdict_copywithitems(ApeValDictionary_t* dict)
 }
 
 // Public
-ApeStrDictionary_t* strdict_make(ApeAllocator_t* alloc, ApeDataCallback_t copy_fn, ApeDataCallback_t destroy_fn)
+ApeStrDictionary_t* strdict_make(ApeContext_t* ctx, ApeDataCallback_t copy_fn, ApeDataCallback_t destroy_fn)
 {
     bool ok;
     ApeStrDictionary_t* dict;
-    dict = (ApeStrDictionary_t*)allocator_malloc(alloc, sizeof(ApeStrDictionary_t));
+    dict = (ApeStrDictionary_t*)allocator_malloc(&ctx->alloc, sizeof(ApeStrDictionary_t));
     if(dict == NULL)
     {
         return NULL;
     }
-    ok = strdict_init(dict, alloc, DICT_INITIAL_SIZE, copy_fn, destroy_fn);
+    dict->context = ctx;
+    ok = strdict_init(dict, ctx, DICT_INITIAL_SIZE, copy_fn, destroy_fn);
     if(!ok)
     {
-        allocator_free(alloc, dict);
+        allocator_free(&ctx->alloc, dict);
         return NULL;
     }
     return dict;
@@ -450,7 +451,7 @@ ApeStrDictionary_t* strdict_copywithitems(ApeStrDictionary_t* dict)
     {
         return NULL;
     }
-    dict_copy = strdict_make(dict->alloc, (ApeDataCallback_t)dict->copy_fn, (ApeDataCallback_t)dict->destroy_fn);
+    dict_copy = strdict_make(dict->context, (ApeDataCallback_t)dict->copy_fn, (ApeDataCallback_t)dict->destroy_fn);
     if(!dict_copy)
     {
         return NULL;
@@ -528,10 +529,11 @@ ApeSize_t strdict_count(const ApeStrDictionary_t* dict)
 }
 
 // Private definitions
-bool strdict_init(ApeStrDictionary_t* dict, ApeAllocator_t* alloc, ApeSize_t initial_capacity, ApeDataCallback_t copy_fn, ApeDataCallback_t destroy_fn)
+bool strdict_init(ApeStrDictionary_t* dict, ApeContext_t* ctx, ApeSize_t initial_capacity, ApeDataCallback_t copy_fn, ApeDataCallback_t destroy_fn)
 {
     ApeSize_t i;
-    dict->alloc = alloc;
+    dict->context = ctx;
+    dict->alloc = &ctx->alloc;
     dict->cells = NULL;
     dict->keys = NULL;
     dict->values = NULL;
@@ -542,11 +544,11 @@ bool strdict_init(ApeStrDictionary_t* dict, ApeAllocator_t* alloc, ApeSize_t ini
     dict->item_capacity = (ApeSize_t)(initial_capacity * 0.7f);
     dict->copy_fn = copy_fn;
     dict->destroy_fn = destroy_fn;
-    dict->cells = (unsigned int*)allocator_malloc(alloc, dict->cell_capacity * sizeof(*dict->cells));
-    dict->keys = (char**)allocator_malloc(alloc, dict->item_capacity * sizeof(*dict->keys));
-    dict->values = (void**)allocator_malloc(alloc, dict->item_capacity * sizeof(*dict->values));
-    dict->cell_ixs = (unsigned int*)allocator_malloc(alloc, dict->item_capacity * sizeof(*dict->cell_ixs));
-    dict->hashes = (long unsigned int*)allocator_malloc(alloc, dict->item_capacity * sizeof(*dict->hashes));
+    dict->cells = (unsigned int*)allocator_malloc(&ctx->alloc, dict->cell_capacity * sizeof(*dict->cells));
+    dict->keys = (char**)allocator_malloc(&ctx->alloc, dict->item_capacity * sizeof(*dict->keys));
+    dict->values = (void**)allocator_malloc(&ctx->alloc, dict->item_capacity * sizeof(*dict->values));
+    dict->cell_ixs = (unsigned int*)allocator_malloc(&ctx->alloc, dict->item_capacity * sizeof(*dict->cell_ixs));
+    dict->hashes = (long unsigned int*)allocator_malloc(&ctx->alloc, dict->item_capacity * sizeof(*dict->hashes));
     if(dict->cells == NULL || dict->keys == NULL || dict->values == NULL || dict->cell_ixs == NULL || dict->hashes == NULL)
     {
         goto error;
@@ -631,7 +633,7 @@ bool strdict_growandrehash(ApeStrDictionary_t* dict)
     char* key;
     void* value;
     ApeStrDictionary_t new_dict;
-    ok = strdict_init(&new_dict, dict->alloc, dict->cell_capacity * 2, dict->copy_fn, dict->destroy_fn);
+    ok = strdict_init(&new_dict, dict->context, dict->cell_capacity * 2, dict->copy_fn, dict->destroy_fn);
     if(!ok)
     {
         return false;

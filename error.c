@@ -13,7 +13,7 @@ ApeTraceback_t* traceback_make(ApeContext_t* ctx)
     memset(traceback, 0, sizeof(ApeTraceback_t));
     traceback->context = ctx;
     traceback->alloc = &ctx->alloc;
-    traceback->items = array_make(&ctx->alloc, ApeTracebackItem_t);
+    traceback->items = array_make(ctx, ApeTracebackItem_t);
     if(!traceback->items)
     {
         traceback_destroy(traceback);
@@ -84,7 +84,7 @@ const char* traceback_item_get_filepath(ApeTracebackItem_t* item)
     return item->pos.file->path;
 }
 
-bool traceback_tostring(const ApeTraceback_t* traceback, ApeStringBuffer_t* buf)
+bool traceback_tostring(ApeTraceback_t* traceback, ApeWriter_t* buf)
 {
     ApeSize_t i;
     ApeSize_t depth;
@@ -95,14 +95,14 @@ bool traceback_tostring(const ApeTraceback_t* traceback, ApeStringBuffer_t* buf)
         const char* filename = traceback_item_get_filepath(item);
         if(item->pos.line >= 0 && item->pos.column >= 0)
         {
-            strbuf_appendf(buf, "%s in %s on %d:%d\n", item->function_name, filename, item->pos.line, item->pos.column);
+            writer_appendf(buf, "%s in %s on %d:%d\n", item->function_name, filename, item->pos.line, item->pos.column);
         }
         else
         {
-            strbuf_appendf(buf, "%s\n", item->function_name);
+            writer_appendf(buf, "%s\n", item->function_name);
         }
     }
-    return !strbuf_failed(buf);
+    return !writer_failed(buf);
 }
 
 const char* errortype_tostring(ApeErrorType_t type)
@@ -126,9 +126,8 @@ const char* errortype_tostring(ApeErrorType_t type)
     }
 }
 
-ApeErrorType_t error_gettype(const ApeError_t* ae)
+ApeErrorType_t error_gettype(ApeError_t* error)
 {
-    const ApeError_t* error = (const ApeError_t*)ae;
     switch(error->type)
     {
         case APE_ERROR_NONE:
@@ -150,7 +149,7 @@ ApeErrorType_t error_gettype(const ApeError_t* ae)
     }
 }
 
-const char* error_gettypestring(const ApeError_t* error)
+const char* error_gettypestring(ApeError_t* error)
 {
     return errortype_tostring(error_gettype(error));
 }
@@ -255,14 +254,14 @@ void errorlist_clear(ApeErrorList_t* errors)
     errors->count = 0;
 }
 
-ApeSize_t errorlist_count(const ApeErrorList_t* errors)
+ApeSize_t errorlist_count(ApeErrorList_t* errors)
 {
     return errors->count;
 }
 
-const ApeError_t* errorlist_getat(const ApeErrorList_t* errors, int ix)
+ApeError_t* errorlist_getat(ApeErrorList_t* errors, ApeInt_t ix)
 {
-    if(ix >= errors->count)
+    if(ix >= (ApeInt_t)errors->count)
     {
         return NULL;
     }
@@ -278,20 +277,18 @@ ApeError_t* errorlist_lasterror(ApeErrorList_t* errors)
     return &errors->errors[errors->count - 1];
 }
 
-bool errorlist_haserrors(const ApeErrorList_t* errors)
+bool errorlist_haserrors(ApeErrorList_t* errors)
 {
     return errorlist_count(errors) > 0;
 }
 
-const char* error_getmessage(const ApeError_t* ae)
+const char* error_getmessage(ApeError_t* error)
 {
-    const ApeError_t* error = (const ApeError_t*)ae;
     return error->message;
 }
 
-const char* error_getfile(const ApeError_t* ae)
+const char* error_getfile(ApeError_t* error)
 {
-    const ApeError_t* error = (const ApeError_t*)ae;
     if(!error->pos.file)
     {
         return NULL;
@@ -299,14 +296,14 @@ const char* error_getfile(const ApeError_t* ae)
     return error->pos.file->path;
 }
 
-const char* error_getsource(const ApeError_t* error)
+const char* error_getsource(ApeError_t* error)
 {
     if(!error->pos.file)
     {
         return NULL;
     }
     ApePtrArray_t* lines = error->pos.file->lines;
-    if(error->pos.line >= ptrarray_count(lines))
+    if(error->pos.line >= (ApeInt_t)ptrarray_count(lines))
     {
         return NULL;
     }
@@ -314,9 +311,8 @@ const char* error_getsource(const ApeError_t* error)
     return line;
 }
 
-int error_getline(const ApeError_t* ae)
+int error_getline(ApeError_t* error)
 {
-    const ApeError_t* error = (const ApeError_t*)ae;
     if(error->pos.line < 0)
     {
         return -1;
@@ -324,9 +320,8 @@ int error_getline(const ApeError_t* ae)
     return error->pos.line + 1;
 }
 
-int error_getcolumn(const ApeError_t* ae)
+int error_getcolumn(ApeError_t* error)
 {
-    const ApeError_t* error = (const ApeError_t*)ae;
     if(error->pos.column < 0)
     {
         return -1;
@@ -334,10 +329,9 @@ int error_getcolumn(const ApeError_t* ae)
     return error->pos.column + 1;
 }
 
-const ApeTraceback_t* error_gettraceback(const ApeError_t* ae)
+ApeTraceback_t* error_gettraceback(ApeError_t* error)
 {
-    const ApeError_t* error = (const ApeError_t*)ae;
-    return (const ApeTraceback_t*)error->traceback;
+    return error->traceback;
 }
 
 const char* object_value_geterrormessage(ApeObject_t object)

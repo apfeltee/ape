@@ -2,33 +2,34 @@
 #include "ape.h"
 
 
-ApeArray_t* array_make_(ApeAllocator_t* alloc, ApeSize_t element_size)
+ApeArray_t* array_make_(ApeContext_t* ctx, ApeSize_t element_size)
 {
-    return array_makecapacity(alloc, 32, element_size);
+    return array_makecapacity(ctx, 32, element_size);
 }
 
-ApeArray_t* array_makecapacity(ApeAllocator_t* alloc, ApeSize_t capacity, ApeSize_t element_size)
+ApeArray_t* array_makecapacity(ApeContext_t* ctx, ApeSize_t capacity, ApeSize_t element_size)
 {
     bool ok;
     ApeArray_t* arr;
-    arr = (ApeArray_t*)allocator_malloc(alloc, sizeof(ApeArray_t));
+    arr = (ApeArray_t*)allocator_malloc(&ctx->alloc, sizeof(ApeArray_t));
     if(!arr)
     {
         return NULL;
     }
-    ok = array_initcapacity(arr, alloc, capacity, element_size);
+    ok = array_initcapacity(arr, ctx, capacity, element_size);
     if(!ok)
     {
-        allocator_free(alloc, arr);
+        allocator_free(&ctx->alloc, arr);
         return NULL;
     }
     return arr;
 }
 
 
-bool array_initcapacity(ApeArray_t* arr, ApeAllocator_t* alloc, ApeSize_t capacity, ApeSize_t element_size)
+bool array_initcapacity(ApeArray_t* arr, ApeContext_t* ctx, ApeSize_t capacity, ApeSize_t element_size)
 {
-    arr->alloc = alloc;
+    arr->context = ctx;
+    arr->alloc = &ctx->alloc;
     if(capacity > 0)
     {
         arr->data_allocated = (unsigned char*)allocator_malloc(arr->alloc, capacity * element_size);
@@ -239,7 +240,7 @@ void* array_data(ApeArray_t* arr)
 
 void array_orphandata(ApeArray_t* arr)
 {
-    array_initcapacity(arr, arr->alloc, 0, arr->element_size);
+    array_initcapacity(arr, arr->context, 0, arr->element_size);
 }
 
 
@@ -247,25 +248,25 @@ void array_orphandata(ApeArray_t* arr)
 // Pointer Array
 //-----------------------------------------------------------------------------
 
-ApePtrArray_t* ptrarray_make(ApeAllocator_t* alloc)
+ApePtrArray_t* ptrarray_make(ApeContext_t* ctx)
 {
-    return ptrarray_makecapacity(alloc, 0);
+    return ptrarray_makecapacity(ctx, 0);
 }
 
-ApePtrArray_t* ptrarray_makecapacity(ApeAllocator_t* alloc, ApeSize_t capacity)
+ApePtrArray_t* ptrarray_makecapacity(ApeContext_t* ctx, ApeSize_t capacity)
 {
     bool ok;
     ApePtrArray_t* ptrarr;
-    ptrarr = (ApePtrArray_t*)allocator_malloc(alloc, sizeof(ApePtrArray_t));
+    ptrarr = (ApePtrArray_t*)allocator_malloc(&ctx->alloc, sizeof(ApePtrArray_t));
     if(!ptrarr)
     {
         return NULL;
     }
-    ptrarr->alloc = alloc;
-    ok = array_initcapacity(&ptrarr->arr, alloc, capacity, sizeof(void*));
+    ptrarr->alloc = &ctx->alloc;
+    ok = array_initcapacity(&ptrarr->arr, ctx, capacity, sizeof(void*));
     if(!ok)
     {
-        allocator_free(alloc, ptrarr);
+        allocator_free(&ctx->alloc, ptrarr);
         return NULL;
     }
     return ptrarr;
@@ -302,7 +303,7 @@ ApePtrArray_t* ptrarray_copywithitems(ApePtrArray_t* arr, ApeDataCallback_t copy
     void* item;
     void* item_copy;
     ApePtrArray_t* arr_copy;
-    arr_copy = ptrarray_makecapacity(arr->alloc, arr->arr.capacity);
+    arr_copy = ptrarray_makecapacity(arr->context, arr->arr.capacity);
     if(!arr_copy)
     {
         return NULL;
@@ -419,7 +420,7 @@ ApeObject_t object_make_arraycapacity(ApeGCMemory_t* mem, unsigned capacity)
     {
         return object_make_null();
     }
-    data->array = array_makecapacity(mem->alloc, capacity, sizeof(ApeObject_t));
+    data->array = array_makecapacity(mem->context, capacity, sizeof(ApeObject_t));
     if(!data->array)
     {
         return object_make_null();
@@ -461,7 +462,7 @@ bool object_array_setat(ApeObject_t object, ApeInt_t ix, ApeObject_t val)
         {
             return false;
         }
-        while(ix >= array_count(array))
+        while(ix >= (ApeInt_t)array_count(array))
         {
             object_array_pushvalue(object, object_make_null());
         }

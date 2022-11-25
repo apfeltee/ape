@@ -71,7 +71,7 @@ ApeCompiledFile_t* compiled_file_make(ApeContext_t* ctx, const char* path)
     {
         goto error;
     }
-    file->lines = ptrarray_make(&ctx->alloc);
+    file->lines = ptrarray_make(ctx);
     if(!file->lines)
     {
         goto error;
@@ -117,12 +117,12 @@ ApeGlobalStore_t* global_store_make(ApeContext_t* ctx, ApeGCMemory_t* mem)
     memset(store, 0, sizeof(ApeGlobalStore_t));
     store->context = ctx;
     store->alloc = &ctx->alloc;
-    store->symbols = strdict_make(&ctx->alloc, (ApeDataCallback_t)symbol_copy, (ApeDataCallback_t)symbol_destroy);
+    store->symbols = strdict_make(ctx, (ApeDataCallback_t)symbol_copy, (ApeDataCallback_t)symbol_destroy);
     if(!store->symbols)
     {
         goto err;
     }
-    store->objects = array_make(&ctx->alloc, ApeObject_t);
+    store->objects = array_make(ctx, ApeObject_t);
     if(!store->objects)
     {
         goto err;
@@ -278,17 +278,17 @@ ApeSymbolTable_t* symbol_table_make(ApeContext_t* ctx, ApeSymbolTable_t* outer, 
     table->outer = outer;
     table->global_store = global_store;
     table->module_global_offset = module_global_offset;
-    table->block_scopes = ptrarray_make(&ctx->alloc);
+    table->block_scopes = ptrarray_make(ctx);
     if(!table->block_scopes)
     {
         goto err;
     }
-    table->free_symbols = ptrarray_make(&ctx->alloc);
+    table->free_symbols = ptrarray_make(ctx);
     if(!table->free_symbols)
     {
         goto err;
     }
-    table->module_global_symbols = ptrarray_make(&ctx->alloc);
+    table->module_global_symbols = ptrarray_make(ctx);
     if(!table->module_global_symbols)
     {
         goto err;
@@ -674,7 +674,7 @@ ApeBlockScope_t* block_scope_make(ApeContext_t* ctx, int offset)
     memset(new_scope, 0, sizeof(ApeBlockScope_t));
     new_scope->context = ctx;
     new_scope->alloc = &ctx->alloc;
-    new_scope->store = strdict_make(&ctx->alloc, (ApeDataCallback_t)symbol_copy, (ApeDataCallback_t)symbol_destroy);
+    new_scope->store = strdict_make(ctx, (ApeDataCallback_t)symbol_copy, (ApeDataCallback_t)symbol_destroy);
     if(!new_scope->store)
     {
         block_scope_destroy(new_scope);
@@ -846,22 +846,22 @@ ApeCompilationScope_t* compilation_scope_make(ApeContext_t* ctx, ApeCompilationS
     scope->context = ctx;
     scope->alloc = &ctx->alloc;
     scope->outer = outer;
-    scope->bytecode = array_make(&ctx->alloc, ApeUShort_t);
+    scope->bytecode = array_make(ctx, ApeUShort_t);
     if(!scope->bytecode)
     {
         goto err;
     }
-    scope->src_positions = array_make(&ctx->alloc, ApePosition_t);
+    scope->src_positions = array_make(ctx, ApePosition_t);
     if(!scope->src_positions)
     {
         goto err;
     }
-    scope->break_ip_stack = array_make(&ctx->alloc, int);
+    scope->break_ip_stack = array_make(ctx, int);
     if(!scope->break_ip_stack)
     {
         goto err;
     }
-    scope->continue_ip_stack = array_make(&ctx->alloc, int);
+    scope->continue_ip_stack = array_make(ctx, int);
     if(!scope->continue_ip_stack)
     {
         goto err;
@@ -1088,7 +1088,7 @@ ApeExpression_t* optimise_infix_expression(ApeExpression_t* expr)
     {
         leftstr = left->string_literal;
         rightstr = right->string_literal;
-        res_str = util_stringfmt(alloc, "%s%s", leftstr, rightstr);
+        res_str = util_stringfmt(expr->context, "%s%s", leftstr, rightstr);
         if(res_str)
         {
             res = expression_make_string_literal(expr->context, res_str);
@@ -1153,7 +1153,7 @@ ApeModule_t* module_make(ApeContext_t* ctx, const char* name)
         module_destroy(module);
         return NULL;
     }
-    module->symbols = ptrarray_make(&ctx->alloc);
+    module->symbols = ptrarray_make(ctx);
     if(!module->symbols)
     {
         module_destroy(module);
@@ -1213,21 +1213,21 @@ const char* get_module_name(const char* path)
 bool module_add_symbol(ApeModule_t* module, const ApeSymbol_t* symbol)
 {
     bool ok;
-    ApeStringBuffer_t* name_buf;
+    ApeWriter_t* name_buf;
     ApeSymbol_t* module_symbol;
-    name_buf = strbuf_make(module->context);
+    name_buf = writer_make(module->context);
     if(!name_buf)
     {
         return false;
     }
-    ok = strbuf_appendf(name_buf, "%s::%s", module->name, symbol->name);
+    ok = writer_appendf(name_buf, "%s::%s", module->name, symbol->name);
     if(!ok)
     {
-        strbuf_destroy(name_buf);
+        writer_destroy(name_buf);
         return false;
     }
-    module_symbol = symbol_make(module->context, strbuf_getdata(name_buf), SYMBOL_MODULE_GLOBAL, symbol->index, false);
-    strbuf_destroy(name_buf);
+    module_symbol = symbol_make(module->context, writer_getdata(name_buf), SYMBOL_MODULE_GLOBAL, symbol->index, false);
+    writer_destroy(name_buf);
     if(!module_symbol)
     {
         return false;
@@ -1513,7 +1513,7 @@ void vmpriv_collectgarbage(ApeVM_t* vm, ApeArray_t * constants)
     gc_sweep(vm->mem);
 }
 
-bool vmpriv_callobject(ApeVM_t* vm, ApeObject_t callee, int num_args)
+bool vmpriv_callobject(ApeVM_t* vm, ApeObject_t callee, ApeInt_t num_args)
 {
     bool ok;
     ApeObjectType_t callee_type;
@@ -1526,7 +1526,7 @@ bool vmpriv_callobject(ApeVM_t* vm, ApeObject_t callee, int num_args)
     if(callee_type == APE_OBJECT_FUNCTION)
     {
         callee_function = object_value_asfunction(callee);
-        if(num_args != callee_function->num_args)
+        if(num_args != (ApeInt_t)callee_function->num_args)
         {
             errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
                               "invalid number of arguments to \"%s\", expected %d, got %d",
@@ -1753,6 +1753,7 @@ bool vm_run(ApeVM_t* vm, ApeCompilationResult_t* comp_res, ApeArray_t * constant
     int old_this_sp;
     ApeSize_t old_frames_count;
     ApeObject_t main_fn;
+    (void)old_sp;
 #ifdef APE_DEBUG
     old_sp = vm->sp;
 #endif
@@ -1784,8 +1785,8 @@ bool vmpriv_append_string(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeO
     ApeInt_t buflen;
     ApeInt_t leftlen;
     ApeInt_t rightlen;
-    ApeStringBuffer_t* allbuf;
-    ApeStringBuffer_t* tostrbuf;
+    ApeWriter_t* allbuf;
+    ApeWriter_t* tostrbuf;
     (void)lefttype;
     if(righttype == APE_OBJECT_STRING)
     {
@@ -1829,16 +1830,16 @@ bool vmpriv_append_string(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeO
         * in short, this does 'left = left + tostring(right)'
         * TODO: probably really inefficient.
         */
-        allbuf = strbuf_make(vm->context);
-        tostrbuf = strbuf_make(vm->context);
-        strbuf_appendn(allbuf, object_string_getdata(left), object_string_getlength(left));
+        allbuf = writer_make(vm->context);
+        tostrbuf = writer_make(vm->context);
+        writer_appendn(allbuf, object_string_getdata(left), object_string_getlength(left));
         object_tostring(right, tostrbuf, false);
-        strbuf_appendn(allbuf, strbuf_getdata(tostrbuf), strbuf_getlength(tostrbuf));
-        buflen = strbuf_getlength(allbuf);
+        writer_appendn(allbuf, writer_getdata(tostrbuf), writer_getlength(tostrbuf));
+        buflen = writer_getlength(allbuf);
         objres = object_make_stringcapacity(vm->mem, buflen);
-        ok = object_string_append(objres, strbuf_getdata(allbuf), buflen);
-        strbuf_destroy(tostrbuf);
-        strbuf_destroy(allbuf);
+        ok = object_string_append(objres, writer_getdata(allbuf), buflen);
+        writer_destroy(tostrbuf);
+        writer_destroy(allbuf);
         if(!ok)
         {
             return false;
@@ -1970,7 +1971,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
     {
         timer = util_timer_start();
     }
-    while(vm->current_frame->ip < vm->current_frame->bytecode_size)
+    while(vm->current_frame->ip < (ApeInt_t)vm->current_frame->bytecode_size)
     {
         opcode = frame_read_opcode(vm->current_frame);
         switch(opcode)
@@ -2445,7 +2446,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                         {
                             ix = object_array_getlength(left) + ix;
                         }
-                        if(ix >= 0 && ix < object_array_getlength(left))
+                        if(ix >= 0 && ix < (ApeInt_t)object_array_getlength(left))
                         {
                             objres = object_array_getvalue(left, ix);
                         }
@@ -2790,7 +2791,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     {
                         traceback_append_from_vm(err->traceback, vm);
                     }
-                    while(vm->frames_count > (recover_frame_ix + 1))
+                    while((ApeInt_t)vm->frames_count > (ApeInt_t)(recover_frame_ix + 1))
                     {
                         vmpriv_popframe(vm);
                     }

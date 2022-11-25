@@ -40,7 +40,7 @@ ApeContext_t* context_make_ex(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t free
     {
         goto err;
     }
-    ctx->files = ptrarray_make(&ctx->alloc);
+    ctx->files = ptrarray_make(ctx);
     if(!ctx->files)
     {
         goto err;
@@ -132,15 +132,10 @@ void context_setfileread(ApeContext_t* ctx, ApeIOReadFunc_t file_read, void* con
 
 void context_dumpbytecode(ApeContext_t* ctx, ApeCompilationResult_t* cres)
 {
-    const char* sdata;
-    ApeInt_t slen;
-    ApeStringBuffer_t* strbuf;
-    strbuf = strbuf_make(ctx);
+    ApeWriter_t* strbuf;
+    strbuf = writer_makeio(ctx, stderr, false, true);
     compresult_tostring(cres, strbuf);
-    sdata = strbuf_getdata(strbuf);
-    slen = strbuf_getlength(strbuf);
-    fprintf(stderr, "compiled: <<<\n%.*s\n>>>\n", slen, sdata);
-    strbuf_destroy(strbuf);
+    writer_destroy(strbuf);
 }
 
 ApeObject_t context_executesource(ApeContext_t* ctx, const char* code, bool alsoreset)
@@ -157,7 +152,10 @@ ApeObject_t context_executesource(ApeContext_t* ctx, const char* code, bool also
     {
         goto err;
     }
-    //context_dumpbytecode(ctx, cres);
+    if(ctx->config.dumpbytecode)
+    {
+        context_dumpbytecode(ctx, cres);
+    }
     ok = vm_run(ctx->vm, cres, compiler_get_constants(ctx->compiler));
     if(!ok || errorlist_count(&ctx->errors) > 0)
     {
@@ -188,7 +186,10 @@ ApeObject_t context_executefile(ApeContext_t* ctx, const char* path)
     {
         goto err;
     }
-    //context_dumpbytecode(ctx, cres);
+    if(ctx->config.dumpbytecode)
+    {
+        context_dumpbytecode(ctx, cres);
+    }
     ok = vm_run(ctx->vm, cres, compiler_get_constants(ctx->compiler));
     if(!ok || errorlist_count(&ctx->errors) > 0)
     {
@@ -209,12 +210,12 @@ err:
     return object_make_null();
 }
 
-bool context_haserrors(const ApeContext_t* ctx)
+bool context_haserrors(ApeContext_t* ctx)
 {
     return context_errorcount(ctx) > 0;
 }
 
-ApeSize_t context_errorcount(const ApeContext_t* ctx)
+ApeSize_t context_errorcount(ApeContext_t* ctx)
 {
     return errorlist_count(&ctx->errors);
 }
@@ -224,9 +225,9 @@ void context_clearerrors(ApeContext_t* ctx)
     errorlist_clear(&ctx->errors);
 }
 
-const ApeError_t* context_geterror(const ApeContext_t* ctx, int index)
+ApeError_t* context_geterror(ApeContext_t* ctx, int index)
 {
-    return (const ApeError_t*)errorlist_getat(&ctx->errors, index);
+    return errorlist_getat(&ctx->errors, index);
 }
 
 bool context_setnativefunction(ApeContext_t* ctx, const char* name, ApeWrappedNativeFunc_t fn, void* data)
@@ -245,44 +246,44 @@ bool context_setglobal(ApeContext_t* ctx, const char* name, ApeObject_t obj)
     return global_store_set(ctx->global_store, name, obj);
 }
 
-char* context_errortostring(ApeContext_t* ctx, const ApeError_t* err)
+char* context_errortostring(ApeContext_t* ctx, ApeError_t* err)
 {
     const char* type_str = error_gettypestring(err);
     const char* filename = error_getfile(err);
     const char* line = error_getsource(err);
     int line_num = error_getline(err);
     int col_num = error_getcolumn(err);
-    ApeStringBuffer_t* buf = strbuf_make(ctx);
+    ApeWriter_t* buf = writer_make(ctx);
     if(!buf)
     {
         return NULL;
     }
     if(line)
     {
-        strbuf_append(buf, line);
-        strbuf_append(buf, "\n");
+        writer_append(buf, line);
+        writer_append(buf, "\n");
         if(col_num >= 0)
         {
             for(int j = 0; j < (col_num - 1); j++)
             {
-                strbuf_append(buf, " ");
+                writer_append(buf, " ");
             }
-            strbuf_append(buf, "^\n");
+            writer_append(buf, "^\n");
         }
     }
-    strbuf_appendf(buf, "%s ERROR in \"%s\" on %d:%d: %s\n", type_str, filename, line_num, col_num, error_getmessage(err));
-    const ApeTraceback_t* traceback = error_gettraceback(err);
+    writer_appendf(buf, "%s ERROR in \"%s\" on %d:%d: %s\n", type_str, filename, line_num, col_num, error_getmessage(err));
+    ApeTraceback_t* traceback = error_gettraceback(err);
     if(traceback)
     {
-        strbuf_appendf(buf, "traceback:\n");
-        traceback_tostring((const ApeTraceback_t*)error_gettraceback(err), buf);
+        writer_appendf(buf, "traceback:\n");
+        traceback_tostring(error_gettraceback(err), buf);
     }
-    if(strbuf_failed(buf))
+    if(writer_failed(buf))
     {
-        strbuf_destroy(buf);
+        writer_destroy(buf);
         return NULL;
     }
-    return strbuf_getstringanddestroy(buf);
+    return writer_getstringanddestroy(buf);
 }
 
 void context_deinit(ApeContext_t* ctx)
@@ -334,6 +335,8 @@ void context_resetstate(ApeContext_t* ctx)
 void context_setdefaultconfig(ApeContext_t* ctx)
 {
     memset(&ctx->config, 0, sizeof(ApeConfig_t));
+    ctx->config.dumpbytecode = false;
+    ctx->config.dumpast = false;
     context_setreplmode(ctx, false);
     context_settimeout(ctx, -1);
     context_setfileread(ctx, util_default_readfile, ctx);

@@ -100,8 +100,8 @@ ApeObject_t object_function_getfreeval(ApeObject_t obj, ApeInt_t ix)
         return object_make_null();
     }
     fun = &data->function;
-    APE_ASSERT(ix >= 0 && ix < fun->free_vals_count);
-    if(ix < 0 || ix >= fun->free_vals_count)
+    APE_ASSERT((ix >= 0) && (ix < (ApeInt_t)fun->free_vals_count));
+    if((ix < 0) || (ix >= (ApeInt_t)fun->free_vals_count))
     {
         return object_make_null();
     }
@@ -124,8 +124,8 @@ void object_set_function_free_val(ApeObject_t obj, ApeInt_t ix, ApeObject_t val)
         return;
     }
     fun = &data->function;
-    APE_ASSERT(ix >= 0 && ix < fun->free_vals_count);
-    if(ix < 0 || ix >= fun->free_vals_count)
+    APE_ASSERT((ix >= 0) && (ix < (ApeInt_t)fun->free_vals_count));
+    if((ix < 0) || (ix >= (ApeInt_t)fun->free_vals_count))
     {
         return;
     }

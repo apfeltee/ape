@@ -329,7 +329,7 @@ static ApeObject_t cfn_println(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObjec
     {
         return object_make_null();// todo: runtime error?
     }
-    ApeStringBuffer_t* buf = strbuf_make(vm->context);
+    ApeWriter_t* buf = writer_make(vm->context);
     if(!buf)
     {
         return object_make_null();
@@ -339,14 +339,14 @@ static ApeObject_t cfn_println(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObjec
         ApeObject_t arg = args[i];
         object_tostring(arg, buf, false);
     }
-    strbuf_append(buf, "\n");
-    if(strbuf_failed(buf))
+    writer_append(buf, "\n");
+    if(writer_failed(buf))
     {
-        strbuf_destroy(buf);
+        writer_destroy(buf);
         return object_make_null();
     }
-    config->stdio.write.write(config->stdio.write.context, strbuf_getdata(buf), strbuf_getlength(buf));
-    strbuf_destroy(buf);
+    config->stdio.write.write(config->stdio.write.context, writer_getdata(buf), writer_getlength(buf));
+    writer_destroy(buf);
     return object_make_null();
 }
 
@@ -360,7 +360,7 @@ static ApeObject_t cfn_print(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     {
         return object_make_null();// todo: runtime error?
     }
-    ApeStringBuffer_t* buf = strbuf_make(vm->context);
+    ApeWriter_t* buf = writer_make(vm->context);
     if(!buf)
     {
         return object_make_null();
@@ -370,13 +370,13 @@ static ApeObject_t cfn_print(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
         ApeObject_t arg = args[i];
         object_tostring(arg, buf, false);
     }
-    if(strbuf_failed(buf))
+    if(writer_failed(buf))
     {
-        strbuf_destroy(buf);
+        writer_destroy(buf);
         return object_make_null();
     }
-    config->stdio.write.write(config->stdio.write.context, strbuf_getdata(buf), strbuf_getlength(buf));
-    strbuf_destroy(buf);
+    config->stdio.write.write(config->stdio.write.context, writer_getdata(buf), writer_getlength(buf));
+    writer_destroy(buf);
     return object_make_null();
 }
 
@@ -388,19 +388,19 @@ static ApeObject_t cfn_to_str(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
         return object_make_null();
     }
     ApeObject_t arg = args[0];
-    ApeStringBuffer_t* buf = strbuf_make(vm->context);
+    ApeWriter_t* buf = writer_make(vm->context);
     if(!buf)
     {
         return object_make_null();
     }
     object_tostring(arg, buf, false);
-    if(strbuf_failed(buf))
+    if(writer_failed(buf))
     {
-        strbuf_destroy(buf);
+        writer_destroy(buf);
         return object_make_null();
     }
-    ApeObject_t res = object_make_string(vm->mem, strbuf_getdata(buf));
-    strbuf_destroy(buf);
+    ApeObject_t res = object_make_string(vm->mem, writer_getdata(buf));
+    writer_destroy(buf);
     return res;
 }
 
@@ -529,9 +529,9 @@ static ApeObject_t cfn_substr(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
 
 static ApeObject_t cfn_range(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
-    ApeSize_t i;
+    ApeInt_t i;
     (void)data;
-    for(i = 0; i < argc; i++)
+    for(i = 0; i < (ApeInt_t)argc; i++)
     {
         ApeObjectType_t type = object_value_type(args[i]);
         if(type != APE_OBJECT_NUMBER)
@@ -1372,6 +1372,7 @@ static ApeObject_t cfn_string_split(ApeVM_t* vm, void* data, ApeSize_t argc, Ape
     char* itm;
     ApeObject_t arr;
     ApePtrArray_t* parr;
+    (void)data;
     if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING, APE_OBJECT_STRING))
     {
         return object_make_null();

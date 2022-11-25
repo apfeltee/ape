@@ -74,7 +74,7 @@ ApeCompiler_t* compiler_make(ApeContext_t* ctx, const ApeConfig_t* config, ApeGC
         return NULL;
     }
     comp->context = ctx;
-    ok = compiler_init(comp, &ctx->alloc, config, mem, errors, files, global_store);
+    ok = compiler_init(comp, ctx, config, mem, errors, files, global_store);
     if(!ok)
     {
         allocator_free(&ctx->alloc, comp);
@@ -223,7 +223,7 @@ ApeArray_t* compiler_get_constants(const ApeCompiler_t* comp)
 
 // INTERNAL
 bool compiler_init(ApeCompiler_t* comp,
-                          ApeAllocator_t* alloc,
+                          ApeContext_t* ctx,
                           const ApeConfig_t* config,
                           ApeGCMemory_t* mem,
                           ApeErrorList_t* errors,
@@ -232,28 +232,28 @@ bool compiler_init(ApeCompiler_t* comp,
 {
     bool ok;
     memset(comp, 0, sizeof(ApeCompiler_t));
-    comp->alloc = alloc;
+    comp->alloc = &ctx->alloc;
     comp->config = config;
     comp->mem = mem;
     comp->errors = errors;
     comp->files = files;
     comp->global_store = global_store;
-    comp->file_scopes = ptrarray_make(alloc);
+    comp->file_scopes = ptrarray_make(ctx);
     if(!comp->file_scopes)
     {
         goto err;
     }
-    comp->constants = array_make(alloc, ApeObject_t);
+    comp->constants = array_make(ctx, ApeObject_t);
     if(!comp->constants)
     {
         goto err;
     }
-    comp->src_positions_stack = array_make(alloc, ApePosition_t);
+    comp->src_positions_stack = array_make(ctx, ApePosition_t);
     if(!comp->src_positions_stack)
     {
         goto err;
     }
-    comp->modules = strdict_make(alloc, (ApeDataCallback_t)module_copy, (ApeDataCallback_t)module_destroy);
+    comp->modules = strdict_make(ctx, (ApeDataCallback_t)module_copy, (ApeDataCallback_t)module_destroy);
     if(!comp->modules)
     {
         goto err;
@@ -268,7 +268,7 @@ bool compiler_init(ApeCompiler_t* comp,
     {
         goto err;
     }
-    comp->string_constants_positions = strdict_make(comp->alloc, NULL, NULL);
+    comp->string_constants_positions = strdict_make(ctx, NULL, NULL);
     if(!comp->string_constants_positions)
     {
         goto err;
@@ -328,7 +328,7 @@ bool compiler_init_shallow_copy(ApeCompiler_t* copy, ApeCompiler_t* src)
     ApePtrArray_t* src_loaded_module_names;
     ApePtrArray_t* copy_loaded_module_names;
 
-    ok = compiler_init(copy, src->alloc, src->config, src->mem, src->errors, src->files, src->global_store);
+    ok = compiler_init(copy, src->context, src->config, src->mem, src->errors, src->files, src->global_store);
     if(!ok)
     {
         return false;
@@ -525,12 +525,12 @@ static bool ccpriv_compilecode(ApeCompiler_t* comp, const char* code)
 
     // Left for debugging purposes
     //    if (ok) {
-    //        ApeStringBuffer_t *buf = strbuf_make(NULL);
+    //        ApeWriter_t *buf = writer_make(NULL);
     //        code_tostring(array_data(comp->compilation_scope->bytecode),
     //                       array_data(comp->compilation_scope->src_positions),
     //                       array_count(comp->compilation_scope->bytecode), buf);
-    //        puts(strbuf_getdata(buf));
-    //        strbuf_destroy(buf);
+    //        puts(writer_getdata(buf));
+    //        writer_destroy(buf);
     //    }
 
     return ok;
@@ -568,7 +568,7 @@ static bool ccpriv_importmodule(ApeCompiler_t* comp, const ApeStatement_t* impor
     const char* module_name;
     const char* filepath_non_canonicalised;
     ApeFileScope_t* file_scope;
-    ApeStringBuffer_t* filepath_buf;
+    ApeWriter_t* filepath_buf;
     ApeSymbolTable_t* symbol_table;
     ApeFileScope_t* fs;
     ApeModule_t* module;
@@ -590,7 +590,7 @@ static bool ccpriv_importmodule(ApeCompiler_t* comp, const ApeStatement_t* impor
             goto end;
         }
     }
-    filepath_buf = strbuf_make(comp->context);
+    filepath_buf = writer_make(comp->context);
     if(!filepath_buf)
     {
         result = false;
@@ -598,21 +598,21 @@ static bool ccpriv_importmodule(ApeCompiler_t* comp, const ApeStatement_t* impor
     }
     if(util_is_absolutepath(module_path))
     {
-        strbuf_appendf(filepath_buf, "%s.ape", module_path);
+        writer_appendf(filepath_buf, "%s.ape", module_path);
     }
     else
     {
-        strbuf_appendf(filepath_buf, "%s%s.ape", file_scope->file->dir_path, module_path);
+        writer_appendf(filepath_buf, "%s%s.ape", file_scope->file->dir_path, module_path);
     }
-    if(strbuf_failed(filepath_buf))
+    if(writer_failed(filepath_buf))
     {
-        strbuf_destroy(filepath_buf);
+        writer_destroy(filepath_buf);
         result = false;
         goto end;
     }
-    filepath_non_canonicalised = strbuf_getdata(filepath_buf);
+    filepath_non_canonicalised = writer_getdata(filepath_buf);
     filepath = util_canonicalisepath(comp->context, filepath_non_canonicalised);
-    strbuf_destroy(filepath_buf);
+    writer_destroy(filepath_buf);
     if(!filepath)
     {
         result = false;
@@ -792,7 +792,7 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
         case STATEMENT_IF:
             {
                 if_stmt = &stmt->if_statement;
-                jump_to_end_ips = array_make(comp->alloc, ApeInt_t);
+                jump_to_end_ips = array_make(comp->context, ApeInt_t);
                 if(!jump_to_end_ips)
                 {
                     goto statement_if_error;
@@ -2263,7 +2263,7 @@ static ApeFileScope_t* ccpriv_makefilescope(ApeCompiler_t* comp, ApeCompiledFile
     }
     file_scope->symbol_table = NULL;
     file_scope->file = file;
-    file_scope->loaded_module_names = ptrarray_make(comp->alloc);
+    file_scope->loaded_module_names = ptrarray_make(comp->context);
     if(!file_scope->loaded_module_names)
     {
         goto err;

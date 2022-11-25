@@ -23,28 +23,30 @@ void util_default_free(void* opaqptr, void* objptr)
     allocator_free(&ctx->custom_allocator, objptr);
 }
 
-void* allocator_malloc(ApeAllocator_t* allocator, size_t size)
+void* allocator_malloc(ApeAllocator_t* alloc, size_t size)
 {
+    (void)alloc;
     return malloc(size);
     /*
-    if(!allocator || !allocator->malloc)
+    if(!alloc || !alloc->malloc)
     {
         return malloc(size);
     }
-    return allocator->malloc(allocator->ctx, size);
+    return alloc->malloc(alloc->ctx, size);
     */
 }
 
-void allocator_free(ApeAllocator_t* allocator, void* ptr)
+void allocator_free(ApeAllocator_t* alloc, void* ptr)
 {
+    (void)alloc;
     free(ptr);
     /*
-    if(!allocator || !allocator->free)
+    if(!alloc || !alloc->free)
     {
         free(ptr);
         return;
     }
-    allocator->free(allocator->ctx, ptr);
+    alloc->free(alloc->ctx, ptr);
     */
 }
 
@@ -70,17 +72,17 @@ ApeGCMemory_t* gcmem_make(ApeContext_t* ctx)
     memset(mem, 0, sizeof(ApeGCMemory_t));
     mem->context = ctx;
     mem->alloc = &ctx->alloc;
-    mem->objects = ptrarray_make(&ctx->alloc);
+    mem->objects = ptrarray_make(ctx);
     if(!mem->objects)
     {
         goto error;
     }
-    mem->objects_back = ptrarray_make(&ctx->alloc);
+    mem->objects_back = ptrarray_make(ctx);
     if(!mem->objects_back)
     {
         goto error;
     }
-    mem->objects_not_gced = array_make(&ctx->alloc, ApeObject_t);
+    mem->objects_not_gced = array_make(ctx, ApeObject_t);
     if(!mem->objects_not_gced)
     {
         goto error;

@@ -1,9 +1,9 @@
 
+#include <time.h>
+#include <sys/time.h>
 #include "ape.h"
 
-static const ApePosition_t g_utilpriv_src_pos_invalid = { NULL, -1, -1 };
-
-char* util_stringfmt(ApeAllocator_t* alloc, const char* format, ...)
+char* util_stringfmt(ApeContext_t* ctx, const char* format, ...)
 {
     int to_write;
     int written;
@@ -14,7 +14,7 @@ char* util_stringfmt(ApeAllocator_t* alloc, const char* format, ...)
     to_write = vsnprintf(NULL, 0, format, args);
     va_end(args);
     va_start(args, format);
-    res = (char*)allocator_malloc(alloc, to_write + 1);
+    res = (char*)allocator_malloc(&ctx->alloc, to_write + 1);
     if(!res)
     {
         return NULL;
@@ -239,7 +239,7 @@ ApePtrArray_t * util_split_string(ApeContext_t* ctx, const char* str, const char
     const char* line_start;
     const char* line_end;
     ok = false;
-    res = ptrarray_make(&ctx->alloc);
+    res = ptrarray_make(ctx);
     rest = NULL;
     if(!str)
     {
@@ -293,8 +293,8 @@ char* util_join(ApeContext_t* ctx, ApePtrArray_t * items, const char* with)
 {
     ApeSize_t i;
     char* item;
-    ApeStringBuffer_t* res;
-    res = strbuf_make(ctx);
+    ApeWriter_t* res;
+    res = writer_make(ctx);
     if(!res)
     {
         return NULL;
@@ -302,13 +302,13 @@ char* util_join(ApeContext_t* ctx, ApePtrArray_t * items, const char* with)
     for(i = 0; i < ptrarray_count(items); i++)
     {
         item = (char*)ptrarray_get(items, i);
-        strbuf_append(res, item);
+        writer_append(res, item);
         if(i < (ptrarray_count(items) - 1))
         {
-            strbuf_append(res, with);
+            writer_append(res, with);
         }
     }
-    return strbuf_getstringanddestroy(res);
+    return writer_getstringanddestroy(res);
 }
 
 char* util_canonicalisepath(ApeContext_t* ctx, const char* path)

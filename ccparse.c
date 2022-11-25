@@ -1251,7 +1251,7 @@ ApePtrArray_t * parser_parse_all(ApeParser_t* parser, const char* input, ApeComp
     }
     lexer_next_token(&parser->lexer);
     lexer_next_token(&parser->lexer);
-    statements = ptrarray_make(parser->alloc);
+    statements = ptrarray_make(parser->context);
     if(!statements)
     {
         return NULL;
@@ -1437,7 +1437,7 @@ ApeStatement_t* parse_if_statement(ApeParser_t* p)
     ApeIfCase_t* cond;
     cases = NULL;
     alternative = NULL;
-    cases = ptrarray_make(p->alloc);
+    cases = ptrarray_make(p->context);
     if(!cases)
     {
         goto err;
@@ -1922,7 +1922,7 @@ ApeCodeblock_t* parse_code_block(ApeParser_t* p)
     }
     lexer_next_token(&p->lexer);
     p->depth++;
-    statements = ptrarray_make(p->alloc);
+    statements = ptrarray_make(p->context);
     if(!statements)
     {
         goto err;
@@ -2037,12 +2037,12 @@ ApeExpression_t* parse_number_literal(ApeParser_t* p)
     char* end;
     char* literal;
     ApeFloat_t number;
-    long parsed_len;
+    ApeInt_t parsed_len;
     number = 0;
     errno = 0;
     number = strtod(p->lexer.cur_token.literal, &end);
     parsed_len = end - p->lexer.cur_token.literal;
-    if(errno || parsed_len != p->lexer.cur_token.len)
+    if(errno || parsed_len != (ApeInt_t)p->lexer.cur_token.len)
     {
         literal = token_duplicate_literal(p->context, &p->lexer.cur_token);
         errorlist_addformat(p->errors, APE_ERROR_PARSING, p->lexer.cur_token.pos, "parsing number literal '%s' failed", literal);
@@ -2210,8 +2210,8 @@ ApeExpression_t* parse_map_literal(ApeParser_t* p)
     ApeExpression_t* key;
     ApeExpression_t* value;
     ApeExpression_t* res;
-    keys = ptrarray_make(p->alloc);
-    values = ptrarray_make(p->alloc);
+    keys = ptrarray_make(p->context);
+    values = ptrarray_make(p->context);
     if(!keys || !values)
     {
         goto err;
@@ -2380,7 +2380,7 @@ ApeExpression_t* parse_function_literal(ApeParser_t* p)
     {
         lexer_next_token(&p->lexer);
     }
-    params = ptrarray_make(p->alloc);
+    params = ptrarray_make(p->context);
     ok = parse_function_parameters(p, params);
     if(!ok)
     {
@@ -2494,7 +2494,7 @@ ApePtrArray_t* parse_expression_list(ApeParser_t* p, ApeTokenType_t start_token,
         return NULL;
     }
     lexer_next_token(&p->lexer);
-    res = ptrarray_make(p->alloc);
+    res = ptrarray_make(p->context);
     if(lexer_cur_token_is(&p->lexer, end_token))
     {
         lexer_next_token(&p->lexer);
@@ -3070,7 +3070,7 @@ static ApeExpression_t* wrap_expression_in_function_call(ApeContext_t* ctx, ApeE
     function_ident_expr->pos = expr->pos;
     ident = NULL;
 
-    ApePtrArray_t* args = ptrarray_make(&ctx->alloc);
+    ApePtrArray_t* args = ptrarray_make(ctx);
     if(!args)
     {
         expression_destroy(function_ident_expr);
