@@ -89,7 +89,7 @@ THE SOFTWARE.
 #define VM_THIS_STACK_SIZE 512
 #define GCMEM_POOL_SIZE 512
 #define GCMEM_POOLS_NUM 3
-#define GCMEM_SWEEP_INTERVAL (128/8)
+#define GCMEM_SWEEP_INTERVAL (128)
 
 #define NATIVE_FN_MAX_DATA_LEN 24
 #define OBJECT_STRING_BUF_SIZE 24
@@ -117,12 +117,12 @@ THE SOFTWARE.
 #define APE_CALL(vm, function_name, ...) \
     vm_call(vm, (function_name), sizeof((ApeObject_t[]){ __VA_ARGS__ }) / sizeof(ApeObject_t), (ApeObject_t[]){ __VA_ARGS__ })
 
+#define APE_ASSERT(x) assert((x))
+
 #ifdef APE_DEBUG
-    #define APE_ASSERT(x) assert((x))
     #define APE_FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
     #define APE_LOG(...) ape_log(APE_FILENAME, __LINE__, __VA_ARGS__)
 #else
-    #define APE_ASSERT(x) ((void)0)
     #define APE_LOG(...) ((void)0)
 #endif
 
@@ -131,6 +131,25 @@ THE SOFTWARE.
 #else
     #define COLLECTIONS_ASSERT(x)
 #endif
+
+/**/
+#define object_value_allocated_data(obj) ((obj).handle)
+
+/**/
+#define object_value_isallocated(o) (true)
+#define object_value_asnumber(obj) (object_value_allocated_data((obj))->numval)
+#define object_value_asbool(obj) (object_value_allocated_data((obj))->boolval)
+#define object_value_asfunction(obj) (&(object_value_allocated_data((obj))->function))
+#define object_value_asnativefunction(obj) (&(object_value_allocated_data((obj))->native_function))
+#define object_value_asexternal(obj) (&(object_value_allocated_data((obj))->external))
+
+/**/
+#define object_value_istype(o, t) (((o).handle->type) == (t))
+#define object_value_isnumber(o) object_value_istype(o, APE_OBJECT_NUMBER)
+#define object_value_isnumeric(o) (object_value_istype(o, APE_OBJECT_NUMBER) || object_value_istype(o, APE_OBJECT_BOOL))
+#define object_value_isnull(o) object_value_istype(o, APE_OBJECT_NULL)
+#define object_value_iscallable(o) (object_value_istype(o, APE_OBJECT_NATIVE_FUNCTION) || object_value_istype(o, APE_OBJECT_FUNCTION))
+
 
 enum ApeErrorType_t
 {
@@ -553,7 +572,7 @@ struct ApeNativeFunction_t
 {
     char* name;
     ApeNativeFunc_t native_funcptr;
-    //ApeUShort_t data[NATIVE_FN_MAX_DATA_LEN];
+
     void* data;
     ApeSize_t data_len;
 };

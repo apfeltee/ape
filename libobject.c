@@ -15,127 +15,67 @@ ApeObject_t object_make_from_data(ApeContext_t* ctx, ApeObjectType_t type, ApeOb
 
 ApeObject_t object_make_number(ApeContext_t* ctx, ApeFloat_t val)
 {
-    ApeObjectData_t* obj;
-    obj = gcmem_alloc_object_data(ctx->mem, APE_OBJECT_NUMBER);
-    if(!obj)
+    ApeObjectData_t* data;
+    data = gcmem_get_object_data_from_pool(ctx->mem, APE_OBJECT_NUMBER);
+    if(!data)
+    {
+        data = gcmem_alloc_object_data(ctx->mem, APE_OBJECT_NUMBER);
+    }
+
+    if(!data)
     {
         fprintf(stderr, "object_make_number: failed to get data?\n");
         return object_make_null(ctx);
     }
-    obj->numval = val;
-    return object_make_from_data(ctx, APE_OBJECT_NUMBER, obj);
+    data->numval = val;
+    return object_make_from_data(ctx, APE_OBJECT_NUMBER, data);
 }
 
 ApeObject_t object_make_bool(ApeContext_t* ctx, bool val)
 {
-    ApeObjectData_t* obj;
-    obj = gcmem_alloc_object_data(ctx->mem, APE_OBJECT_BOOL);
-    if(!obj)
+    ApeObjectData_t* data;
+    data = gcmem_get_object_data_from_pool(ctx->mem, APE_OBJECT_BOOL);
+    if(!data)
+    {
+        data = gcmem_alloc_object_data(ctx->mem, APE_OBJECT_BOOL);
+    }
+    if(!data)
     {
         fprintf(stderr, "object_make_bool: failed to get data?\n");
         return object_make_null(ctx);
     }
-    obj->boolval = val;
-    return object_make_from_data(ctx, APE_OBJECT_BOOL, obj);
+    data->boolval = val;
+    return object_make_from_data(ctx, APE_OBJECT_BOOL, data);
 }
 
 ApeObject_t object_make_null(ApeContext_t* ctx)
 {
-    ApeObjectData_t* obj;
-    obj = gcmem_alloc_object_data(ctx->mem, APE_OBJECT_NULL);
-    if(!obj)
+    ApeObjectData_t* data;
+    data = gcmem_get_object_data_from_pool(ctx->mem, APE_OBJECT_NULL);
+    if(!data)
+    {
+        data = gcmem_alloc_object_data(ctx->mem, APE_OBJECT_NULL);
+    }
+    if(!data)
     {
         fprintf(stderr, "internal error: failed to alloc object data for null");
         abort();
     }
-    return object_make_from_data(ctx, APE_OBJECT_NULL, obj);
+    return object_make_from_data(ctx, APE_OBJECT_NULL, data);
 }
 
-ApeObject_t object_make_external(ApeContext_t* ctx, void* data)
+ApeObject_t object_make_external(ApeContext_t* ctx, void* ptr)
 {
-    ApeObjectData_t* obj;
-    obj = gcmem_alloc_object_data(ctx->mem, APE_OBJECT_EXTERNAL);
-    if(!obj)
+    ApeObjectData_t* data;
+    data = gcmem_alloc_object_data(ctx->mem, APE_OBJECT_EXTERNAL);
+    if(!data)
     {
         return object_make_null(ctx);
     }
-    obj->external.data = data;
-    obj->external.data_destroy_fn = NULL;
-    obj->external.data_copy_fn = NULL;
-    return object_make_from_data(ctx, APE_OBJECT_EXTERNAL, obj);
-}
-
-
-ApeObjectData_t* object_value_allocated_data(ApeObject_t object)
-{
-    APE_ASSERT(object_value_isallocated(object) || object_value_type(object) == APE_OBJECT_NULL);
-    return object.handle;
-}
-
-bool object_value_asbool(ApeObject_t obj)
-{
-    ApeObjectData_t* data;
-    data = object_value_allocated_data(obj);
-    return data->boolval;
-}
-
-// todo: optimise? always return number?
-ApeFloat_t object_value_asnumber(ApeObject_t obj)
-{
-    ApeObjectData_t* data;
-    data = object_value_allocated_data(obj);
-    return data->numval;
-}
-
-ApeFunction_t* object_value_asfunction(ApeObject_t object)
-{
-    ApeObjectData_t* data;
-    data = object_value_allocated_data(object);
-    return &data->function;
-}
-
-ApeNativeFunction_t* object_value_asnativefunction(ApeObject_t obj)
-{
-    ApeObjectData_t* data;
-    data = object_value_allocated_data(obj);
-    return &data->native_function;
-}
-
-ApeExternalData_t* object_value_asexternal(ApeObject_t object)
-{
-    ApeObjectData_t* data;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_EXTERNAL);
-    data = object_value_allocated_data(object);
-    return &data->external;
-}
-
-bool object_value_isallocated(ApeObject_t object)
-{
-    return true;
-}
-
-bool object_value_isnumber(ApeObject_t o)
-{
-    return o.handle->type == APE_OBJECT_NUMBER;
-}
-
-bool object_value_isnumeric(ApeObject_t obj)
-{
-    ApeObjectType_t type;
-    type = object_value_type(obj);
-    return ((type == APE_OBJECT_NUMBER) || (type == APE_OBJECT_BOOL));
-}
-
-bool object_value_isnull(ApeObject_t obj)
-{
-    return object_value_type(obj) == APE_OBJECT_NULL;
-}
-
-bool object_value_iscallable(ApeObject_t obj)
-{
-    ApeObjectType_t type;
-    type = object_value_type(obj);
-    return type == APE_OBJECT_NATIVE_FUNCTION || type == APE_OBJECT_FUNCTION;
+    data->external.data = ptr;
+    data->external.data_destroy_fn = NULL;
+    data->external.data_copy_fn = NULL;
+    return object_make_from_data(ctx, APE_OBJECT_EXTERNAL, data);
 }
 
 

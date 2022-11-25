@@ -1,5 +1,0 @@
-import "module_dir/module_c"
-
-fn inc() {
-    return module_c::inc()
-}

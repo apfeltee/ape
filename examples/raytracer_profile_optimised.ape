@@ -19,7 +19,7 @@ var op_mod = null
 var op_xor = null
 var op_bang = null
 
-fn vec3(x, y, z) {
+function vec3(x, y, z) {
     return {
         x: x,
         y: y,
@@ -32,11 +32,11 @@ fn vec3(x, y, z) {
     }
 }
 
-op_add = fn(a, b) {
+op_add = function(a, b) {
     return vec3(a.x + b.x, a.y + b.y, a.z + b.z)
 }
 
-op_mul = fn(a, b) {
+op_mul = function(a, b) {
     if (is_number(b)) {
         return vec3(a.x * b, a.y * b, a.z * b)
     } else if (is_number(a)) {
@@ -45,11 +45,11 @@ op_mul = fn(a, b) {
     assert(false)
 }
 
-op_mod = fn(a, b) {
+op_mod = function(a, b) {
     return a.x * b.x + a.y * b.y + a.z * b.z
 }
 
-op_xor = fn(a, b) {
+op_xor = function(a, b) {
     var v = vec3(0, 0, 0)
     v.x = (a.y * b.z) - (b.y * a.z)
     v.y = (a.z * b.x) - (b.z * a.x)
@@ -57,11 +57,11 @@ op_xor = fn(a, b) {
     return v
 }
 
-op_bang = fn(a) {
+op_bang = function(a) {
     return a * (1 / Math.sqrt(a % a))
 }
 
-fn test(o, d, t, n) { 
+function test(o, d, t, n) { 
     t = 1e9
 
     var m = 0
@@ -101,7 +101,7 @@ fn test(o, d, t, n) {
   }
 
 
-fn sample(o, d) {
+function sample(o, d) {
     var t = 0
     var n = vec3(0, 0, 0)
     var test_res = test(o, d, t, n)
@@ -145,7 +145,7 @@ fn sample(o, d) {
     return vec3(p, p, p) + sample(h, r) * 0.5
 }
 
-fn main() {
+function main() {
     print("P3 512 512 255 ")
     
     var g = !vec3(-6, -16, 0)

@@ -1,10 +1,10 @@
 
 INCFLAGS =
 
-WFLAGS = -Wunused -Wunused-macros -Wunused-function -Wunused-label -Wunused-local-typedefs -Wunused-parameter -Wunused-value -Wunused-variable -Wunused-local-typedefs
-EXTRAFLAGS = -fdata-sections -ffunction-sections -Wl,--gc-sections -Wl,--print-gc-sections
+WFLAGS = -Wunused -Wunused-macros -Wunused-local-typedefs
+#EXTRAFLAGS = -fdata-sections -ffunction-sections -Wl,--gc-sections -Wl,--print-gc-sections
 
-CC = clang -Wall -Wextra  $(WFLAGS)
+CC = gcc -Wall -Wextra $(EXTRAFLAGS) $(WFLAGS)
 # ricing intensifies
 #CFLAGS = $(INCFLAGS) -Ofast -march=native -flto -ffast-math -funroll-loops
 CFLAGS = $(INCFLAGS) -O0 -g3 -ggdb3

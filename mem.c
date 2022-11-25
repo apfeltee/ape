@@ -179,13 +179,88 @@ ApeObjectData_t* gcmem_alloc_object_data(ApeGCMemory_t* mem, ApeObjectType_t typ
     return data;
 }
 
+
+bool can_data_be_put_in_pool(ApeGCMemory_t* mem, ApeObjectData_t* data)
+{
+    ApeObject_t obj;
+    ApeObjectDataPool_t* pool;
+    obj = object_make_from_data(mem->context, data->type, data);
+    // this is to ensure that large objects won't be kept in pool indefinitely
+    switch(data->type)
+    {
+        case APE_OBJECT_ARRAY:
+            {
+                if(object_array_getlength(obj) > 1024)
+                {
+                    return false;
+                }
+            }
+            break;
+        case APE_OBJECT_MAP:
+            {
+                if(object_map_getlength(obj) > 1024)
+                {
+                    return false;
+                }
+            }
+            break;
+        case APE_OBJECT_STRING:
+            {
+                if(!data->string.is_allocated || data->string.capacity > 4096)
+                {
+                    return false;
+                }
+            }
+            break;
+        default:
+            {
+            }
+            break;
+    }
+    pool = gcmem_get_pool_for_type(mem, data->type);
+    if(!pool || pool->count >= GCMEM_POOL_SIZE)
+    {
+        return false;
+    }
+    return true;
+}
+
+// INTERNAL
+ApeObjectDataPool_t* gcmem_get_pool_for_type(ApeGCMemory_t* mem, ApeObjectType_t type)
+{
+    switch(type)
+    {
+        case APE_OBJECT_ARRAY:
+            {
+                return &mem->pools[0];
+            }
+            break;
+        case APE_OBJECT_MAP:
+            {
+                return &mem->pools[1];
+            }
+            break;
+        case APE_OBJECT_STRING:
+            {
+                return &mem->pools[2];
+            }
+            break;
+        default:
+            {
+            }
+            break;
+    }
+    return NULL;
+
+}
+
 ApeObjectData_t* gcmem_get_object_data_from_pool(ApeGCMemory_t* mem, ApeObjectType_t type)
 {
     bool ok;
     ApeObjectData_t* data;
     ApeObjectDataPool_t* pool;
-    pool = get_pool_for_type(mem, type);
-    if(!pool || pool->count <= 0)
+    pool = gcmem_get_pool_for_type(mem, type);
+    if(!pool || (pool->count <= 0))
     {
         return NULL;
     }
@@ -350,7 +425,7 @@ void gc_sweep(ApeGCMemory_t* mem)
         {
             if(can_data_be_put_in_pool(mem, data))
             {
-                pool = get_pool_for_type(mem, data->type);
+                pool = gcmem_get_pool_for_type(mem, data->type);
                 pool->datapool[pool->count] = data;
                 pool->count++;
             }
@@ -378,80 +453,6 @@ void gc_sweep(ApeGCMemory_t* mem)
 int gc_should_sweep(ApeGCMemory_t* mem)
 {
     return mem->allocations_since_sweep > GCMEM_SWEEP_INTERVAL;
-}
-
-// INTERNAL
-ApeObjectDataPool_t* get_pool_for_type(ApeGCMemory_t* mem, ApeObjectType_t type)
-{
-    switch(type)
-    {
-        case APE_OBJECT_ARRAY:
-            {
-                return &mem->pools[0];
-            }
-            break;
-        case APE_OBJECT_MAP:
-            {
-                return &mem->pools[1];
-            }
-            break;
-        case APE_OBJECT_STRING:
-            {
-                return &mem->pools[2];
-            }
-            break;
-        default:
-            {
-            }
-            break;
-    }
-    return NULL;
-
-}
-
-bool can_data_be_put_in_pool(ApeGCMemory_t* mem, ApeObjectData_t* data)
-{
-    ApeObject_t obj;
-    ApeObjectDataPool_t* pool;
-    obj = object_make_from_data(mem->context, data->type, data);
-    // this is to ensure that large objects won't be kept in pool indefinitely
-    switch(data->type)
-    {
-        case APE_OBJECT_ARRAY:
-            {
-                if(object_array_getlength(obj) > 1024)
-                {
-                    return false;
-                }
-            }
-            break;
-        case APE_OBJECT_MAP:
-            {
-                if(object_map_getlength(obj) > 1024)
-                {
-                    return false;
-                }
-            }
-            break;
-        case APE_OBJECT_STRING:
-            {
-                if(!data->string.is_allocated || data->string.capacity > 4096)
-                {
-                    return false;
-                }
-            }
-            break;
-        default:
-            {
-            }
-            break;
-    }
-    pool = get_pool_for_type(mem, data->type);
-    if(!pool || pool->count >= GCMEM_POOL_SIZE)
-    {
-        return false;
-    }
-    return true;
 }
 
 

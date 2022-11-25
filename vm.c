@@ -1755,9 +1755,7 @@ bool vm_run(ApeVM_t* vm, ApeCompilationResult_t* comp_res, ApeArray_t * constant
     ApeSize_t old_frames_count;
     ApeObject_t main_fn;
     (void)old_sp;
-#ifdef APE_DEBUG
     old_sp = vm->sp;
-#endif
     old_this_sp = vm->this_sp;
     old_frames_count = vm->frames_count;
     main_fn = object_make_function(vm->context, "main", comp_res, false, 0, 0, 0);
