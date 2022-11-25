@@ -240,12 +240,12 @@ check(this_test.get_inner_name(), "lorem")
 
 function add(x, y) { return x + y }
 var templ_var = 3
-//check(`foo${templ_var}bar`, "foo3bar")
-//check(`lorem${add(`${add(`x`, "y")}`, `z`)}ipsum`, "loremxyzipsum")
-//check(`${4 * 2}`, "8")
-//check(`${{}}`, "{}")
-//check(`foo\${x}bar`, "foo${x}bar")
-//check(`${1} ${2}`, "1 2")
+check(`foo${templ_var}bar`, "foo3bar")
+check(`lorem${add(`${add(`x`, "y")}`, `z`)}ipsum`, "loremxyzipsum")
+check(`${4 * 2}`, "8")
+check(`${{}}`, "{}")
+check(`foo\${x}bar`, "foo${x}bar")
+check(`${1} ${2}`, "1 2")
 
 function test_ternary(x) {
     var res = x == 1 ? 1 : 2;

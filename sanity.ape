@@ -183,6 +183,12 @@ var this_test = {
 _check_result = (this_test.get_inner_name() == "lorem"); println(`checking (${"this_test.get_inner_name()"} ${"=="} ${"lorem"}) = ${_check_result}`); assert(_check_result);
 function add(x, y) { return x + y }
 var templ_var = 3
+_check_result = (`foo${templ_var}bar` == "foo3bar"); println(`checking (${"`foo${templ_var}bar`"} ${"=="} ${"foo3bar"}) = ${_check_result}`); assert(_check_result);
+_check_result = (`lorem${add(`${add(`x`, "y")}`, `z`)}ipsum` == "loremxyzipsum"); println(`checking (${"`lorem${add(`${add(`x`, \"y\")}`, `z`)}ipsum`"} ${"=="} ${"loremxyzipsum"}) = ${_check_result}`); assert(_check_result);
+_check_result = (`${4 * 2}` == "8"); println(`checking (${"`${4 * 2}`"} ${"=="} ${"8"}) = ${_check_result}`); assert(_check_result);
+_check_result = (`${{}}` == "{}"); println(`checking (${"`${{}}`"} ${"=="} ${"{}"}) = ${_check_result}`); assert(_check_result);
+_check_result = (`foo\${x}bar` == "foo${x}bar"); println(`checking (${"`foo\${x}bar`"} ${"=="} ${"foo${x}bar"}) = ${_check_result}`); assert(_check_result);
+_check_result = (`${1} ${2}` == "1 2"); println(`checking (${"`${1} ${2}`"} ${"=="} ${"1 2"}) = ${_check_result}`); assert(_check_result);
 function test_ternary(x) {
     var res = x == 1 ? 1 : 2;
     return res;
