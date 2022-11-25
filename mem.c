@@ -225,7 +225,10 @@ void gc_mark_objects(ApeObject_t* objects, ApeSize_t count)
     for(i = 0; i < count; i++)
     {
         obj = objects[i];
-        gc_mark_object(obj);
+        if(obj.handle)
+        {
+            gc_mark_object(obj);
+        }
     }
 }
 

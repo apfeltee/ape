@@ -5,6 +5,7 @@ const trailing_comma_array = [
     3,
 ]
 
+println("len(trailing_comma_array)=", len(trailing_comma_array) == 3);
 assert(len(trailing_comma_array) == 3)
 
 const trailing_comma_dict = {

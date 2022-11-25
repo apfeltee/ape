@@ -1599,22 +1599,22 @@ ApeObject_t vmpriv_callnativefunction(ApeVM_t* vm, ApeObject_t callee, ApePositi
     return objres;
 }
 
-bool vmpriv_checkassign(ApeVM_t* vm, ApeObject_t old_value, ApeObject_t new_value)
+bool vmpriv_checkassign(ApeVM_t* vm, ApeObject_t oldval, ApeObject_t newval)
 {
-    ApeObjectType_t old_value_type;
-    ApeObjectType_t new_value_type;
+    ApeObjectType_t oldtype;
+    ApeObjectType_t newtype;
     (void)vm;
-    old_value_type = object_value_type(old_value);
-    new_value_type = object_value_type(new_value);
-    if(old_value_type == APE_OBJECT_NULL || new_value_type == APE_OBJECT_NULL)
+    oldtype = object_value_type(oldval);
+    newtype = object_value_type(newval);
+    if(oldtype == APE_OBJECT_NULL || newtype == APE_OBJECT_NULL)
     {
         return true;
     }
-    if(old_value_type != new_value_type)
+    if(oldtype != newtype)
     {
         /*
         errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "trying to assign variable of type %s to %s",
-                          object_value_typename(new_value_type), object_value_typename(old_value_type));
+                          object_value_typename(newtype), object_value_typename(oldtype));
         return false;
         */
     }
@@ -1692,6 +1692,7 @@ ApeVM_t* vm_make(ApeContext_t* ctx, const ApeConfig_t* config, ApeGCMemory_t* me
         return NULL;
     }
     memset(vm, 0, sizeof(ApeVM_t));
+    vm->context = ctx;
     vm->alloc = &ctx->alloc;
     vm->config = config;
     vm->mem = mem;
@@ -1705,7 +1706,7 @@ ApeVM_t* vm_make(ApeContext_t* ctx, const ApeConfig_t* config, ApeGCMemory_t* me
     vm->running = false;
     for(i = 0; i < OPCODE_MAX; i++)
     {
-        vm->operator_oveload_keys[i] = object_make_null(vm->context);
+        vm->operator_oveload_keys[i] = object_make_null(ctx);
     }
     SET_OPERATOR_OVERLOAD_KEY(OPCODE_ADD, "__operator_add__");
     SET_OPERATOR_OVERLOAD_KEY(OPCODE_SUB, "__operator_sub__");
@@ -1861,6 +1862,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
     bool ok;
     bool overloadfound;
     bool resval;
+    bool iseq;
     const ApeFunction_t* constfunction;
     const char* indextypename;
     const char* keytypename;
@@ -2145,6 +2147,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     {
                         comparison_res = object_value_compare(left, right, &ok);
                         if(ok || opcode == OPCODE_COMPARE_EQ)
+                        //if(opcode == OPCODE_COMPARE_EQ)
                         {
                             objres = object_make_number(vm->context, comparison_res);
                             vmpriv_pushstack(vm, objres);

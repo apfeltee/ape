@@ -6,55 +6,55 @@ ApeObject_t object_make_from_data(ApeContext_t* ctx, ApeObjectType_t type, ApeOb
 {
     uint64_t type_tag;
     ApeObject_t object;
+    object.type = type;
     data->context = ctx;
-    object.handle = OBJECT_PATTERN;
-    type_tag = object_value_typetag(type) & 0x7;
-    // assumes no pointer exceeds 48 bits
-    object.handle |= (type_tag << 48);
-    object.handle |= (uintptr_t)data;
+    object.handle = data;
+    object.handle->type = type;
     return object;
 }
 
 ApeObject_t object_make_number(ApeContext_t* ctx, ApeFloat_t val)
 {
-    #if 1
-    ApeObject_t o = { .number = val };
-    if((o.handle & OBJECT_PATTERN) == OBJECT_PATTERN)
+    ApeObjectData_t* obj;
+    obj = gcmem_alloc_object_data(ctx->mem, APE_OBJECT_NUMBER);
+    if(!obj)
     {
-        o.handle = 0x7ff8000000000000;
+        fprintf(stderr, "object_make_number: failed to get data?\n");
+        return object_make_null(ctx);
     }
-    return o;
-    #else
-    bool ok;
-    ApeObjectData_t* data;
-    data = gcmem_get_object_data_from_pool(ctx->vm->mem, APE_OBJECT_NUMBER);
-    if(!data)
-    {
-        data = gcmem_alloc_object_data(ctx->vm->mem, APE_OBJECT_NUMBER);
-        if(!data)
-        {
-            return object_make_null(ctx);
-        }
-    }
-    data->numval = val;
-    return object_make_from_data(ctx, APE_OBJECT_NUMBER, data);
-    #endif
+    obj->numval = val;
+    return object_make_from_data(ctx, APE_OBJECT_NUMBER, obj);
 }
 
 ApeObject_t object_make_bool(ApeContext_t* ctx, bool val)
 {
-    return (ApeObject_t){ .handle = OBJECT_BOOL_HEADER | val };
+    ApeObjectData_t* obj;
+    obj = gcmem_alloc_object_data(ctx->mem, APE_OBJECT_BOOL);
+    if(!obj)
+    {
+        fprintf(stderr, "object_make_bool: failed to get data?\n");
+        return object_make_null(ctx);
+    }
+    obj->boolval = val;
+    return object_make_from_data(ctx, APE_OBJECT_BOOL, obj);
 }
 
 ApeObject_t object_make_null(ApeContext_t* ctx)
 {
-    return (ApeObject_t){ .handle = OBJECT_NULL_PATTERN };
+    ApeObjectData_t* obj;
+    obj = gcmem_alloc_object_data(ctx->mem, APE_OBJECT_NULL);
+    if(!obj)
+    {
+        fprintf(stderr, "internal error: failed to alloc object data for null");
+        abort();
+    }
+    return object_make_from_data(ctx, APE_OBJECT_NULL, obj);
 }
 
 ApeObject_t object_make_external(ApeContext_t* ctx, void* data)
 {
     ApeObjectData_t* obj;
-    obj = gcmem_alloc_object_data(ctx->vm->mem, APE_OBJECT_EXTERNAL);
+    obj = gcmem_alloc_object_data(ctx->mem, APE_OBJECT_EXTERNAL);
     if(!obj)
     {
         return object_make_null(ctx);
@@ -69,32 +69,27 @@ ApeObject_t object_make_external(ApeContext_t* ctx, void* data)
 ApeObjectData_t* object_value_allocated_data(ApeObject_t object)
 {
     APE_ASSERT(object_value_isallocated(object) || object_value_type(object) == APE_OBJECT_NULL);
-    return (ApeObjectData_t*)(object.handle & ~OBJECT_HEADER_MASK);
+    return object.handle;
 }
 
 bool object_value_asbool(ApeObject_t obj)
 {
-    if(object_value_isnumber(obj))
-    {
-        return obj.handle;
-    }
-    return obj.handle & (~OBJECT_HEADER_MASK);
+    ApeObjectData_t* data;
+    data = object_value_allocated_data(obj);
+    return data->boolval;
 }
 
+// todo: optimise? always return number?
 ApeFloat_t object_value_asnumber(ApeObject_t obj)
 {
-    if(object_value_isnumber(obj))
-    {// todo: optimise? always return number?
-        return obj.number;
-    }
-    return (ApeFloat_t)(obj.handle & (~OBJECT_HEADER_MASK));
+    ApeObjectData_t* data;
+    data = object_value_allocated_data(obj);
+    return data->numval;
 }
-
 
 ApeFunction_t* object_value_asfunction(ApeObject_t object)
 {
     ApeObjectData_t* data;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_FUNCTION);
     data = object_value_allocated_data(object);
     return &data->function;
 }
@@ -114,22 +109,21 @@ ApeExternalData_t* object_value_asexternal(ApeObject_t object)
     return &data->external;
 }
 
-
 bool object_value_isallocated(ApeObject_t object)
 {
-    return (object.handle & OBJECT_ALLOCATED_HEADER) == OBJECT_ALLOCATED_HEADER;
+    return true;
 }
 
 bool object_value_isnumber(ApeObject_t o)
 {
-    return (o.handle & OBJECT_PATTERN) != OBJECT_PATTERN;
+    return o.handle->type == APE_OBJECT_NUMBER;
 }
 
 bool object_value_isnumeric(ApeObject_t obj)
 {
     ApeObjectType_t type;
     type = object_value_type(obj);
-    return type == APE_OBJECT_NUMBER || type == APE_OBJECT_BOOL;
+    return ((type == APE_OBJECT_NUMBER) || (type == APE_OBJECT_BOOL));
 }
 
 bool object_value_isnull(ApeObject_t obj)
@@ -314,41 +308,7 @@ void object_tostring(ApeObject_t obj, ApeWriter_t* buf, bool quote_str)
 
 ApeObjectType_t object_value_type(ApeObject_t obj)
 {
-    uint64_t tag;
-    if(object_value_isnumber(obj))
-    {
-        return APE_OBJECT_NUMBER;
-    }
-    tag = (obj.handle >> 48) & 0x7;
-    switch(tag)
-    {
-        case 0:
-            {
-                return APE_OBJECT_NONE;
-            }
-            break;
-        case 1:
-            {
-                return APE_OBJECT_BOOL;
-            }
-            break;
-        case 2:
-            {
-                return APE_OBJECT_NULL;
-            }
-            break;
-        case 4:
-            {
-                ApeObjectData_t* data = object_value_allocated_data(obj);
-                return data->type;
-            }
-            break;
-        default:
-            {
-            }
-            break;
-    }
-    return APE_OBJECT_NONE;
+    return obj.handle->type;
 }
 
 const char* object_value_typename(const ApeObjectType_t type)
@@ -385,32 +345,6 @@ const char* object_value_typename(const ApeObjectType_t type)
     return "NONE";
 }
 
-uint64_t object_value_typetag(ApeObjectType_t type)
-{
-    switch(type)
-    {
-        case APE_OBJECT_NONE:
-            {
-                return 0;
-            }
-            break;
-        case APE_OBJECT_BOOL:
-            {
-                return 1;
-            }
-            break;
-        case APE_OBJECT_NULL:
-            {
-                return 2;
-            }
-            break;
-        default:
-            {
-            }
-            break;
-    }
-    return 4;
-}
 
 void object_data_deinit(ApeObjectData_t* data)
 {
@@ -484,7 +418,6 @@ ApeGCMemory_t* object_value_getmem(ApeObject_t obj)
     data = object_value_allocated_data(obj);
     return data->mem;
 }
-
 
 #define CHECK_TYPE(t)                                    \
     do                                                   \
@@ -883,8 +816,20 @@ ApeObject_t object_value_copyflat(ApeContext_t* ctx, ApeObject_t obj)
             }
             break;
         case APE_OBJECT_NUMBER:
+            {
+                copy = object_make_number(ctx, object_value_asnumber(obj));
+            }
+            break;
         case APE_OBJECT_BOOL:
+            {
+                copy = object_make_bool(ctx, object_value_asbool(obj));
+            }
+            break;
         case APE_OBJECT_NULL:
+            {
+                copy = object_make_number(ctx, object_value_asnumber(obj));
+            }
+            break;
         case APE_OBJECT_FUNCTION:
         case APE_OBJECT_NATIVE_FUNCTION:
         case APE_OBJECT_ERROR:
@@ -958,6 +903,28 @@ ApeObject_t object_value_copyflat(ApeContext_t* ctx, ApeObject_t obj)
     return copy;
 }
 
+ApeFloat_t object_value_asnumerica(ApeObject_t obj, ApeObjectType_t t)
+{
+    if(t == APE_OBJECT_NUMBER)
+    {
+        return object_value_asnumber(obj);
+    }
+    else if(t == APE_OBJECT_BOOL)
+    {
+        return object_value_asbool(obj);
+    }
+    else if(t == APE_OBJECT_NULL)
+    {
+        /* fallthrough */
+    }
+    return 0;
+}
+
+ApeFloat_t object_value_asnumeric(ApeObject_t obj)
+{
+    return object_value_asnumerica(obj, object_value_type(obj));
+}
+
 ApeFloat_t object_value_compare(ApeObject_t a, ApeObject_t b, bool* out_ok)
 {
     bool isnumeric;
@@ -986,8 +953,8 @@ ApeFloat_t object_value_compare(ApeObject_t a, ApeObject_t b, bool* out_ok)
     );
     if(isnumeric)
     {
-        leftval = object_value_asnumber(a);
-        rightval = object_value_asnumber(b);
+        leftval = object_value_asnumerica(a, a_type);
+        rightval = object_value_asnumerica(b, b_type);
         return leftval - rightval;
     }
     else if(a_type == b_type && a_type == APE_OBJECT_STRING)
@@ -1037,6 +1004,8 @@ bool object_value_equals(ApeObject_t a, ApeObject_t b)
     res = object_value_compare(a, b, &ok);
     return APE_DBLEQ(res, 0);
 }
+
+
 
 
 bool object_value_setexternaldestroy(ApeObject_t object, ApeDataCallback_t destroy_fn)

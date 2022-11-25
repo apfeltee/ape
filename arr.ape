@@ -1,0 +1,11 @@
+
+const ary = [
+    1,
+    2,
+    3,
+]
+
+println("ary=", ary);
+println("len(ary)=", len(ary));
+println("len(ary)==3=", len(ary) == 3);
+

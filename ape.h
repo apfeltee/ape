@@ -79,11 +79,6 @@ THE SOFTWARE.
 
 #define APE_VERSION_STRING "0.14.0"
 
-#define OBJECT_PATTERN 0xfff8000000000000
-#define OBJECT_HEADER_MASK 0xffff000000000000
-#define OBJECT_ALLOCATED_HEADER 0xfffc000000000000
-#define OBJECT_BOOL_HEADER 0xfff9000000000000
-#define OBJECT_NULL_PATTERN 0xfffa000000000000
 
 #define VALDICT_INVALID_IX UINT_MAX
 #define DICT_INVALID_IX UINT_MAX
@@ -577,7 +572,8 @@ struct ApeObjectData_t
     ApeGCMemory_t* mem;
     union
     {
-        //ApeFloat_t numval;
+        bool boolval;
+        ApeFloat_t numval;
         ApeObjectString_t string;
         ApeObjectError_t error;
         ApeArray_t* array;
@@ -592,15 +588,17 @@ struct ApeObjectData_t
 
 struct ApeObject_t
 {
+    ApeObjectType_t type;
     uint64_t internal_padding;
     //char internal_padding[64 * 8];
-    union
-    {
+    //union
+    //{
         // assumes no pointer exceeds 48 bits
         //uintptr_t handle;
-        uint64_t handle;
-        ApeFloat_t number;
-    };
+        //uint64_t handle;
+        //ApeFloat_t number;
+        ApeObjectData_t* handle;
+    //};
 };
 
 struct ApeObjectDataPool_t
