@@ -704,33 +704,33 @@ bool strdict_setinternal(ApeStrDictionary_t* dict, const char* ckey, char* mkey,
     return true;
 }
 
-ApeObject_t object_make_map(ApeGCMemory_t* mem)
+ApeObject_t object_make_map(ApeContext_t* ctx)
 {
-    return object_make_mapcapacity(mem, 32);
+    return object_make_mapcapacity(ctx, 32);
 }
 
-ApeObject_t object_make_mapcapacity(ApeGCMemory_t* mem, unsigned capacity)
+ApeObject_t object_make_mapcapacity(ApeContext_t* ctx, unsigned capacity)
 {
     ApeObjectData_t* data;
-    data = gcmem_get_object_data_from_pool(mem, APE_OBJECT_MAP);
+    data = gcmem_get_object_data_from_pool(ctx->vm->mem, APE_OBJECT_MAP);
     if(data)
     {
         valdict_clear(data->map);
-        return object_make_from_data(APE_OBJECT_MAP, data);
+        return object_make_from_data(ctx, APE_OBJECT_MAP, data);
     }
-    data = gcmem_alloc_object_data(mem, APE_OBJECT_MAP);
+    data = gcmem_alloc_object_data(ctx->vm->mem, APE_OBJECT_MAP);
     if(!data)
     {
-        return object_make_null();
+        return object_make_null(ctx);
     }
-    data->map = valdict_makecapacity(mem->context, capacity, sizeof(ApeObject_t), sizeof(ApeObject_t));
+    data->map = valdict_makecapacity(ctx, capacity, sizeof(ApeObject_t), sizeof(ApeObject_t));
     if(!data->map)
     {
-        return object_make_null();
+        return object_make_null(ctx);
     }
     valdict_sethashfunction(data->map, (ApeDataHashFunc_t)object_value_hash);
     valdict_setequalsfunction(data->map, (ApeDataEqualsFunc_t)object_value_wrapequals);
-    return object_make_from_data(APE_OBJECT_MAP, data);
+    return object_make_from_data(ctx, APE_OBJECT_MAP, data);
 }
 
 
@@ -751,7 +751,7 @@ ApeObject_t object_map_getkeyat(ApeObject_t object, ApeSize_t ix)
     res= (ApeObject_t*)valdict_getkeyat(data->map, ix);
     if(!res)
     {
-        return object_make_null();
+        return object_make_null(data->context);
     }
     return *res;
 }
@@ -765,7 +765,7 @@ ApeObject_t object_map_getvalueat(ApeObject_t object, ApeSize_t ix)
     res = (ApeObject_t*)valdict_getvalueat(data->map, ix);
     if(!res)
     {
-        return object_make_null();
+        return object_make_null(data->context);
     }
     return *res;
 }
@@ -787,7 +787,7 @@ ApeObject_t object_map_getvalueobject(ApeObject_t object, ApeObject_t key)
     res = (ApeObject_t*)valdict_get(data->map, &key);
     if(!res)
     {
-        return object_make_null();
+        return object_make_null(data->context);
     }
     return *res;
 }
@@ -799,7 +799,7 @@ bool object_map_setnamedvalue(ApeObject_t obj, const char* key, ApeObject_t valu
     {
         return false;
     }
-    ApeObject_t key_object = object_make_string(mem, key);
+    ApeObject_t key_object = object_make_string(mem->context, key);
     if(object_value_isnull(key_object))
     {
         return false;
@@ -814,7 +814,7 @@ bool object_map_setnamedstring(ApeObject_t obj, const char* key, const char* str
     {
         return false;
     }
-    ApeObject_t string_object = object_make_string(mem, string);
+    ApeObject_t string_object = object_make_string(mem->context, string);
     if(object_value_isnull(string_object))
     {
         return false;
@@ -824,13 +824,17 @@ bool object_map_setnamedstring(ApeObject_t obj, const char* key, const char* str
 
 bool object_map_setnamednumber(ApeObject_t obj, const char* key, ApeFloat_t number)
 {
-    ApeObject_t number_object = object_make_number(number);
+    ApeObjectData_t* data;
+    data = object_value_allocated_data(obj);
+    ApeObject_t number_object = object_make_number(data->context, number);
     return object_map_setnamedvalue(obj, key, number_object);
 }
 
 bool object_map_setnamedbool(ApeObject_t obj, const char* key, bool value)
 {
-    ApeObject_t bool_object = object_make_bool(value);
+    ApeObjectData_t* data;
+    data = object_value_allocated_data(obj);
+    ApeObject_t bool_object = object_make_bool(data->context, value);
     return object_map_setnamedvalue(obj, key, bool_object);
 }
 

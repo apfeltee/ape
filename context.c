@@ -55,7 +55,7 @@ ApeContext_t* context_make_ex(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t free
     {
         goto err;
     }
-    ctx->vm = vm_make(&ctx->alloc, &ctx->config, ctx->mem, &ctx->errors, ctx->global_store);
+    ctx->vm = vm_make(ctx, &ctx->config, ctx->mem, &ctx->errors, ctx->global_store);
     if(!ctx->vm)
     {
         goto err;
@@ -172,7 +172,7 @@ ApeObject_t context_executesource(ApeContext_t* ctx, const char* code, bool also
 
 err:
     compilation_result_destroy(cres);
-    return object_make_null();
+    return object_make_null(ctx);
 }
 
 ApeObject_t context_executefile(ApeContext_t* ctx, const char* path)
@@ -207,7 +207,7 @@ ApeObject_t context_executefile(ApeContext_t* ctx, const char* path)
 
 err:
     compilation_result_destroy(cres);
-    return object_make_null();
+    return object_make_null(ctx);
 }
 
 bool context_haserrors(ApeContext_t* ctx)
@@ -306,7 +306,7 @@ static ApeObject_t context_wrapnativefunc(ApeVM_t* vm, void* data, ApeSize_t arg
     objres = wrapper->wrapped_funcptr(wrapper->context, wrapper->data, argc, (ApeObject_t*)args);
     if(context_haserrors(wrapper->context))
     {
-        return object_make_null();
+        return object_make_null(vm->context);
     }
     return objres;
 }
@@ -318,10 +318,10 @@ ApeObject_t context_makenamednative(ApeContext_t* ctx, const char* name, ApeWrap
     wrapper.wrapped_funcptr = fn;
     wrapper.context = ctx;
     wrapper.data = data;
-    ApeObject_t wrapper_native_function = object_make_native_function_memory(ctx->mem, name, context_wrapnativefunc, &wrapper, sizeof(wrapper));
+    ApeObject_t wrapper_native_function = object_make_native_function_memory(ctx, name, context_wrapnativefunc, &wrapper, sizeof(wrapper));
     if(object_value_isnull(wrapper_native_function))
     {
-        return object_make_null();
+        return object_make_null(ctx);
     }
     return wrapper_native_function;
 }

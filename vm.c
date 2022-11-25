@@ -132,7 +132,7 @@ ApeGlobalStore_t* global_store_make(ApeContext_t* ctx, ApeGCMemory_t* mem)
         for(i = 0; i < builtins_count(); i++)
         {
             name = builtins_get_name(i);
-            builtin = object_make_native_function_memory(mem, name, builtins_get_fn(i), NULL, 0);
+            builtin = object_make_native_function_memory(ctx, name, builtins_get_fn(i), NULL, 0);
             if(object_value_isnull(builtin))
             {
                 goto err;
@@ -207,7 +207,7 @@ ApeObject_t global_store_get_object_at(ApeGlobalStore_t* store, int ix, bool* ou
     if(!res)
     {
         *out_ok = false;
-        return object_make_null();
+        return object_make_null(store->context);
     }
     *out_ok = true;
     return *res;
@@ -1342,7 +1342,7 @@ ApeObject_t vm_get_global(ApeVM_t* vm, ApeSize_t ix)
     {
         APE_ASSERT(false);
         errorlist_add(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "global read out of range");
-        return object_make_null();
+        return object_make_null(vm->context);
     }
     return vm->globals[ix];
 }
@@ -1387,7 +1387,7 @@ ApeObject_t vmpriv_popstack(ApeVM_t* vm)
     {
         errorlist_add(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "stack underflow");
         APE_ASSERT(false);
-        return object_make_null();
+        return object_make_null(vm->context);
     }
     if(vm->current_frame)
     {
@@ -1411,7 +1411,7 @@ ApeObject_t vmpriv_getstack(ApeVM_t* vm, int nth_item)
     {
         errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "invalid stack index: %d", nth_item);
         APE_ASSERT(false);
-        return object_make_null();
+        return object_make_null(vm->context);
     }
 #endif
     return vm->stack[ix];
@@ -1438,7 +1438,7 @@ static ApeObject_t vmpriv_popthisstack(ApeVM_t* vm)
     {
         errorlist_add(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "this stack underflow");
         APE_ASSERT(false);
-        return object_make_null();
+        return object_make_null(vm->context);
     }
 #endif
     vm->this_sp--;
@@ -1453,7 +1453,7 @@ static ApeObject_t vmpriv_getthisstack(ApeVM_t* vm, int nth_item)
     {
         errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "invalid this stack index: %d", nth_item);
         APE_ASSERT(false);
-        return object_make_null();
+        return object_make_null(vm->context);
     }
 #endif
     return vm->this_stack[ix];
@@ -1579,7 +1579,7 @@ ApeObject_t vmpriv_callnativefunction(ApeVM_t* vm, ApeObject_t callee, ApePositi
         {
             traceback_append(err->traceback, native_fun->name, g_vmpriv_src_pos_invalid);
         }
-        return object_make_null();
+        return object_make_null(vm->context);
     }
     ApeObjectType_t res_type = object_value_type(objres);
     if(res_type == APE_OBJECT_ERROR)
@@ -1642,7 +1642,7 @@ static bool vmpriv_tryoverloadoperator(ApeVM_t* vm, ApeObject_t left, ApeObject_
         num_operands = 1;
     }
     key = vm->operator_oveload_keys[op];
-    callee = object_make_null();
+    callee = object_make_null(vm->context);
     if(lefttype == APE_OBJECT_MAP)
     {
         callee = object_map_getvalueobject(left, key);
@@ -1673,7 +1673,7 @@ static bool vmpriv_tryoverloadoperator(ApeVM_t* vm, ApeObject_t left, ApeObject_
 #define SET_OPERATOR_OVERLOAD_KEY(op, key)                   \
     do                                                       \
     {                                                        \
-        key_obj = object_make_string(vm->mem, key); \
+        key_obj = object_make_string(ctx, key); \
         if(object_value_isnull(key_obj))                          \
         {                                                    \
             goto err;                                        \
@@ -1681,18 +1681,18 @@ static bool vmpriv_tryoverloadoperator(ApeVM_t* vm, ApeObject_t left, ApeObject_
         vm->operator_oveload_keys[op] = key_obj;             \
     } while(0)
 
-ApeVM_t* vm_make(ApeAllocator_t* alloc, const ApeConfig_t* config, ApeGCMemory_t* mem, ApeErrorList_t* errors, ApeGlobalStore_t* global_store)
+ApeVM_t* vm_make(ApeContext_t* ctx, const ApeConfig_t* config, ApeGCMemory_t* mem, ApeErrorList_t* errors, ApeGlobalStore_t* global_store)
 {
     ApeSize_t i;
     ApeVM_t* vm;
     ApeObject_t key_obj;
-    vm = (ApeVM_t*)allocator_malloc(alloc, sizeof(ApeVM_t));
+    vm = (ApeVM_t*)allocator_malloc(&ctx->alloc, sizeof(ApeVM_t));
     if(!vm)
     {
         return NULL;
     }
     memset(vm, 0, sizeof(ApeVM_t));
-    vm->alloc = alloc;
+    vm->alloc = &ctx->alloc;
     vm->config = config;
     vm->mem = mem;
     vm->errors = errors;
@@ -1701,11 +1701,11 @@ ApeVM_t* vm_make(ApeAllocator_t* alloc, const ApeConfig_t* config, ApeGCMemory_t
     vm->sp = 0;
     vm->this_sp = 0;
     vm->frames_count = 0;
-    vm->last_popped = object_make_null();
+    vm->last_popped = object_make_null(ctx);
     vm->running = false;
     for(i = 0; i < OPCODE_MAX; i++)
     {
-        vm->operator_oveload_keys[i] = object_make_null();
+        vm->operator_oveload_keys[i] = object_make_null(vm->context);
     }
     SET_OPERATOR_OVERLOAD_KEY(OPCODE_ADD, "__operator_add__");
     SET_OPERATOR_OVERLOAD_KEY(OPCODE_SUB, "__operator_sub__");
@@ -1759,7 +1759,7 @@ bool vm_run(ApeVM_t* vm, ApeCompilationResult_t* comp_res, ApeArray_t * constant
 #endif
     old_this_sp = vm->this_sp;
     old_frames_count = vm->frames_count;
-    main_fn = object_make_function(vm->mem, "main", comp_res, false, 0, 0, 0);
+    main_fn = object_make_function(vm->context, "main", comp_res, false, 0, 0, 0);
     if(object_value_isnull(main_fn))
     {
         return false;
@@ -1805,7 +1805,7 @@ bool vmpriv_append_string(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeO
         {
             leftstr = object_string_getdata(left);
             rightstr = object_string_getdata(right);
-            objres = object_make_stringcapacity(vm->mem, leftlen + rightlen);
+            objres = object_make_stringcapacity(vm->context, leftlen + rightlen);
             if(object_value_isnull(objres))
             {
                 return false;
@@ -1836,7 +1836,7 @@ bool vmpriv_append_string(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeO
         object_tostring(right, tostrbuf, false);
         writer_appendn(allbuf, writer_getdata(tostrbuf), writer_getlength(tostrbuf));
         buflen = writer_getlength(allbuf);
-        objres = object_make_stringcapacity(vm->mem, buflen);
+        objres = object_make_stringcapacity(vm->context, buflen);
         ok = object_string_append(objres, writer_getdata(allbuf), buflen);
         writer_destroy(tostrbuf);
         writer_destroy(allbuf);
@@ -1956,7 +1956,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
         return false;
     }
     vm->running = true;
-    vm->last_popped = object_make_null();
+    vm->last_popped = object_make_null(vm->context);
     checktime = false;
     maxexecms = 0;
     if(vm->config)
@@ -2005,11 +2005,11 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     // NULL to 0 coercion
                     if(object_value_isnumeric(left) && object_value_isnull(right))
                     {
-                        right = object_make_number(0);
+                        right = object_make_number(vm->context, 0);
                     }
                     if(object_value_isnumeric(right) && object_value_isnull(left))
                     {
-                        left = object_make_number(0);
+                        left = object_make_number(vm->context, 0);
                     }
                     lefttype = object_value_type(left);
                     righttype = object_value_type(right);
@@ -2079,7 +2079,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                                 }
                                 break;
                         }
-                        vmpriv_pushstack(vm, object_make_number(bigres));
+                        vmpriv_pushstack(vm, object_make_number(vm->context, bigres));
                     }
                     else if(lefttype == APE_OBJECT_STRING /*&& ((righttype == APE_OBJECT_STRING) || (righttype == APE_OBJECT_NUMBER))*/ && opcode == OPCODE_ADD)
                     {
@@ -2122,12 +2122,12 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                 break;
             case OPCODE_TRUE:
                 {
-                    vmpriv_pushstack(vm, object_make_bool(true));
+                    vmpriv_pushstack(vm, object_make_bool(vm->context, true));
                 }
                 break;
             case OPCODE_FALSE:
                 {
-                    vmpriv_pushstack(vm, object_make_bool(false));
+                    vmpriv_pushstack(vm, object_make_bool(vm->context, false));
                 }
                 break;
             case OPCODE_COMPARE:
@@ -2146,7 +2146,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                         comparison_res = object_value_compare(left, right, &ok);
                         if(ok || opcode == OPCODE_COMPARE_EQ)
                         {
-                            objres = object_make_number(comparison_res);
+                            objres = object_make_number(vm->context, comparison_res);
                             vmpriv_pushstack(vm, objres);
                         }
                         else
@@ -2191,7 +2191,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                             }
                             break;
                     }
-                    objres = object_make_bool(resval);
+                    objres = object_make_bool(vm->context, resval);
                     vmpriv_pushstack(vm, objres);
                 }
                 break;
@@ -2203,13 +2203,13 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     if(operand_type == APE_OBJECT_NUMBER)
                     {
                         val = object_value_asnumber(operand);
-                        objres = object_make_number(-val);
+                        objres = object_make_number(vm->context, -val);
                         vmpriv_pushstack(vm, objres);
                     }
                     else
                     {
                         overloadfound = false;
-                        ok = vmpriv_tryoverloadoperator(vm, operand, object_make_null(), OPCODE_MINUS, &overloadfound);
+                        ok = vmpriv_tryoverloadoperator(vm, operand, object_make_null(vm->context), OPCODE_MINUS, &overloadfound);
                         if(!ok)
                         {
                             goto err;
@@ -2231,25 +2231,25 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     type = object_value_type(operand);
                     if(type == APE_OBJECT_BOOL)
                     {
-                        objres = object_make_bool(!object_value_asbool(operand));
+                        objres = object_make_bool(vm->context, !object_value_asbool(operand));
                         vmpriv_pushstack(vm, objres);
                     }
                     else if(type == APE_OBJECT_NULL)
                     {
-                        objres = object_make_bool(true);
+                        objres = object_make_bool(vm->context, true);
                         vmpriv_pushstack(vm, objres);
                     }
                     else
                     {
                         overloadfound = false;
-                        ok = vmpriv_tryoverloadoperator(vm, operand, object_make_null(), OPCODE_BANG, &overloadfound);
+                        ok = vmpriv_tryoverloadoperator(vm, operand, object_make_null(vm->context), OPCODE_BANG, &overloadfound);
                         if(!ok)
                         {
                             goto err;
                         }
                         if(!overloadfound)
                         {
-                            ApeObject_t objres = object_make_bool(false);
+                            ApeObject_t objres = object_make_bool(vm->context, false);
                             vmpriv_pushstack(vm, objres);
                         }
                     }
@@ -2287,7 +2287,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
 
             case OPCODE_NULL:
                 {
-                    vmpriv_pushstack(vm, object_make_null());
+                    vmpriv_pushstack(vm, object_make_null(vm->context));
                 }
                 break;
 
@@ -2322,7 +2322,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
             case OPCODE_ARRAY:
                 {
                     count = frame_read_uint16(vm->current_frame);
-                    array_obj = object_make_arraycapacity(vm->mem, count);
+                    array_obj = object_make_arraycapacity(vm->context, count);
                     if(object_value_isnull(array_obj))
                     {
                         goto err;
@@ -2345,7 +2345,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
             case OPCODE_MAP_START:
                 {
                     count = frame_read_uint16(vm->current_frame);
-                    map_obj = object_make_mapcapacity(vm->mem, count);
+                    map_obj = object_make_mapcapacity(vm->context, count);
                     if(object_value_isnull(map_obj))
                     {
                         goto err;
@@ -2432,7 +2432,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                             "type %s is not indexable (in OPCODE_GET_INDEX)", left_type_name);
                         goto err;
                     }
-                    objres = object_make_null();
+                    objres = object_make_null(vm->context);
                     if(lefttype == APE_OBJECT_ARRAY)
                     {
                         if(indextype != APE_OBJECT_NUMBER)
@@ -2463,7 +2463,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                         if(ix >= 0 && ix < leftlen)
                         {
                             char res_str[2] = { str[ix], '\0' };
-                            objres = object_make_string(vm->mem, res_str);
+                            objres = object_make_string(vm->context, res_str);
                         }
                     }
                     vmpriv_pushstack(vm, objres);
@@ -2484,7 +2484,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                                       "type %s is not indexable (in OPCODE_GET_VALUE_AT)", left_type_name);
                     goto err;
                 }
-                objres = object_make_null();
+                objres = object_make_null(vm->context);
                 if(indextype != APE_OBJECT_NUMBER)
                 {
                     errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),
@@ -2498,7 +2498,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                 }
                 else if(lefttype == APE_OBJECT_MAP)
                 {
-                    objres = object_get_kv_pair_at(vm->mem, left, ix);
+                    objres = object_get_kv_pair_at(vm->context, left, ix);
                 }
                 else if(lefttype == APE_OBJECT_STRING)
                 {
@@ -2508,7 +2508,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     if(ix >= 0 && ix < leftlen)
                     {
                         char res_str[2] = { str[ix], '\0' };
-                        objres = object_make_string(vm->mem, res_str);
+                        objres = object_make_string(vm->context, res_str);
                     }
                 }
                 vmpriv_pushstack(vm, objres);
@@ -2539,7 +2539,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
             case OPCODE_RETURN:
             {
                 ok = vmpriv_popframe(vm);
-                vmpriv_pushstack(vm, object_make_null());
+                vmpriv_pushstack(vm, object_make_null(vm->context));
                 if(!ok)
                 {
                     vmpriv_popstack(vm);
@@ -2606,7 +2606,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                         goto err;
                     }
                     constfunction = object_value_asfunction(*constant);
-                    function_obj = object_make_function(vm->mem, object_function_getname(*constant), constfunction->comp_result,
+                    function_obj = object_make_function(vm->context, object_function_getname(*constant), constfunction->comp_result,
                                            false, constfunction->num_locals, constfunction->num_args, num_free);
                     if(object_value_isnull(function_obj))
                     {
@@ -2692,7 +2692,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
             case OPCODE_DUP:
                 {
                     objval = vmpriv_getstack(vm, 0);
-                    vmpriv_pushstack(vm, object_value_copyflat(vm->mem, objval));
+                    vmpriv_pushstack(vm, object_value_copyflat(vm->context, objval));
                 }
                 break;
             case OPCODE_LEN:
@@ -2719,7 +2719,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                                           "cannot get length of %s", type_name);
                         goto err;
                     }
-                    vmpriv_pushstack(vm, object_make_number(len));
+                    vmpriv_pushstack(vm, object_make_number(vm->context, len));
                 }
                 break;
             case OPCODE_NUMBER:
@@ -2728,7 +2728,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     val = frame_read_uint64(vm->current_frame);
                     //valdouble = util_uint64_to_double(val);
                     valdouble = val;
-                    objval = object_make_number(valdouble);
+                    objval = object_make_number(vm->context, valdouble);
                     vmpriv_pushstack(vm, objval);
                 }
                 break;
@@ -2795,7 +2795,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     {
                         vmpriv_popframe(vm);
                     }
-                    err_obj = object_make_error(vm->mem, err->message);
+                    err_obj = object_make_error(vm->context, err->message);
                     if(!object_value_isnull(err_obj))
                     {
                         object_value_seterrortraceback(err_obj, err->traceback);

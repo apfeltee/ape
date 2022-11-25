@@ -154,35 +154,35 @@ const char* error_gettypestring(ApeError_t* error)
     return errortype_tostring(error_gettype(error));
 }
 
-ApeObject_t object_make_error(ApeGCMemory_t* mem, const char* error)
+ApeObject_t object_make_error(ApeContext_t* ctx, const char* error)
 {
     char* error_str;
     ApeObject_t res;
-    error_str = util_strdup(mem->context, error);
+    error_str = util_strdup(ctx, error);
     if(!error_str)
     {
-        return object_make_null();
+        return object_make_null(ctx);
     }
-    res = object_make_error_no_copy(mem, error_str);
+    res = object_make_error_no_copy(ctx, error_str);
     if(object_value_isnull(res))
     {
-        allocator_free(mem->alloc, error_str);
-        return object_make_null();
+        allocator_free(&ctx->alloc, error_str);
+        return object_make_null(ctx);
     }
     return res;
 }
 
-ApeObject_t object_make_error_no_copy(ApeGCMemory_t* mem, char* error)
+ApeObject_t object_make_error_no_copy(ApeContext_t* ctx, char* error)
 {
     ApeObjectData_t* data;
-    data = gcmem_alloc_object_data(mem, APE_OBJECT_ERROR);
+    data = gcmem_alloc_object_data(ctx->vm->mem, APE_OBJECT_ERROR);
     if(!data)
     {
-        return object_make_null();
+        return object_make_null(ctx);
     }
     data->error.message = error;
     data->error.traceback = NULL;
-    return object_make_from_data(APE_OBJECT_ERROR, data);
+    return object_make_from_data(ctx, APE_OBJECT_ERROR, data);
 }
 
 void errorlist_initerrors(ApeErrorList_t* errors)

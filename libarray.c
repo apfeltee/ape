@@ -401,31 +401,31 @@ void ptrarray_clearanddestroyitems(ApePtrArray_t* arr, ApeDataCallback_t destroy
     ptrarray_clear(arr);
 }
 
-ApeObject_t object_make_array(ApeGCMemory_t* mem)
+ApeObject_t object_make_array(ApeContext_t* ctx)
 {
-    return object_make_arraycapacity(mem, 8);
+    return object_make_arraycapacity(ctx, 8);
 }
 
-ApeObject_t object_make_arraycapacity(ApeGCMemory_t* mem, unsigned capacity)
+ApeObject_t object_make_arraycapacity(ApeContext_t* ctx, unsigned capacity)
 {
     ApeObjectData_t* data;
-    data = gcmem_get_object_data_from_pool(mem, APE_OBJECT_ARRAY);
+    data = gcmem_get_object_data_from_pool(ctx->vm->mem, APE_OBJECT_ARRAY);
     if(data)
     {
         array_clear(data->array);
-        return object_make_from_data(APE_OBJECT_ARRAY, data);
+        return object_make_from_data(ctx, APE_OBJECT_ARRAY, data);
     }
-    data = gcmem_alloc_object_data(mem, APE_OBJECT_ARRAY);
+    data = gcmem_alloc_object_data(ctx->vm->mem, APE_OBJECT_ARRAY);
     if(!data)
     {
-        return object_make_null();
+        return object_make_null(ctx);
     }
-    data->array = array_makecapacity(mem->context, capacity, sizeof(ApeObject_t));
+    data->array = array_makecapacity(ctx, capacity, sizeof(ApeObject_t));
     if(!data->array)
     {
-        return object_make_null();
+        return object_make_null(ctx);
     }
-    return object_make_from_data(APE_OBJECT_ARRAY, data);
+    return object_make_from_data(ctx, APE_OBJECT_ARRAY, data);
 }
 
 
@@ -437,12 +437,12 @@ ApeObject_t object_array_getvalue(ApeObject_t object, ApeSize_t ix)
     array = object_array_getarray(object);
     if(ix >= array_count(array))
     {
-        return object_make_null();
+        return object_make_null(array->context);
     }
     res = (ApeObject_t*)array_get(array, ix);
     if(!res)
     {
-        return object_make_null();
+        return object_make_null(array->context);
     }
     return *res;
 }
@@ -464,7 +464,7 @@ bool object_array_setat(ApeObject_t object, ApeInt_t ix, ApeObject_t val)
         }
         while(ix >= (ApeInt_t)array_count(array))
         {
-            object_array_pushvalue(object, object_make_null());
+            object_array_pushvalue(object, object_make_null(array->context));
         }
     }
     return array_set(array, ix, &val);
@@ -502,7 +502,7 @@ bool object_array_pushstring(ApeObject_t obj, const char* string)
     {
         return false;
     }
-    new_value = object_make_string(mem, string);
+    new_value = object_make_string(mem->context, string);
     return object_array_pushvalue(obj, new_value);
 }
 

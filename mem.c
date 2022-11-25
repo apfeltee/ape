@@ -410,7 +410,7 @@ bool can_data_be_put_in_pool(ApeGCMemory_t* mem, ApeObjectData_t* data)
 {
     ApeObject_t obj;
     ApeObjectDataPool_t* pool;
-    obj = object_make_from_data(data->type, data);
+    obj = object_make_from_data(mem->context, data->type, data);
     // this is to ensure that large objects won't be kept in pool indefinitely
     switch(data->type)
     {

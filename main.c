@@ -135,7 +135,7 @@ static ApeObject_t exit_repl(ApeContext_t *ctx, void *data, ApeSize_t argc, ApeO
     (void)args;
     exit_repl = (bool*)data;
     *exit_repl = true;
-    return object_make_null();
+    return object_make_null(ctx);
 }
 
 #if !defined(NO_READLINE)
@@ -264,7 +264,7 @@ int main(int argc, char *argv[])
     context_setnativefunction(ctx, "exit", exit_repl, &replexit);
     if((fx.poscnt > 0) || (opts.codeline != NULL))
     {
-        args_array = object_make_array(ctx->mem);
+        args_array = object_make_array(ctx);
         for(i=0; i<fx.poscnt; i++)
         {
             object_array_pushstring(args_array, fx.positional[i]);

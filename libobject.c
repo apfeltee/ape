@@ -2,10 +2,11 @@
 #include <inttypes.h>
 #include "ape.h"
 
-ApeObject_t object_make_from_data(ApeObjectType_t type, ApeObjectData_t* data)
+ApeObject_t object_make_from_data(ApeContext_t* ctx, ApeObjectType_t type, ApeObjectData_t* data)
 {
     uint64_t type_tag;
     ApeObject_t object;
+    data->context = ctx;
     object.handle = OBJECT_PATTERN;
     type_tag = object_value_typetag(type) & 0x7;
     // assumes no pointer exceeds 48 bits
@@ -14,38 +15,54 @@ ApeObject_t object_make_from_data(ApeObjectType_t type, ApeObjectData_t* data)
     return object;
 }
 
-ApeObject_t object_make_number(ApeFloat_t val)
+ApeObject_t object_make_number(ApeContext_t* ctx, ApeFloat_t val)
 {
+    #if 1
     ApeObject_t o = { .number = val };
     if((o.handle & OBJECT_PATTERN) == OBJECT_PATTERN)
     {
         o.handle = 0x7ff8000000000000;
     }
     return o;
+    #else
+    bool ok;
+    ApeObjectData_t* data;
+    data = gcmem_get_object_data_from_pool(ctx->vm->mem, APE_OBJECT_NUMBER);
+    if(!data)
+    {
+        data = gcmem_alloc_object_data(ctx->vm->mem, APE_OBJECT_NUMBER);
+        if(!data)
+        {
+            return object_make_null(ctx);
+        }
+    }
+    data->numval = val;
+    return object_make_from_data(ctx, APE_OBJECT_NUMBER, data);
+    #endif
 }
 
-ApeObject_t object_make_bool(bool val)
+ApeObject_t object_make_bool(ApeContext_t* ctx, bool val)
 {
     return (ApeObject_t){ .handle = OBJECT_BOOL_HEADER | val };
 }
 
-ApeObject_t object_make_null()
+ApeObject_t object_make_null(ApeContext_t* ctx)
 {
     return (ApeObject_t){ .handle = OBJECT_NULL_PATTERN };
 }
 
-ApeObject_t object_make_external(ApeGCMemory_t* mem, void* data)
+ApeObject_t object_make_external(ApeContext_t* ctx, void* data)
 {
     ApeObjectData_t* obj;
-    obj = gcmem_alloc_object_data(mem, APE_OBJECT_EXTERNAL);
+    obj = gcmem_alloc_object_data(ctx->vm->mem, APE_OBJECT_EXTERNAL);
     if(!obj)
     {
-        return object_make_null();
+        return object_make_null(ctx);
     }
     obj->external.data = data;
     obj->external.data_destroy_fn = NULL;
     obj->external.data_copy_fn = NULL;
-    return object_make_from_data(APE_OBJECT_EXTERNAL, obj);
+    return object_make_from_data(ctx, APE_OBJECT_EXTERNAL, obj);
 }
 
 
@@ -420,10 +437,7 @@ void object_data_deinit(ApeObjectData_t* data)
                     allocator_free(data->mem->alloc, data->function.name);
                     compilation_result_destroy(data->function.comp_result);
                 }
-                if(function_freevalsallocated(&data->function))
-                {
-                    allocator_free(data->mem->alloc, data->function.free_vals_allocated);
-                }
+                allocator_free(data->mem->alloc, data->function.free_vals_allocated);
             }
             break;
         case APE_OBJECT_ARRAY:
@@ -559,7 +573,7 @@ bool object_value_setexternalcopy(ApeObject_t object, ApeDataCallback_t copy_fn)
     return true;
 }
 
-ApeObject_t object_get_kv_pair_at(ApeGCMemory_t* mem, ApeObject_t object, int ix)
+ApeObject_t object_get_kv_pair_at(ApeContext_t* ctx, ApeObject_t object, int ix)
 {
     ApeObject_t key;
     ApeObject_t val;
@@ -571,25 +585,25 @@ ApeObject_t object_get_kv_pair_at(ApeGCMemory_t* mem, ApeObject_t object, int ix
     data = object_value_allocated_data(object);
     if(ix >= (ApeInt_t)valdict_count(data->map))
     {
-        return object_make_null();
+        return object_make_null(ctx);
     }
     key = object_map_getkeyat(object, ix);
     val = object_map_getvalueat(object, ix);
-    res = object_make_map(mem);
+    res = object_make_map(ctx);
     if(object_value_isnull(res))
     {
-        return object_make_null();
+        return object_make_null(ctx);
     }
-    key_obj = object_make_string(mem, "key");
+    key_obj = object_make_string(ctx, "key");
     if(object_value_isnull(key_obj))
     {
-        return object_make_null();
+        return object_make_null(ctx);
     }
     object_map_setvalue(res, key_obj, key);
-    val_obj = object_make_string(mem, "value");
+    val_obj = object_make_string(ctx, "value");
     if(object_value_isnull(val_obj))
     {
-        return object_make_null();
+        return object_make_null(ctx);
     }
     object_map_setvalue(res, val_obj, val);
     return res;
@@ -597,7 +611,7 @@ ApeObject_t object_get_kv_pair_at(ApeGCMemory_t* mem, ApeObject_t object, int ix
 
 
 // INTERNAL
-ApeObject_t object_value_internal_copydeep(ApeGCMemory_t* mem, ApeObject_t obj, ApeValDictionary_t * copies)
+ApeObject_t object_value_internal_copydeep(ApeContext_t* ctx, ApeObject_t obj, ApeValDictionary_t * copies)
 {
     ApeSize_t i;
     ApeSize_t len;
@@ -624,7 +638,7 @@ ApeObject_t object_value_internal_copydeep(ApeGCMemory_t* mem, ApeObject_t obj, 
     {
         return *copy_ptr;
     }
-    copy = object_make_null();
+    copy = object_make_null(ctx);
     type = object_value_type(obj);
     switch(type)
     {
@@ -633,7 +647,7 @@ ApeObject_t object_value_internal_copydeep(ApeGCMemory_t* mem, ApeObject_t obj, 
         case APE_OBJECT_NONE:
             {
                 APE_ASSERT(false);
-                copy = object_make_null();
+                copy = object_make_null(ctx);
             }
             break;
         case APE_OBJECT_NUMBER:
@@ -647,7 +661,7 @@ ApeObject_t object_value_internal_copydeep(ApeGCMemory_t* mem, ApeObject_t obj, 
         case APE_OBJECT_STRING:
             {
                 str = object_string_getdata(obj);
-                copy = object_make_string(mem, str);
+                copy = object_make_string(ctx, str);
             }
             break;
 
@@ -657,55 +671,52 @@ ApeObject_t object_value_internal_copydeep(ApeGCMemory_t* mem, ApeObject_t obj, 
                 bytecode_copy = NULL;
                 src_positions_copy = NULL;
                 comp_res_copy = NULL;
-                bytecode_copy = (ApeUShort_t*)allocator_malloc(mem->alloc, sizeof(ApeUShort_t) * function->comp_result->count);
+                bytecode_copy = (ApeUShort_t*)allocator_malloc(&ctx->alloc, sizeof(ApeUShort_t) * function->comp_result->count);
                 if(!bytecode_copy)
                 {
-                    return object_make_null();
+                    return object_make_null(ctx);
                 }
                 memcpy(bytecode_copy, function->comp_result->bytecode, sizeof(ApeUShort_t) * function->comp_result->count);
-                src_positions_copy = (ApePosition_t*)allocator_malloc(mem->alloc, sizeof(ApePosition_t) * function->comp_result->count);
+                src_positions_copy = (ApePosition_t*)allocator_malloc(&ctx->alloc, sizeof(ApePosition_t) * function->comp_result->count);
                 if(!src_positions_copy)
                 {
-                    allocator_free(mem->alloc, bytecode_copy);
-                    return object_make_null();
+                    allocator_free(&ctx->alloc, bytecode_copy);
+                    return object_make_null(ctx);
                 }
                 memcpy(src_positions_copy, function->comp_result->src_positions, sizeof(ApePosition_t) * function->comp_result->count);
                 // todo: add compilation result copy function
-                comp_res_copy = compilation_result_make(mem->context, bytecode_copy, src_positions_copy, function->comp_result->count);
+                comp_res_copy = compilation_result_make(ctx, bytecode_copy, src_positions_copy, function->comp_result->count);
                 if(!comp_res_copy)
                 {
-                    allocator_free(mem->alloc, src_positions_copy);
-                    allocator_free(mem->alloc, bytecode_copy);
-                    return object_make_null();
+                    allocator_free(&ctx->alloc, src_positions_copy);
+                    allocator_free(&ctx->alloc, bytecode_copy);
+                    return object_make_null(ctx);
                 }
-                copy = object_make_function(mem, object_function_getname(obj), comp_res_copy, true, function->num_locals, function->num_args, 0);
+                copy = object_make_function(ctx, object_function_getname(obj), comp_res_copy, true, function->num_locals, function->num_args, 0);
                 if(object_value_isnull(copy))
                 {
                     compilation_result_destroy(comp_res_copy);
-                    return object_make_null();
+                    return object_make_null(ctx);
                 }
                 ok = valdict_set(copies, &obj, &copy);
                 if(!ok)
                 {
-                    return object_make_null();
+                    return object_make_null(ctx);
                 }
                 function_copy = object_value_asfunction(copy);
-                if(function_freevalsallocated(function))
+                function_copy->free_vals_allocated = (ApeObject_t*)allocator_malloc(&ctx->alloc, sizeof(ApeObject_t) * function->free_vals_count);
+                if(!function_copy->free_vals_allocated)
                 {
-                    function_copy->free_vals_allocated = (ApeObject_t*)allocator_malloc(mem->alloc, sizeof(ApeObject_t) * function->free_vals_count);
-                    if(!function_copy->free_vals_allocated)
-                    {
-                        return object_make_null();
-                    }
+                    return object_make_null(ctx);
                 }
                 function_copy->free_vals_count = function->free_vals_count;
                 for(i = 0; i < function->free_vals_count; i++)
                 {
                     free_val = object_function_getfreeval(obj, i);
-                    free_val_copy = object_value_internal_copydeep(mem, free_val, copies);
+                    free_val_copy = object_value_internal_copydeep(ctx, free_val, copies);
                     if(!object_value_isnull(free_val) && object_value_isnull(free_val_copy))
                     {
-                        return object_make_null();
+                        return object_make_null(ctx);
                     }
                     object_set_function_free_val(copy, i, free_val_copy);
                 }
@@ -714,69 +725,69 @@ ApeObject_t object_value_internal_copydeep(ApeGCMemory_t* mem, ApeObject_t obj, 
         case APE_OBJECT_ARRAY:
             {
                 len = object_array_getlength(obj);
-                copy = object_make_arraycapacity(mem, len);
+                copy = object_make_arraycapacity(ctx, len);
                 if(object_value_isnull(copy))
                 {
-                    return object_make_null();
+                    return object_make_null(ctx);
                 }
                 ok = valdict_set(copies, &obj, &copy);
                 if(!ok)
                 {
-                    return object_make_null();
+                    return object_make_null(ctx);
                 }
                 for(i = 0; i < len; i++)
                 {
                     item = object_array_getvalue(obj, i);
-                    item_copy = object_value_internal_copydeep(mem, item, copies);
+                    item_copy = object_value_internal_copydeep(ctx, item, copies);
                     if(!object_value_isnull(item) && object_value_isnull(item_copy))
                     {
-                        return object_make_null();
+                        return object_make_null(ctx);
                     }
                     ok = object_array_pushvalue(copy, item_copy);
                     if(!ok)
                     {
-                        return object_make_null();
+                        return object_make_null(ctx);
                     }
                 }
             }
             break;
         case APE_OBJECT_MAP:
             {
-                copy = object_make_map(mem);
+                copy = object_make_map(ctx);
                 if(object_value_isnull(copy))
                 {
-                    return object_make_null();
+                    return object_make_null(ctx);
                 }
                 ok = valdict_set(copies, &obj, &copy);
                 if(!ok)
                 {
-                    return object_make_null();
+                    return object_make_null(ctx);
                 }
                 for(i = 0; i < object_map_getlength(obj); i++)
                 {
                     key = object_map_getkeyat(obj, i);
                     val = object_map_getvalueat(obj, i);
-                    key_copy = object_value_internal_copydeep(mem, key, copies);
+                    key_copy = object_value_internal_copydeep(ctx, key, copies);
                     if(!object_value_isnull(key) && object_value_isnull(key_copy))
                     {
-                        return object_make_null();
+                        return object_make_null(ctx);
                     }
-                    val_copy = object_value_internal_copydeep(mem, val, copies);
+                    val_copy = object_value_internal_copydeep(ctx, val, copies);
                     if(!object_value_isnull(val) && object_value_isnull(val_copy))
                     {
-                        return object_make_null();
+                        return object_make_null(ctx);
                     }
                     ok = object_map_setvalue(copy, key_copy, val_copy);
                     if(!ok)
                     {
-                        return object_make_null();
+                        return object_make_null(ctx);
                     }
                 }
             }
             break;
         case APE_OBJECT_EXTERNAL:
             {
-                copy = object_value_copyflat(mem, obj);
+                copy = object_value_copyflat(ctx, obj);
             }
             break;
         case APE_OBJECT_ERROR:
@@ -832,21 +843,21 @@ unsigned long object_value_hash(ApeObject_t* obj_ptr)
 }
 
 
-ApeObject_t object_value_copydeep(ApeGCMemory_t* mem, ApeObject_t obj)
+ApeObject_t object_value_copydeep(ApeContext_t* ctx, ApeObject_t obj)
 {
     ApeObject_t res;
     ApeValDictionary_t* copies;
-    copies = valdict_make(mem->context, ApeObject_t, ApeObject_t);
+    copies = valdict_make(ctx, ApeObject_t, ApeObject_t);
     if(!copies)
     {
-        return object_make_null();
+        return object_make_null(ctx);
     }
-    res = object_value_internal_copydeep(mem, obj, copies);
+    res = object_value_internal_copydeep(ctx, obj, copies);
     valdict_destroy(copies);
     return res;
 }
 
-ApeObject_t object_value_copyflat(ApeGCMemory_t* mem, ApeObject_t obj)
+ApeObject_t object_value_copyflat(ApeContext_t* ctx, ApeObject_t obj)
 {
     ApeSize_t i;
     ApeSize_t len;
@@ -859,7 +870,7 @@ ApeObject_t object_value_copyflat(ApeGCMemory_t* mem, ApeObject_t obj)
     ApeObject_t val;
     ApeObjectType_t type;
     ApeExternalData_t* external;
-    copy = object_make_null();
+    copy = object_make_null(ctx);
     type = object_value_type(obj);
     switch(type)
     {
@@ -868,7 +879,7 @@ ApeObject_t object_value_copyflat(ApeGCMemory_t* mem, ApeObject_t obj)
         case APE_OBJECT_NONE:
             {
                 APE_ASSERT(false);
-                copy = object_make_null();
+                copy = object_make_null(ctx);
             }
             break;
         case APE_OBJECT_NUMBER:
@@ -884,16 +895,16 @@ ApeObject_t object_value_copyflat(ApeGCMemory_t* mem, ApeObject_t obj)
         case APE_OBJECT_STRING:
             {
                 str = object_string_getdata(obj);
-                copy = object_make_string(mem, str);
+                copy = object_make_string(ctx, str);
             }
             break;
         case APE_OBJECT_ARRAY:
             {
                 len = object_array_getlength(obj);
-                copy = object_make_arraycapacity(mem, len);
+                copy = object_make_arraycapacity(ctx, len);
                 if(object_value_isnull(copy))
                 {
-                    return object_make_null();
+                    return object_make_null(ctx);
                 }
                 for(i = 0; i < len; i++)
                 {
@@ -901,14 +912,14 @@ ApeObject_t object_value_copyflat(ApeGCMemory_t* mem, ApeObject_t obj)
                     ok = object_array_pushvalue(copy, item);
                     if(!ok)
                     {
-                        return object_make_null();
+                        return object_make_null(ctx);
                     }
                 }
             }
             break;
         case APE_OBJECT_MAP:
             {
-                copy = object_make_map(mem);
+                copy = object_make_map(ctx);
                 for(i = 0; i < object_map_getlength(obj); i++)
                 {
                     key = (ApeObject_t)object_map_getkeyat(obj, i);
@@ -916,17 +927,17 @@ ApeObject_t object_value_copyflat(ApeGCMemory_t* mem, ApeObject_t obj)
                     ok = object_map_setvalue(copy, key, val);
                     if(!ok)
                     {
-                        return object_make_null();
+                        return object_make_null(ctx);
                     }
                 }
             }
             break;
         case APE_OBJECT_EXTERNAL:
             {
-                copy = object_make_external(mem, NULL);
+                copy = object_make_external(ctx, NULL);
                 if(object_value_isnull(copy))
                 {
-                    return object_make_null();
+                    return object_make_null(ctx);
                 }
                 external = object_value_asexternal(obj);
                 data_copy = NULL;

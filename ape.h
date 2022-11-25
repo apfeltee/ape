@@ -88,13 +88,13 @@ THE SOFTWARE.
 #define VALDICT_INVALID_IX UINT_MAX
 #define DICT_INVALID_IX UINT_MAX
 #define DICT_INITIAL_SIZE 32
-#define VM_STACK_SIZE 2048
-#define VM_MAX_GLOBALS 2048
-#define VM_MAX_FRAMES 2048
-#define VM_THIS_STACK_SIZE 2048
-#define GCMEM_POOL_SIZE 2048
+#define VM_STACK_SIZE 1024
+#define VM_MAX_GLOBALS 512
+#define VM_MAX_FRAMES 512
+#define VM_THIS_STACK_SIZE 512
+#define GCMEM_POOL_SIZE 512
 #define GCMEM_POOLS_NUM 3
-#define GCMEM_SWEEP_INTERVAL 128
+#define GCMEM_SWEEP_INTERVAL (128/8)
 
 #define NATIVE_FN_MAX_DATA_LEN 24
 #define OBJECT_STRING_BUF_SIZE 24
@@ -164,7 +164,6 @@ enum ApeObjectType_t
     APE_OBJECT_FREED = 1 << 10,
     APE_OBJECT_ANY = 0xffff,// for checking types with &
 };
-
 
 enum ApeTokenType_t
 {
@@ -512,26 +511,10 @@ typedef void* (*ApeDataCallback_t)(void*);
 typedef ApeExpression_t* (*ApeRightAssocParseFNCallback_t)(ApeParser_t* p);
 typedef ApeExpression_t* (*ApeLeftAssocParseFNCallback_t)(ApeParser_t* p, ApeExpression_t* expr);
 
-struct ApeObject_t
-{
-    uint64_t internal_padding;
-    //char internal_padding[64 * 8];
-    union
-    {
-        // assumes no pointer exceeds 48 bits
-        //uintptr_t handle;
-        uint64_t handle;
-        ApeFloat_t number;
-    };
-};
 
 struct ApeFunction_t
 {
-    union
-    {
-        ApeObject_t* free_vals_allocated;
-        ApeObject_t free_vals_buf[2];
-    };
+    ApeObject_t* free_vals_allocated;
     union
     {
         char* name;
@@ -590,9 +573,11 @@ struct ApeNativeFuncWrapper_t
 
 struct ApeObjectData_t
 {
+    ApeContext_t* context; 
     ApeGCMemory_t* mem;
     union
     {
+        //ApeFloat_t numval;
         ApeObjectString_t string;
         ApeObjectError_t error;
         ApeArray_t* array;
@@ -605,6 +590,24 @@ struct ApeObjectData_t
     ApeObjectType_t type;
 };
 
+struct ApeObject_t
+{
+    uint64_t internal_padding;
+    //char internal_padding[64 * 8];
+    union
+    {
+        // assumes no pointer exceeds 48 bits
+        //uintptr_t handle;
+        uint64_t handle;
+        ApeFloat_t number;
+    };
+};
+
+struct ApeObjectDataPool_t
+{
+    ApeObjectData_t* datapool[GCMEM_POOL_SIZE];
+    ApeSize_t count;
+};
 
 struct ApePosition_t
 {
@@ -970,12 +973,6 @@ struct ApeCompilationScope_t
     ApeArray_t * break_ip_stack;
     ApeArray_t * continue_ip_stack;
     ApeOpByte_t last_opcode;
-};
-
-struct ApeObjectDataPool_t
-{
-    ApeObjectData_t* datapool[GCMEM_POOL_SIZE];
-    ApeSize_t count;
 };
 
 struct ApeGCMemory_t

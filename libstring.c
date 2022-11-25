@@ -243,11 +243,11 @@ bool writer_grow(ApeWriter_t* buf, ApeSize_t new_capacity)
 }
 
 
-ApeObject_t object_make_stringlen(ApeGCMemory_t* mem, const char* string, ApeSize_t len)
+ApeObject_t object_make_stringlen(ApeContext_t* ctx, const char* string, ApeSize_t len)
 {
     bool ok;
     ApeObject_t res;
-    res = object_make_stringcapacity(mem, len);
+    res = object_make_stringcapacity(ctx, len);
     if(object_value_isnull(res))
     {
         return res;
@@ -255,27 +255,27 @@ ApeObject_t object_make_stringlen(ApeGCMemory_t* mem, const char* string, ApeSiz
     ok = object_string_append(res, string, len);
     if(!ok)
     {
-        return object_make_null();
+        return object_make_null(ctx);
     }
     return res;
 }
 
-ApeObject_t object_make_string(ApeGCMemory_t* mem, const char* string)
+ApeObject_t object_make_string(ApeContext_t* ctx, const char* string)
 {
-    return object_make_stringlen(mem, string, strlen(string));
+    return object_make_stringlen(ctx, string, strlen(string));
 }
 
-ApeObject_t object_make_stringcapacity(ApeGCMemory_t* mem, ApeSize_t capacity)
+ApeObject_t object_make_stringcapacity(ApeContext_t* ctx, ApeSize_t capacity)
 {
     bool ok;
     ApeObjectData_t* data;
-    data = gcmem_get_object_data_from_pool(mem, APE_OBJECT_STRING);
+    data = gcmem_get_object_data_from_pool(ctx->mem, APE_OBJECT_STRING);
     if(!data)
     {
-        data = gcmem_alloc_object_data(mem, APE_OBJECT_STRING);
+        data = gcmem_alloc_object_data(ctx->mem, APE_OBJECT_STRING);
         if(!data)
         {
-            return object_make_null();
+            return object_make_null(ctx);
         }
         data->string.capacity = OBJECT_STRING_BUF_SIZE - 1;
         data->string.is_allocated = false;
@@ -287,10 +287,10 @@ ApeObject_t object_make_stringcapacity(ApeGCMemory_t* mem, ApeSize_t capacity)
         ok = object_string_reservecapacity(data, capacity);
         if(!ok)
         {
-            return object_make_null();
+            return object_make_null(ctx);
         }
     }
-    return object_make_from_data(APE_OBJECT_STRING, data);
+    return object_make_from_data(ctx, APE_OBJECT_STRING, data);
 }
 
 const char* object_string_getdata(ApeObject_t object)

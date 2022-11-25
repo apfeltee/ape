@@ -232,6 +232,7 @@ bool compiler_init(ApeCompiler_t* comp,
 {
     bool ok;
     memset(comp, 0, sizeof(ApeCompiler_t));
+    comp->context = ctx;
     comp->alloc = &ctx->alloc;
     comp->config = config;
     comp->mem = mem;
@@ -333,6 +334,7 @@ bool compiler_init_shallow_copy(ApeCompiler_t* copy, ApeCompiler_t* src)
     {
         return false;
     }
+    copy->context = src->context;
     src_st = compiler_get_symbol_table(src);
     APE_ASSERT(ptrarray_count(src->file_scopes) == 1);
     APE_ASSERT(src_st->outer == NULL);
@@ -1531,7 +1533,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
             }
             else
             {
-                ApeObject_t obj = object_make_string(comp->mem, expr->string_literal);
+                ApeObject_t obj = object_make_string(comp->context, expr->string_literal);
                 if(object_value_isnull(obj))
                 {
                     goto error;
@@ -1784,7 +1786,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
             compilation_scope = ccpriv_getcompscope(comp);
             symbol_table = compiler_get_symbol_table(comp);
 
-            ApeObject_t obj = object_make_function(comp->mem, fn->name, comp_res, true, num_locals, ptrarray_count(fn->params), 0);
+            ApeObject_t obj = object_make_function(comp->context, fn->name, comp_res, true, num_locals, ptrarray_count(fn->params), 0);
 
             if(object_value_isnull(obj))
             {
