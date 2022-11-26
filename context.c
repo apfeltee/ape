@@ -130,6 +130,15 @@ void context_setfileread(ApeContext_t* ctx, ApeIOReadFunc_t file_read, void* con
     ctx->config.fileio.read_file.context = context;
 }
 
+
+void context_dumpast(ApeContext_t* ctx, ApePtrArray_t* statements)
+{
+    ApeWriter_t* strbuf;
+    strbuf = writer_makeio(ctx, stderr, false, true);
+    statements_tostring(statements, strbuf);
+    writer_destroy(strbuf);
+}
+
 void context_dumpbytecode(ApeContext_t* ctx, ApeCompilationResult_t* cres)
 {
     ApeWriter_t* strbuf;
@@ -147,7 +156,7 @@ ApeObject_t context_executesource(ApeContext_t* ctx, const char* code, bool also
     {
         context_resetstate(ctx);
     }
-    cres = compiler_compile(ctx->compiler, code);
+    cres = compiler_compilesource(ctx->compiler, code);
     if(!cres || errorlist_count(&ctx->errors) > 0)
     {
         goto err;

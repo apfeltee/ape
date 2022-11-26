@@ -90,7 +90,7 @@ ApeFloat_t util_timer_getelapsed(const ApeTimer_t* timer)
 #if defined(APE_POSIX)
     struct timeval current_time;
     gettimeofday(&current_time, NULL);
-    int time_s = (int)((int64_t)current_time.tv_sec - timer->start_offset);
+    int time_s = (int)((ApeInt_t)current_time.tv_sec - timer->start_offset);
     ApeFloat_t current_time_ms = (time_s * 1000) + (current_time.tv_usec / 1000.0);
     return current_time_ms - timer->start_time_ms;
 #elif defined(APE_WINDOWS)
@@ -104,7 +104,6 @@ ApeFloat_t util_timer_getelapsed(const ApeTimer_t* timer)
 #endif
 */
     return 0;
-
 }
 
 char* util_strndup(ApeContext_t* ctx, const char* string, size_t n)
@@ -149,12 +148,12 @@ unsigned long util_hashstring(const void* ptr, size_t len)
 /* djb2 */
 unsigned long util_hashdouble(ApeFloat_t val)
 {
-    uint32_t* val_ptr;
+    uintptr_t* vptr;
     unsigned long hash;
-    val_ptr = (uint32_t*)&val;
+    vptr = (uintptr_t*)&val;
     hash = 5381;
-    hash = ((hash << 5) + hash) + val_ptr[0];
-    hash = ((hash << 5) + hash) + val_ptr[1];
+    hash = ((hash << 5) + hash) + vptr[0];
+    hash = ((hash << 5) + hash) + vptr[1];
     return hash;
 }
 

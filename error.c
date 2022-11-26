@@ -60,7 +60,7 @@ bool traceback_append(ApeTraceback_t* traceback, const char* function_name, ApeP
 
 bool traceback_append_from_vm(ApeTraceback_t* traceback, ApeVM_t* vm)
 {
-    int64_t i;
+    ApeInt_t i;
     bool ok;
     ApeFrame_t* frame;
     for(i = vm->frames_count - 1; i >= 0; i--)

@@ -96,7 +96,7 @@ const char* opcode_get_name(ApeOpByte_t op)
     return g_definitions[op].name;
 }
 
-static bool code_read_operands(ApeOpcodeDefinition_t* def, ApeUShort_t* instr, ApeUInt_t out_operands[2])
+static bool code_read_operands(ApeOpcodeDefinition_t* def, ApeUShort_t* instr, uint64_t out_operands[2])
 {
     ApeSize_t i;
     int offset = 0;
@@ -112,7 +112,7 @@ static bool code_read_operands(ApeOpcodeDefinition_t* def, ApeUShort_t* instr, A
             }
             case 2:
             {
-                ApeUInt_t operand = 0;
+                uint64_t operand = 0;
                 operand = operand | (instr[offset] << 8);
                 operand = operand | (instr[offset + 1]);
                 out_operands[i] = operand;
@@ -120,7 +120,7 @@ static bool code_read_operands(ApeOpcodeDefinition_t* def, ApeUShort_t* instr, A
             }
             case 4:
             {
-                ApeUInt_t operand = 0;
+                uint64_t operand = 0;
                 operand = operand | (instr[offset + 0] << 24);
                 operand = operand | (instr[offset + 1] << 16);
                 operand = operand | (instr[offset + 2] << 8);
@@ -130,15 +130,15 @@ static bool code_read_operands(ApeOpcodeDefinition_t* def, ApeUShort_t* instr, A
             }
             case 8:
             {
-                ApeUInt_t operand = 0;
-                operand = operand | ((ApeUInt_t)instr[offset + 0] << 56);
-                operand = operand | ((ApeUInt_t)instr[offset + 1] << 48);
-                operand = operand | ((ApeUInt_t)instr[offset + 2] << 40);
-                operand = operand | ((ApeUInt_t)instr[offset + 3] << 32);
-                operand = operand | ((ApeUInt_t)instr[offset + 4] << 24);
-                operand = operand | ((ApeUInt_t)instr[offset + 5] << 16);
-                operand = operand | ((ApeUInt_t)instr[offset + 6] << 8);
-                operand = operand | ((ApeUInt_t)instr[offset + 7]);
+                uint64_t operand = 0;
+                operand = operand | ((uint64_t)instr[offset + 0] << 56);
+                operand = operand | ((uint64_t)instr[offset + 1] << 48);
+                operand = operand | ((uint64_t)instr[offset + 2] << 40);
+                operand = operand | ((uint64_t)instr[offset + 3] << 32);
+                operand = operand | ((uint64_t)instr[offset + 4] << 24);
+                operand = operand | ((uint64_t)instr[offset + 5] << 16);
+                operand = operand | ((uint64_t)instr[offset + 6] << 8);
+                operand = operand | ((uint64_t)instr[offset + 7]);
                 out_operands[i] = operand;
                 break;
             }
@@ -154,17 +154,11 @@ static bool code_read_operands(ApeOpcodeDefinition_t* def, ApeUShort_t* instr, A
     ;
 }
 
-char* statements_tostring(ApeContext_t* ctx, ApePtrArray_t * statements)
+bool statements_tostring(ApePtrArray_t* statements, ApeWriter_t* buf)
 {
     ApeSize_t i;
     ApeSize_t count;
     const ApeStatement_t* stmt;
-    ApeWriter_t* buf;
-    buf = writer_make(ctx);
-    if(!buf)
-    {
-        return NULL;
-    }
     count = ptrarray_count(statements);
     for(i = 0; i < count; i++)
     {
@@ -175,7 +169,7 @@ char* statements_tostring(ApeContext_t* ctx, ApePtrArray_t * statements)
             writer_append(buf, "\n");
         }
     }
-    return writer_getstringanddestroy(buf);
+    return true;
 }
 
 bool statement_tostring(const ApeStatement_t* stmt, ApeWriter_t* buf)
@@ -624,7 +618,7 @@ bool code_tostring(ApeUShort_t* code, ApePosition_t* source_positions, size_t co
         }
         pos++;
 
-        ApeUInt_t operands[2];
+        uint64_t operands[2];
         bool ok = code_read_operands(def, code + pos, operands);
         if(!ok)
         {
@@ -647,6 +641,7 @@ bool code_tostring(ApeUShort_t* code, ApePosition_t* source_positions, size_t co
     }
     return true;
 }
+
 
 const char* tokentype_tostring(ApeTokenType_t type)
 {

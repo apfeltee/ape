@@ -82,20 +82,20 @@ THE SOFTWARE.
 
 #define APE_CONF_INVALID_VALDICT_IX UINT_MAX
 #define APE_CONF_INVALID_STRDICT_IX UINT_MAX
-#define APE_CONF_DICT_INITIAL_SIZE (4)
+#define APE_CONF_DICT_INITIAL_SIZE (16)
 #define APE_CONF_SIZE_VM_STACK (1024)
-#define APE_CONF_SIZE_VM_MAXGLOBALS (512/4)
-#define APE_CONF_SIZE_MAXFRAMES (512/4)
-#define APE_CONF_SIZE_VM_THISSTACK (512/4)
-#define APE_CONF_SIZE_GCMEM_POOLSIZE (512/4)
-#define APE_CONF_SIZE_GCMEM_POOLCOUNT (3)
+#define APE_CONF_SIZE_VM_MAXGLOBALS (512*4)
+#define APE_CONF_SIZE_MAXFRAMES (512*4)
+#define APE_CONF_SIZE_VM_THISSTACK (512*4)
+#define APE_CONF_SIZE_GCMEM_POOLSIZE (512*4)
+#define APE_CONF_SIZE_GCMEM_POOLCOUNT ((3) + 1)
 #define APE_CONF_CONST_GCMEM_SWEEPINTERVAL (128/1)
 
 #define APE_CONF_SIZE_NATFN_MAXDATALEN (16*2)
 #define APE_CONF_SIZE_STRING_BUFSIZE (4)
 
 #define APE_CONF_SIZE_ERRORS_MAXCOUNT (16)
-#define APE_CONF_SIZE_ERROR_MAXMSGLENGTH (255)
+#define APE_CONF_SIZE_ERROR_MAXMSGLENGTH (128)
 
 
 #define valdict_make(ctx, key_type, val_type) valdict_make_(ctx, sizeof(key_type), sizeof(val_type))
@@ -449,9 +449,9 @@ enum ApePrecedence_t
 };
 
 typedef uint8_t ApeOpByte_t;
-typedef double ApeFloat_t;
-typedef int64_t ApeInt_t;
-typedef uint64_t ApeUInt_t;
+typedef float ApeFloat_t;
+typedef int32_t ApeInt_t;
+typedef uint32_t ApeUInt_t;
 typedef int8_t ApeShort_t;
 typedef uint8_t ApeUShort_t;
 typedef size_t ApeSize_t;
@@ -688,7 +688,7 @@ struct ApeConfig_t
 struct ApeTimer_t
 {
 #if defined(APE_POSIX)
-    int64_t start_offset;
+    ApeInt_t start_offset;
 #elif defined(APE_WINDOWS)
     double pc_frequency;
 #endif

@@ -262,6 +262,11 @@ int main(int argc, char *argv[])
         return 1;
     }
     context_setnativefunction(ctx, "exit", exit_repl, &replexit);
+    if(opts.debug)
+    {
+        ctx->config.dumpast = true;
+        ctx->config.dumpbytecode = true;
+    }
     if((fx.poscnt > 0) || (opts.codeline != NULL))
     {
         args_array = object_make_array(ctx);

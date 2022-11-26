@@ -533,7 +533,7 @@ const ApeSymbol_t* symbol_table_define_this(ApeSymbolTable_t* st)
 
 const ApeSymbol_t* symbol_table_resolve(ApeSymbolTable_t* table, const char* name)
 {
-    int64_t i;
+    ApeInt_t i;
     const ApeSymbol_t* symbol;
     ApeBlockScope_t* scope;
     scope = NULL;
@@ -542,7 +542,7 @@ const ApeSymbol_t* symbol_table_resolve(ApeSymbolTable_t* table, const char* nam
     {
         return symbol;
     }
-    for(i = (int64_t)ptrarray_count(table->block_scopes) - 1; i >= 0; i--)
+    for(i = (ApeInt_t)ptrarray_count(table->block_scopes) - 1; i >= 0; i--)
     {
         scope = (ApeBlockScope_t*)ptrarray_get(table->block_scopes, i);
         symbol = (ApeSymbol_t*)strdict_get(scope->store, name);
@@ -737,11 +737,11 @@ static int vmpriv_nextsymbolindex(ApeSymbolTable_t* table)
 
 static int vmpriv_countnumdefs(ApeSymbolTable_t* table)
 {
-    int64_t i;
+    ApeInt_t i;
     int count;
     ApeBlockScope_t* scope;
     count = 0;
-    for(i = (int64_t)ptrarray_count(table->block_scopes) - 1; i >= 0; i--)
+    for(i = (ApeInt_t)ptrarray_count(table->block_scopes) - 1; i >= 0; i--)
     {
         scope = (ApeBlockScope_t*)ptrarray_get(table->block_scopes, i);
         count += scope->num_definitions;
@@ -762,7 +762,7 @@ static int vmpriv_countnumdefs(ApeSymbolTable_t* table)
         }                                        \
     } while(0)
 
-int code_make(ApeOpByte_t op, ApeSize_t operands_count, ApeUInt_t* operands, ApeArray_t* res)
+int code_make(ApeOpByte_t op, ApeSize_t operands_count, uint64_t* operands, ApeArray_t* res)
 {
     ApeSize_t i;
     int width;
@@ -957,8 +957,8 @@ ApeExpression_t* optimise_infix_expression(ApeExpression_t* expr)
     bool right_is_numeric;
     bool left_is_string;
     bool right_is_string;
-    int64_t leftint;
-    int64_t rightint;
+    ApeInt_t leftint;
+    ApeInt_t rightint;
     char* res_str;
     const char* leftstr;
     const char* rightstr;
@@ -992,8 +992,8 @@ ApeExpression_t* optimise_infix_expression(ApeExpression_t* expr)
     {
         leftval = left->type == EXPRESSION_NUMBER_LITERAL ? left->number_literal : left->bool_literal;
         rightval = right->type == EXPRESSION_NUMBER_LITERAL ? right->number_literal : right->bool_literal;
-        leftint = (int64_t)leftval;
-        rightint = (int64_t)rightval;
+        leftint = (ApeInt_t)leftval;
+        rightint = (ApeInt_t)rightval;
         switch(expr->infix.op)
         {
             case OPERATOR_PLUS:
@@ -1267,21 +1267,21 @@ ApeOpcodeValue_t frame_read_opcode(ApeFrame_t* frame)
     return (ApeOpcodeValue_t)frame_read_uint8(frame);
 }
 
-ApeUInt_t frame_read_uint64(ApeFrame_t* frame)
+uint64_t frame_read_uint64(ApeFrame_t* frame)
 {
-    ApeUInt_t res;
+    uint64_t res;
     const ApeUShort_t* data;
     data = frame->bytecode + frame->ip;
     frame->ip += 8;
     res = 0;
-    res |= (ApeUInt_t)data[7];
-    res |= (ApeUInt_t)data[6] << 8;
-    res |= (ApeUInt_t)data[5] << 16;
-    res |= (ApeUInt_t)data[4] << 24;
-    res |= (ApeUInt_t)data[3] << 32;
-    res |= (ApeUInt_t)data[2] << 40;
-    res |= (ApeUInt_t)data[1] << 48;
-    res |= (ApeUInt_t)data[0] << 56;
+    res |= (uint64_t)data[7];
+    res |= (uint64_t)data[6] << 8;
+    res |= (uint64_t)data[5] << 16;
+    res |= (uint64_t)data[4] << 24;
+    res |= (uint64_t)data[3] << 32;
+    res |= (uint64_t)data[2] << 40;
+    res |= (uint64_t)data[1] << 48;
+    res |= (uint64_t)data[0] << 56;
     return res;
 }
 
@@ -1879,16 +1879,16 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
     int leftlen;
     int len;
     int recover_frame_ix;
-    int64_t ui;
-    int64_t leftint;
-    int64_t rightint;
-    uint16_t constant_ix;
-    uint16_t count;
-    uint16_t items_count;
-    uint16_t kvp_count;
-    uint16_t recover_ip;
-    int64_t val;
-    int64_t pos;
+    ApeInt_t ui;
+    ApeInt_t leftint;
+    ApeInt_t rightint;
+    ApeUInt_t constant_ix;
+    ApeUInt_t count;
+    ApeUInt_t items_count;
+    ApeUInt_t kvp_count;
+    ApeUInt_t recover_ip;
+    ApeInt_t val;
+    ApeInt_t pos;
     unsigned time_check_counter;
     unsigned time_check_interval;
     ApeInt_t bigres;
@@ -2017,8 +2017,8 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
                     {
                         rightval = object_value_asnumber(right);
                         leftval = object_value_asnumber(left);
-                        leftint = (int64_t)leftval;
-                        rightint = (int64_t)rightval;
+                        leftint = (ApeInt_t)leftval;
+                        rightint = (ApeInt_t)rightval;
                         bigres = 0;
                         switch(opcode)
                         {

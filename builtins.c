@@ -487,10 +487,10 @@ static ApeObject_t cfn_ord(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t*
 
 static ApeObject_t cfn_substr(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
-    int64_t begin;
-    int64_t end;
-    int64_t len;
-    int64_t nlen;
+    ApeInt_t begin;
+    ApeInt_t end;
+    ApeInt_t len;
+    ApeInt_t nlen;
     const char* str;
     (void)data;
     if(argc < 1)
@@ -1414,8 +1414,7 @@ static ApeObject_t cfn_bitnot(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
     {
         return object_make_null(vm->context);
     }
-
-    int64_t val = object_value_asnumber(args[0]);
+    ApeInt_t val = object_value_asnumber(args[0]);
     return object_make_number(vm->context, ~val);
 }
 
@@ -1426,8 +1425,8 @@ static ApeObject_t cfn_shiftleft(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObj
     {
         return object_make_null(vm->context);
     }
-    int64_t v1 = object_value_asnumber(args[0]);
-    int64_t v2 = object_value_asnumber(args[1]);
+    ApeInt_t v1 = object_value_asnumber(args[0]);
+    ApeInt_t v2 = object_value_asnumber(args[1]);
     return object_make_number(vm->context, (v1 << v2));
 }
 
@@ -1438,8 +1437,8 @@ static ApeObject_t cfn_shiftright(ApeVM_t* vm, void* data, ApeSize_t argc, ApeOb
     {
         return object_make_null(vm->context);
     }
-    int64_t v1 = object_value_asnumber(args[0]);
-    int64_t v2 = object_value_asnumber(args[1]);
+    ApeInt_t v1 = object_value_asnumber(args[0]);
+    ApeInt_t v2 = object_value_asnumber(args[1]);
     return object_make_number(vm->context, (v1 >> v2));
 }
 
