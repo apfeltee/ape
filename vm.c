@@ -1322,7 +1322,7 @@ bool vm_has_errors(ApeVM_t* vm)
 
 bool vm_set_global(ApeVM_t* vm, ApeSize_t ix, ApeObject_t val)
 {
-    if(ix >= VM_MAX_GLOBALS)
+    if(ix >= APE_CONF_SIZE_VM_MAXGLOBALS)
     {
         APE_ASSERT(false);
         errorlist_add(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "global write out of range");
@@ -1338,7 +1338,7 @@ bool vm_set_global(ApeVM_t* vm, ApeSize_t ix, ApeObject_t val)
 
 ApeObject_t vm_get_global(ApeVM_t* vm, ApeSize_t ix)
 {
-    if(ix >= VM_MAX_GLOBALS)
+    if(ix >= APE_CONF_SIZE_VM_MAXGLOBALS)
     {
         APE_ASSERT(false);
         errorlist_add(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "global read out of range");
@@ -1362,7 +1362,7 @@ static void vmpriv_setstackpointer(ApeVM_t* vm, int new_sp)
 void vmpriv_pushstack(ApeVM_t* vm, ApeObject_t obj)
 {
 #ifdef APE_DEBUG
-    if(vm->sp >= VM_STACK_SIZE)
+    if(vm->sp >= APE_CONF_SIZE_VM_STACK)
     {
         APE_ASSERT(false);
         errorlist_add(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "stack overflow");
@@ -1407,7 +1407,7 @@ ApeObject_t vmpriv_getstack(ApeVM_t* vm, int nth_item)
 {
     int ix = vm->sp - 1 - nth_item;
 #ifdef APE_DEBUG
-    if(ix < 0 || ix >= VM_STACK_SIZE)
+    if(ix < 0 || ix >= APE_CONF_SIZE_VM_STACK)
     {
         errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "invalid stack index: %d", nth_item);
         APE_ASSERT(false);
@@ -1420,7 +1420,7 @@ ApeObject_t vmpriv_getstack(ApeVM_t* vm, int nth_item)
 static void vmpriv_pushthisstack(ApeVM_t* vm, ApeObject_t obj)
 {
 #ifdef APE_DEBUG
-    if(vm->this_sp >= VM_THIS_STACK_SIZE)
+    if(vm->this_sp >= APE_CONF_SIZE_VM_THISSTACK)
     {
         APE_ASSERT(false);
         errorlist_add(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "this stack overflow");
@@ -1449,7 +1449,7 @@ static ApeObject_t vmpriv_getthisstack(ApeVM_t* vm, int nth_item)
 {
     int ix = vm->this_sp - 1 - nth_item;
 #ifdef APE_DEBUG
-    if(ix < 0 || ix >= VM_THIS_STACK_SIZE)
+    if(ix < 0 || ix >= APE_CONF_SIZE_VM_THISSTACK)
     {
         errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame), "invalid this stack index: %d", nth_item);
         APE_ASSERT(false);
@@ -1461,7 +1461,7 @@ static ApeObject_t vmpriv_getthisstack(ApeVM_t* vm, int nth_item)
 
 bool vmpriv_pushframe(ApeVM_t* vm, ApeFrame_t frame)
 {
-    if(vm->frames_count >= VM_MAX_FRAMES)
+    if(vm->frames_count >= APE_CONF_SIZE_MAXFRAMES)
     {
         APE_ASSERT(false);
         return false;

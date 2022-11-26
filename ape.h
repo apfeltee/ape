@@ -80,22 +80,22 @@ THE SOFTWARE.
 #define APE_VERSION_STRING "0.14.0"
 
 
-#define VALDICT_INVALID_IX UINT_MAX
-#define DICT_INVALID_IX UINT_MAX
-#define DICT_INITIAL_SIZE 32
-#define VM_STACK_SIZE 1024
-#define VM_MAX_GLOBALS 512
-#define VM_MAX_FRAMES 512
-#define VM_THIS_STACK_SIZE 512
-#define GCMEM_POOL_SIZE 512
-#define GCMEM_POOLS_NUM 3
-#define GCMEM_SWEEP_INTERVAL (128)
+#define APE_CONF_INVALID_VALDICT_IX UINT_MAX
+#define APE_CONF_INVALID_STRDICT_IX UINT_MAX
+#define APE_CONF_DICT_INITIAL_SIZE 32
+#define APE_CONF_SIZE_VM_STACK 1024
+#define APE_CONF_SIZE_VM_MAXGLOBALS (512/4)
+#define APE_CONF_SIZE_MAXFRAMES (512/4)
+#define APE_CONF_SIZE_VM_THISSTACK (512/4)
+#define APE_CONF_SIZE_GCMEM_POOLSIZE (512/4)
+#define APE_CONF_SIZE_GCMEM_POOLCOUNT 3
+#define APE_CONF_CONST_GCMEM_SWEEPINTERVAL (128/1)
 
-#define NATIVE_FN_MAX_DATA_LEN 24
-#define OBJECT_STRING_BUF_SIZE 24
+#define APE_CONF_SIZE_NATFN_MAXDATALEN 24
+#define APE_CONF_SIZE_STRING_BUFSIZE 24
 
-#define ERRORS_MAX_COUNT 16
-#define APE_ERROR_MESSAGE_MAX_LENGTH 255
+#define APE_CONF_SIZE_ERRORS_MAXCOUNT 16
+#define APE_CONF_SIZE_ERROR_MAXMSGLENGTH 255
 
 
 #define valdict_make(ctx, key_type, val_type) valdict_make_(ctx, sizeof(key_type), sizeof(val_type))
@@ -560,7 +560,7 @@ struct ApeObjectString_t
     union
     {
         char* value_allocated;
-        char value_buf[OBJECT_STRING_BUF_SIZE];
+        char value_buf[APE_CONF_SIZE_STRING_BUFSIZE];
     };
     unsigned long hash;
     bool is_allocated;
@@ -622,7 +622,7 @@ struct ApeObject_t
 
 struct ApeObjectDataPool_t
 {
-    ApeObjectData_t* datapool[GCMEM_POOL_SIZE];
+    ApeObjectData_t* datapool[APE_CONF_SIZE_GCMEM_POOLSIZE];
     ApeSize_t count;
 };
 
@@ -686,14 +686,14 @@ struct ApeAllocator_t
 struct ApeError_t
 {
     ApeErrorType_t type;
-    char message[APE_ERROR_MESSAGE_MAX_LENGTH];
+    char message[APE_CONF_SIZE_ERROR_MAXMSGLENGTH];
     ApePosition_t pos;
     ApeTraceback_t* traceback;
 };
 
 struct ApeErrorList_t
 {
-    ApeError_t errors[ERRORS_MAX_COUNT];
+    ApeError_t errors[APE_CONF_SIZE_ERRORS_MAXCOUNT];
     ApeSize_t count;
 };
 
@@ -1001,7 +1001,7 @@ struct ApeGCMemory_t
     ApePtrArray_t * objects_back;
     ApeArray_t * objects_not_gced;
     ApeObjectDataPool_t data_only_pool;
-    ApeObjectDataPool_t pools[GCMEM_POOLS_NUM];
+    ApeObjectDataPool_t pools[APE_CONF_SIZE_GCMEM_POOLCOUNT];
 };
 
 struct ApeTracebackItem_t
@@ -1038,13 +1038,13 @@ struct ApeVM_t
     ApeGCMemory_t* mem;
     ApeErrorList_t* errors;
     ApeGlobalStore_t* global_store;
-    ApeObject_t globals[VM_MAX_GLOBALS];
+    ApeObject_t globals[APE_CONF_SIZE_VM_MAXGLOBALS];
     ApeSize_t globals_count;
-    ApeObject_t stack[VM_STACK_SIZE];
+    ApeObject_t stack[APE_CONF_SIZE_VM_STACK];
     int sp;
-    ApeObject_t this_stack[VM_THIS_STACK_SIZE];
+    ApeObject_t this_stack[APE_CONF_SIZE_VM_THISSTACK];
     int this_sp;
-    ApeFrame_t frames[VM_MAX_FRAMES];
+    ApeFrame_t frames[APE_CONF_SIZE_MAXFRAMES];
     ApeSize_t frames_count;
     ApeObject_t last_popped;
     ApeFrame_t* current_frame;

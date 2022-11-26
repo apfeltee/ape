@@ -41,7 +41,7 @@ object_make_function(ApeContext_t* ctx, const char* name, ApeCompilationResult_t
 ApeObject_t object_make_native_function_memory(ApeContext_t* ctx, const char* name, ApeNativeFunc_t fn, void* data, ApeSize_t data_len)
 {
     ApeObjectData_t* obj;
-    if(data_len > NATIVE_FN_MAX_DATA_LEN)
+    if(data_len > APE_CONF_SIZE_NATFN_MAXDATALEN)
     {
         return object_make_null(ctx);
     }

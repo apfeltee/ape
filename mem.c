@@ -89,7 +89,7 @@ ApeGCMemory_t* gcmem_make(ApeContext_t* ctx)
     }
     mem->allocations_since_sweep = 0;
     mem->data_only_pool.count = 0;
-    for(i = 0; i < GCMEM_POOLS_NUM; i++)
+    for(i = 0; i < APE_CONF_SIZE_GCMEM_POOLCOUNT; i++)
     {
         pool = &mem->pools[i];
         mem->pools[i].count = 0;
@@ -121,7 +121,7 @@ void gcmem_destroy(ApeGCMemory_t* mem)
         allocator_free(mem->alloc, obj);
     }
     ptrarray_destroy(mem->objects);
-    for(i = 0; i < GCMEM_POOLS_NUM; i++)
+    for(i = 0; i < APE_CONF_SIZE_GCMEM_POOLCOUNT; i++)
     {
         pool = &mem->pools[i];
         for(j = 0; j < pool->count; j++)
@@ -218,7 +218,7 @@ bool can_data_be_put_in_pool(ApeGCMemory_t* mem, ApeObjectData_t* data)
             break;
     }
     pool = gcmem_get_pool_for_type(mem, data->type);
-    if(!pool || pool->count >= GCMEM_POOL_SIZE)
+    if(!pool || pool->count >= APE_CONF_SIZE_GCMEM_POOLSIZE)
     {
         return false;
     }
@@ -432,7 +432,7 @@ void gc_sweep(ApeGCMemory_t* mem)
             else
             {
                 object_data_deinit(data);
-                if(mem->data_only_pool.count < GCMEM_POOL_SIZE)
+                if(mem->data_only_pool.count < APE_CONF_SIZE_GCMEM_POOLSIZE)
                 {
                     mem->data_only_pool.datapool[mem->data_only_pool.count] = data;
                     mem->data_only_pool.count++;
@@ -452,7 +452,7 @@ void gc_sweep(ApeGCMemory_t* mem)
 
 int gc_should_sweep(ApeGCMemory_t* mem)
 {
-    return mem->allocations_since_sweep > GCMEM_SWEEP_INTERVAL;
+    return mem->allocations_since_sweep > APE_CONF_CONST_GCMEM_SWEEPINTERVAL;
 }
 
 

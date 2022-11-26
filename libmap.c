@@ -4,7 +4,7 @@
 // Public
 ApeValDictionary_t* valdict_make_(ApeContext_t* ctx, ApeSize_t key_size, ApeSize_t val_size)
 {
-    return valdict_makecapacity(ctx, DICT_INITIAL_SIZE, key_size, val_size);
+    return valdict_makecapacity(ctx, APE_CONF_DICT_INITIAL_SIZE, key_size, val_size);
 }
 
 ApeValDictionary_t* valdict_makecapacity(ApeContext_t* ctx, ApeSize_t min_capacity, ApeSize_t key_size, ApeSize_t val_size)
@@ -147,7 +147,7 @@ void valdict_clear(ApeValDictionary_t* dict)
     dict->count = 0;
     for(i = 0; i < dict->cell_capacity; i++)
     {
-        dict->cells[i] = VALDICT_INVALID_IX;
+        dict->cells[i] = APE_CONF_INVALID_VALDICT_IX;
     }
 }
 
@@ -179,7 +179,7 @@ bool valdict_init(ApeValDictionary_t* dict, ApeSize_t key_size, ApeSize_t val_si
     }
     for(i = 0; i < dict->cell_capacity; i++)
     {
-        dict->cells[i] = VALDICT_INVALID_IX;
+        dict->cells[i] = APE_CONF_INVALID_VALDICT_IX;
     }
     return true;
 error:
@@ -231,11 +231,11 @@ ApeSize_t valdict_getcellindex(const ApeValDictionary_t* dict, const void* key, 
     cell_ix = hash & ofs;
     for(i = 0; i < dict->cell_capacity; i++)
     {
-        cell = VALDICT_INVALID_IX;
+        cell = APE_CONF_INVALID_VALDICT_IX;
         ix = (cell_ix + i) & ofs;
         //fprintf(stderr, "(cell_ix=%d + i=%d) & ofs=%d == %d\n", cell_ix, i, ofs, ix);
         cell = dict->cells[ix];
-        if(cell == VALDICT_INVALID_IX)
+        if(cell == APE_CONF_INVALID_VALDICT_IX)
         {
             return ix;
         }
@@ -252,7 +252,7 @@ ApeSize_t valdict_getcellindex(const ApeValDictionary_t* dict, const void* key, 
             return ix;
         }
     }
-    return VALDICT_INVALID_IX;
+    return APE_CONF_INVALID_VALDICT_IX;
 }
 
 bool valdict_growandrehash(ApeValDictionary_t* dict)
@@ -263,7 +263,7 @@ bool valdict_growandrehash(ApeValDictionary_t* dict)
     char* key;
     void* value;
     ApeValDictionary_t new_dict;
-    new_capacity = dict->cell_capacity == 0 ? DICT_INITIAL_SIZE : dict->cell_capacity * 2;
+    new_capacity = dict->cell_capacity == 0 ? APE_CONF_DICT_INITIAL_SIZE : dict->cell_capacity * 2;
     ok = valdict_init(&new_dict, dict->key_size, dict->val_size, new_capacity);
     if(!ok)
     {
@@ -400,7 +400,7 @@ ApeStrDictionary_t* strdict_make(ApeContext_t* ctx, ApeDataCallback_t copy_fn, A
         return NULL;
     }
     dict->context = ctx;
-    ok = strdict_init(dict, ctx, DICT_INITIAL_SIZE, copy_fn, destroy_fn);
+    ok = strdict_init(dict, ctx, APE_CONF_DICT_INITIAL_SIZE, copy_fn, destroy_fn);
     if(!ok)
     {
         allocator_free(&ctx->alloc, dict);
@@ -555,7 +555,7 @@ bool strdict_init(ApeStrDictionary_t* dict, ApeContext_t* ctx, ApeSize_t initial
     }
     for(i = 0; i < dict->cell_capacity; i++)
     {
-        dict->cells[i] = DICT_INVALID_IX;
+        dict->cells[i] = APE_CONF_INVALID_STRDICT_IX;
     }
     return true;
 error:
@@ -606,7 +606,7 @@ ApeSize_t strdict_getcellindex(const ApeStrDictionary_t* dict, const char* key, 
     {
         ix = (cell_ix + i) & (dict->cell_capacity - 1);
         cell = dict->cells[ix];
-        if(cell == DICT_INVALID_IX)
+        if(cell == APE_CONF_INVALID_STRDICT_IX)
         {
             return ix;
         }
@@ -622,7 +622,7 @@ ApeSize_t strdict_getcellindex(const ApeStrDictionary_t* dict, const char* key, 
             return ix;
         }
     }
-    return DICT_INVALID_IX;
+    return APE_CONF_INVALID_STRDICT_IX;
 }
 
 

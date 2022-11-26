@@ -35,7 +35,7 @@ ApeObject_t object_make_stringcapacity(ApeContext_t* ctx, ApeSize_t capacity)
         {
             return object_make_null(ctx);
         }
-        data->string.capacity = OBJECT_STRING_BUF_SIZE - 1;
+        data->string.capacity = APE_CONF_SIZE_STRING_BUFSIZE - 1;
         data->string.is_allocated = false;
     }
     data->string.length = 0;
@@ -81,14 +81,14 @@ bool object_string_reservecapacity(ApeObjectData_t* data, ApeSize_t capacity)
     {
         return true;
     }
-    if(capacity <= (OBJECT_STRING_BUF_SIZE - 1))
+    if(capacity <= (APE_CONF_SIZE_STRING_BUFSIZE - 1))
     {
         if(string->is_allocated)
         {
             APE_ASSERT(false);// should never happen
             allocator_free(data->mem->alloc, string->value_allocated);// just in case
         }
-        string->capacity = OBJECT_STRING_BUF_SIZE - 1;
+        string->capacity = APE_CONF_SIZE_STRING_BUFSIZE - 1;
         string->is_allocated = false;
         return true;
     }

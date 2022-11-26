@@ -201,7 +201,7 @@ void errorlist_add(ApeErrorList_t* errors, ApeErrorType_t type, ApePosition_t po
     int len;
     int to_copy;
     ApeError_t err;
-    if(errors->count >= ERRORS_MAX_COUNT)
+    if(errors->count >= APE_CONF_SIZE_ERRORS_MAXCOUNT)
     {
         return;
     }
@@ -209,9 +209,9 @@ void errorlist_add(ApeErrorList_t* errors, ApeErrorType_t type, ApePosition_t po
     err.type = type;
     len = (int)strlen(message);
     to_copy = len;
-    if(to_copy >= (APE_ERROR_MESSAGE_MAX_LENGTH - 1))
+    if(to_copy >= (APE_CONF_SIZE_ERROR_MAXMSGLENGTH - 1))
     {
-        to_copy = APE_ERROR_MESSAGE_MAX_LENGTH - 1;
+        to_copy = APE_CONF_SIZE_ERROR_MAXMSGLENGTH - 1;
     }
     memcpy(err.message, message, to_copy);
     err.message[to_copy] = '\0';
@@ -225,7 +225,7 @@ void errorlist_addformat(ApeErrorList_t* errors, ApeErrorType_t type, ApePositio
 {
     int to_write;
     int written;
-    char res[APE_ERROR_MESSAGE_MAX_LENGTH];
+    char res[APE_CONF_SIZE_ERROR_MAXMSGLENGTH];
     va_list args;
     (void)to_write;
     (void)written;
@@ -233,7 +233,7 @@ void errorlist_addformat(ApeErrorList_t* errors, ApeErrorType_t type, ApePositio
     to_write = vsnprintf(NULL, 0, format, args);
     va_end(args);
     va_start(args, format);
-    written = vsnprintf(res, APE_ERROR_MESSAGE_MAX_LENGTH, format, args);
+    written = vsnprintf(res, APE_CONF_SIZE_ERROR_MAXMSGLENGTH, format, args);
     APE_ASSERT(to_write == written);
     va_end(args);
     errorlist_add(errors, type, pos, res);
