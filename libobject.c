@@ -2,17 +2,6 @@
 #include <inttypes.h>
 #include "ape.h"
 
-ApeObject_t object_make_from_data(ApeContext_t* ctx, ApeObjectType_t type, ApeObjectData_t* data)
-{
-    uint64_t type_tag;
-    ApeObject_t object;
-    object.type = type;
-    data->context = ctx;
-    object.handle = data;
-    object.handle->type = type;
-    return object;
-}
-
 ApeObject_t object_make_number(ApeContext_t* ctx, ApeFloat_t val)
 {
     ApeObjectData_t* data;
@@ -246,11 +235,6 @@ void object_tostring(ApeObject_t obj, ApeWriter_t* buf, bool quote_str)
 }
 
 
-ApeObjectType_t object_value_type(ApeObject_t obj)
-{
-    return obj.handle->type;
-}
-
 const char* object_value_typename(const ApeObjectType_t type)
 {
     switch(type)
@@ -349,14 +333,6 @@ void object_data_deinit(ApeObjectData_t* data)
             break;
     }
     data->type = APE_OBJECT_FREED;
-}
-
-
-ApeGCMemory_t* object_value_getmem(ApeObject_t obj)
-{
-    ApeObjectData_t* data;
-    data = object_value_allocated_data(obj);
-    return data->mem;
 }
 
 #define CHECK_TYPE(t)                                    \
@@ -672,7 +648,6 @@ ApeObject_t object_value_internal_copydeep(ApeContext_t* ctx, ApeObject_t obj, A
     return copy;
 }
 
-
 bool object_value_wrapequals(const ApeObject_t* a_ptr, const ApeObject_t* b_ptr)
 {
     ApeObject_t a = *a_ptr;
@@ -807,8 +782,8 @@ ApeObject_t object_value_copyflat(ApeContext_t* ctx, ApeObject_t obj)
                 copy = object_make_map(ctx);
                 for(i = 0; i < object_map_getlength(obj); i++)
                 {
-                    key = (ApeObject_t)object_map_getkeyat(obj, i);
-                    val = (ApeObject_t)object_map_getvalueat(obj, i);
+                    key = object_map_getkeyat(obj, i);
+                    val = object_map_getvalueat(obj, i);
                     ok = object_map_setvalue(copy, key, val);
                     if(!ok)
                     {
@@ -944,9 +919,6 @@ bool object_value_equals(ApeObject_t a, ApeObject_t b)
     res = object_value_compare(a, b, &ok);
     return APE_DBLEQ(res, 0);
 }
-
-
-
 
 bool object_value_setexternaldestroy(ApeObject_t object, ApeDataCallback_t destroy_fn)
 {

@@ -1,6 +1,8 @@
 
 #include <time.h>
-#include <sys/time.h>
+#if defined(__linux__)
+    #include <sys/time.h>
+#endif
 #include "ape.h"
 
 char* util_stringfmt(ApeContext_t* ctx, const char* format, ...)
@@ -26,23 +28,23 @@ char* util_stringfmt(ApeContext_t* ctx, const char* format, ...)
 }
 
 // fixme
-uint64_t util_double_to_uint64(ApeFloat_t val)
+ApeUInt_t util_double_to_uint64(ApeFloat_t val)
 {
     return val;
     union
     {
-        uint64_t fltcast_uint64;
+        ApeUInt_t fltcast_uint64;
         ApeFloat_t fltcast_double;
     } temp = { .fltcast_double = val };
     return temp.fltcast_uint64;
 }
 
-ApeFloat_t util_uint64_to_double(uint64_t val)
+ApeFloat_t util_uint64_to_double(ApeUInt_t val)
 {
     return val;
     union
     {
-        uint64_t fltcast_uint64;
+        ApeUInt_t fltcast_uint64;
         ApeFloat_t fltcast_double;
     } temp = { .fltcast_uint64 = val };
     return temp.fltcast_double;
@@ -62,6 +64,7 @@ ApeTimer_t util_timer_start()
 {
     ApeTimer_t timer;
     memset(&timer, 0, sizeof(ApeTimer_t));
+/*
 #if defined(APE_POSIX)
     // At some point it should be replaced with more accurate per-platform timers
     struct timeval start_time;
@@ -77,11 +80,13 @@ ApeTimer_t util_timer_start()
 #elif defined(APE_EMSCRIPTEN)
     timer.start_time_ms = emscripten_get_now();
 #endif
+*/
     return timer;
 }
 
 ApeFloat_t util_timer_getelapsed(const ApeTimer_t* timer)
 {
+/*
 #if defined(APE_POSIX)
     struct timeval current_time;
     gettimeofday(&current_time, NULL);
@@ -96,9 +101,10 @@ ApeFloat_t util_timer_getelapsed(const ApeTimer_t* timer)
 #elif defined(APE_EMSCRIPTEN)
     ApeFloat_t current_time_ms = emscripten_get_now();
     return current_time_ms - timer->start_time_ms;
-#else
-    return 0;
 #endif
+*/
+    return 0;
+
 }
 
 char* util_strndup(ApeContext_t* ctx, const char* string, size_t n)

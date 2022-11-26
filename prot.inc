@@ -1,15 +1,12 @@
 /* libobject.c */
-ApeObject_t object_make_from_data(ApeContext_t *ctx, ApeObjectType_t type, ApeObjectData_t *data);
 ApeObject_t object_make_number(ApeContext_t *ctx, ApeFloat_t val);
 ApeObject_t object_make_bool(ApeContext_t *ctx, _Bool val);
 ApeObject_t object_make_null(ApeContext_t *ctx);
 ApeObject_t object_make_external(ApeContext_t *ctx, void *ptr);
 _Bool object_value_ishashable(ApeObject_t obj);
 void object_tostring(ApeObject_t obj, ApeWriter_t *buf, _Bool quote_str);
-ApeObjectType_t object_value_type(ApeObject_t obj);
 const char *object_value_typename(const ApeObjectType_t type);
 void object_data_deinit(ApeObjectData_t *data);
-ApeGCMemory_t *object_value_getmem(ApeObject_t obj);
 char *object_value_typeunionname(ApeContext_t *ctx, const ApeObjectType_t type);
 char *object_value_serialize(ApeContext_t *ctx, ApeObject_t object, ApeSize_t *lendest);
 _Bool object_value_setexternaldata(ApeObject_t object, void *ext_data);
@@ -89,7 +86,7 @@ const ApeSymbol_t *symbol_table_get_module_global_symbol_at(const ApeSymbolTable
 ApeBlockScope_t *block_scope_make(ApeContext_t *ctx, int offset);
 void *block_scope_destroy(ApeBlockScope_t *scope);
 ApeBlockScope_t *block_scope_copy(ApeBlockScope_t *scope);
-int code_make(ApeOpByte_t op, ApeSize_t operands_count, uint64_t *operands, ApeArray_t *res);
+int code_make(ApeOpByte_t op, ApeSize_t operands_count, ApeUInt_t *operands, ApeArray_t *res);
 ApeCompilationScope_t *compilation_scope_make(ApeContext_t *ctx, ApeCompilationScope_t *outer);
 void compilation_scope_destroy(ApeCompilationScope_t *scope);
 ApeCompilationResult_t *compilation_scope_orphan_result(ApeCompilationScope_t *scope);
@@ -105,7 +102,7 @@ const char *get_module_name(const char *path);
 _Bool module_add_symbol(ApeModule_t *module, const ApeSymbol_t *symbol);
 _Bool frame_init(ApeFrame_t *frame, ApeObject_t function_obj, int base_pointer);
 ApeOpcodeValue_t frame_read_opcode(ApeFrame_t *frame);
-uint64_t frame_read_uint64(ApeFrame_t *frame);
+ApeUInt_t frame_read_uint64(ApeFrame_t *frame);
 uint16_t frame_read_uint16(ApeFrame_t *frame);
 ApeUShort_t frame_read_uint8(ApeFrame_t *frame);
 ApePosition_t frame_src_position(const ApeFrame_t *frame);
@@ -130,8 +127,8 @@ _Bool vmpriv_append_string(ApeVM_t *vm, ApeObject_t left, ApeObject_t right, Ape
 _Bool vm_execute_function(ApeVM_t *vm, ApeObject_t function, ApeArray_t *constants);
 /* util.c */
 char *util_stringfmt(ApeContext_t *ctx, const char *format, ...);
-uint64_t util_double_to_uint64(ApeFloat_t val);
-ApeFloat_t util_uint64_to_double(uint64_t val);
+ApeUInt_t util_double_to_uint64(ApeFloat_t val);
+ApeFloat_t util_uint64_to_double(ApeUInt_t val);
 _Bool util_timer_supported(void);
 ApeTimer_t util_timer_start(void);
 ApeFloat_t util_timer_getelapsed(const ApeTimer_t *timer);

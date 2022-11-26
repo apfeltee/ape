@@ -5,7 +5,7 @@ static const ApePosition_t g_ccpriv_src_pos_invalid = { NULL, -1, -1 };
 
 static const ApeSymbol_t *ccpriv_definesym(ApeCompiler_t *comp, ApePosition_t pos, const char *name, bool assignable, bool can_shadow);
 static void ccpriv_setsymtable(ApeCompiler_t *comp, ApeSymbolTable_t *table);
-static ApeInt_t ccpriv_emit(ApeCompiler_t *comp, ApeOpByte_t op, ApeSize_t operands_count, uint64_t *operands);
+static ApeInt_t ccpriv_emit(ApeCompiler_t *comp, ApeOpByte_t op, ApeSize_t operands_count, ApeUInt_t *operands);
 static ApeCompilationScope_t *ccpriv_getcompscope(ApeCompiler_t *comp);
 static bool ccpriv_pushcompscope(ApeCompiler_t *comp);
 static void ccpriv_popcompscope(ApeCompiler_t *comp);
@@ -405,7 +405,7 @@ err:
     return false;
 }
 
-static ApeInt_t ccpriv_emit(ApeCompiler_t* comp, ApeOpByte_t op, ApeSize_t operands_count, uint64_t* operands)
+static ApeInt_t ccpriv_emit(ApeCompiler_t* comp, ApeOpByte_t op, ApeSize_t operands_count, ApeUInt_t* operands)
 {
     ApeInt_t i;
     ApeInt_t ip;
@@ -807,7 +807,7 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
                     {
                         goto statement_if_error;
                     }
-                    next_case_jump_ip = ccpriv_emit(comp, OPCODE_JUMP_IF_FALSE, 1, (uint64_t[]){ (uint64_t)(0xbeef) });
+                    next_case_jump_ip = ccpriv_emit(comp, OPCODE_JUMP_IF_FALSE, 1, (ApeUInt_t[]){ (ApeUInt_t)(0xbeef) });
                     ok = ccpriv_compilecodeblock(comp, if_case->consequence);
                     if(!ok)
                     {
@@ -817,7 +817,7 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
                     if(i < (ptrarray_count(if_stmt->cases) - 1) || if_stmt->alternative)
                     {
 
-                        jump_to_end_ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (uint64_t[]){ (uint64_t)(0xbeef) });
+                        jump_to_end_ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (ApeUInt_t[]){ (ApeUInt_t)(0xbeef) });
                         ok = array_add(jump_to_end_ips, &jump_to_end_ip);
                         if(!ok)
                         {
@@ -886,12 +886,12 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
                     return false;
                 }
                 after_test_ip = ccpriv_getip(comp);
-                ip = ccpriv_emit(comp, OPCODE_JUMP_IF_TRUE, 1, (uint64_t[]){ (uint64_t)(after_test_ip + 6) });
+                ip = ccpriv_emit(comp, OPCODE_JUMP_IF_TRUE, 1, (ApeUInt_t[]){ (ApeUInt_t)(after_test_ip + 6) });
                 if(ip < 0)
                 {
                     return false;
                 }
-                jump_to_after_body_ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (uint64_t[]){ (uint64_t)0xdead });
+                jump_to_after_body_ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (ApeUInt_t[]){ (ApeUInt_t)0xdead });
                 if(jump_to_after_body_ip < 0)
                 {
                     return false;
@@ -913,7 +913,7 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
                 }
                 ccpriv_popbreakip(comp);
                 ccpriv_popcontip(comp);
-                ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (uint64_t[]){ (uint64_t)before_test_ip });
+                ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (ApeUInt_t[]){ (ApeUInt_t)before_test_ip });
                 if(ip < 0)
                 {
                     return false;
@@ -931,7 +931,7 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
                 errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "nothing to break from");
                 return false;
             }
-            ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (uint64_t[]){ (uint64_t)break_ip });
+            ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (ApeUInt_t[]){ (ApeUInt_t)break_ip });
             if(ip < 0)
             {
                 return false;
@@ -946,7 +946,7 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
                 errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "nothing to continue from");
                 return false;
             }
-            ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (uint64_t[]){ (uint64_t)continue_ip });
+            ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (ApeUInt_t[]){ (ApeUInt_t)continue_ip });
             if(ip < 0)
             {
                 return false;
@@ -969,7 +969,7 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
                 return false;
             }
 
-            ip = ccpriv_emit(comp, OPCODE_NUMBER, 1, (uint64_t[]){ (uint64_t)0 });
+            ip = ccpriv_emit(comp, OPCODE_NUMBER, 1, (ApeUInt_t[]){ (ApeUInt_t)0 });
             if(ip < 0)
             {
                 return false;
@@ -1012,7 +1012,7 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
             }
 
             // Update
-            ApeInt_t jump_to_after_update_ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (uint64_t[]){ (uint64_t)0xbeef });
+            ApeInt_t jump_to_after_update_ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (ApeUInt_t[]){ (ApeUInt_t)0xbeef });
             if(jump_to_after_update_ip < 0)
             {
                 return false;
@@ -1025,7 +1025,7 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
                 return false;
             }
 
-            ip = ccpriv_emit(comp, OPCODE_NUMBER, 1, (uint64_t[]){ (uint64_t)util_double_to_uint64(1) });
+            ip = ccpriv_emit(comp, OPCODE_NUMBER, 1, (ApeUInt_t[]){ (ApeUInt_t)util_double_to_uint64(1) });
             if(ip < 0)
             {
                 return false;
@@ -1085,13 +1085,13 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
             }
 
             ApeInt_t after_test_ip = ccpriv_getip(comp);
-            ip = ccpriv_emit(comp, OPCODE_JUMP_IF_FALSE, 1, (uint64_t[]){ (uint64_t)(after_test_ip + 6) });
+            ip = ccpriv_emit(comp, OPCODE_JUMP_IF_FALSE, 1, (ApeUInt_t[]){ (ApeUInt_t)(after_test_ip + 6) });
             if(ip < 0)
             {
                 return false;
             }
 
-            ApeInt_t jump_to_after_body_ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (uint64_t[]){ (uint64_t)0xdead });
+            ApeInt_t jump_to_after_body_ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (ApeUInt_t[]){ (ApeUInt_t)0xdead });
             if(jump_to_after_body_ip < 0)
             {
                 return false;
@@ -1149,7 +1149,7 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
             ccpriv_popbreakip(comp);
             ccpriv_popcontip(comp);
 
-            ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (uint64_t[]){ (uint64_t)update_ip });
+            ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (ApeUInt_t[]){ (ApeUInt_t)update_ip });
             if(ip < 0)
             {
                 return false;
@@ -1181,7 +1181,7 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
                 {
                     return false;
                 }
-                jump_to_after_update_ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (uint64_t[]){ (uint64_t)0xbeef });
+                jump_to_after_update_ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (ApeUInt_t[]){ (ApeUInt_t)0xbeef });
                 if(jump_to_after_update_ip < 0)
                 {
                     return false;
@@ -1229,12 +1229,12 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
             }
             ApeInt_t after_test_ip = ccpriv_getip(comp);
 
-            ip = ccpriv_emit(comp, OPCODE_JUMP_IF_TRUE, 1, (uint64_t[]){ (uint64_t)(after_test_ip + 6) });
+            ip = ccpriv_emit(comp, OPCODE_JUMP_IF_TRUE, 1, (ApeUInt_t[]){ (ApeUInt_t)(after_test_ip + 6) });
             if(ip < 0)
             {
                 return false;
             }
-            ApeInt_t jmp_to_after_body_ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (uint64_t[]){ (uint64_t)0xdead });
+            ApeInt_t jmp_to_after_body_ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (ApeUInt_t[]){ (ApeUInt_t)0xdead });
             if(jmp_to_after_body_ip < 0)
             {
                 return false;
@@ -1262,7 +1262,7 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
             ccpriv_popbreakip(comp);
             ccpriv_popcontip(comp);
 
-            ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (uint64_t[]){ (uint64_t)update_ip });
+            ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (ApeUInt_t[]){ (ApeUInt_t)update_ip });
             if(ip < 0)
             {
                 return false;
@@ -1309,13 +1309,13 @@ static bool ccpriv_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* s
                 return false;
             }
 
-            ApeInt_t recover_ip = ccpriv_emit(comp, OPCODE_SET_RECOVER, 1, (uint64_t[]){ (uint64_t)0xbeef });
+            ApeInt_t recover_ip = ccpriv_emit(comp, OPCODE_SET_RECOVER, 1, (ApeUInt_t[]){ (ApeUInt_t)0xbeef });
             if(recover_ip < 0)
             {
                 return false;
             }
 
-            ApeInt_t jump_to_after_recover_ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (uint64_t[]){ (uint64_t)0xbeef });
+            ApeInt_t jump_to_after_recover_ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (ApeUInt_t[]){ (ApeUInt_t)0xbeef });
             if(jump_to_after_recover_ip < 0)
             {
                 return false;
@@ -1515,7 +1515,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
         case EXPRESSION_NUMBER_LITERAL:
         {
             ApeFloat_t number = expr->number_literal;
-            ip = ccpriv_emit(comp, OPCODE_NUMBER, 1, (uint64_t[]){ (uint64_t)util_double_to_uint64(number) });
+            ip = ccpriv_emit(comp, OPCODE_NUMBER, 1, (ApeUInt_t[]){ (ApeUInt_t)util_double_to_uint64(number) });
             if(ip < 0)
             {
                 goto error;
@@ -1560,7 +1560,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
                 }
             }
 
-            ip = ccpriv_emit(comp, OPCODE_CONSTANT, 1, (uint64_t[]){ (uint64_t)pos });
+            ip = ccpriv_emit(comp, OPCODE_CONSTANT, 1, (ApeUInt_t[]){ (ApeUInt_t)pos });
             if(ip < 0)
             {
                 goto error;
@@ -1596,7 +1596,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
                     goto error;
                 }
             }
-            ip = ccpriv_emit(comp, OPCODE_ARRAY, 1, (uint64_t[]){ (uint64_t)ptrarray_count(expr->array) });
+            ip = ccpriv_emit(comp, OPCODE_ARRAY, 1, (ApeUInt_t[]){ (ApeUInt_t)ptrarray_count(expr->array) });
             if(ip < 0)
             {
                 goto error;
@@ -1607,7 +1607,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
         {
             const ApeMapLiteral_t* map = &expr->map;
             ApeSize_t len = ptrarray_count(map->keys);
-            ip = ccpriv_emit(comp, OPCODE_MAP_START, 1, (uint64_t[]){ (uint64_t)len });
+            ip = ccpriv_emit(comp, OPCODE_MAP_START, 1, (ApeUInt_t[]){ (ApeUInt_t)len });
             if(ip < 0)
             {
                 goto error;
@@ -1631,7 +1631,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
                 }
             }
 
-            ip = ccpriv_emit(comp, OPCODE_MAP_END, 1, (uint64_t[]){ (uint64_t)len });
+            ip = ccpriv_emit(comp, OPCODE_MAP_END, 1, (ApeUInt_t[]){ (ApeUInt_t)len });
             if(ip < 0)
             {
                 goto error;
@@ -1813,7 +1813,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
                 goto error;
             }
 
-            ip = ccpriv_emit(comp, OPCODE_FUNCTION, 2, (uint64_t[]){ (uint64_t)pos, (uint64_t)ptrarray_count(free_symbols) });
+            ip = ccpriv_emit(comp, OPCODE_FUNCTION, 2, (ApeUInt_t[]){ (ApeUInt_t)pos, (ApeUInt_t)ptrarray_count(free_symbols) });
             if(ip < 0)
             {
                 ptrarray_destroywithitems(free_symbols, (ApeDataCallback_t)symbol_destroy);
@@ -1842,7 +1842,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
                 }
             }
 
-            ip = ccpriv_emit(comp, OPCODE_CALL, 1, (uint64_t[]){ (uint64_t)ptrarray_count(expr->call_expr.args) });
+            ip = ccpriv_emit(comp, OPCODE_CALL, 1, (ApeUInt_t[]){ (ApeUInt_t)ptrarray_count(expr->call_expr.args) });
             if(ip < 0)
             {
                 goto error;
@@ -1960,11 +1960,11 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
             ApeInt_t after_left_jump_ip = 0;
             if(logi->op == OPERATOR_LOGICAL_AND)
             {
-                after_left_jump_ip = ccpriv_emit(comp, OPCODE_JUMP_IF_FALSE, 1, (uint64_t[]){ (uint64_t)0xbeef });
+                after_left_jump_ip = ccpriv_emit(comp, OPCODE_JUMP_IF_FALSE, 1, (ApeUInt_t[]){ (ApeUInt_t)0xbeef });
             }
             else
             {
-                after_left_jump_ip = ccpriv_emit(comp, OPCODE_JUMP_IF_TRUE, 1, (uint64_t[]){ (uint64_t)0xbeef });
+                after_left_jump_ip = ccpriv_emit(comp, OPCODE_JUMP_IF_TRUE, 1, (ApeUInt_t[]){ (ApeUInt_t)0xbeef });
             }
 
             if(after_left_jump_ip < 0)
@@ -1999,7 +1999,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
                 goto error;
             }
 
-            ApeInt_t else_jump_ip = ccpriv_emit(comp, OPCODE_JUMP_IF_FALSE, 1, (uint64_t[]){ (uint64_t)0xbeef });
+            ApeInt_t else_jump_ip = ccpriv_emit(comp, OPCODE_JUMP_IF_FALSE, 1, (ApeUInt_t[]){ (ApeUInt_t)0xbeef });
 
             ok = ccpriv_compileexpression(comp, ternary->if_true);
             if(!ok)
@@ -2007,7 +2007,7 @@ static bool ccpriv_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
                 goto error;
             }
 
-            ApeInt_t end_jump_ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (uint64_t[]){ (uint64_t)0xbeef });
+            ApeInt_t end_jump_ip = ccpriv_emit(comp, OPCODE_JUMP, 1, (ApeUInt_t[]){ (ApeUInt_t)0xbeef });
 
             ApeInt_t else_ip = ccpriv_getip(comp);
             ccpriv_moduint16operand(comp, else_jump_ip + 1, else_ip);
@@ -2117,19 +2117,19 @@ static bool ccpriv_readsym(ApeCompiler_t* comp, const ApeSymbol_t* symbol)
     ApeInt_t ip = -1;
     if(symbol->type == SYMBOL_MODULE_GLOBAL)
     {
-        ip = ccpriv_emit(comp, OPCODE_GET_MODULE_GLOBAL, 1, (uint64_t[]){ (uint64_t)(symbol->index) });
+        ip = ccpriv_emit(comp, OPCODE_GET_MODULE_GLOBAL, 1, (ApeUInt_t[]){ (ApeUInt_t)(symbol->index) });
     }
     else if(symbol->type == SYMBOL_CONTEXT_GLOBAL)
     {
-        ip = ccpriv_emit(comp, OPCODE_GET_CONTEXT_GLOBAL, 1, (uint64_t[]){ (uint64_t)(symbol->index) });
+        ip = ccpriv_emit(comp, OPCODE_GET_CONTEXT_GLOBAL, 1, (ApeUInt_t[]){ (ApeUInt_t)(symbol->index) });
     }
     else if(symbol->type == SYMBOL_LOCAL)
     {
-        ip = ccpriv_emit(comp, OPCODE_GET_LOCAL, 1, (uint64_t[]){ (uint64_t)(symbol->index) });
+        ip = ccpriv_emit(comp, OPCODE_GET_LOCAL, 1, (ApeUInt_t[]){ (ApeUInt_t)(symbol->index) });
     }
     else if(symbol->type == SYMBOL_FREE)
     {
-        ip = ccpriv_emit(comp, OPCODE_GET_FREE, 1, (uint64_t[]){ (uint64_t)(symbol->index) });
+        ip = ccpriv_emit(comp, OPCODE_GET_FREE, 1, (ApeUInt_t[]){ (ApeUInt_t)(symbol->index) });
     }
     else if(symbol->type == SYMBOL_FUNCTION)
     {
@@ -2149,27 +2149,27 @@ static bool ccpriv_writesym(ApeCompiler_t* comp, const ApeSymbol_t* symbol, bool
     {
         if(define)
         {
-            ip = ccpriv_emit(comp, OPCODE_DEFINE_MODULE_GLOBAL, 1, (uint64_t[]){ (uint64_t)(symbol->index) });
+            ip = ccpriv_emit(comp, OPCODE_DEFINE_MODULE_GLOBAL, 1, (ApeUInt_t[]){ (ApeUInt_t)(symbol->index) });
         }
         else
         {
-            ip = ccpriv_emit(comp, OPCODE_SET_MODULE_GLOBAL, 1, (uint64_t[]){ (uint64_t)(symbol->index) });
+            ip = ccpriv_emit(comp, OPCODE_SET_MODULE_GLOBAL, 1, (ApeUInt_t[]){ (ApeUInt_t)(symbol->index) });
         }
     }
     else if(symbol->type == SYMBOL_LOCAL)
     {
         if(define)
         {
-            ip = ccpriv_emit(comp, OPCODE_DEFINE_LOCAL, 1, (uint64_t[]){ (uint64_t)(symbol->index) });
+            ip = ccpriv_emit(comp, OPCODE_DEFINE_LOCAL, 1, (ApeUInt_t[]){ (ApeUInt_t)(symbol->index) });
         }
         else
         {
-            ip = ccpriv_emit(comp, OPCODE_SET_LOCAL, 1, (uint64_t[]){ (uint64_t)(symbol->index) });
+            ip = ccpriv_emit(comp, OPCODE_SET_LOCAL, 1, (ApeUInt_t[]){ (ApeUInt_t)(symbol->index) });
         }
     }
     else if(symbol->type == SYMBOL_FREE)
     {
-        ip = ccpriv_emit(comp, OPCODE_SET_FREE, 1, (uint64_t[]){ (uint64_t)(symbol->index) });
+        ip = ccpriv_emit(comp, OPCODE_SET_FREE, 1, (ApeUInt_t[]){ (ApeUInt_t)(symbol->index) });
     }
     return ip >= 0;
 }

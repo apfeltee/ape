@@ -762,7 +762,7 @@ static int vmpriv_countnumdefs(ApeSymbolTable_t* table)
         }                                        \
     } while(0)
 
-int code_make(ApeOpByte_t op, ApeSize_t operands_count, uint64_t* operands, ApeArray_t* res)
+int code_make(ApeOpByte_t op, ApeSize_t operands_count, ApeUInt_t* operands, ApeArray_t* res)
 {
     ApeSize_t i;
     int width;
@@ -1267,21 +1267,21 @@ ApeOpcodeValue_t frame_read_opcode(ApeFrame_t* frame)
     return (ApeOpcodeValue_t)frame_read_uint8(frame);
 }
 
-uint64_t frame_read_uint64(ApeFrame_t* frame)
+ApeUInt_t frame_read_uint64(ApeFrame_t* frame)
 {
-    uint64_t res;
+    ApeUInt_t res;
     const ApeUShort_t* data;
     data = frame->bytecode + frame->ip;
     frame->ip += 8;
     res = 0;
-    res |= (uint64_t)data[7];
-    res |= (uint64_t)data[6] << 8;
-    res |= (uint64_t)data[5] << 16;
-    res |= (uint64_t)data[4] << 24;
-    res |= (uint64_t)data[3] << 32;
-    res |= (uint64_t)data[2] << 40;
-    res |= (uint64_t)data[1] << 48;
-    res |= (uint64_t)data[0] << 56;
+    res |= (ApeUInt_t)data[7];
+    res |= (ApeUInt_t)data[6] << 8;
+    res |= (ApeUInt_t)data[5] << 16;
+    res |= (ApeUInt_t)data[4] << 24;
+    res |= (ApeUInt_t)data[3] << 32;
+    res |= (ApeUInt_t)data[2] << 40;
+    res |= (ApeUInt_t)data[1] << 48;
+    res |= (ApeUInt_t)data[0] << 56;
     return res;
 }
 

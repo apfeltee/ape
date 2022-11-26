@@ -1260,6 +1260,7 @@ static ApeObject_t cfn_file_isdirectory(ApeVM_t* vm, void* data, ApeSize_t argc,
     return object_make_bool(vm->context, false);
 }
 
+#if defined(__linux__)
 static ApeObject_t timespec_to_map(ApeVM_t* vm, struct timespec ts)
 {
     ApeObject_t map;
@@ -1268,6 +1269,7 @@ static ApeObject_t timespec_to_map(ApeVM_t* vm, struct timespec ts)
     object_map_setnamednumber(map, "nsec", ts.tv_nsec);
     return map;
 }
+#endif
 
 static ApeObject_t cfn_file_stat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
@@ -1294,11 +1296,13 @@ static ApeObject_t cfn_file_stat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObj
         object_map_setnamednumber(map, "gid", st.st_gid);
         object_map_setnamednumber(map, "rdev", st.st_rdev);
         object_map_setnamednumber(map, "size", st.st_size);
+        #if defined(__linux__)
         object_map_setnamednumber(map, "blksize", st.st_blksize);
         object_map_setnamednumber(map, "blocks", st.st_blocks);
         object_map_setnamedvalue(map, "atim", timespec_to_map(vm, st.st_atim));
         object_map_setnamedvalue(map, "mtim", timespec_to_map(vm, st.st_mtim));
         object_map_setnamedvalue(map, "ctim", timespec_to_map(vm, st.st_ctim));
+        #endif
         return map;
     }
     return object_make_null(vm->context);

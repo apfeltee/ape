@@ -82,20 +82,20 @@ THE SOFTWARE.
 
 #define APE_CONF_INVALID_VALDICT_IX UINT_MAX
 #define APE_CONF_INVALID_STRDICT_IX UINT_MAX
-#define APE_CONF_DICT_INITIAL_SIZE 32
-#define APE_CONF_SIZE_VM_STACK 1024
+#define APE_CONF_DICT_INITIAL_SIZE (4)
+#define APE_CONF_SIZE_VM_STACK (1024)
 #define APE_CONF_SIZE_VM_MAXGLOBALS (512/4)
 #define APE_CONF_SIZE_MAXFRAMES (512/4)
 #define APE_CONF_SIZE_VM_THISSTACK (512/4)
 #define APE_CONF_SIZE_GCMEM_POOLSIZE (512/4)
-#define APE_CONF_SIZE_GCMEM_POOLCOUNT 3
+#define APE_CONF_SIZE_GCMEM_POOLCOUNT (3)
 #define APE_CONF_CONST_GCMEM_SWEEPINTERVAL (128/1)
 
-#define APE_CONF_SIZE_NATFN_MAXDATALEN 24
-#define APE_CONF_SIZE_STRING_BUFSIZE 24
+#define APE_CONF_SIZE_NATFN_MAXDATALEN (16*2)
+#define APE_CONF_SIZE_STRING_BUFSIZE (4)
 
-#define APE_CONF_SIZE_ERRORS_MAXCOUNT 16
-#define APE_CONF_SIZE_ERROR_MAXMSGLENGTH 255
+#define APE_CONF_SIZE_ERRORS_MAXCOUNT (16)
+#define APE_CONF_SIZE_ERROR_MAXMSGLENGTH (255)
 
 
 #define valdict_make(ctx, key_type, val_type) valdict_make_(ctx, sizeof(key_type), sizeof(val_type))
@@ -133,22 +133,49 @@ THE SOFTWARE.
 #endif
 
 /**/
-#define object_value_allocated_data(obj) ((obj).handle)
+#define object_value_allocated_data(obj) \
+    ((obj).handle)
 
 /**/
-#define object_value_isallocated(o) (true)
-#define object_value_asnumber(obj) (object_value_allocated_data((obj))->numval)
-#define object_value_asbool(obj) (object_value_allocated_data((obj))->boolval)
-#define object_value_asfunction(obj) (&(object_value_allocated_data((obj))->function))
-#define object_value_asnativefunction(obj) (&(object_value_allocated_data((obj))->native_function))
-#define object_value_asexternal(obj) (&(object_value_allocated_data((obj))->external))
+#define object_value_isallocated(o) \
+    (true)
+
+#define object_value_asnumber(obj) \
+    (object_value_allocated_data((obj))->numval)
+
+#define object_value_asbool(obj) \
+    (object_value_allocated_data((obj))->boolval)
+
+#define object_value_asfunction(obj) \
+    (&(object_value_allocated_data((obj))->function))
+
+#define object_value_asnativefunction(obj) \
+    (&(object_value_allocated_data((obj))->native_function))
+
+#define object_value_asexternal(obj) \
+    (&(object_value_allocated_data((obj))->external))
+
+#define object_value_getmem(obj) \
+    (object_value_allocated_data(obj)->mem)
 
 /**/
-#define object_value_istype(o, t) (((o).handle->type) == (t))
-#define object_value_isnumber(o) object_value_istype(o, APE_OBJECT_NUMBER)
-#define object_value_isnumeric(o) (object_value_istype(o, APE_OBJECT_NUMBER) || object_value_istype(o, APE_OBJECT_BOOL))
-#define object_value_isnull(o) object_value_istype(o, APE_OBJECT_NULL)
-#define object_value_iscallable(o) (object_value_istype(o, APE_OBJECT_NATIVE_FUNCTION) || object_value_istype(o, APE_OBJECT_FUNCTION))
+#define object_value_type(obj) \
+    ((obj).handle->type)
+
+#define object_value_istype(o, t) \
+    (object_value_type(o) == (t))
+
+#define object_value_isnumber(o) \
+    object_value_istype(o, APE_OBJECT_NUMBER)
+
+#define object_value_isnumeric(o) \
+    (object_value_istype(o, APE_OBJECT_NUMBER) || object_value_istype(o, APE_OBJECT_BOOL))
+
+#define object_value_isnull(o) \
+    object_value_istype(o, APE_OBJECT_NULL)
+
+#define object_value_iscallable(o) \
+    (object_value_istype(o, APE_OBJECT_NATIVE_FUNCTION) || object_value_istype(o, APE_OBJECT_FUNCTION))
 
 
 enum ApeErrorType_t
@@ -608,16 +635,8 @@ struct ApeObjectData_t
 struct ApeObject_t
 {
     ApeObjectType_t type;
-    uint64_t internal_padding;
-    //char internal_padding[64 * 8];
-    //union
-    //{
-        // assumes no pointer exceeds 48 bits
-        //uintptr_t handle;
-        //uint64_t handle;
-        //ApeFloat_t number;
-        ApeObjectData_t* handle;
-    //};
+    ApeObjectData_t* handle;
+    
 };
 
 struct ApeObjectDataPool_t
@@ -1196,6 +1215,17 @@ struct ApeContext_t
 #ifdef __cplusplus
     APE_EXTERNC_BEGIN
 #endif
+
+
+static inline ApeObject_t object_make_from_data(ApeContext_t* ctx, ApeObjectType_t type, ApeObjectData_t* data)
+{
+    ApeObject_t object;
+    object.type = type;
+    data->context = ctx;
+    object.handle = data;
+    object.handle->type = type;
+    return object;
+}
 
 #include "prot.inc"
 
