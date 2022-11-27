@@ -98,9 +98,11 @@ THE SOFTWARE.
 #define APE_CONF_SIZE_ERROR_MAXMSGLENGTH (128)
 
 
-#define valdict_make(ctx, key_type, val_type) valdict_make_(ctx, sizeof(key_type), sizeof(val_type))
+#define valdict_make(ctx, key_type, val_type) \
+    ape_make_valdict_actual(ctx, sizeof(key_type), sizeof(val_type))
 
-#define array_make(allocator, type) array_make_(allocator, sizeof(type))
+#define array_make(allocator, type) \
+    ape_make_valarray_actual(allocator, sizeof(type))
 
 #define APE_STREQ(a, b) (strcmp((a), (b)) == 0)
 #define APE_STRNEQ(a, b, n) (strncmp((a), (b), (n)) == 0)

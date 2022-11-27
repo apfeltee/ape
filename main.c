@@ -45,6 +45,8 @@ struct Options_t
     const char* package;
     const char* filename;
     bool debug;
+    bool printast;
+    bool printbytecode;
     int n_paths;
     const char** paths;
     const char* codeline;
@@ -117,13 +119,13 @@ static void print_errors(ApeContext_t *ctx)
     int count;
     char *err_str;
     ApeError_t *err;
-    count = context_errorcount(ctx);
+    count = ape_context_errorcount(ctx);
     for (i = 0; i < count; i++)
     {
-        err = context_geterror(ctx, i);
-        err_str = context_errortostring(ctx, err);
+        err = ape_context_geterror(ctx, i);
+        err_str = ape_context_errortostring(ctx, err);
         fprintf(stderr, "%s", err_str);
-        context_freeallocated(ctx, err_str);
+        ape_context_freeallocated(ctx, err_str);
     }
 }
 
@@ -135,7 +137,7 @@ static ApeObject_t exit_repl(ApeContext_t *ctx, void *data, ApeSize_t argc, ApeO
     (void)args;
     exit_repl = (bool*)data;
     *exit_repl = true;
-    return object_make_null(ctx);
+    return ape_object_make_null(ctx);
 }
 
 #if !defined(NO_READLINE)
@@ -159,8 +161,8 @@ static void do_repl(ApeContext_t* ctx)
     char *line;
     char *object_str;
     ApeObject_t res;
-    context_setreplmode(ctx, true);
-    context_settimeout(ctx, 100.0);
+    ape_context_setreplmode(ctx, true);
+    ape_context_settimeout(ctx, 100.0);
     while(true)
     {
         line = readline(">> ");
@@ -169,15 +171,15 @@ static void do_repl(ApeContext_t* ctx)
             continue;
         }
         add_history(line);
-        res = context_executesource(ctx, line, true);
-        if (context_haserrors(ctx))
+        res = ape_context_executesource(ctx, line, true);
+        if (ape_context_haserrors(ctx))
         {
             print_errors(ctx);
             free(line);
         }
         else
         {
-            object_str = object_value_serialize(ctx, res, &len);
+            object_str = ape_object_value_serialize(ctx, res, &len);
             printf("%.*s\n", (int)len, object_str);
             free(object_str);
         }
@@ -203,6 +205,8 @@ static bool parse_options(Options_t* opts, Flag_t* flags, int fcnt)
     opts->package = NULL;
     opts->filename = NULL;
     opts->debug = false;
+    opts->printast = false;
+    opts->printbytecode = false;
     for(i=0; i<fcnt; i++)
     {
         switch(flags[i].flag)
@@ -225,6 +229,16 @@ static bool parse_options(Options_t* opts, Flag_t* flags, int fcnt)
             case 'd':
                 {
                     opts->debug = true;
+                }
+                break;
+            case 'a':
+                {
+                    opts->printast = true;
+                }
+                break;
+            case 'b':
+                {
+                    opts->printbytecode = true;
                 }
                 break;
             case 'p':
@@ -255,13 +269,21 @@ int main(int argc, char *argv[])
     ApeObject_t args_array;
     replexit = false;
     populate_flags(argc, 1, argv, "epI", &fx);
-    ctx = context_make();
+    ctx = ape_make_context();
     if(!parse_options(&opts, fx.flags, fx.fcnt))
     {
         fprintf(stderr, "failed to process command line flags.\n");
         return 1;
     }
-    context_setnativefunction(ctx, "exit", exit_repl, &replexit);
+    ape_context_setnativefunction(ctx, "exit", exit_repl, &replexit);
+    if(opts.printast)
+    {
+        ctx->config.dumpast = true;
+    }
+    if(opts.printbytecode)
+    {
+        ctx->config.dumpbytecode = true;
+    }
     if(opts.debug)
     {
         ctx->config.dumpast = true;
@@ -269,22 +291,22 @@ int main(int argc, char *argv[])
     }
     if((fx.poscnt > 0) || (opts.codeline != NULL))
     {
-        args_array = object_make_array(ctx);
+        args_array = ape_object_make_array(ctx);
         for(i=0; i<fx.poscnt; i++)
         {
-            object_array_pushstring(args_array, fx.positional[i]);
+            ape_object_array_pushstring(args_array, fx.positional[i]);
         }
-        context_setglobal(ctx, "args", args_array);
+        ape_context_setglobal(ctx, "args", args_array);
         if(opts.codeline)
         {
-            context_executesource(ctx, opts.codeline, true);
+            ape_context_executesource(ctx, opts.codeline, true);
         }
         else
         {
             filename = fx.positional[0];
-            context_executefile(ctx, filename);
+            ape_context_executefile(ctx, filename);
         }
-        if(context_haserrors(ctx))
+        if(ape_context_haserrors(ctx))
         {
             print_errors(ctx);
         }
@@ -297,7 +319,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "no repl support compiled in\n");
         #endif
     }
-    context_destroy(ctx);
+    ape_context_destroy(ctx);
     return 0;
 }
 
