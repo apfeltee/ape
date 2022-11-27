@@ -2,16 +2,16 @@
 #include "ape.h"
 
 
-ApeArray_t* ape_make_valarray_actual(ApeContext_t* ctx, ApeSize_t element_size)
+ApeValArray_t* ape_make_valarray_actual(ApeContext_t* ctx, ApeSize_t element_size)
 {
     return ape_make_valarraycapacity(ctx, 32, element_size);
 }
 
-ApeArray_t* ape_make_valarraycapacity(ApeContext_t* ctx, ApeSize_t capacity, ApeSize_t element_size)
+ApeValArray_t* ape_make_valarraycapacity(ApeContext_t* ctx, ApeSize_t capacity, ApeSize_t element_size)
 {
     bool ok;
-    ApeArray_t* arr;
-    arr = (ApeArray_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeArray_t));
+    ApeValArray_t* arr;
+    arr = (ApeValArray_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeValArray_t));
     if(!arr)
     {
         return NULL;
@@ -26,7 +26,7 @@ ApeArray_t* ape_make_valarraycapacity(ApeContext_t* ctx, ApeSize_t capacity, Ape
 }
 
 
-bool ape_valarray_initcapacity(ApeArray_t* arr, ApeContext_t* ctx, ApeSize_t capacity, ApeSize_t element_size)
+bool ape_valarray_initcapacity(ApeValArray_t* arr, ApeContext_t* ctx, ApeSize_t capacity, ApeSize_t element_size)
 {
     arr->context = ctx;
     arr->alloc = &ctx->alloc;
@@ -52,12 +52,12 @@ bool ape_valarray_initcapacity(ApeArray_t* arr, ApeContext_t* ctx, ApeSize_t cap
     return true;
 }
 
-void ape_valarray_deinit(ApeArray_t* arr)
+void ape_valarray_deinit(ApeValArray_t* arr)
 {
     ape_allocator_free(arr->alloc, arr->data_allocated);
 }
 
-void ape_valarray_destroy(ApeArray_t* arr)
+void ape_valarray_destroy(ApeValArray_t* arr)
 {
     ApeAllocator_t* alloc;
     if(!arr)
@@ -69,10 +69,10 @@ void ape_valarray_destroy(ApeArray_t* arr)
     ape_allocator_free(alloc, arr);
 }
 
-ApeArray_t* ape_valarray_copy(const ApeArray_t* arr)
+ApeValArray_t* ape_valarray_copy(const ApeValArray_t* arr)
 {
-    ApeArray_t* copy;
-    copy = (ApeArray_t*)ape_allocator_alloc(arr->alloc, sizeof(ApeArray_t));
+    ApeValArray_t* copy;
+    copy = (ApeValArray_t*)ape_allocator_alloc(arr->alloc, sizeof(ApeValArray_t));
     if(!copy)
     {
         return NULL;
@@ -102,7 +102,7 @@ ApeArray_t* ape_valarray_copy(const ApeArray_t* arr)
     return copy;
 }
 
-bool ape_valarray_add(ApeArray_t* arr, const void* value)
+bool ape_valarray_add(ApeValArray_t* arr, const void* value)
 {
     ApeSize_t new_capacity;
     unsigned char* new_data;
@@ -134,12 +134,12 @@ bool ape_valarray_add(ApeArray_t* arr, const void* value)
     return true;
 }
 
-bool ape_valarray_push(ApeArray_t* arr, const void* value)
+bool ape_valarray_push(ApeValArray_t* arr, const void* value)
 {
     return ape_valarray_add(arr, value);
 }
 
-bool ape_valarray_pop(ApeArray_t* arr, void* out_value)
+bool ape_valarray_pop(ApeValArray_t* arr, void* out_value)
 {
     void* res;
     if(arr->count <= 0)
@@ -155,7 +155,7 @@ bool ape_valarray_pop(ApeArray_t* arr, void* out_value)
     return true;
 }
 
-void* ape_valarray_top(ApeArray_t* arr)
+void* ape_valarray_top(ApeValArray_t* arr)
 {
     if(arr->count <= 0)
     {
@@ -164,7 +164,7 @@ void* ape_valarray_top(ApeArray_t* arr)
     return (void*)ape_valarray_get(arr, arr->count - 1);
 }
 
-bool ape_valarray_set(ApeArray_t* arr, ApeSize_t ix, void* value)
+bool ape_valarray_set(ApeValArray_t* arr, ApeSize_t ix, void* value)
 {
     ApeSize_t offset;
     if(ix >= arr->count)
@@ -178,7 +178,7 @@ bool ape_valarray_set(ApeArray_t* arr, ApeSize_t ix, void* value)
 }
 
 
-void* ape_valarray_get(ApeArray_t* arr, ApeSize_t ix)
+void* ape_valarray_get(ApeValArray_t* arr, ApeSize_t ix)
 {
     ApeSize_t offset;
     if(ix >= arr->count)
@@ -190,7 +190,7 @@ void* ape_valarray_get(ApeArray_t* arr, ApeSize_t ix)
     return arr->arraydata + offset;
 }
 
-ApeSize_t ape_valarray_count(const ApeArray_t* arr)
+ApeSize_t ape_valarray_count(const ApeValArray_t* arr)
 {
     if(!arr)
     {
@@ -199,7 +199,7 @@ ApeSize_t ape_valarray_count(const ApeArray_t* arr)
     return arr->count;
 }
 
-bool ape_valarray_removeat(ApeArray_t* arr, ApeSize_t ix)
+bool ape_valarray_removeat(ApeValArray_t* arr, ApeSize_t ix)
 {
     ApeSize_t to_move_bytes;
     void* dest;
@@ -228,17 +228,17 @@ bool ape_valarray_removeat(ApeArray_t* arr, ApeSize_t ix)
     return true;
 }
 
-void ape_valarray_clear(ApeArray_t* arr)
+void ape_valarray_clear(ApeValArray_t* arr)
 {
     arr->count = 0;
 }
 
-void* ape_valarray_data(ApeArray_t* arr)
+void* ape_valarray_data(ApeValArray_t* arr)
 {
     return arr->arraydata;
 }
 
-void ape_valarray_orphandata(ApeArray_t* arr)
+void ape_valarray_orphandata(ApeValArray_t* arr)
 {
     ape_valarray_initcapacity(arr, arr->context, 0, arr->element_size);
 }
@@ -408,11 +408,11 @@ ApeObject_t ape_object_make_array(ApeContext_t* ctx)
 
 ApeObject_t ape_object_make_arraycapacity(ApeContext_t* ctx, unsigned capacity)
 {
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     data = ape_gcmem_getfrompool(ctx->vm->mem, APE_OBJECT_ARRAY);
     if(data)
     {
-        ape_valarray_clear(data->array);
+        ape_valarray_clear(data->valarray);
         return object_make_from_data(ctx, APE_OBJECT_ARRAY, data);
     }
     data = ape_gcmem_allocobjdata(ctx->vm->mem, APE_OBJECT_ARRAY);
@@ -420,8 +420,8 @@ ApeObject_t ape_object_make_arraycapacity(ApeContext_t* ctx, unsigned capacity)
     {
         return ape_object_make_null(ctx);
     }
-    data->array = ape_make_valarraycapacity(ctx, capacity, sizeof(ApeObject_t));
-    if(!data->array)
+    data->valarray = ape_make_valarraycapacity(ctx, capacity, sizeof(ApeObject_t));
+    if(!data->valarray)
     {
         return ape_object_make_null(ctx);
     }
@@ -432,7 +432,7 @@ ApeObject_t ape_object_make_arraycapacity(ApeContext_t* ctx, unsigned capacity)
 ApeObject_t ape_object_array_getvalue(ApeObject_t object, ApeSize_t ix)
 {
     ApeObject_t* res;
-    ApeArray_t* array;
+    ApeValArray_t* array;
     APE_ASSERT(object_value_type(object) == APE_OBJECT_ARRAY);
     array = ape_object_array_getarray(object);
     if(ix >= ape_valarray_count(array))
@@ -453,7 +453,7 @@ ApeObject_t ape_object_array_getvalue(ApeObject_t object, ApeSize_t ix)
 */
 bool ape_object_array_setat(ApeObject_t object, ApeInt_t ix, ApeObject_t val)
 {
-    ApeArray_t* array;
+    ApeValArray_t* array;
     APE_ASSERT(object_value_type(object) == APE_OBJECT_ARRAY);
     array = ape_object_array_getarray(object);
     if(ix < 0 || ix >= (ApeInt_t)ape_valarray_count(array))
@@ -472,7 +472,7 @@ bool ape_object_array_setat(ApeObject_t object, ApeInt_t ix, ApeObject_t val)
 
 bool ape_object_array_pushvalue(ApeObject_t object, ApeObject_t val)
 {
-    ApeArray_t* array;
+    ApeValArray_t* array;
     APE_ASSERT(object_value_type(object) == APE_OBJECT_ARRAY);
     array = ape_object_array_getarray(object);
     return ape_valarray_add(array, &val);
@@ -480,7 +480,7 @@ bool ape_object_array_pushvalue(ApeObject_t object, ApeObject_t val)
 
 ApeSize_t ape_object_array_getlength(ApeObject_t object)
 {
-    ApeArray_t* array;
+    ApeValArray_t* array;
     APE_ASSERT(object_value_type(object) == APE_OBJECT_ARRAY);
     array = ape_object_array_getarray(object);
     return ape_valarray_count(array);
@@ -488,7 +488,7 @@ ApeSize_t ape_object_array_getlength(ApeObject_t object)
 
 bool ape_object_array_removeat(ApeObject_t object, ApeInt_t ix)
 {
-    ApeArray_t* array;
+    ApeValArray_t* array;
     array = ape_object_array_getarray(object);
     return ape_valarray_removeat(array, ix);
 }
@@ -507,13 +507,11 @@ bool ape_object_array_pushstring(ApeObject_t obj, const char* string)
 }
 
 
-ApeArray_t * ape_object_array_getarray(ApeObject_t object)
+ApeValArray_t * ape_object_array_getarray(ApeObject_t object)
 {
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     APE_ASSERT(object_value_type(object) == APE_OBJECT_ARRAY);
     data = object_value_allocated_data(object);
-    return data->array;
+    return data->valarray;
 }
-
-
 

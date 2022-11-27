@@ -26,7 +26,7 @@ ApeObject_t ape_object_make_string(ApeContext_t* ctx, const char* string)
 ApeObject_t ape_object_make_stringcapacity(ApeContext_t* ctx, ApeSize_t capacity)
 {
     bool ok;
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     data = ape_gcmem_getfrompool(ctx->mem, APE_OBJECT_STRING);
     if(!data)
     {
@@ -35,12 +35,12 @@ ApeObject_t ape_object_make_stringcapacity(ApeContext_t* ctx, ApeSize_t capacity
         {
             return ape_object_make_null(ctx);
         }
-        data->string.capacity = APE_CONF_SIZE_STRING_BUFSIZE - 1;
-        data->string.is_allocated = false;
+        data->valstring.capacity = APE_CONF_SIZE_STRING_BUFSIZE - 1;
+        data->valstring.is_allocated = false;
     }
-    data->string.length = 0;
-    data->string.hash = 0;
-    if(capacity > data->string.capacity)
+    data->valstring.length = 0;
+    data->valstring.hash = 0;
+    if(capacity > data->valstring.capacity)
     {
         ok = ape_object_string_reservecapacity(data, capacity);
         if(!ok)
@@ -53,28 +53,28 @@ ApeObject_t ape_object_make_stringcapacity(ApeContext_t* ctx, ApeSize_t capacity
 
 const char* ape_object_string_getdata(ApeObject_t object)
 {
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     APE_ASSERT(object_value_type(object) == APE_OBJECT_STRING);
     data = object_value_allocated_data(object);
     return ape_object_string_getinternalobjdata(data);
 }
 
-char* ape_object_string_getinternalobjdata(ApeObjectData_t* data)
+char* ape_object_string_getinternalobjdata(ApeObjData_t* data)
 {
     APE_ASSERT(data->type == APE_OBJECT_STRING);
-    if(data->string.is_allocated)
+    if(data->valstring.is_allocated)
     {
-        return data->string.value_allocated;
+        return data->valstring.value_allocated;
     }
-    return data->string.value_buf;
+    return data->valstring.value_buf;
 }
 
-bool ape_object_string_reservecapacity(ApeObjectData_t* data, ApeSize_t capacity)
+bool ape_object_string_reservecapacity(ApeObjData_t* data, ApeSize_t capacity)
 {
     char* new_value;
-    ApeObjectString_t* string;
+    ApeObjString_t* string;
     APE_ASSERT(capacity >= 0);
-    string = &data->string;
+    string = &data->valstring;
     string->length = 0;
     string->hash = 0;
     if(capacity <= string->capacity)
@@ -109,23 +109,23 @@ bool ape_object_string_reservecapacity(ApeObjectData_t* data, ApeSize_t capacity
 
 ApeSize_t ape_object_string_getlength(ApeObject_t object)
 {
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     APE_ASSERT(object_value_type(object) == APE_OBJECT_STRING);
     data = object_value_allocated_data(object);
-    return data->string.length;
+    return data->valstring.length;
 }
 
 void ape_object_string_setlength(ApeObject_t object, ApeSize_t len)
 {
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     APE_ASSERT(object_value_type(object) == APE_OBJECT_STRING);
     data = object_value_allocated_data(object);
-    data->string.length = len;
+    data->valstring.length = len;
 }
 
 char* ape_object_string_getmutable(ApeObject_t object)
 {
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     APE_ASSERT(object_value_type(object) == APE_OBJECT_STRING);
     data = object_value_allocated_data(object);
     return ape_object_string_getinternalobjdata(data);
@@ -136,11 +136,11 @@ bool ape_object_string_append(ApeObject_t obj, const char* src, ApeSize_t len)
     ApeSize_t capacity;
     ApeSize_t current_len;
     char* str_buf;
-    ApeObjectData_t* data;
-    ApeObjectString_t* string;
+    ApeObjData_t* data;
+    ApeObjString_t* string;
     APE_ASSERT(object_value_type(obj) == APE_OBJECT_STRING);
     data = object_value_allocated_data(obj);
-    string = &data->string;
+    string = &data->valstring;
     str_buf = ape_object_string_getmutable(obj);
     current_len = string->length;
     capacity = string->capacity;
@@ -159,20 +159,20 @@ unsigned long ape_object_string_gethash(ApeObject_t obj)
 {
     const char* rawstr;
     ApeSize_t rawlen;
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     APE_ASSERT(object_value_type(obj) == APE_OBJECT_STRING);
     data = object_value_allocated_data(obj);
-    if(data->string.hash == 0)
+    if(data->valstring.hash == 0)
     {
         rawstr = ape_object_string_getdata(obj);
         rawlen = ape_object_string_getlength(obj);
-        data->string.hash = ape_util_hashstring(rawstr, rawlen);
-        if(data->string.hash == 0)
+        data->valstring.hash = ape_util_hashstring(rawstr, rawlen);
+        if(data->valstring.hash == 0)
         {
-            data->string.hash = 1;
+            data->valstring.hash = 1;
         }
     }
-    return data->string.hash;
+    return data->valstring.hash;
 }
 
 

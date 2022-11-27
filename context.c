@@ -11,28 +11,19 @@ ApeContext_t* ape_make_contextex(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t f
 {
     ApeContext_t* ctx;
     ApeAllocator_t custom_alloc;
-
-
     custom_alloc = ape_make_allocator(malloc_fn, free_fn, optr);
-
     ctx = (ApeContext_t*)ape_allocator_alloc(&custom_alloc, sizeof(ApeContext_t));
-
     if(!ctx)
     {
         return NULL;
     }
-
     memset(ctx, 0, sizeof(ApeContext_t));
-
+    // NB. this currently does not work. need to figure this out eventually.
     {
-
         //ctx->alloc = ape_make_allocator(ape_mem_defaultmalloc, ape_mem_defaultfree, ctx);
         ctx->alloc = ape_make_allocator(NULL, NULL, ctx);
-
         ctx->custom_allocator = custom_alloc;
-
     }
-
     ape_context_setdefaultconfig(ctx);
     ape_errorlist_initerrors(&ctx->errors);
     ctx->mem = ape_make_gcmem(ctx);
@@ -98,7 +89,6 @@ bool ape_context_settimeout(ApeContext_t* ctx, ApeFloat_t max_execution_time_ms)
         ctx->config.max_execution_time_set = false;
         return false;
     }
-
     if(max_execution_time_ms >= 0)
     {
         ctx->config.max_execution_time_ms = max_execution_time_ms;
@@ -130,7 +120,6 @@ void ape_context_setfileread(ApeContext_t* ctx, ApeIOReadFunc_t file_read, void*
     ctx->config.fileio.read_file.context = context;
 }
 
-
 void ape_context_dumpast(ApeContext_t* ctx, ApePtrArray_t* statements)
 {
     ApeWriter_t* strbuf;
@@ -141,7 +130,7 @@ void ape_context_dumpast(ApeContext_t* ctx, ApePtrArray_t* statements)
     ape_writer_destroy(strbuf);
 }
 
-void ape_context_dumpbytecode(ApeContext_t* ctx, ApeCompilationResult_t* cres)
+void ape_context_dumpbytecode(ApeContext_t* ctx, ApeCompResult_t* cres)
 {
     ApeWriter_t* strbuf;
     strbuf = ape_make_writerio(ctx, stderr, false, true);
@@ -155,7 +144,7 @@ ApeObject_t ape_context_executesource(ApeContext_t* ctx, const char* code, bool 
 {
     bool ok;
     ApeObject_t objres;
-    ApeCompilationResult_t* cres;
+    ApeCompResult_t* cres;
     if(alsoreset)
     {
         ape_context_resetstate(ctx);
@@ -192,7 +181,7 @@ ApeObject_t ape_context_executefile(ApeContext_t* ctx, const char* path)
 {
     bool ok;
     ApeObject_t objres;
-    ApeCompilationResult_t* cres;
+    ApeCompResult_t* cres;
     ape_context_resetstate(ctx);
     cres = ape_compiler_compilefile(ctx->compiler, path);
     if(!cres || ape_errorlist_count(&ctx->errors) > 0)

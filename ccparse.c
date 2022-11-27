@@ -1151,7 +1151,7 @@ ApeExpression_t* ape_ast_make_expression(ApeContext_t* ctx, ApeExprType_t type)
     return res;
 }
 
-ApeStatement_t* ape_ast_make_statement(ApeContext_t* ctx, ApeStatementType_t type)
+ApeStatement_t* ape_ast_make_statement(ApeContext_t* ctx, ApeStmtType_t type)
 {
     ApeStatement_t* res = (ApeStatement_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeStatement_t));
     if(!res)

@@ -20,7 +20,7 @@ all: $(protofile) $(target)
 
 $(protofile): $(srcfiles_all)
 	echo > $(protofile)
-	cproto $(srcfiles_all) > $(protofile)_tmp
+	cproto $(srcfiles_all) | perl -pe 's/\b_Bool\b/bool/g' > $(protofile)_tmp
 	mv $(protofile)_tmp $(protofile)
 
 $(target): $(protofile) $(objfiles_all)

@@ -21,7 +21,7 @@ static const char* g_type_names[] = {
 * todo: these MUST reflect the order of ApeOpcodeValue_t.
 * meaning its prone to break terribly if and/or when it is changed.
 */
-static ApeOpcodeDefinition_t g_definitions[OPCODE_MAX + 1] =
+static ApeOpcodeDef_t g_definitions[OPCODE_MAX + 1] =
 {
     { "none", 0, { 0 } },
     { "constant", 1, { 2 } },
@@ -78,7 +78,7 @@ static ApeOpcodeDefinition_t g_definitions[OPCODE_MAX + 1] =
     { "invalid_max", 0, { 0 } },
 };
 
-ApeOpcodeDefinition_t* ape_tostring_opcodefind(ApeOpByte_t op)
+ApeOpcodeDef_t* ape_tostring_opcodefind(ApeOpByte_t op)
 {
     if(op <= OPCODE_NONE || op >= OPCODE_MAX)
     {
@@ -96,7 +96,7 @@ const char* ape_tostring_opcodename(ApeOpByte_t op)
     return g_definitions[op].name;
 }
 
-static bool ape_tostrign_opcodecoderead(ApeOpcodeDefinition_t* def, ApeUShort_t* instr, uint64_t outop[2])
+static bool ape_tostrign_opcodecoderead(ApeOpcodeDef_t* def, ApeUShort_t* instr, uint64_t outop[2])
 {
     ApeSize_t i;
     int offset = 0;
@@ -157,7 +157,7 @@ bool ape_tostring_stmtlist(ApePtrArray_t* statements, ApeWriter_t* buf)
 {
     ApeSize_t i;
     ApeSize_t count;
-    const ApeStatement_t* stmt;
+    ApeStatement_t* stmt;
     count = ape_ptrarray_count(statements);
     for(i = 0; i < count; i++)
     {
@@ -171,7 +171,7 @@ bool ape_tostring_stmtlist(ApePtrArray_t* statements, ApeWriter_t* buf)
     return true;
 }
 
-bool ape_tostring_statement(const ApeStatement_t* stmt, ApeWriter_t* buf)
+bool ape_tostring_statement(ApeStatement_t* stmt, ApeWriter_t* buf)
 {
     ApeSize_t i;
     ApeDefineStmt_t* defstmt;
@@ -488,7 +488,7 @@ bool ape_tostring_expression(ApeExpression_t* expr, ApeWriter_t* buf)
     return true;
 }
 
-bool ape_tostring_codeblock(const ApeCodeblock_t* stmt, ApeWriter_t* buf)
+bool ape_tostring_codeblock(ApeCodeblock_t* stmt, ApeWriter_t* buf)
 {
     bool ok;
     ApeSize_t i;
@@ -596,7 +596,7 @@ const char* ape_tostring_exprtype(ApeExprType_t type)
     return "unknown";
 }
 
-bool ape_tostring_compresult(ApeCompilationResult_t* res, ApeWriter_t* buf)
+bool ape_tostring_compresult(ApeCompResult_t* res, ApeWriter_t* buf)
 {
     return ape_tostring_code(res->bytecode, res->srcpositions, res->count, buf);
 }
@@ -608,7 +608,7 @@ bool ape_tostring_code(ApeUShort_t* code, ApePosition_t* source_positions, size_
     while(pos < code_size)
     {
         ApeUShort_t op = code[pos];
-        ApeOpcodeDefinition_t* def = ape_tostring_opcodefind(op);
+        ApeOpcodeDef_t* def = ape_tostring_opcodefind(op);
         APE_ASSERT(def);
         if(source_positions)
         {

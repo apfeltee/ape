@@ -63,7 +63,7 @@ ApeGCMemory_t* ape_make_gcmem(ApeContext_t* ctx)
 {
     ApeSize_t i;
     ApeGCMemory_t* mem;
-    ApeObjectDataPool_t* pool;
+    ApeObjPool_t* pool;
     mem = (ApeGCMemory_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeGCMemory_t));
     if(!mem)
     {
@@ -93,7 +93,7 @@ ApeGCMemory_t* ape_make_gcmem(ApeContext_t* ctx)
     {
         pool = &mem->pools[i];
         mem->pools[i].count = 0;
-        memset(pool, 0, sizeof(ApeObjectDataPool_t));
+        memset(pool, 0, sizeof(ApeObjPool_t));
     }
     return mem;
 error:
@@ -105,9 +105,9 @@ void ape_gcmem_destroy(ApeGCMemory_t* mem)
 {
     ApeSize_t i;
     ApeSize_t j;
-    ApeObjectData_t* obj;
-    ApeObjectData_t* data;
-    ApeObjectDataPool_t* pool;
+    ApeObjData_t* obj;
+    ApeObjData_t* data;
+    ApeObjPool_t* pool;
     if(!mem)
     {
         return;
@@ -116,7 +116,7 @@ void ape_gcmem_destroy(ApeGCMemory_t* mem)
     ape_ptrarray_destroy(mem->objects_back);
     for(i = 0; i < ape_ptrarray_count(mem->objects); i++)
     {
-        obj = (ApeObjectData_t*)ape_ptrarray_get(mem->objects, i);
+        obj = (ApeObjData_t*)ape_ptrarray_get(mem->objects, i);
         ape_object_data_deinit(obj);
         ape_allocator_free(mem->alloc, obj);
     }
@@ -130,7 +130,7 @@ void ape_gcmem_destroy(ApeGCMemory_t* mem)
             ape_object_data_deinit(data);
             ape_allocator_free(mem->alloc, data);
         }
-        memset(pool, 0, sizeof(ApeObjectDataPool_t));
+        memset(pool, 0, sizeof(ApeObjPool_t));
     }
     for(i = 0; i < mem->data_only_pool.count; i++)
     {
@@ -139,10 +139,10 @@ void ape_gcmem_destroy(ApeGCMemory_t* mem)
     ape_allocator_free(mem->alloc, mem);
 }
 
-ApeObjectData_t* ape_gcmem_allocobjdata(ApeGCMemory_t* mem, ApeObjectType_t type)
+ApeObjData_t* ape_gcmem_allocobjdata(ApeGCMemory_t* mem, ApeObjType_t type)
 {
     bool ok;
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     data = NULL;
     mem->allocations_since_sweep++;
     if(mem->data_only_pool.count > 0)
@@ -152,13 +152,13 @@ ApeObjectData_t* ape_gcmem_allocobjdata(ApeGCMemory_t* mem, ApeObjectType_t type
     }
     else
     {
-        data = (ApeObjectData_t*)ape_allocator_alloc(mem->alloc, sizeof(ApeObjectData_t));
+        data = (ApeObjData_t*)ape_allocator_alloc(mem->alloc, sizeof(ApeObjData_t));
         if(!data)
         {
             return NULL;
         }
     }
-    memset(data, 0, sizeof(ApeObjectData_t));
+    memset(data, 0, sizeof(ApeObjData_t));
     APE_ASSERT(ape_ptrarray_count(mem->objects_back) >= ape_ptrarray_count(mem->objects));
     // we want to make sure that appending to objects_back never fails in sweep
     // so this only reserves space there.
@@ -180,10 +180,10 @@ ApeObjectData_t* ape_gcmem_allocobjdata(ApeGCMemory_t* mem, ApeObjectType_t type
 }
 
 
-bool ape_gcmem_canputinpool(ApeGCMemory_t* mem, ApeObjectData_t* data)
+bool ape_gcmem_canputinpool(ApeGCMemory_t* mem, ApeObjData_t* data)
 {
     ApeObject_t obj;
-    ApeObjectDataPool_t* pool;
+    ApeObjPool_t* pool;
     obj = object_make_from_data(mem->context, data->type, data);
     // this is to ensure that large objects won't be kept in pool indefinitely
     switch(data->type)
@@ -206,7 +206,7 @@ bool ape_gcmem_canputinpool(ApeGCMemory_t* mem, ApeObjectData_t* data)
             break;
         case APE_OBJECT_STRING:
             {
-                if(!data->string.is_allocated || data->string.capacity > 4096)
+                if(!data->valstring.is_allocated || data->valstring.capacity > 4096)
                 {
                     return false;
                 }
@@ -226,7 +226,7 @@ bool ape_gcmem_canputinpool(ApeGCMemory_t* mem, ApeObjectData_t* data)
 }
 
 // INTERNAL
-ApeObjectDataPool_t* ape_gcmem_getpoolfor(ApeGCMemory_t* mem, ApeObjectType_t type)
+ApeObjPool_t* ape_gcmem_getpoolfor(ApeGCMemory_t* mem, ApeObjType_t type)
 {
     switch(type)
     {
@@ -254,11 +254,11 @@ ApeObjectDataPool_t* ape_gcmem_getpoolfor(ApeGCMemory_t* mem, ApeObjectType_t ty
 
 }
 
-ApeObjectData_t* ape_gcmem_getfrompool(ApeGCMemory_t* mem, ApeObjectType_t type)
+ApeObjData_t* ape_gcmem_getfrompool(ApeGCMemory_t* mem, ApeObjType_t type)
 {
     bool ok;
-    ApeObjectData_t* data;
-    ApeObjectDataPool_t* pool;
+    ApeObjData_t* data;
+    ApeObjPool_t* pool;
     pool = ape_gcmem_getpoolfor(mem, type);
     if(!pool || (pool->count <= 0))
     {
@@ -285,10 +285,10 @@ ApeObjectData_t* ape_gcmem_getfrompool(ApeGCMemory_t* mem, ApeObjectType_t type)
 void ape_gcmem_unmarkall(ApeGCMemory_t* mem)
 {
     ApeSize_t i;
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     for(i = 0; i < ape_ptrarray_count(mem->objects); i++)
     {
-        data = (ApeObjectData_t*)ape_ptrarray_get(mem->objects, i);
+        data = (ApeObjData_t*)ape_ptrarray_get(mem->objects, i);
         data->gcmark = false;
     }
 }
@@ -313,12 +313,12 @@ void ape_gcmem_markobject(ApeObject_t obj)
     ApeSize_t len;
     ApeObject_t key;
     ApeObject_t val;
-    ApeObjectData_t* key_data;
-    ApeObjectData_t* val_data;
-    ApeFunction_t* function;
+    ApeObjData_t* key_data;
+    ApeObjData_t* val_data;
+    ApeScriptFunction_t* function;
     ApeObject_t free_val;
-    ApeObjectData_t* free_val_data;
-    ApeObjectData_t* data;
+    ApeObjData_t* free_val_data;
+    ApeObjData_t* data;
     if(!object_value_isallocated(obj))
     {
         return;
@@ -405,15 +405,15 @@ void ape_gcmem_sweep(ApeGCMemory_t* mem)
 {
     ApeSize_t i;
     bool ok;
-    ApeObjectData_t* data;
-    ApeObjectDataPool_t* pool;
+    ApeObjData_t* data;
+    ApeObjPool_t* pool;
     ApePtrArray_t* objs_temp;
     ape_gcmem_markobjlist((ApeObject_t*)ape_valarray_data(mem->objects_not_gced), ape_valarray_count(mem->objects_not_gced));
     APE_ASSERT(ape_ptrarray_count(mem->objects_back) >= ape_ptrarray_count(mem->objects));
     ape_ptrarray_clear(mem->objects_back);
     for(i = 0; i < ape_ptrarray_count(mem->objects); i++)
     {
-        data = (ApeObjectData_t*)ape_ptrarray_get(mem->objects, i);
+        data = (ApeObjData_t*)ape_ptrarray_get(mem->objects, i);
         if(data->gcmark)
         {
             // this should never fail because objects_back's size should be equal to objects

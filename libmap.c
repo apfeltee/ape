@@ -2,17 +2,17 @@
 #include "ape.h"
 
 // Public
-ApeValDictionary_t* ape_make_valdict_actual(ApeContext_t* ctx, ApeSize_t key_size, ApeSize_t val_size)
+ApeValDict_t* ape_make_valdict_actual(ApeContext_t* ctx, ApeSize_t key_size, ApeSize_t val_size)
 {
     return ape_make_valdictcapacity(ctx, APE_CONF_DICT_INITIAL_SIZE, key_size, val_size);
 }
 
-ApeValDictionary_t* ape_make_valdictcapacity(ApeContext_t* ctx, ApeSize_t min_capacity, ApeSize_t key_size, ApeSize_t val_size)
+ApeValDict_t* ape_make_valdictcapacity(ApeContext_t* ctx, ApeSize_t min_capacity, ApeSize_t key_size, ApeSize_t val_size)
 {
     bool ok;
-    ApeValDictionary_t* dict;
+    ApeValDict_t* dict;
     ApeSize_t capacity;
-    dict = (ApeValDictionary_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeValDictionary_t));
+    dict = (ApeValDict_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeValDict_t));
     capacity = ape_util_upperpoweroftwo(min_capacity * 2);
     if(!dict)
     {
@@ -27,7 +27,7 @@ ApeValDictionary_t* ape_make_valdictcapacity(ApeContext_t* ctx, ApeSize_t min_ca
     return dict;
 }
 
-void ape_valdict_destroy(ApeValDictionary_t* dict)
+void ape_valdict_destroy(ApeValDict_t* dict)
 {
     ApeAllocator_t* alloc;
     if(!dict)
@@ -39,17 +39,17 @@ void ape_valdict_destroy(ApeValDictionary_t* dict)
     ape_allocator_free(alloc, dict);
 }
 
-void ape_valdict_sethashfunction(ApeValDictionary_t* dict, ApeDataHashFunc_t hash_fn)
+void ape_valdict_sethashfunction(ApeValDict_t* dict, ApeDataHashFunc_t hash_fn)
 {
     dict->_hash_key = hash_fn;
 }
 
-void ape_valdict_setequalsfunction(ApeValDictionary_t* dict, ApeDataEqualsFunc_t equals_fn)
+void ape_valdict_setequalsfunction(ApeValDict_t* dict, ApeDataEqualsFunc_t equals_fn)
 {
     dict->_keys_equals = equals_fn;
 }
 
-bool ape_valdict_set(ApeValDictionary_t* dict, void* key, void* value)
+bool ape_valdict_set(ApeValDict_t* dict, void* key, void* value)
 {
     bool ok;
     bool found;
@@ -85,7 +85,7 @@ bool ape_valdict_set(ApeValDictionary_t* dict, void* key, void* value)
     return true;
 }
 
-void* ape_valdict_get(const ApeValDictionary_t* dict, const void* key)
+void* ape_valdict_get(const ApeValDict_t* dict, const void* key)
 {
     bool found;
     ApeSize_t item_ix;
@@ -102,7 +102,7 @@ void* ape_valdict_get(const ApeValDictionary_t* dict, const void* key)
     return ape_valdict_getvalueat(dict, item_ix);
 }
 
-void* ape_valdict_getkeyat(const ApeValDictionary_t* dict, ApeSize_t ix)
+void* ape_valdict_getkeyat(const ApeValDict_t* dict, ApeSize_t ix)
 {
     if(ix >= dict->count)
     {
@@ -111,7 +111,7 @@ void* ape_valdict_getkeyat(const ApeValDictionary_t* dict, ApeSize_t ix)
     return (char*)dict->keys + (dict->key_size * ix);
 }
 
-void* ape_valdict_getvalueat(const ApeValDictionary_t* dict, ApeSize_t ix)
+void* ape_valdict_getvalueat(const ApeValDict_t* dict, ApeSize_t ix)
 {
     if(ix >= dict->count)
     {
@@ -120,7 +120,7 @@ void* ape_valdict_getvalueat(const ApeValDictionary_t* dict, ApeSize_t ix)
     return (char*)dict->values + (dict->val_size * ix);
 }
 
-bool ape_valdict_setvalueat(const ApeValDictionary_t* dict, ApeSize_t ix, const void* value)
+bool ape_valdict_setvalueat(const ApeValDict_t* dict, ApeSize_t ix, const void* value)
 {
     ApeSize_t offset;
     if(ix >= dict->count)
@@ -132,7 +132,7 @@ bool ape_valdict_setvalueat(const ApeValDictionary_t* dict, ApeSize_t ix, const 
     return true;
 }
 
-ApeSize_t ape_valdict_count(const ApeValDictionary_t* dict)
+ApeSize_t ape_valdict_count(const ApeValDict_t* dict)
 {
     if(!dict)
     {
@@ -141,7 +141,7 @@ ApeSize_t ape_valdict_count(const ApeValDictionary_t* dict)
     return dict->count;
 }
 
-void ape_valdict_clear(ApeValDictionary_t* dict)
+void ape_valdict_clear(ApeValDict_t* dict)
 {
     ApeSize_t i;
     dict->count = 0;
@@ -152,7 +152,7 @@ void ape_valdict_clear(ApeValDictionary_t* dict)
 }
 
 // Private definitions
-bool ape_valdict_init(ApeValDictionary_t* dict, ApeSize_t key_size, ApeSize_t val_size, ApeSize_t initial_capacity)
+bool ape_valdict_init(ApeValDict_t* dict, ApeSize_t key_size, ApeSize_t val_size, ApeSize_t initial_capacity)
 {
     ApeSize_t i;
     dict->alloc = &dict->context->alloc;
@@ -191,7 +191,7 @@ error:
     return false;
 }
 
-void ape_valdict_deinit(ApeValDictionary_t* dict)
+void ape_valdict_deinit(ApeValDict_t* dict)
 {
     dict->key_size = 0;
     dict->val_size = 0;
@@ -210,7 +210,7 @@ void ape_valdict_deinit(ApeValDictionary_t* dict)
     dict->hashes = NULL;
 }
 
-ApeSize_t ape_valdict_getcellindex(const ApeValDictionary_t* dict, const void* key, unsigned long hash, bool* out_found)
+ApeSize_t ape_valdict_getcellindex(const ApeValDict_t* dict, const void* key, unsigned long hash, bool* out_found)
 {
     bool are_equal;
     ApeSize_t ofs;
@@ -255,14 +255,14 @@ ApeSize_t ape_valdict_getcellindex(const ApeValDictionary_t* dict, const void* k
     return APE_CONF_INVALID_VALDICT_IX;
 }
 
-bool ape_valdict_growandrehash(ApeValDictionary_t* dict)
+bool ape_valdict_growandrehash(ApeValDict_t* dict)
 {
     bool ok;
     ApeSize_t new_capacity;
     ApeSize_t i;
     char* key;
     void* value;
-    ApeValDictionary_t new_dict;
+    ApeValDict_t new_dict;
     new_capacity = dict->cell_capacity == 0 ? APE_CONF_DICT_INITIAL_SIZE : dict->cell_capacity * 2;
     ok = ape_valdict_init(&new_dict, dict->key_size, dict->val_size, new_capacity);
     if(!ok)
@@ -287,7 +287,7 @@ bool ape_valdict_growandrehash(ApeValDictionary_t* dict)
     return true;
 }
 
-bool ape_valdict_setkeyat(ApeValDictionary_t* dict, ApeSize_t ix, void* key)
+bool ape_valdict_setkeyat(ApeValDict_t* dict, ApeSize_t ix, void* key)
 {
     ApeSize_t offset;
     if(ix >= dict->count)
@@ -299,7 +299,7 @@ bool ape_valdict_setkeyat(ApeValDictionary_t* dict, ApeSize_t ix, void* key)
     return true;
 }
 
-bool ape_valdict_keysareequal(const ApeValDictionary_t* dict, const void* a, const void* b)
+bool ape_valdict_keysareequal(const ApeValDict_t* dict, const void* a, const void* b)
 {
     if(dict->_keys_equals)
     {
@@ -308,7 +308,7 @@ bool ape_valdict_keysareequal(const ApeValDictionary_t* dict, const void* a, con
     return memcmp(a, b, dict->key_size) == 0;
 }
 
-unsigned long ape_valdict_hashkey(const ApeValDictionary_t* dict, const void* key)
+unsigned long ape_valdict_hashkey(const ApeValDict_t* dict, const void* key)
 {
     if(dict->_hash_key)
     {
@@ -317,7 +317,7 @@ unsigned long ape_valdict_hashkey(const ApeValDictionary_t* dict, const void* ke
     return ape_util_hashstring(key, dict->key_size);
 }
 
-void ape_valdict_destroywithitems(ApeValDictionary_t* dict)
+void ape_valdict_destroywithitems(ApeValDict_t* dict)
 {
     ApeSize_t i;
     void** vp;
@@ -337,24 +337,24 @@ void ape_valdict_destroywithitems(ApeValDictionary_t* dict)
     ape_valdict_destroy(dict);
 }
 
-void ape_valdict_setcopyfunc(ApeValDictionary_t* dict, ApeDataCallback_t fn)
+void ape_valdict_setcopyfunc(ApeValDict_t* dict, ApeDataCallback_t fn)
 {
     dict->copy_fn = fn;
 }
 
-void ape_valdict_setdeletefunc(ApeValDictionary_t* dict, ApeDataCallback_t fn)
+void ape_valdict_setdeletefunc(ApeValDict_t* dict, ApeDataCallback_t fn)
 {
     dict->destroy_fn = fn;
 }
 
-ApeValDictionary_t* ape_valdict_copywithitems(ApeValDictionary_t* dict)
+ApeValDict_t* ape_valdict_copywithitems(ApeValDict_t* dict)
 {
     ApeSize_t i;
     bool ok;
     const char* key;
     void* item;
     void* item_copy;
-    ApeValDictionary_t* dict_copy;
+    ApeValDict_t* dict_copy;
     ok = false;
     if(!dict->copy_fn || !dict->destroy_fn)
     {
@@ -363,14 +363,13 @@ ApeValDictionary_t* ape_valdict_copywithitems(ApeValDictionary_t* dict)
     dict_copy = valdict_make(dict->context, dict->key_size, dict->val_size);
     ape_valdict_setcopyfunc(dict_copy, (ApeDataCallback_t)dict->copy_fn);
     ape_valdict_setdeletefunc(dict_copy, (ApeDataCallback_t)dict->destroy_fn);
-
     if(!dict_copy)
     {
         return NULL;
     }
     for(i = 0; i < ape_valdict_count(dict); i++)
     {
-        key = ape_valdict_getkeyat(dict, i);
+        key = (const char*)ape_valdict_getkeyat(dict, i);
         item = ape_valdict_getvalueat(dict, i);
         item_copy = dict_copy->copy_fn(item);
         if(item && !item_copy)
@@ -390,11 +389,11 @@ ApeValDictionary_t* ape_valdict_copywithitems(ApeValDictionary_t* dict)
 }
 
 // Public
-ApeStrDictionary_t* ape_make_strdict(ApeContext_t* ctx, ApeDataCallback_t copy_fn, ApeDataCallback_t destroy_fn)
+ApeStrDict_t* ape_make_strdict(ApeContext_t* ctx, ApeDataCallback_t copy_fn, ApeDataCallback_t destroy_fn)
 {
     bool ok;
-    ApeStrDictionary_t* dict;
-    dict = (ApeStrDictionary_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeStrDictionary_t));
+    ApeStrDict_t* dict;
+    dict = (ApeStrDict_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeStrDict_t));
     if(dict == NULL)
     {
         return NULL;
@@ -409,7 +408,7 @@ ApeStrDictionary_t* ape_make_strdict(ApeContext_t* ctx, ApeDataCallback_t copy_f
     return dict;
 }
 
-void ape_strdict_destroy(ApeStrDictionary_t* dict)
+void ape_strdict_destroy(ApeStrDict_t* dict)
 {
     ApeAllocator_t* alloc;
     if(!dict)
@@ -421,7 +420,7 @@ void ape_strdict_destroy(ApeStrDictionary_t* dict)
     ape_allocator_free(alloc, dict);
 }
 
-void ape_strdict_destroywithitems(ApeStrDictionary_t* dict)
+void ape_strdict_destroywithitems(ApeStrDict_t* dict)
 {
     ApeSize_t i;
     if(!dict)
@@ -438,14 +437,14 @@ void ape_strdict_destroywithitems(ApeStrDictionary_t* dict)
     ape_strdict_destroy(dict);
 }
 
-ApeStrDictionary_t* ape_strdict_copywithitems(ApeStrDictionary_t* dict)
+ApeStrDict_t* ape_strdict_copywithitems(ApeStrDict_t* dict)
 {
     ApeSize_t i;
     bool ok;
     const char* key;
     void* item;
     void* item_copy;
-    ApeStrDictionary_t* dict_copy;
+    ApeStrDict_t* dict_copy;
     ok = false;
     if(!dict->copy_fn || !dict->destroy_fn)
     {
@@ -477,12 +476,12 @@ ApeStrDictionary_t* ape_strdict_copywithitems(ApeStrDictionary_t* dict)
     return dict_copy;
 }
 
-bool ape_strdict_set(ApeStrDictionary_t* dict, const char* key, void* value)
+bool ape_strdict_set(ApeStrDict_t* dict, const char* key, void* value)
 {
     return ape_strdict_setinternal(dict, key, NULL, value);
 }
 
-void* ape_strdict_get(const ApeStrDictionary_t* dict, const char* key)
+void* ape_strdict_get(const ApeStrDict_t* dict, const char* key)
 {
     bool found;
     ApeSize_t klen;
@@ -501,7 +500,7 @@ void* ape_strdict_get(const ApeStrDictionary_t* dict, const char* key)
     return dict->values[item_ix];
 }
 
-void* ape_strdict_getvalueat(const ApeStrDictionary_t* dict, ApeSize_t ix)
+void* ape_strdict_getvalueat(const ApeStrDict_t* dict, ApeSize_t ix)
 {
     if(ix >= dict->count)
     {
@@ -510,7 +509,7 @@ void* ape_strdict_getvalueat(const ApeStrDictionary_t* dict, ApeSize_t ix)
     return dict->values[ix];
 }
 
-const char* ape_strdict_getkeyat(const ApeStrDictionary_t* dict, ApeSize_t ix)
+const char* ape_strdict_getkeyat(const ApeStrDict_t* dict, ApeSize_t ix)
 {
     if(ix >= dict->count)
     {
@@ -519,7 +518,7 @@ const char* ape_strdict_getkeyat(const ApeStrDictionary_t* dict, ApeSize_t ix)
     return dict->keys[ix];
 }
 
-ApeSize_t ape_strdict_count(const ApeStrDictionary_t* dict)
+ApeSize_t ape_strdict_count(const ApeStrDict_t* dict)
 {
     if(!dict)
     {
@@ -529,7 +528,7 @@ ApeSize_t ape_strdict_count(const ApeStrDictionary_t* dict)
 }
 
 // Private definitions
-bool ape_strdict_init(ApeStrDictionary_t* dict, ApeContext_t* ctx, ApeSize_t initial_capacity, ApeDataCallback_t copy_fn, ApeDataCallback_t destroy_fn)
+bool ape_strdict_init(ApeStrDict_t* dict, ApeContext_t* ctx, ApeSize_t initial_capacity, ApeDataCallback_t copy_fn, ApeDataCallback_t destroy_fn)
 {
     ApeSize_t i;
     dict->context = ctx;
@@ -567,7 +566,7 @@ error:
     return false;
 }
 
-void ape_strdict_deinit(ApeStrDictionary_t* dict, bool free_keys)
+void ape_strdict_deinit(ApeStrDict_t* dict, bool free_keys)
 {
     ApeSize_t i;
     if(free_keys)
@@ -592,7 +591,7 @@ void ape_strdict_deinit(ApeStrDictionary_t* dict, bool free_keys)
     dict->hashes = NULL;
 }
 
-ApeSize_t ape_strdict_getcellindex(const ApeStrDictionary_t* dict, const char* key, unsigned long hash, bool* out_found)
+ApeSize_t ape_strdict_getcellindex(const ApeStrDict_t* dict, const char* key, unsigned long hash, bool* out_found)
 {
     ApeSize_t i;
     ApeSize_t ix;
@@ -626,13 +625,13 @@ ApeSize_t ape_strdict_getcellindex(const ApeStrDictionary_t* dict, const char* k
 }
 
 
-bool ape_strdict_growandrehash(ApeStrDictionary_t* dict)
+bool ape_strdict_growandrehash(ApeStrDict_t* dict)
 {
     bool ok;
     ApeSize_t i;
     char* key;
     void* value;
-    ApeStrDictionary_t new_dict;
+    ApeStrDict_t new_dict;
     ok = ape_strdict_init(&new_dict, dict->context, dict->cell_capacity * 2, dict->copy_fn, dict->destroy_fn);
     if(!ok)
     {
@@ -655,7 +654,7 @@ bool ape_strdict_growandrehash(ApeStrDictionary_t* dict)
     return true;
 }
 
-bool ape_strdict_setinternal(ApeStrDictionary_t* dict, const char* ckey, char* mkey, void* value)
+bool ape_strdict_setinternal(ApeStrDict_t* dict, const char* ckey, char* mkey, void* value)
 {
     bool ok;
     bool found;
@@ -711,11 +710,11 @@ ApeObject_t ape_object_make_map(ApeContext_t* ctx)
 
 ApeObject_t ape_object_make_mapcapacity(ApeContext_t* ctx, unsigned capacity)
 {
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     data = ape_gcmem_getfrompool(ctx->vm->mem, APE_OBJECT_MAP);
     if(data)
     {
-        ape_valdict_clear(data->map);
+        ape_valdict_clear(data->valmap);
         return object_make_from_data(ctx, APE_OBJECT_MAP, data);
     }
     data = ape_gcmem_allocobjdata(ctx->vm->mem, APE_OBJECT_MAP);
@@ -723,32 +722,32 @@ ApeObject_t ape_object_make_mapcapacity(ApeContext_t* ctx, unsigned capacity)
     {
         return ape_object_make_null(ctx);
     }
-    data->map = ape_make_valdictcapacity(ctx, capacity, sizeof(ApeObject_t), sizeof(ApeObject_t));
-    if(!data->map)
+    data->valmap = ape_make_valdictcapacity(ctx, capacity, sizeof(ApeObject_t), sizeof(ApeObject_t));
+    if(!data->valmap)
     {
         return ape_object_make_null(ctx);
     }
-    ape_valdict_sethashfunction(data->map, (ApeDataHashFunc_t)ape_object_value_hash);
-    ape_valdict_setequalsfunction(data->map, (ApeDataEqualsFunc_t)ape_object_value_wrapequals);
+    ape_valdict_sethashfunction(data->valmap, (ApeDataHashFunc_t)ape_object_value_hash);
+    ape_valdict_setequalsfunction(data->valmap, (ApeDataEqualsFunc_t)ape_object_value_wrapequals);
     return object_make_from_data(ctx, APE_OBJECT_MAP, data);
 }
 
 
 ApeSize_t ape_object_map_getlength(ApeObject_t object)
 {
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     APE_ASSERT(object_value_type(object) == APE_OBJECT_MAP);
     data = object_value_allocated_data(object);
-    return ape_valdict_count(data->map);
+    return ape_valdict_count(data->valmap);
 }
 
 ApeObject_t ape_object_map_getkeyat(ApeObject_t object, ApeSize_t ix)
 {
     ApeObject_t* res;
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     APE_ASSERT(object_value_type(object) == APE_OBJECT_MAP);
     data = object_value_allocated_data(object);
-    res= (ApeObject_t*)ape_valdict_getkeyat(data->map, ix);
+    res= (ApeObject_t*)ape_valdict_getkeyat(data->valmap, ix);
     if(!res)
     {
         return ape_object_make_null(data->context);
@@ -759,10 +758,10 @@ ApeObject_t ape_object_map_getkeyat(ApeObject_t object, ApeSize_t ix)
 ApeObject_t ape_object_map_getvalueat(ApeObject_t object, ApeSize_t ix)
 {
     ApeObject_t* res;
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     APE_ASSERT(object_value_type(object) == APE_OBJECT_MAP);
     data = object_value_allocated_data(object);
-    res = (ApeObject_t*)ape_valdict_getvalueat(data->map, ix);
+    res = (ApeObject_t*)ape_valdict_getvalueat(data->valmap, ix);
     if(!res)
     {
         return ape_object_make_null(data->context);
@@ -772,19 +771,19 @@ ApeObject_t ape_object_map_getvalueat(ApeObject_t object, ApeSize_t ix)
 
 bool ape_object_map_setvalue(ApeObject_t object, ApeObject_t key, ApeObject_t val)
 {
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     APE_ASSERT(object_value_type(object) == APE_OBJECT_MAP);
     data = object_value_allocated_data(object);
-    return ape_valdict_set(data->map, &key, &val);
+    return ape_valdict_set(data->valmap, &key, &val);
 }
 
 ApeObject_t ape_object_map_getvalueobject(ApeObject_t object, ApeObject_t key)
 {
     ApeObject_t* res;
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     APE_ASSERT(object_value_type(object) == APE_OBJECT_MAP);
     data = object_value_allocated_data(object);
-    res = (ApeObject_t*)ape_valdict_get(data->map, &key);
+    res = (ApeObject_t*)ape_valdict_get(data->valmap, &key);
     if(!res)
     {
         return ape_object_make_null(data->context);
@@ -824,7 +823,7 @@ bool ape_object_map_setnamedstring(ApeObject_t obj, const char* key, const char*
 
 bool ape_object_map_setnamednumber(ApeObject_t obj, const char* key, ApeFloat_t number)
 {
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     data = object_value_allocated_data(obj);
     ApeObject_t number_object = ape_object_make_number(data->context, number);
     return ape_object_map_setnamedvalue(obj, key, number_object);
@@ -832,7 +831,7 @@ bool ape_object_map_setnamednumber(ApeObject_t obj, const char* key, ApeFloat_t 
 
 bool ape_object_map_setnamedbool(ApeObject_t obj, const char* key, bool value)
 {
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     data = object_value_allocated_data(obj);
     ApeObject_t bool_object = ape_object_make_bool(data->context, value);
     return ape_object_map_setnamedvalue(obj, key, bool_object);

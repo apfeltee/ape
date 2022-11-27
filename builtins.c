@@ -16,8 +16,8 @@
             (generate_error), \
             (argc), \
             (args),  \
-            (sizeof((ApeObjectType_t[]){ __VA_ARGS__ }) / sizeof(ApeObjectType_t)), \
-            ((ApeObjectType_t*)((ApeObjectType_t[]){ __VA_ARGS__ })) \
+            (sizeof((ApeObjType_t[]){ __VA_ARGS__ }) / sizeof(ApeObjType_t)), \
+            ((ApeObjType_t*)((ApeObjType_t[]){ __VA_ARGS__ })) \
         )
 #else
     #define CHECK_ARGS(vm, generate_error, argc, args, ...) \
@@ -53,14 +53,14 @@ struct NatFunc_t
 
 static const ApePosition_t g_bltpriv_src_pos_invalid = { NULL, -1, -1 };
 
-static ApeObjectType_t* typargs_to_array(int first, ...)
+static ApeObjType_t* typargs_to_array(int first, ...)
 {
     int idx;
     int thing;
     va_list va;
-    static ApeObjectType_t rt[20];
+    static ApeObjType_t rt[20];
     idx = 0;
-    rt[idx] = (ApeObjectType_t)first;
+    rt[idx] = (ApeObjType_t)first;
     va_start(va, first);
     idx++;
     while(true)
@@ -70,14 +70,14 @@ static ApeObjectType_t* typargs_to_array(int first, ...)
         {
             break;
         }
-        rt[idx] = (ApeObjectType_t)thing;
+        rt[idx] = (ApeObjType_t)thing;
         idx++;
     }
     va_end(va);
     return rt;
 }
 
-static bool check_args(ApeVM_t* vm, bool generate_error, ApeSize_t argc, ApeObject_t* args, ApeSize_t expected_argc, const ApeObjectType_t* expected_types)
+static bool check_args(ApeVM_t* vm, bool generate_error, ApeSize_t argc, ApeObject_t* args, ApeSize_t expected_argc, const ApeObjType_t* expected_types)
 {
     ApeSize_t i;
     if(argc != expected_argc)
@@ -93,8 +93,8 @@ static bool check_args(ApeVM_t* vm, bool generate_error, ApeSize_t argc, ApeObje
     for(i = 0; i < argc; i++)
     {
         ApeObject_t arg = args[i];
-        ApeObjectType_t type = object_value_type(arg);
-        ApeObjectType_t expected_type = expected_types[i];
+        ApeObjType_t type = object_value_type(arg);
+        ApeObjType_t expected_type = expected_types[i];
         if(!(type & expected_type))
         {
             if(generate_error)
@@ -125,7 +125,7 @@ static ApeObject_t cfn_len(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t*
     }
 
     ApeObject_t arg = args[0];
-    ApeObjectType_t type = object_value_type(arg);
+    ApeObjType_t type = object_value_type(arg);
     if(type == APE_OBJECT_STRING)
     {
         ApeSize_t len = ape_object_string_getlength(arg);
@@ -209,7 +209,7 @@ static ApeObject_t cfn_reverse(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObjec
         return ape_object_make_null(vm->context);
     }
     ApeObject_t arg = args[0];
-    ApeObjectType_t type = object_value_type(arg);
+    ApeObjType_t type = object_value_type(arg);
     if(type == APE_OBJECT_ARRAY)
     {
         len = ape_object_array_getlength(arg);
@@ -533,7 +533,7 @@ static ApeObject_t cfn_range(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     (void)data;
     for(i = 0; i < (ApeInt_t)argc; i++)
     {
-        ApeObjectType_t type = object_value_type(args[i]);
+        ApeObjType_t type = object_value_type(args[i]);
         if(type != APE_OBJECT_NUMBER)
         {
             const char* type_str = ape_object_value_typename(type);
@@ -677,8 +677,8 @@ static ApeObject_t cfn_concat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
     {
         return ape_object_make_null(vm->context);
     }
-    ApeObjectType_t type = object_value_type(args[0]);
-    ApeObjectType_t item_type = object_value_type(args[1]);
+    ApeObjType_t type = object_value_type(args[0]);
+    ApeObjType_t item_type = object_value_type(args[1]);
     if(type == APE_OBJECT_ARRAY)
     {
         if(item_type != APE_OBJECT_ARRAY)
@@ -766,7 +766,7 @@ static ApeObject_t cfn_remove_at(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObj
         return ape_object_make_null(vm->context);
     }
 
-    ApeObjectType_t type = object_value_type(args[0]);
+    ApeObjType_t type = object_value_type(args[0]);
     ApeSize_t ix = (ApeSize_t)object_value_asnumber(args[1]);
 
     switch(type)
@@ -881,7 +881,7 @@ static ApeObject_t cfn_slice(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     {
         return ape_object_make_null(vm->context);
     }
-    ApeObjectType_t arg_type = object_value_type(args[0]);
+    ApeObjType_t arg_type = object_value_type(args[0]);
     ApeInt_t index = (ApeInt_t)object_value_asnumber(args[1]);
     if(arg_type == APE_OBJECT_ARRAY)
     {
@@ -1602,7 +1602,7 @@ const char* builtins_get_name(ApeSize_t ix)
 * the same instructions, there is currently no clear way of how and where to best insert
 * lookups to these functions.
 */
-ApeNativeFunc_t builtin_get_object(ApeObjectType_t objt, const char* idxname)
+ApeNativeFunc_t builtin_get_object(ApeObjType_t objt, const char* idxname)
 {
     if(objt == APE_OBJECT_STRING)
     {

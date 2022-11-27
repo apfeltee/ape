@@ -174,14 +174,14 @@ ApeObject_t ape_object_make_error(ApeContext_t* ctx, const char* error)
 
 ApeObject_t ape_object_make_error_nocopy(ApeContext_t* ctx, char* error)
 {
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     data = ape_gcmem_allocobjdata(ctx->vm->mem, APE_OBJECT_ERROR);
     if(!data)
     {
         return ape_object_make_null(ctx);
     }
-    data->error.message = error;
-    data->error.traceback = NULL;
+    data->valerror.message = error;
+    data->valerror.traceback = NULL;
     return object_make_from_data(ctx, APE_OBJECT_ERROR, data);
 }
 
@@ -336,31 +336,31 @@ ApeTraceback_t* ape_error_gettraceback(ApeError_t* error)
 
 const char* ape_object_value_geterrormessage(ApeObject_t object)
 {
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     APE_ASSERT(object_value_type(object) == APE_OBJECT_ERROR);
     data = object_value_allocated_data(object);
-    return data->error.message;
+    return data->valerror.message;
 }
 
 void ape_object_value_seterrortraceback(ApeObject_t object, ApeTraceback_t* traceback)
 {
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     APE_ASSERT(object_value_type(object) == APE_OBJECT_ERROR);
     if(object_value_type(object) != APE_OBJECT_ERROR)
     {
         return;
     }
     data = object_value_allocated_data(object);
-    APE_ASSERT(data->error.traceback == NULL);
-    data->error.traceback = traceback;
+    APE_ASSERT(data->valerror.traceback == NULL);
+    data->valerror.traceback = traceback;
 }
 
 ApeTraceback_t* ape_object_value_geterrortraceback(ApeObject_t object)
 {
-    ApeObjectData_t* data;
+    ApeObjData_t* data;
     APE_ASSERT(object_value_type(object) == APE_OBJECT_ERROR);
     data = object_value_allocated_data(object);
-    return data->error.traceback;
+    return data->valerror.traceback;
 }
 
 

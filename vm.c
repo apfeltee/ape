@@ -29,9 +29,9 @@ THE SOFTWARE.
 static const ApePosition_t g_vmpriv_src_pos_invalid = { NULL, -1, -1 };
 
 
-static bool ape_vm_setsymbol(ApeSymbolTable_t *table, ApeSymbol_t *symbol);
-static int ape_vm_nextsymbolindex(ApeSymbolTable_t *table);
-static int ape_vm_countnumdefs(ApeSymbolTable_t *table);
+static bool ape_vm_setsymbol(ApeSymTable_t *table, ApeSymbol_t *symbol);
+static int ape_vm_nextsymbolindex(ApeSymTable_t *table);
+static int ape_vm_countnumdefs(ApeSymTable_t *table);
 static void ape_vm_setstackpointer(ApeVM_t *vm, int new_sp);
 static void ape_vm_pushthisstack(ApeVM_t *vm, ApeObject_t obj);
 static ApeObject_t ape_vm_popthisstack(ApeVM_t *vm);
@@ -262,16 +262,16 @@ ApeSymbol_t* ape_symbol_copy(ApeSymbol_t* symbol)
     return ape_make_symbol(symbol->context, symbol->name, symbol->type, symbol->index, symbol->assignable);
 }
 
-ApeSymbolTable_t* ape_make_symtable(ApeContext_t* ctx, ApeSymbolTable_t* outer, ApeGlobalStore_t* global_store, int module_global_offset)
+ApeSymTable_t* ape_make_symtable(ApeContext_t* ctx, ApeSymTable_t* outer, ApeGlobalStore_t* global_store, int module_global_offset)
 {
     bool ok;
-    ApeSymbolTable_t* table;
-    table = (ApeSymbolTable_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeSymbolTable_t));
+    ApeSymTable_t* table;
+    table = (ApeSymTable_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeSymTable_t));
     if(!table)
     {
         return NULL;
     }
-    memset(table, 0, sizeof(ApeSymbolTable_t));
+    memset(table, 0, sizeof(ApeSymTable_t));
     table->context = ctx;
     table->alloc = &ctx->alloc;
     table->maxnumdefinitions = 0;
@@ -304,7 +304,7 @@ err:
     return NULL;
 }
 
-void ape_symtable_destroy(ApeSymbolTable_t* table)
+void ape_symtable_destroy(ApeSymTable_t* table)
 {
     ApeAllocator_t* alloc;
     if(!table)
@@ -319,19 +319,19 @@ void ape_symtable_destroy(ApeSymbolTable_t* table)
     ape_ptrarray_destroywithitems(table->module_global_symbols, (ApeDataCallback_t)ape_symbol_destroy);
     ape_ptrarray_destroywithitems(table->freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
     alloc = table->alloc;
-    memset(table, 0, sizeof(ApeSymbolTable_t));
+    memset(table, 0, sizeof(ApeSymTable_t));
     ape_allocator_free(alloc, table);
 }
 
-ApeSymbolTable_t* ape_symtable_copy(ApeSymbolTable_t* table)
+ApeSymTable_t* ape_symtable_copy(ApeSymTable_t* table)
 {
-    ApeSymbolTable_t* copy;
-    copy = (ApeSymbolTable_t*)ape_allocator_alloc(table->alloc, sizeof(ApeSymbolTable_t));
+    ApeSymTable_t* copy;
+    copy = (ApeSymTable_t*)ape_allocator_alloc(table->alloc, sizeof(ApeSymTable_t));
     if(!copy)
     {
         return NULL;
     }
-    memset(copy, 0, sizeof(ApeSymbolTable_t));
+    memset(copy, 0, sizeof(ApeSymTable_t));
     copy->alloc = table->alloc;
     copy->outer = table->outer;
     copy->globalstore = table->globalstore;
@@ -358,7 +358,7 @@ err:
     return NULL;
 }
 
-bool ape_symtable_addmodulesymbol(ApeSymbolTable_t* st, ApeSymbol_t* symbol)
+bool ape_symtable_addmodulesymbol(ApeSymTable_t* st, ApeSymbol_t* symbol)
 {
     bool ok;
     if(symbol->type != SYMBOL_MODULE_GLOBAL)
@@ -384,7 +384,7 @@ bool ape_symtable_addmodulesymbol(ApeSymbolTable_t* st, ApeSymbol_t* symbol)
     return true;
 }
 
-const ApeSymbol_t* ape_symtable_define(ApeSymbolTable_t* table, const char* name, bool assignable)
+const ApeSymbol_t* ape_symtable_define(ApeSymTable_t* table, const char* name, bool assignable)
 {
     
     bool ok;
@@ -457,7 +457,7 @@ const ApeSymbol_t* ape_symtable_define(ApeSymbolTable_t* table, const char* name
     return symbol;
 }
 
-const ApeSymbol_t* ape_symtable_deffree(ApeSymbolTable_t* st, const ApeSymbol_t* original)
+const ApeSymbol_t* ape_symtable_deffree(ApeSymTable_t* st, const ApeSymbol_t* original)
 {
     bool ok;
     ApeSymbol_t* symbol;
@@ -490,7 +490,7 @@ const ApeSymbol_t* ape_symtable_deffree(ApeSymbolTable_t* st, const ApeSymbol_t*
     return symbol;
 }
 
-const ApeSymbol_t* ape_symtable_definefuncname(ApeSymbolTable_t* st, const char* name, bool assignable)
+const ApeSymbol_t* ape_symtable_definefuncname(ApeSymTable_t* st, const char* name, bool assignable)
 {
     bool ok;
     ApeSymbol_t* symbol;
@@ -513,7 +513,7 @@ const ApeSymbol_t* ape_symtable_definefuncname(ApeSymbolTable_t* st, const char*
     return symbol;
 }
 
-const ApeSymbol_t* ape_symtable_definethis(ApeSymbolTable_t* st)
+const ApeSymbol_t* ape_symtable_definethis(ApeSymTable_t* st)
 {
     bool ok;
     ApeSymbol_t* symbol;
@@ -531,7 +531,7 @@ const ApeSymbol_t* ape_symtable_definethis(ApeSymbolTable_t* st)
     return symbol;
 }
 
-const ApeSymbol_t* ape_symtable_resolve(ApeSymbolTable_t* table, const char* name)
+const ApeSymbol_t* ape_symtable_resolve(ApeSymTable_t* table, const char* name)
 {
     ApeInt_t i;
     const ApeSymbol_t* symbol;
@@ -572,7 +572,7 @@ const ApeSymbol_t* ape_symtable_resolve(ApeSymbolTable_t* table, const char* nam
     return symbol;
 }
 
-bool ape_symtable_symbol_is_defined(ApeSymbolTable_t* table, const char* name)
+bool ape_symtable_symbol_is_defined(ApeSymTable_t* table, const char* name)
 {
     ApeBlockScope_t* top_scope;
     const ApeSymbol_t* symbol;
@@ -591,7 +591,7 @@ bool ape_symtable_symbol_is_defined(ApeSymbolTable_t* table, const char* name)
     return false;
 }
 
-bool ape_symtable_pushblockscope(ApeSymbolTable_t* table)
+bool ape_symtable_pushblockscope(ApeSymTable_t* table)
 {
     bool ok;
     int block_scope_offset;
@@ -622,7 +622,7 @@ bool ape_symtable_pushblockscope(ApeSymbolTable_t* table)
     return true;
 }
 
-void ape_symtable_popblockscope(ApeSymbolTable_t* table)
+void ape_symtable_popblockscope(ApeSymTable_t* table)
 {
     ApeBlockScope_t* top_scope;
     top_scope = (ApeBlockScope_t*)ape_ptrarray_top(table->blockscopes);
@@ -630,34 +630,34 @@ void ape_symtable_popblockscope(ApeSymbolTable_t* table)
     ape_blockscope_destroy(top_scope);
 }
 
-ApeBlockScope_t* ape_symtable_getblockscope(ApeSymbolTable_t* table)
+ApeBlockScope_t* ape_symtable_getblockscope(ApeSymTable_t* table)
 {
     ApeBlockScope_t* top_scope;
     top_scope = (ApeBlockScope_t*)ape_ptrarray_top(table->blockscopes);
     return top_scope;
 }
 
-bool ape_symtable_ismoduleglobalscope(ApeSymbolTable_t* table)
+bool ape_symtable_ismoduleglobalscope(ApeSymTable_t* table)
 {
     return table->outer == NULL;
 }
 
-bool ape_symtable_istopblockscope(ApeSymbolTable_t* table)
+bool ape_symtable_istopblockscope(ApeSymTable_t* table)
 {
     return ape_ptrarray_count(table->blockscopes) == 1;
 }
 
-bool ape_symtable_istopglobalscope(ApeSymbolTable_t* table)
+bool ape_symtable_istopglobalscope(ApeSymTable_t* table)
 {
     return ape_symtable_ismoduleglobalscope(table) && ape_symtable_istopblockscope(table);
 }
 
-ApeSize_t ape_symtable_getmoduleglobalsymbolcount(const ApeSymbolTable_t* table)
+ApeSize_t ape_symtable_getmoduleglobalsymbolcount(const ApeSymTable_t* table)
 {
     return ape_ptrarray_count(table->module_global_symbols);
 }
 
-const ApeSymbol_t* ape_symtable_getmoduleglobalsymbolat(const ApeSymbolTable_t* table, int ix)
+const ApeSymbol_t* ape_symtable_getmoduleglobalsymbolat(const ApeSymTable_t* table, int ix)
 {
     return (ApeSymbol_t*)ape_ptrarray_get(table->module_global_symbols, ix);
 }
@@ -713,7 +713,7 @@ ApeBlockScope_t* ape_blockscope_copy(ApeBlockScope_t* scope)
     return copy;
 }
 
-static bool ape_vm_setsymbol(ApeSymbolTable_t* table, ApeSymbol_t* symbol)
+static bool ape_vm_setsymbol(ApeSymTable_t* table, ApeSymbol_t* symbol)
 {
     ApeBlockScope_t* top_scope;
     ApeSymbol_t* existing;
@@ -726,7 +726,7 @@ static bool ape_vm_setsymbol(ApeSymbolTable_t* table, ApeSymbol_t* symbol)
     return ape_strdict_set(top_scope->store, symbol->name, symbol);
 }
 
-static int ape_vm_nextsymbolindex(ApeSymbolTable_t* table)
+static int ape_vm_nextsymbolindex(ApeSymTable_t* table)
 {
     int ix;
     ApeBlockScope_t* top_scope;
@@ -735,7 +735,7 @@ static int ape_vm_nextsymbolindex(ApeSymbolTable_t* table)
     return ix;
 }
 
-static int ape_vm_countnumdefs(ApeSymbolTable_t* table)
+static int ape_vm_countnumdefs(ApeSymTable_t* table)
 {
     ApeInt_t i;
     int count;
@@ -762,14 +762,14 @@ static int ape_vm_countnumdefs(ApeSymbolTable_t* table)
         }                                        \
     } while(0)
 
-int ape_make_code(ApeOpByte_t op, ApeSize_t operands_count, uint64_t* operands, ApeArray_t* res)
+int ape_make_code(ApeOpByte_t op, ApeSize_t operands_count, uint64_t* operands, ApeValArray_t* res)
 {
     ApeSize_t i;
     int width;
     int instr_len;
     bool ok;
     ApeUShort_t val;
-    ApeOpcodeDefinition_t* def;
+    ApeOpcodeDef_t* def;
     def = ape_tostring_opcodefind(op);
     if(!def)
     {
@@ -834,15 +834,15 @@ int ape_make_code(ApeOpByte_t op, ApeSize_t operands_count, uint64_t* operands, 
 }
 #undef APPEND_BYTE
 
-ApeCompilationScope_t* ape_make_compscope(ApeContext_t* ctx, ApeCompilationScope_t* outer)
+ApeCompScope_t* ape_make_compscope(ApeContext_t* ctx, ApeCompScope_t* outer)
 {
-    ApeCompilationScope_t* scope;
-    scope = (ApeCompilationScope_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeCompilationScope_t));
+    ApeCompScope_t* scope;
+    scope = (ApeCompScope_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeCompScope_t));
     if(!scope)
     {
         return NULL;
     }
-    memset(scope, 0, sizeof(ApeCompilationScope_t));
+    memset(scope, 0, sizeof(ApeCompScope_t));
     scope->context = ctx;
     scope->alloc = &ctx->alloc;
     scope->outer = outer;
@@ -872,7 +872,7 @@ err:
     return NULL;
 }
 
-void ape_compscope_destroy(ApeCompilationScope_t* scope)
+void ape_compscope_destroy(ApeCompScope_t* scope)
 {
     ape_valarray_destroy(scope->continueipstack);
     ape_valarray_destroy(scope->breakipstack);
@@ -881,9 +881,9 @@ void ape_compscope_destroy(ApeCompilationScope_t* scope)
     ape_allocator_free(scope->alloc, scope);
 }
 
-ApeCompilationResult_t* ape_compscope_orphanresult(ApeCompilationScope_t* scope)
+ApeCompResult_t* ape_compscope_orphanresult(ApeCompScope_t* scope)
 {
-    ApeCompilationResult_t* res;
+    ApeCompResult_t* res;
     res = ape_make_compresult(scope->context,
         (ApeUShort_t*)ape_valarray_data(scope->bytecode),
         (ApePosition_t*)ape_valarray_data(scope->srcpositions),
@@ -898,15 +898,15 @@ ApeCompilationResult_t* ape_compscope_orphanresult(ApeCompilationScope_t* scope)
     return res;
 }
 
-ApeCompilationResult_t* ape_make_compresult(ApeContext_t* ctx, ApeUShort_t* bytecode, ApePosition_t* src_positions, int count)
+ApeCompResult_t* ape_make_compresult(ApeContext_t* ctx, ApeUShort_t* bytecode, ApePosition_t* src_positions, int count)
 {
-    ApeCompilationResult_t* res;
-    res = (ApeCompilationResult_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeCompilationResult_t));
+    ApeCompResult_t* res;
+    res = (ApeCompResult_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeCompResult_t));
     if(!res)
     {
         return NULL;
     }
-    memset(res, 0, sizeof(ApeCompilationResult_t));
+    memset(res, 0, sizeof(ApeCompResult_t));
     res->context = ctx;
     res->alloc = &ctx->alloc;
     res->bytecode = bytecode;
@@ -915,7 +915,7 @@ ApeCompilationResult_t* ape_make_compresult(ApeContext_t* ctx, ApeUShort_t* byte
     return res;
 }
 
-void ape_compresult_destroy(ApeCompilationResult_t* res)
+void ape_compresult_destroy(ApeCompResult_t* res)
 {
     if(!res)
     {
@@ -1243,7 +1243,7 @@ bool ape_module_addsymbol(ApeModule_t* module, const ApeSymbol_t* symbol)
 
 bool ape_frame_init(ApeFrame_t* frame, ApeObject_t function_obj, int base_pointer)
 {
-    ApeFunction_t* function;
+    ApeScriptFunction_t* function;
     if(object_value_type(function_obj) != APE_OBJECT_FUNCTION)
     {
         return false;
@@ -1371,7 +1371,7 @@ void ape_vm_pushstack(ApeVM_t* vm, ApeObject_t obj)
     if(vm->current_frame)
     {
         ApeFrame_t* frame = vm->current_frame;
-        ApeFunction_t* current_function = object_value_asfunction(frame->function);
+        ApeScriptFunction_t* current_function = object_value_asfunction(frame->function);
         int num_locals = current_function->num_locals;
         APE_ASSERT(vm->sp >= (frame->base_pointer + num_locals));
     }
@@ -1392,7 +1392,7 @@ ApeObject_t ape_vm_popstack(ApeVM_t* vm)
     if(vm->current_frame)
     {
         ApeFrame_t* frame = vm->current_frame;
-        ApeFunction_t* current_function = object_value_asfunction(frame->function);
+        ApeScriptFunction_t* current_function = object_value_asfunction(frame->function);
         int num_locals = current_function->num_locals;
         APE_ASSERT((vm->sp - 1) >= (frame->base_pointer + num_locals));
     }
@@ -1469,7 +1469,7 @@ bool ape_vm_pushframe(ApeVM_t* vm, ApeFrame_t frame)
     vm->frames[vm->frames_count] = frame;
     vm->current_frame = &vm->frames[vm->frames_count];
     vm->frames_count++;
-    ApeFunction_t* frame_function = object_value_asfunction(frame.function);
+    ApeScriptFunction_t* frame_function = object_value_asfunction(frame.function);
     ape_vm_setstackpointer(vm, frame.base_pointer + frame_function->num_locals);
     return true;
 }
@@ -1493,7 +1493,7 @@ bool ape_vm_popframe(ApeVM_t* vm)
     return true;
 }
 
-void ape_vm_collectgarbage(ApeVM_t* vm, ApeArray_t * constants)
+void ape_vm_collectgarbage(ApeVM_t* vm, ApeValArray_t * constants)
 {
     ApeSize_t i;
     ApeFrame_t* frame;
@@ -1516,8 +1516,8 @@ void ape_vm_collectgarbage(ApeVM_t* vm, ApeArray_t * constants)
 bool ape_vm_callobject(ApeVM_t* vm, ApeObject_t callee, ApeInt_t num_args)
 {
     bool ok;
-    ApeObjectType_t callee_type;
-    ApeFunction_t* callee_function;
+    ApeObjType_t callee_type;
+    ApeScriptFunction_t* callee_function;
     ApeFrame_t callee_frame;
     ApeObject_t* stack_pos;
     ApeObject_t objres;
@@ -1581,7 +1581,7 @@ ApeObject_t ape_vm_callnativefunction(ApeVM_t* vm, ApeObject_t callee, ApePositi
         }
         return ape_object_make_null(vm->context);
     }
-    ApeObjectType_t res_type = object_value_type(objres);
+    ApeObjType_t res_type = object_value_type(objres);
     if(res_type == APE_OBJECT_ERROR)
     {
         ApeTraceback_t* traceback = ape_make_traceback(vm->context);
@@ -1601,8 +1601,8 @@ ApeObject_t ape_vm_callnativefunction(ApeVM_t* vm, ApeObject_t callee, ApePositi
 
 bool ape_vm_checkassign(ApeVM_t* vm, ApeObject_t oldval, ApeObject_t newval)
 {
-    ApeObjectType_t oldtype;
-    ApeObjectType_t newtype;
+    ApeObjType_t oldtype;
+    ApeObjType_t newtype;
     (void)vm;
     oldtype = object_value_type(oldval);
     newtype = object_value_type(newval);
@@ -1626,8 +1626,8 @@ static bool ape_vm_tryoverloadoperator(ApeVM_t* vm, ApeObject_t left, ApeObject_
     int num_operands;
     ApeObject_t key;
     ApeObject_t callee;
-    ApeObjectType_t lefttype;
-    ApeObjectType_t righttype;
+    ApeObjType_t lefttype;
+    ApeObjType_t righttype;
     *out_overload_found = false;
     lefttype = object_value_type(left);
     righttype = object_value_type(right);
@@ -1747,7 +1747,7 @@ void ape_vm_reset(ApeVM_t* vm)
     }
 }
 
-bool ape_vm_run(ApeVM_t* vm, ApeCompilationResult_t* comp_res, ApeArray_t * constants)
+bool ape_vm_run(ApeVM_t* vm, ApeCompResult_t* comp_res, ApeValArray_t * constants)
 {
     bool res;
     int old_sp;
@@ -1775,7 +1775,7 @@ bool ape_vm_run(ApeVM_t* vm, ApeCompilationResult_t* comp_res, ApeArray_t * cons
 }
 
 
-bool ape_vm_appendstring(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeObjectType_t lefttype, ApeObjectType_t righttype)
+bool ape_vm_appendstring(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeObjType_t lefttype, ApeObjType_t righttype)
 {
     bool ok;
     const char* leftstr;
@@ -1853,7 +1853,7 @@ bool ape_vm_appendstring(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOb
 * TODO: there is A LOT of code in this function.
 * some could be easily split into other functions.
 */
-bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constants)
+bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * constants)
 {
     bool checktime;
     bool isoverloaded;
@@ -1861,7 +1861,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeArray_t * cons
     bool overloadfound;
     bool resval;
     bool iseq;
-    const ApeFunction_t* constfunction;
+    const ApeScriptFunction_t* constfunction;
     const char* indextypename;
     const char* keytypename;
     const char* left_type_name;
@@ -1900,13 +1900,13 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeArray_t * cons
     ApeFloat_t maxexecms;
     ApeFloat_t rightval;
     ApeFloat_t valdouble;
-    ApeObjectType_t constant_type;
-    ApeObjectType_t indextype;
-    ApeObjectType_t keytype;
-    ApeObjectType_t lefttype;
-    ApeObjectType_t operand_type;
-    ApeObjectType_t righttype;
-    ApeObjectType_t type;
+    ApeObjType_t constant_type;
+    ApeObjType_t indextype;
+    ApeObjType_t keytype;
+    ApeObjType_t lefttype;
+    ApeObjType_t operand_type;
+    ApeObjType_t righttype;
+    ApeObjType_t type;
     ApeObject_t array_obj;
     ApeObject_t callee;
     ApeObject_t current_function;
@@ -1934,7 +1934,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeArray_t * cons
     ApeFrame_t* frame;
     ApeError_t* err;
     ApeFrame_t new_frame;
-    ApeFunction_t* function_function;
+    ApeScriptFunction_t* function_function;
     #if 0
     if(vm->running)
     {
