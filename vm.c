@@ -56,13 +56,13 @@ ApeCompiledFile_t* compiled_file_make(ApeContext_t* ctx, const char* path)
     if(last_slash_pos)
     {
         len = last_slash_pos - path + 1;
-        file->dir_path = util_strndup(ctx, path, len);
+        file->dirpath = util_strndup(ctx, path, len);
     }
     else
     {
-        file->dir_path = util_strdup(ctx, "");
+        file->dirpath = util_strdup(ctx, "");
     }
-    if(!file->dir_path)
+    if(!file->dirpath)
     {
         goto error;
     }
@@ -96,7 +96,7 @@ void* compiled_file_destroy(ApeCompiledFile_t* file)
         allocator_free(file->alloc, item);
     }
     ptrarray_destroy(file->lines);
-    allocator_free(file->alloc, file->dir_path);
+    allocator_free(file->alloc, file->dirpath);
     allocator_free(file->alloc, file->path);
     allocator_free(file->alloc, file);
     return NULL;
@@ -274,17 +274,17 @@ ApeSymbolTable_t* symbol_table_make(ApeContext_t* ctx, ApeSymbolTable_t* outer, 
     memset(table, 0, sizeof(ApeSymbolTable_t));
     table->context = ctx;
     table->alloc = &ctx->alloc;
-    table->max_num_definitions = 0;
+    table->maxnumdefinitions = 0;
     table->outer = outer;
-    table->global_store = global_store;
+    table->globalstore = global_store;
     table->module_global_offset = module_global_offset;
-    table->block_scopes = ptrarray_make(ctx);
-    if(!table->block_scopes)
+    table->blockscopes = ptrarray_make(ctx);
+    if(!table->blockscopes)
     {
         goto err;
     }
-    table->free_symbols = ptrarray_make(ctx);
-    if(!table->free_symbols)
+    table->freesymbols = ptrarray_make(ctx);
+    if(!table->freesymbols)
     {
         goto err;
     }
@@ -311,13 +311,13 @@ void symbol_table_destroy(ApeSymbolTable_t* table)
     {
         return;
     }
-    while(ptrarray_count(table->block_scopes) > 0)
+    while(ptrarray_count(table->blockscopes) > 0)
     {
         symbol_table_pop_block_scope(table);
     }
-    ptrarray_destroy(table->block_scopes);
+    ptrarray_destroy(table->blockscopes);
     ptrarray_destroywithitems(table->module_global_symbols, (ApeDataCallback_t)symbol_destroy);
-    ptrarray_destroywithitems(table->free_symbols, (ApeDataCallback_t)symbol_destroy);
+    ptrarray_destroywithitems(table->freesymbols, (ApeDataCallback_t)symbol_destroy);
     alloc = table->alloc;
     memset(table, 0, sizeof(ApeSymbolTable_t));
     allocator_free(alloc, table);
@@ -334,14 +334,14 @@ ApeSymbolTable_t* symbol_table_copy(ApeSymbolTable_t* table)
     memset(copy, 0, sizeof(ApeSymbolTable_t));
     copy->alloc = table->alloc;
     copy->outer = table->outer;
-    copy->global_store = table->global_store;
-    copy->block_scopes = ptrarray_copywithitems(table->block_scopes, (ApeDataCallback_t)block_scope_copy, (ApeDataCallback_t)block_scope_destroy);
-    if(!copy->block_scopes)
+    copy->globalstore = table->globalstore;
+    copy->blockscopes = ptrarray_copywithitems(table->blockscopes, (ApeDataCallback_t)block_scope_copy, (ApeDataCallback_t)block_scope_destroy);
+    if(!copy->blockscopes)
     {
         goto err;
     }
-    copy->free_symbols = ptrarray_copywithitems(table->free_symbols, (ApeDataCallback_t)symbol_copy, (ApeDataCallback_t)symbol_destroy);
-    if(!copy->free_symbols)
+    copy->freesymbols = ptrarray_copywithitems(table->freesymbols, (ApeDataCallback_t)symbol_copy, (ApeDataCallback_t)symbol_destroy);
+    if(!copy->freesymbols)
     {
         goto err;
     }
@@ -350,7 +350,7 @@ ApeSymbolTable_t* symbol_table_copy(ApeSymbolTable_t* table)
     {
         goto err;
     }
-    copy->max_num_definitions = table->max_num_definitions;
+    copy->maxnumdefinitions = table->maxnumdefinitions;
     copy->module_global_offset = table->module_global_offset;
     return copy;
 err:
@@ -396,7 +396,7 @@ const ApeSymbol_t* symbol_table_define(ApeSymbolTable_t* table, const char* name
     ApeSymbol_t* symbol;
     ApeSymbol_t* global_symbol_copy;
     const ApeSymbol_t* global_symbol;
-    global_symbol = global_store_get_symbol(table->global_store, name);
+    global_symbol = global_store_get_symbol(table->globalstore, name);
     if(global_symbol)
     {
         return NULL;
@@ -418,7 +418,7 @@ const ApeSymbol_t* symbol_table_define(ApeSymbolTable_t* table, const char* name
     }
     global_symbol_added = false;
     ok = false;
-    if(symbol_type == SYMBOL_MODULE_GLOBAL && ptrarray_count(table->block_scopes) == 1)
+    if(symbol_type == SYMBOL_MODULE_GLOBAL && ptrarray_count(table->blockscopes) == 1)
     {
         global_symbol_copy = symbol_copy(symbol);
         if(!global_symbol_copy)
@@ -446,12 +446,12 @@ const ApeSymbol_t* symbol_table_define(ApeSymbolTable_t* table, const char* name
         symbol_destroy(symbol);
         return NULL;
     }
-    top_scope = (ApeBlockScope_t*)ptrarray_top(table->block_scopes);
-    top_scope->num_definitions++;
+    top_scope = (ApeBlockScope_t*)ptrarray_top(table->blockscopes);
+    top_scope->numdefinitions++;
     definitions_count = vmpriv_countnumdefs(table);
-    if(definitions_count > table->max_num_definitions)
+    if(definitions_count > table->maxnumdefinitions)
     {
-        table->max_num_definitions = definitions_count;
+        table->maxnumdefinitions = definitions_count;
     }
 
     return symbol;
@@ -467,14 +467,14 @@ const ApeSymbol_t* symbol_table_define_free(ApeSymbolTable_t* st, const ApeSymbo
     {
         return NULL;
     }
-    ok = ptrarray_add(st->free_symbols, copy);
+    ok = ptrarray_add(st->freesymbols, copy);
     if(!ok)
     {
         symbol_destroy(copy);
         return NULL;
     }
 
-    symbol = symbol_make(st->context, original->name, SYMBOL_FREE, ptrarray_count(st->free_symbols) - 1, original->assignable);
+    symbol = symbol_make(st->context, original->name, SYMBOL_FREE, ptrarray_count(st->freesymbols) - 1, original->assignable);
     if(!symbol)
     {
         return NULL;
@@ -537,14 +537,14 @@ const ApeSymbol_t* symbol_table_resolve(ApeSymbolTable_t* table, const char* nam
     const ApeSymbol_t* symbol;
     ApeBlockScope_t* scope;
     scope = NULL;
-    symbol = global_store_get_symbol(table->global_store, name);
+    symbol = global_store_get_symbol(table->globalstore, name);
     if(symbol)
     {
         return symbol;
     }
-    for(i = (ApeInt_t)ptrarray_count(table->block_scopes) - 1; i >= 0; i--)
+    for(i = (ApeInt_t)ptrarray_count(table->blockscopes) - 1; i >= 0; i--)
     {
-        scope = (ApeBlockScope_t*)ptrarray_get(table->block_scopes, i);
+        scope = (ApeBlockScope_t*)ptrarray_get(table->blockscopes, i);
         symbol = (ApeSymbol_t*)strdict_get(scope->store, name);
         if(symbol)
         {
@@ -577,12 +577,12 @@ bool symbol_table_symbol_is_defined(ApeSymbolTable_t* table, const char* name)
     ApeBlockScope_t* top_scope;
     const ApeSymbol_t* symbol;
     // todo: rename to something more obvious
-    symbol = global_store_get_symbol(table->global_store, name);
+    symbol = global_store_get_symbol(table->globalstore, name);
     if(symbol)
     {
         return true;
     }
-    top_scope = (ApeBlockScope_t*)ptrarray_top(table->block_scopes);
+    top_scope = (ApeBlockScope_t*)ptrarray_top(table->blockscopes);
     symbol = (ApeSymbol_t*)strdict_get(top_scope->store, name);
     if(symbol)
     {
@@ -598,10 +598,10 @@ bool symbol_table_push_block_scope(ApeSymbolTable_t* table)
     ApeBlockScope_t* prev_block_scope;
     ApeBlockScope_t* new_scope;
     block_scope_offset = 0;
-    prev_block_scope = (ApeBlockScope_t*)ptrarray_top(table->block_scopes);
+    prev_block_scope = (ApeBlockScope_t*)ptrarray_top(table->blockscopes);
     if(prev_block_scope)
     {
-        block_scope_offset = table->module_global_offset + prev_block_scope->offset + prev_block_scope->num_definitions;
+        block_scope_offset = table->module_global_offset + prev_block_scope->offset + prev_block_scope->numdefinitions;
     }
     else
     {
@@ -613,7 +613,7 @@ bool symbol_table_push_block_scope(ApeSymbolTable_t* table)
     {
         return false;
     }
-    ok = ptrarray_push(table->block_scopes, new_scope);
+    ok = ptrarray_push(table->blockscopes, new_scope);
     if(!ok)
     {
         block_scope_destroy(new_scope);
@@ -625,15 +625,15 @@ bool symbol_table_push_block_scope(ApeSymbolTable_t* table)
 void symbol_table_pop_block_scope(ApeSymbolTable_t* table)
 {
     ApeBlockScope_t* top_scope;
-    top_scope = (ApeBlockScope_t*)ptrarray_top(table->block_scopes);
-    ptrarray_pop(table->block_scopes);
+    top_scope = (ApeBlockScope_t*)ptrarray_top(table->blockscopes);
+    ptrarray_pop(table->blockscopes);
     block_scope_destroy(top_scope);
 }
 
 ApeBlockScope_t* symbol_table_get_block_scope(ApeSymbolTable_t* table)
 {
     ApeBlockScope_t* top_scope;
-    top_scope = (ApeBlockScope_t*)ptrarray_top(table->block_scopes);
+    top_scope = (ApeBlockScope_t*)ptrarray_top(table->blockscopes);
     return top_scope;
 }
 
@@ -644,7 +644,7 @@ bool symbol_table_is_module_global_scope(ApeSymbolTable_t* table)
 
 bool symbol_table_is_top_block_scope(ApeSymbolTable_t* table)
 {
-    return ptrarray_count(table->block_scopes) == 1;
+    return ptrarray_count(table->blockscopes) == 1;
 }
 
 bool symbol_table_is_top_global_scope(ApeSymbolTable_t* table)
@@ -680,7 +680,7 @@ ApeBlockScope_t* block_scope_make(ApeContext_t* ctx, int offset)
         block_scope_destroy(new_scope);
         return NULL;
     }
-    new_scope->num_definitions = 0;
+    new_scope->numdefinitions = 0;
     new_scope->offset = offset;
     return new_scope;
 }
@@ -702,7 +702,7 @@ ApeBlockScope_t* block_scope_copy(ApeBlockScope_t* scope)
     }
     memset(copy, 0, sizeof(ApeBlockScope_t));
     copy->alloc = scope->alloc;
-    copy->num_definitions = scope->num_definitions;
+    copy->numdefinitions = scope->numdefinitions;
     copy->offset = scope->offset;
     copy->store = strdict_copywithitems(scope->store);
     if(!copy->store)
@@ -717,7 +717,7 @@ static bool vmpriv_setsymbol(ApeSymbolTable_t* table, ApeSymbol_t* symbol)
 {
     ApeBlockScope_t* top_scope;
     ApeSymbol_t* existing;
-    top_scope = (ApeBlockScope_t*)ptrarray_top(table->block_scopes);
+    top_scope = (ApeBlockScope_t*)ptrarray_top(table->blockscopes);
     existing= (ApeSymbol_t*)strdict_get(top_scope->store, symbol->name);
     if(existing)
     {
@@ -730,8 +730,8 @@ static int vmpriv_nextsymbolindex(ApeSymbolTable_t* table)
 {
     int ix;
     ApeBlockScope_t* top_scope;
-    top_scope = (ApeBlockScope_t*)ptrarray_top(table->block_scopes);
-    ix = top_scope->offset + top_scope->num_definitions;
+    top_scope = (ApeBlockScope_t*)ptrarray_top(table->blockscopes);
+    ix = top_scope->offset + top_scope->numdefinitions;
     return ix;
 }
 
@@ -741,10 +741,10 @@ static int vmpriv_countnumdefs(ApeSymbolTable_t* table)
     int count;
     ApeBlockScope_t* scope;
     count = 0;
-    for(i = (ApeInt_t)ptrarray_count(table->block_scopes) - 1; i >= 0; i--)
+    for(i = (ApeInt_t)ptrarray_count(table->blockscopes) - 1; i >= 0; i--)
     {
-        scope = (ApeBlockScope_t*)ptrarray_get(table->block_scopes, i);
-        count += scope->num_definitions;
+        scope = (ApeBlockScope_t*)ptrarray_get(table->blockscopes, i);
+        count += scope->numdefinitions;
     }
     return count;
 }
@@ -851,18 +851,18 @@ ApeCompilationScope_t* compilation_scope_make(ApeContext_t* ctx, ApeCompilationS
     {
         goto err;
     }
-    scope->src_positions = array_make(ctx, ApePosition_t);
-    if(!scope->src_positions)
+    scope->srcpositions = array_make(ctx, ApePosition_t);
+    if(!scope->srcpositions)
     {
         goto err;
     }
-    scope->break_ip_stack = array_make(ctx, int);
-    if(!scope->break_ip_stack)
+    scope->breakipstack = array_make(ctx, int);
+    if(!scope->breakipstack)
     {
         goto err;
     }
-    scope->continue_ip_stack = array_make(ctx, int);
-    if(!scope->continue_ip_stack)
+    scope->continueipstack = array_make(ctx, int);
+    if(!scope->continueipstack)
     {
         goto err;
     }
@@ -874,10 +874,10 @@ err:
 
 void compilation_scope_destroy(ApeCompilationScope_t* scope)
 {
-    array_destroy(scope->continue_ip_stack);
-    array_destroy(scope->break_ip_stack);
+    array_destroy(scope->continueipstack);
+    array_destroy(scope->breakipstack);
     array_destroy(scope->bytecode);
-    array_destroy(scope->src_positions);
+    array_destroy(scope->srcpositions);
     allocator_free(scope->alloc, scope);
 }
 
@@ -886,7 +886,7 @@ ApeCompilationResult_t* compilation_scope_orphan_result(ApeCompilationScope_t* s
     ApeCompilationResult_t* res;
     res = compilation_result_make(scope->context,
         (ApeUShort_t*)array_data(scope->bytecode),
-        (ApePosition_t*)array_data(scope->src_positions),
+        (ApePosition_t*)array_data(scope->srcpositions),
         array_count(scope->bytecode)
     );
     if(!res)
@@ -894,7 +894,7 @@ ApeCompilationResult_t* compilation_scope_orphan_result(ApeCompilationScope_t* s
         return NULL;
     }
     array_orphandata(scope->bytecode);
-    array_orphandata(scope->src_positions);
+    array_orphandata(scope->srcpositions);
     return res;
 }
 
@@ -910,7 +910,7 @@ ApeCompilationResult_t* compilation_result_make(ApeContext_t* ctx, ApeUShort_t* 
     res->context = ctx;
     res->alloc = &ctx->alloc;
     res->bytecode = bytecode;
-    res->src_positions = src_positions;
+    res->srcpositions = src_positions;
     res->count = count;
     return res;
 }
@@ -922,7 +922,7 @@ void compilation_result_destroy(ApeCompilationResult_t* res)
         return;
     }
     allocator_free(res->alloc, res->bytecode);
-    allocator_free(res->alloc, res->src_positions);
+    allocator_free(res->alloc, res->srcpositions);
     allocator_free(res->alloc, res);
 }
 
@@ -990,8 +990,8 @@ ApeExpression_t* optimise_infix_expression(ApeExpression_t* expr)
     alloc = expr->alloc;
     if(left_is_numeric && right_is_numeric)
     {
-        leftval = left->type == EXPRESSION_NUMBER_LITERAL ? left->number_literal : left->bool_literal;
-        rightval = right->type == EXPRESSION_NUMBER_LITERAL ? right->number_literal : right->bool_literal;
+        leftval = left->type == EXPRESSION_NUMBER_LITERAL ? left->numberliteral : left->boolliteral;
+        rightval = right->type == EXPRESSION_NUMBER_LITERAL ? right->numberliteral : right->boolliteral;
         leftint = (ApeInt_t)leftval;
         rightint = (ApeInt_t)rightval;
         switch(expr->infix.op)
@@ -1086,8 +1086,8 @@ ApeExpression_t* optimise_infix_expression(ApeExpression_t* expr)
     }
     else if(expr->infix.op == OPERATOR_PLUS && left_is_string && right_is_string)
     {
-        leftstr = left->string_literal;
-        rightstr = right->string_literal;
+        leftstr = left->stringliteral;
+        rightstr = right->stringliteral;
         res_str = util_stringfmt(expr->context, "%s%s", leftstr, rightstr);
         if(res_str)
         {
@@ -1122,11 +1122,11 @@ ApeExpression_t* optimise_prefix_expression(ApeExpression_t* expr)
     res = NULL;
     if(expr->prefix.op == OPERATOR_MINUS && right->type == EXPRESSION_NUMBER_LITERAL)
     {
-        res = expression_make_number_literal(expr->context, -right->number_literal);
+        res = expression_make_number_literal(expr->context, -right->numberliteral);
     }
     else if(expr->prefix.op == OPERATOR_BANG && right->type == EXPRESSION_BOOL_LITERAL)
     {
-        res = expression_make_bool_literal(expr->context, !right->bool_literal);
+        res = expression_make_bool_literal(expr->context, !right->boolliteral);
     }
     expression_destroy(right_optimised);
     if(res)
@@ -1254,7 +1254,7 @@ bool frame_init(ApeFrame_t* frame, ApeObject_t function_obj, int base_pointer)
     frame->base_pointer = base_pointer;
     frame->src_ip = 0;
     frame->bytecode = function->comp_result->bytecode;
-    frame->src_positions = function->comp_result->src_positions;
+    frame->srcpositions = function->comp_result->srcpositions;
     frame->bytecode_size = function->comp_result->count;
     frame->recover_ip = -1;
     frame->is_recovering = false;
@@ -1303,9 +1303,9 @@ ApeUShort_t frame_read_uint8(ApeFrame_t* frame)
 
 ApePosition_t frame_src_position(const ApeFrame_t* frame)
 {
-    if(frame->src_positions)
+    if(frame->srcpositions)
     {
-        return frame->src_positions[frame->src_ip];
+        return frame->srcpositions[frame->src_ip];
     }
     return g_vmpriv_src_pos_invalid;
 }
@@ -1498,7 +1498,7 @@ void vmpriv_collectgarbage(ApeVM_t* vm, ApeArray_t * constants)
     ApeSize_t i;
     ApeFrame_t* frame;
     gc_unmark_all(vm->mem);
-    gc_mark_objects(global_store_get_object_data(vm->global_store), global_store_get_object_count(vm->global_store));
+    gc_mark_objects(global_store_get_object_data(vm->globalstore), global_store_get_object_count(vm->globalstore));
     gc_mark_objects((ApeObject_t*)array_data(constants), array_count(constants));
     gc_mark_objects(vm->globals, vm->globals_count);
     for(i = 0; i < vm->frames_count; i++)
@@ -1697,7 +1697,7 @@ ApeVM_t* vm_make(ApeContext_t* ctx, const ApeConfig_t* config, ApeGCMemory_t* me
     vm->config = config;
     vm->mem = mem;
     vm->errors = errors;
-    vm->global_store = global_store;
+    vm->globalstore = global_store;
     vm->globals_count = 0;
     vm->sp = 0;
     vm->this_sp = 0;
@@ -2577,7 +2577,7 @@ bool vm_execute_function(ApeVM_t* vm, ApeObject_t function, ApeArray_t * constan
             {
                 ix = frame_read_uint16(vm->current_frame);
                 ok = false;
-                objval = global_store_get_object_at(vm->global_store, ix, &ok);
+                objval = global_store_get_object_at(vm->globalstore, ix, &ok);
                 if(!ok)
                 {
                     errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, frame_src_position(vm->current_frame),

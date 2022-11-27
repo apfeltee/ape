@@ -5,7 +5,7 @@ var top_edge    =  300;
 var bottom_edge = -300;
 var x_step      =    7;
 var y_step      =   15;
-var max_iter    =  500;
+var max_iter    =  50;
 var y0 = top_edge;
 while(y0 > bottom_edge)
 {

@@ -129,7 +129,8 @@ void object_tostring(ApeObject_t obj, ApeWriter_t* buf, bool quote_str)
                 #if 1
                 if(fltnum == ((ApeInt_t)fltnum))
                 {
-                    writer_appendf(buf, "%" PRId64, (ApeInt_t)fltnum);
+                    //writer_appendf(buf, "%" PRId64, (ApeInt_t)fltnum);
+                    writer_appendf(buf, "%" PRIi64, (ApeInt_t)fltnum);
                 }
                 else
                 {
@@ -168,7 +169,7 @@ void object_tostring(ApeObject_t obj, ApeWriter_t* buf, bool quote_str)
             {
                 compfunc = object_value_asfunction(obj);
                 writer_appendf(buf, "CompiledFunction: %s\n", object_function_getname(obj));
-                code_tostring(compfunc->comp_result->bytecode, compfunc->comp_result->src_positions, compfunc->comp_result->count, buf);
+                code_tostring(compfunc->comp_result->bytecode, compfunc->comp_result->srcpositions, compfunc->comp_result->count, buf);
             }
             break;
         case APE_OBJECT_ARRAY:
@@ -532,7 +533,7 @@ ApeObject_t object_value_internal_copydeep(ApeContext_t* ctx, ApeObject_t obj, A
                     allocator_free(&ctx->alloc, bytecode_copy);
                     return object_make_null(ctx);
                 }
-                memcpy(src_positions_copy, function->comp_result->src_positions, sizeof(ApePosition_t) * function->comp_result->count);
+                memcpy(src_positions_copy, function->comp_result->srcpositions, sizeof(ApePosition_t) * function->comp_result->count);
                 // todo: add compilation result copy function
                 comp_res_copy = compilation_result_make(ctx, bytecode_copy, src_positions_copy, function->comp_result->count);
                 if(!comp_res_copy)

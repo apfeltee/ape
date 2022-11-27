@@ -150,11 +150,11 @@ if (is_error(err)) {
 ```
 <br/>
 
-`to_str(string | number | bool | null | map | array)` -> `string`
+`tostring(string | number | bool | null | map | array)` -> `string`
 ```javascript
   var aVal = true
 
-  to_str(aVal) // "true"
+  tostring(aVal) // "true"
 ```
 <br/>
 

@@ -151,7 +151,6 @@ static bool code_read_operands(ApeOpcodeDefinition_t* def, ApeUShort_t* instr, u
         offset += operand_width;
     }
     return true;
-    ;
 }
 
 bool statements_tostring(ApePtrArray_t* statements, ApeWriter_t* buf)
@@ -203,32 +202,32 @@ bool statement_tostring(const ApeStatement_t* stmt, ApeWriter_t* buf)
         }
         case STATEMENT_IF:
         {
-            if_case = (ApeIfCase_t*)ptrarray_get(stmt->if_statement.cases, 0);
+            if_case = (ApeIfCase_t*)ptrarray_get(stmt->ifstatement.cases, 0);
             writer_append(buf, "if (");
             expression_tostring(if_case->test, buf);
             writer_append(buf, ") ");
             codeblock_tostring(if_case->consequence, buf);
-            for(i = 1; i < ptrarray_count(stmt->if_statement.cases); i++)
+            for(i = 1; i < ptrarray_count(stmt->ifstatement.cases); i++)
             {
-                elif_case = (ApeIfCase_t*)ptrarray_get(stmt->if_statement.cases, i);
+                elif_case = (ApeIfCase_t*)ptrarray_get(stmt->ifstatement.cases, i);
                 writer_append(buf, " elif (");
                 expression_tostring(elif_case->test, buf);
                 writer_append(buf, ") ");
                 codeblock_tostring(elif_case->consequence, buf);
             }
-            if(stmt->if_statement.alternative)
+            if(stmt->ifstatement.alternative)
             {
                 writer_append(buf, " else ");
-                codeblock_tostring(stmt->if_statement.alternative, buf);
+                codeblock_tostring(stmt->ifstatement.alternative, buf);
             }
             break;
         }
         case STATEMENT_RETURN_VALUE:
         {
             writer_append(buf, "return ");
-            if(stmt->return_value)
+            if(stmt->returnvalue)
             {
-                expression_tostring(stmt->return_value, buf);
+                expression_tostring(stmt->returnvalue, buf);
             }
             break;
         }
@@ -243,38 +242,38 @@ bool statement_tostring(const ApeStatement_t* stmt, ApeWriter_t* buf)
         case STATEMENT_WHILE_LOOP:
         {
             writer_append(buf, "while (");
-            expression_tostring(stmt->while_loop.test, buf);
+            expression_tostring(stmt->whileloop.test, buf);
             writer_append(buf, ")");
-            codeblock_tostring(stmt->while_loop.body, buf);
+            codeblock_tostring(stmt->whileloop.body, buf);
             break;
         }
         case STATEMENT_FOR_LOOP:
         {
             writer_append(buf, "for (");
-            if(stmt->for_loop.init)
+            if(stmt->forloop.init)
             {
-                statement_tostring(stmt->for_loop.init, buf);
+                statement_tostring(stmt->forloop.init, buf);
                 writer_append(buf, " ");
             }
             else
             {
                 writer_append(buf, ";");
             }
-            if(stmt->for_loop.test)
+            if(stmt->forloop.test)
             {
-                expression_tostring(stmt->for_loop.test, buf);
+                expression_tostring(stmt->forloop.test, buf);
                 writer_append(buf, "; ");
             }
             else
             {
                 writer_append(buf, ";");
             }
-            if(stmt->for_loop.update)
+            if(stmt->forloop.update)
             {
-                expression_tostring(stmt->for_loop.test, buf);
+                expression_tostring(stmt->forloop.test, buf);
             }
             writer_append(buf, ")");
-            codeblock_tostring(stmt->for_loop.body, buf);
+            codeblock_tostring(stmt->forloop.body, buf);
             break;
         }
         case STATEMENT_FOREACH:
@@ -314,7 +313,7 @@ bool statement_tostring(const ApeStatement_t* stmt, ApeWriter_t* buf)
         }
         case STATEMENT_RECOVER:
         {
-            writer_appendf(buf, "recover (%s)", stmt->recover.error_ident->value);
+            writer_appendf(buf, "recover (%s)", stmt->recover.errorident->value);
             codeblock_tostring(stmt->recover.body, buf);
             break;
         }
@@ -336,17 +335,17 @@ bool expression_tostring(ApeExpression_t* expr, ApeWriter_t* buf)
             break;
         case EXPRESSION_NUMBER_LITERAL:
             {
-                writer_appendf(buf, "%1.17g", expr->number_literal);
+                writer_appendf(buf, "%1.17g", expr->numberliteral);
             }
             break;
         case EXPRESSION_BOOL_LITERAL:
             {
-                writer_appendf(buf, "%s", expr->bool_literal ? "true" : "false");
+                writer_appendf(buf, "%s", expr->boolliteral ? "true" : "false");
             }
             break;
         case EXPRESSION_STRING_LITERAL:
             {
-                writer_appendf(buf, "\"%s\"", expr->string_literal);
+                writer_appendf(buf, "\"%s\"", expr->stringliteral);
             }
             break;
         case EXPRESSION_NULL_LITERAL:
@@ -409,7 +408,7 @@ bool expression_tostring(ApeExpression_t* expr, ApeWriter_t* buf)
             break;
         case EXPRESSION_FUNCTION_LITERAL:
             {
-                ApeFnLiteral_t* fn = &expr->fn_literal;
+                ApeFnLiteral_t* fn = &expr->fnliteral;
                 writer_append(buf, "fn");
                 writer_append(buf, "(");
                 for(i = 0; i < ptrarray_count(fn->params); i++)
@@ -427,7 +426,7 @@ bool expression_tostring(ApeExpression_t* expr, ApeWriter_t* buf)
             break;
         case EXPRESSION_CALL:
             {
-                ApeCallExpr_t* call_expr = &expr->call_expr;
+                ApeCallExpr_t* call_expr = &expr->callexpr;
                 expression_tostring(call_expr->function, buf);
                 writer_append(buf, "(");
                 for(i = 0; i < ptrarray_count(call_expr->args); i++)
@@ -445,9 +444,9 @@ bool expression_tostring(ApeExpression_t* expr, ApeWriter_t* buf)
         case EXPRESSION_INDEX:
             {
                 writer_append(buf, "(");
-                expression_tostring(expr->index_expr.left, buf);
+                expression_tostring(expr->indexexpr.left, buf);
                 writer_append(buf, "[");
-                expression_tostring(expr->index_expr.index, buf);
+                expression_tostring(expr->indexexpr.index, buf);
                 writer_append(buf, "])");
             }
             break;
@@ -471,9 +470,9 @@ bool expression_tostring(ApeExpression_t* expr, ApeWriter_t* buf)
             {
                 expression_tostring(expr->ternary.test, buf);
                 writer_append(buf, " ? ");
-                expression_tostring(expr->ternary.if_true, buf);
+                expression_tostring(expr->ternary.iftrue, buf);
                 writer_append(buf, " : ");
-                expression_tostring(expr->ternary.if_false, buf);
+                expression_tostring(expr->ternary.iffalse, buf);
             }
             break;
         case EXPRESSION_NONE:
@@ -595,7 +594,7 @@ const char* expressiontype_tostring(ApeExprType_t type)
 
 bool compresult_tostring(ApeCompilationResult_t* res, ApeWriter_t* buf)
 {
-    return code_tostring(res->bytecode, res->src_positions, res->count, buf);
+    return code_tostring(res->bytecode, res->srcpositions, res->count, buf);
 }
 
 bool code_tostring(ApeUShort_t* code, ApePosition_t* source_positions, size_t code_size, ApeWriter_t* res)

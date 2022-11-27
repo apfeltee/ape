@@ -45,17 +45,17 @@ ApeContext_t* context_make_ex(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t free
     {
         goto err;
     }
-    ctx->global_store = global_store_make(ctx, ctx->mem);
-    if(!ctx->global_store)
+    ctx->globalstore = global_store_make(ctx, ctx->mem);
+    if(!ctx->globalstore)
     {
         goto err;
     }
-    ctx->compiler = compiler_make(ctx, &ctx->config, ctx->mem, &ctx->errors, ctx->files, ctx->global_store);
+    ctx->compiler = compiler_make(ctx, &ctx->config, ctx->mem, &ctx->errors, ctx->files, ctx->globalstore);
     if(!ctx->compiler)
     {
         goto err;
     }
-    ctx->vm = vm_make(ctx, &ctx->config, ctx->mem, &ctx->errors, ctx->global_store);
+    ctx->vm = vm_make(ctx, &ctx->config, ctx->mem, &ctx->errors, ctx->globalstore);
     if(!ctx->vm)
     {
         goto err;
@@ -87,7 +87,7 @@ void context_freeallocated(ApeContext_t* ctx, void* ptr)
 
 void context_setreplmode(ApeContext_t* ctx, bool enabled)
 {
-    ctx->config.repl_mode = enabled;
+    ctx->config.replmode = enabled;
 }
 
 bool context_settimeout(ApeContext_t* ctx, ApeFloat_t max_execution_time_ms)
@@ -170,7 +170,7 @@ ApeObject_t context_executesource(ApeContext_t* ctx, const char* code, bool also
     {
         goto err;
     }
-    APE_ASSERT(ctx->vm->sp == 0);
+    //APE_ASSERT(ctx->vm->sp == 0);
     objres = vm_get_last_popped(ctx->vm);
     if(object_value_type(objres) == APE_OBJECT_NONE)
     {
@@ -252,7 +252,7 @@ bool context_setnativefunction(ApeContext_t* ctx, const char* name, ApeWrappedNa
 
 bool context_setglobal(ApeContext_t* ctx, const char* name, ApeObject_t obj)
 {
-    return global_store_set(ctx->global_store, name, obj);
+    return global_store_set(ctx->globalstore, name, obj);
 }
 
 char* context_errortostring(ApeContext_t* ctx, ApeError_t* err)
@@ -299,7 +299,7 @@ void context_deinit(ApeContext_t* ctx)
 {
     vm_destroy(ctx->vm);
     compiler_destroy(ctx->compiler);
-    global_store_destroy(ctx->global_store);
+    global_store_destroy(ctx->globalstore);
     gcmem_destroy(ctx->mem);
     ptrarray_destroywithitems(ctx->files, (ApeDataCallback_t)compiled_file_destroy);
     errorlist_destroy(&ctx->errors);

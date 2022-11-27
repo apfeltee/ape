@@ -1470,7 +1470,7 @@ static NatFunc_t g_core_globalfuncs[] =
     { "append", cfn_append },
     { "remove", cfn_remove },
     { "remove_at", cfn_remove_at },
-    { "to_str", cfn_to_str },
+    { "tostring", cfn_to_str },
     { "to_num", cfn_to_num },
     { "range", cfn_range },
     { "keys", cfn_keys },
@@ -1567,7 +1567,7 @@ static void setup_namespace(ApeVM_t* vm, const char* nsname, NatFunc_t* fnarray)
     {
         make_fn_entry(vm->context, map, fnarray[i].name, fnarray[i].fn);
     }
-    global_store_set(vm->global_store, nsname, map);
+    global_store_set(vm->globalstore, nsname, map);
 }
 
 void builtins_install(ApeVM_t* vm)

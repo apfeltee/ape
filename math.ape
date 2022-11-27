@@ -10,10 +10,10 @@ var testtbl = [
 
 for(t in testtbl)
 {
-    src = t[0];
-    exp = t[1];
-    rt = eval(src);
-    pre = "OK  ";
+    var src = t[0];
+    var exp = t[1];
+    var rt = eval(src);
+    var pre = "OK  ";
     if(rt != exp)
     {
         pre = "FAIL";

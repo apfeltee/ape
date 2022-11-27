@@ -5,10 +5,10 @@ static bool lexpriv_readchar(ApeLexer_t *lex);
 static char lexpriv_peekchar(ApeLexer_t *lex);
 static bool lexpriv_isletter(char ch);
 static bool lexpriv_isdigit(char ch);
-static bool lexpriv_isoneof(char ch, const char *allowed, int allowed_len);
-static const char *lexpriv_readident(ApeLexer_t *lex, int *out_len);
-static const char *lexpriv_readnumber(ApeLexer_t *lex, int *out_len);
-static const char *lexpriv_readstring(ApeLexer_t *lex, char delimiter, bool is_template, bool *out_template_found, int *out_len);
+static bool lexpriv_isoneof(char ch, const char *allowed, int allowedlen);
+static const char *lexpriv_readident(ApeLexer_t *lex, int *outlen);
+static const char *lexpriv_readnumber(ApeLexer_t *lex, int *outlen);
+static const char *lexpriv_readstring(ApeLexer_t *lex, char delimiter, bool istemplate, bool *outtemplatefound, int *outlen);
 static ApeTokenType_t lexpriv_lookupident(const char *ident, int len);
 static void lexpriv_skipspace(ApeLexer_t *lex);
 static bool lexpriv_addline(ApeLexer_t *lex, int offset);
@@ -42,9 +42,9 @@ bool lexer_init(ApeLexer_t* lex, ApeContext_t* ctx, ApeErrorList_t* errs, const 
     lex->alloc = &ctx->alloc;
     lex->errors = errs;
     lex->input = input;
-    lex->input_len = (int)strlen(input);
+    lex->inputlen = (int)strlen(input);
     lex->position = 0;
-    lex->next_position = 0;
+    lex->nextposition = 0;
     lex->ch = '\0';
     if(file)
     {
@@ -69,10 +69,10 @@ bool lexer_init(ApeLexer_t* lex, ApeContext_t* ctx, ApeErrorList_t* errs, const 
     lex->failed = false;
     lex->continue_template_string = false;
 
-    memset(&lex->prev_token_state, 0, sizeof(lex->prev_token_state));
-    token_init(&lex->prev_token, TOKEN_INVALID, NULL, 0);
-    token_init(&lex->cur_token, TOKEN_INVALID, NULL, 0);
-    token_init(&lex->peek_token, TOKEN_INVALID, NULL, 0);
+    memset(&lex->prevtokenstate, 0, sizeof(lex->prevtokenstate));
+    token_init(&lex->prevtoken, TOKEN_INVALID, NULL, 0);
+    token_init(&lex->curtoken, TOKEN_INVALID, NULL, 0);
+    token_init(&lex->peektoken, TOKEN_INVALID, NULL, 0);
 
     return true;
 }
@@ -89,49 +89,49 @@ void lexer_continue_template_string(ApeLexer_t* lex)
 
 bool lexer_cur_token_is(ApeLexer_t* lex, ApeTokenType_t type)
 {
-    return lex->cur_token.type == type;
+    return lex->curtoken.type == type;
 }
 
 bool lexer_peek_token_is(ApeLexer_t* lex, ApeTokenType_t type)
 {
-    return lex->peek_token.type == type;
+    return lex->peektoken.type == type;
 }
 
 bool lexer_next_token(ApeLexer_t* lex)
 {
-    lex->prev_token = lex->cur_token;
-    lex->cur_token = lex->peek_token;
-    lex->peek_token = lexer_next_token_internal(lex);
+    lex->prevtoken = lex->curtoken;
+    lex->curtoken = lex->peektoken;
+    lex->peektoken = lexer_next_token_internal(lex);
     return !lex->failed;
 }
 
 bool lexer_previous_token(ApeLexer_t* lex)
 {
-    if(lex->prev_token.type == TOKEN_INVALID)
+    if(lex->prevtoken.type == TOKEN_INVALID)
     {
         return false;
     }
 
-    lex->peek_token = lex->cur_token;
-    lex->cur_token = lex->prev_token;
-    token_init(&lex->prev_token, TOKEN_INVALID, NULL, 0);
+    lex->peektoken = lex->curtoken;
+    lex->curtoken = lex->prevtoken;
+    token_init(&lex->prevtoken, TOKEN_INVALID, NULL, 0);
 
-    lex->ch = lex->prev_token_state.ch;
-    lex->column = lex->prev_token_state.column;
-    lex->line = lex->prev_token_state.line;
-    lex->position = lex->prev_token_state.position;
-    lex->next_position = lex->prev_token_state.next_position;
+    lex->ch = lex->prevtokenstate.ch;
+    lex->column = lex->prevtokenstate.column;
+    lex->line = lex->prevtokenstate.line;
+    lex->position = lex->prevtokenstate.position;
+    lex->nextposition = lex->prevtokenstate.nextposition;
 
     return true;
 }
 
 ApeToken_t lexer_next_token_internal(ApeLexer_t* lex)
 {
-    lex->prev_token_state.ch = lex->ch;
-    lex->prev_token_state.column = lex->column;
-    lex->prev_token_state.line = lex->line;
-    lex->prev_token_state.position = lex->position;
-    lex->prev_token_state.next_position = lex->next_position;
+    lex->prevtokenstate.ch = lex->ch;
+    lex->prevtokenstate.column = lex->column;
+    lex->prevtokenstate.line = lex->line;
+    lex->prevtokenstate.position = lex->position;
+    lex->prevtokenstate.nextposition = lex->nextposition;
 
     while(true)
     {
@@ -140,29 +140,29 @@ ApeToken_t lexer_next_token_internal(ApeLexer_t* lex)
             lexpriv_skipspace(lex);
         }
 
-        ApeToken_t out_tok;
-        out_tok.type = TOKEN_INVALID;
-        out_tok.literal = lex->input + lex->position;
-        out_tok.len = 1;
-        out_tok.pos = lexpriv_makesourcepos(lex->file, lex->line, lex->column);
+        ApeToken_t outtok;
+        outtok.type = TOKEN_INVALID;
+        outtok.literal = lex->input + lex->position;
+        outtok.len = 1;
+        outtok.pos = lexpriv_makesourcepos(lex->file, lex->line, lex->column);
 
         char c = lex->continue_template_string ? '`' : lex->ch;
 
         switch(c)
         {
             case '\0':
-                token_init(&out_tok, TOKEN_EOF, "EOF", 3);
+                token_init(&outtok, TOKEN_EOF, "EOF", 3);
                 break;
             case '=':
             {
                 if(lexpriv_peekchar(lex) == '=')
                 {
-                    token_init(&out_tok, TOKEN_EQ, "==", 2);
+                    token_init(&outtok, TOKEN_EQ, "==", 2);
                     lexpriv_readchar(lex);
                 }
                 else
                 {
-                    token_init(&out_tok, TOKEN_ASSIGN, "=", 1);
+                    token_init(&outtok, TOKEN_ASSIGN, "=", 1);
                 }
                 break;
             }
@@ -170,17 +170,17 @@ ApeToken_t lexer_next_token_internal(ApeLexer_t* lex)
             {
                 if(lexpriv_peekchar(lex) == '&')
                 {
-                    token_init(&out_tok, TOKEN_AND, "&&", 2);
+                    token_init(&outtok, TOKEN_AND, "&&", 2);
                     lexpriv_readchar(lex);
                 }
                 else if(lexpriv_peekchar(lex) == '=')
                 {
-                    token_init(&out_tok, TOKEN_BIT_AND_ASSIGN, "&=", 2);
+                    token_init(&outtok, TOKEN_BIT_AND_ASSIGN, "&=", 2);
                     lexpriv_readchar(lex);
                 }
                 else
                 {
-                    token_init(&out_tok, TOKEN_BIT_AND, "&", 1);
+                    token_init(&outtok, TOKEN_BIT_AND, "&", 1);
                 }
                 break;
             }
@@ -188,17 +188,17 @@ ApeToken_t lexer_next_token_internal(ApeLexer_t* lex)
             {
                 if(lexpriv_peekchar(lex) == '|')
                 {
-                    token_init(&out_tok, TOKEN_OR, "||", 2);
+                    token_init(&outtok, TOKEN_OR, "||", 2);
                     lexpriv_readchar(lex);
                 }
                 else if(lexpriv_peekchar(lex) == '=')
                 {
-                    token_init(&out_tok, TOKEN_BIT_OR_ASSIGN, "|=", 2);
+                    token_init(&outtok, TOKEN_BIT_OR_ASSIGN, "|=", 2);
                     lexpriv_readchar(lex);
                 }
                 else
                 {
-                    token_init(&out_tok, TOKEN_BIT_OR, "|", 1);
+                    token_init(&outtok, TOKEN_BIT_OR, "|", 1);
                 }
                 break;
             }
@@ -206,12 +206,12 @@ ApeToken_t lexer_next_token_internal(ApeLexer_t* lex)
             {
                 if(lexpriv_peekchar(lex) == '=')
                 {
-                    token_init(&out_tok, TOKEN_BIT_XOR_ASSIGN, "^=", 2);
+                    token_init(&outtok, TOKEN_BIT_XOR_ASSIGN, "^=", 2);
                     lexpriv_readchar(lex);
                 }
                 else
                 {
-                    token_init(&out_tok, TOKEN_BIT_XOR, "^", 1);
+                    token_init(&outtok, TOKEN_BIT_XOR, "^", 1);
                     break;
                 }
                 break;
@@ -220,17 +220,17 @@ ApeToken_t lexer_next_token_internal(ApeLexer_t* lex)
             {
                 if(lexpriv_peekchar(lex) == '=')
                 {
-                    token_init(&out_tok, TOKEN_PLUS_ASSIGN, "+=", 2);
+                    token_init(&outtok, TOKEN_PLUS_ASSIGN, "+=", 2);
                     lexpriv_readchar(lex);
                 }
                 else if(lexpriv_peekchar(lex) == '+')
                 {
-                    token_init(&out_tok, TOKEN_PLUS_PLUS, "++", 2);
+                    token_init(&outtok, TOKEN_PLUS_PLUS, "++", 2);
                     lexpriv_readchar(lex);
                 }
                 else
                 {
-                    token_init(&out_tok, TOKEN_PLUS, "+", 1);
+                    token_init(&outtok, TOKEN_PLUS, "+", 1);
                     break;
                 }
                 break;
@@ -239,17 +239,17 @@ ApeToken_t lexer_next_token_internal(ApeLexer_t* lex)
             {
                 if(lexpriv_peekchar(lex) == '=')
                 {
-                    token_init(&out_tok, TOKEN_MINUS_ASSIGN, "-=", 2);
+                    token_init(&outtok, TOKEN_MINUS_ASSIGN, "-=", 2);
                     lexpriv_readchar(lex);
                 }
                 else if(lexpriv_peekchar(lex) == '-')
                 {
-                    token_init(&out_tok, TOKEN_MINUS_MINUS, "--", 2);
+                    token_init(&outtok, TOKEN_MINUS_MINUS, "--", 2);
                     lexpriv_readchar(lex);
                 }
                 else
                 {
-                    token_init(&out_tok, TOKEN_MINUS, "-", 1);
+                    token_init(&outtok, TOKEN_MINUS, "-", 1);
                     break;
                 }
                 break;
@@ -258,12 +258,12 @@ ApeToken_t lexer_next_token_internal(ApeLexer_t* lex)
             {
                 if(lexpriv_peekchar(lex) == '=')
                 {
-                    token_init(&out_tok, TOKEN_NOT_EQ, "!=", 2);
+                    token_init(&outtok, TOKEN_NOT_EQ, "!=", 2);
                     lexpriv_readchar(lex);
                 }
                 else
                 {
-                    token_init(&out_tok, TOKEN_BANG, "!", 1);
+                    token_init(&outtok, TOKEN_BANG, "!", 1);
                 }
                 break;
             }
@@ -271,12 +271,12 @@ ApeToken_t lexer_next_token_internal(ApeLexer_t* lex)
             {
                 if(lexpriv_peekchar(lex) == '=')
                 {
-                    token_init(&out_tok, TOKEN_ASTERISK_ASSIGN, "*=", 2);
+                    token_init(&outtok, TOKEN_ASTERISK_ASSIGN, "*=", 2);
                     lexpriv_readchar(lex);
                 }
                 else
                 {
-                    token_init(&out_tok, TOKEN_ASTERISK, "*", 1);
+                    token_init(&outtok, TOKEN_ASTERISK, "*", 1);
                     break;
                 }
                 break;
@@ -294,12 +294,12 @@ ApeToken_t lexer_next_token_internal(ApeLexer_t* lex)
                 }
                 else if(lexpriv_peekchar(lex) == '=')
                 {
-                    token_init(&out_tok, TOKEN_SLASH_ASSIGN, "/=", 2);
+                    token_init(&outtok, TOKEN_SLASH_ASSIGN, "/=", 2);
                     lexpriv_readchar(lex);
                 }
                 else
                 {
-                    token_init(&out_tok, TOKEN_SLASH, "/", 1);
+                    token_init(&outtok, TOKEN_SLASH, "/", 1);
                     break;
                 }
                 break;
@@ -308,7 +308,7 @@ ApeToken_t lexer_next_token_internal(ApeLexer_t* lex)
             {
                 if(lexpriv_peekchar(lex) == '=')
                 {
-                    token_init(&out_tok, TOKEN_LTE, "<=", 2);
+                    token_init(&outtok, TOKEN_LTE, "<=", 2);
                     lexpriv_readchar(lex);
                 }
                 else if(lexpriv_peekchar(lex) == '<')
@@ -316,17 +316,17 @@ ApeToken_t lexer_next_token_internal(ApeLexer_t* lex)
                     lexpriv_readchar(lex);
                     if(lexpriv_peekchar(lex) == '=')
                     {
-                        token_init(&out_tok, TOKEN_LSHIFT_ASSIGN, "<<=", 3);
+                        token_init(&outtok, TOKEN_LSHIFT_ASSIGN, "<<=", 3);
                         lexpriv_readchar(lex);
                     }
                     else
                     {
-                        token_init(&out_tok, TOKEN_LSHIFT, "<<", 2);
+                        token_init(&outtok, TOKEN_LSHIFT, "<<", 2);
                     }
                 }
                 else
                 {
-                    token_init(&out_tok, TOKEN_LT, "<", 1);
+                    token_init(&outtok, TOKEN_LT, "<", 1);
                     break;
                 }
                 break;
@@ -335,7 +335,7 @@ ApeToken_t lexer_next_token_internal(ApeLexer_t* lex)
             {
                 if(lexpriv_peekchar(lex) == '=')
                 {
-                    token_init(&out_tok, TOKEN_GTE, ">=", 2);
+                    token_init(&outtok, TOKEN_GTE, ">=", 2);
                     lexpriv_readchar(lex);
                 }
                 else if(lexpriv_peekchar(lex) == '>')
@@ -343,63 +343,63 @@ ApeToken_t lexer_next_token_internal(ApeLexer_t* lex)
                     lexpriv_readchar(lex);
                     if(lexpriv_peekchar(lex) == '=')
                     {
-                        token_init(&out_tok, TOKEN_RSHIFT_ASSIGN, ">>=", 3);
+                        token_init(&outtok, TOKEN_RSHIFT_ASSIGN, ">>=", 3);
                         lexpriv_readchar(lex);
                     }
                     else
                     {
-                        token_init(&out_tok, TOKEN_RSHIFT, ">>", 2);
+                        token_init(&outtok, TOKEN_RSHIFT, ">>", 2);
                     }
                 }
                 else
                 {
-                    token_init(&out_tok, TOKEN_GT, ">", 1);
+                    token_init(&outtok, TOKEN_GT, ">", 1);
                 }
                 break;
             }
             case ',':
-                token_init(&out_tok, TOKEN_COMMA, ",", 1);
+                token_init(&outtok, TOKEN_COMMA, ",", 1);
                 break;
             case ';':
-                token_init(&out_tok, TOKEN_SEMICOLON, ";", 1);
+                token_init(&outtok, TOKEN_SEMICOLON, ";", 1);
                 break;
             case ':':
-                token_init(&out_tok, TOKEN_COLON, ":", 1);
+                token_init(&outtok, TOKEN_COLON, ":", 1);
                 break;
             case '(':
-                token_init(&out_tok, TOKEN_LPAREN, "(", 1);
+                token_init(&outtok, TOKEN_LPAREN, "(", 1);
                 break;
             case ')':
-                token_init(&out_tok, TOKEN_RPAREN, ")", 1);
+                token_init(&outtok, TOKEN_RPAREN, ")", 1);
                 break;
             case '{':
-                token_init(&out_tok, TOKEN_LBRACE, "{", 1);
+                token_init(&outtok, TOKEN_LBRACE, "{", 1);
                 break;
             case '}':
-                token_init(&out_tok, TOKEN_RBRACE, "}", 1);
+                token_init(&outtok, TOKEN_RBRACE, "}", 1);
                 break;
             case '[':
-                token_init(&out_tok, TOKEN_LBRACKET, "[", 1);
+                token_init(&outtok, TOKEN_LBRACKET, "[", 1);
                 break;
             case ']':
-                token_init(&out_tok, TOKEN_RBRACKET, "]", 1);
+                token_init(&outtok, TOKEN_RBRACKET, "]", 1);
                 break;
             case '.':
-                token_init(&out_tok, TOKEN_DOT, ".", 1);
+                token_init(&outtok, TOKEN_DOT, ".", 1);
                 break;
             case '?':
-                token_init(&out_tok, TOKEN_QUESTION, "?", 1);
+                token_init(&outtok, TOKEN_QUESTION, "?", 1);
                 break;
             case '%':
             {
                 if(lexpriv_peekchar(lex) == '=')
                 {
-                    token_init(&out_tok, TOKEN_PERCENT_ASSIGN, "%=", 2);
+                    token_init(&outtok, TOKEN_PERCENT_ASSIGN, "%=", 2);
                     lexpriv_readchar(lex);
                 }
                 else
                 {
-                    token_init(&out_tok, TOKEN_PERCENT, "%", 1);
+                    token_init(&outtok, TOKEN_PERCENT, "%", 1);
                     break;
                 }
                 break;
@@ -411,11 +411,11 @@ ApeToken_t lexer_next_token_internal(ApeLexer_t* lex)
                 const char* str = lexpriv_readstring(lex, '"', false, NULL, &len);
                 if(str)
                 {
-                    token_init(&out_tok, TOKEN_STRING, str, len);
+                    token_init(&outtok, TOKEN_STRING, str, len);
                 }
                 else
                 {
-                    token_init(&out_tok, TOKEN_INVALID, NULL, 0);
+                    token_init(&outtok, TOKEN_INVALID, NULL, 0);
                 }
                 break;
             }
@@ -426,11 +426,11 @@ ApeToken_t lexer_next_token_internal(ApeLexer_t* lex)
                 const char* str = lexpriv_readstring(lex, '\'', false, NULL, &len);
                 if(str)
                 {
-                    token_init(&out_tok, TOKEN_STRING, str, len);
+                    token_init(&outtok, TOKEN_STRING, str, len);
                 }
                 else
                 {
-                    token_init(&out_tok, TOKEN_INVALID, NULL, 0);
+                    token_init(&outtok, TOKEN_INVALID, NULL, 0);
                 }
                 break;
             }
@@ -441,22 +441,22 @@ ApeToken_t lexer_next_token_internal(ApeLexer_t* lex)
                     lexpriv_readchar(lex);
                 }
                 int len;
-                bool template_found = false;
-                const char* str = lexpriv_readstring(lex, '`', true, &template_found, &len);
+                bool templatefound = false;
+                const char* str = lexpriv_readstring(lex, '`', true, &templatefound, &len);
                 if(str)
                 {
-                    if(template_found)
+                    if(templatefound)
                     {
-                        token_init(&out_tok, TOKEN_TEMPLATE_STRING, str, len);
+                        token_init(&outtok, TOKEN_TEMPLATE_STRING, str, len);
                     }
                     else
                     {
-                        token_init(&out_tok, TOKEN_STRING, str, len);
+                        token_init(&outtok, TOKEN_STRING, str, len);
                     }
                 }
                 else
                 {
-                    token_init(&out_tok, TOKEN_INVALID, NULL, 0);
+                    token_init(&outtok, TOKEN_INVALID, NULL, 0);
                 }
                 break;
             }
@@ -464,18 +464,18 @@ ApeToken_t lexer_next_token_internal(ApeLexer_t* lex)
             {
                 if(lexpriv_isletter(lex->ch))
                 {
-                    int ident_len = 0;
-                    const char* ident = lexpriv_readident(lex, &ident_len);
-                    ApeTokenType_t type = lexpriv_lookupident(ident, ident_len);
-                    token_init(&out_tok, type, ident, ident_len);
-                    return out_tok;
+                    int identlen = 0;
+                    const char* ident = lexpriv_readident(lex, &identlen);
+                    ApeTokenType_t type = lexpriv_lookupident(ident, identlen);
+                    token_init(&outtok, type, ident, identlen);
+                    return outtok;
                 }
                 else if(lexpriv_isdigit(lex->ch))
                 {
-                    int number_len = 0;
-                    const char* number = lexpriv_readnumber(lex, &number_len);
-                    token_init(&out_tok, TOKEN_NUMBER, number, number_len);
-                    return out_tok;
+                    int numberlen = 0;
+                    const char* number = lexpriv_readnumber(lex, &numberlen);
+                    token_init(&outtok, TOKEN_NUMBER, number, numberlen);
+                    return outtok;
                 }
                 break;
             }
@@ -483,10 +483,10 @@ ApeToken_t lexer_next_token_internal(ApeLexer_t* lex)
         lexpriv_readchar(lex);
         if(lexer_failed(lex))
         {
-            token_init(&out_tok, TOKEN_INVALID, NULL, 0);
+            token_init(&outtok, TOKEN_INVALID, NULL, 0);
         }
         lex->continue_template_string = false;
-        return out_tok;
+        return outtok;
     }
 }
 
@@ -499,10 +499,10 @@ bool lexer_expect_current(ApeLexer_t* lex, ApeTokenType_t type)
 
     if(!lexer_cur_token_is(lex, type))
     {
-        const char* expected_type_str = tokentype_tostring(type);
-        const char* actual_type_str = tokentype_tostring(lex->cur_token.type);
-        errorlist_addformat(lex->errors, APE_ERROR_PARSING, lex->cur_token.pos,
-                          "expected current token to be '%s', got '%s' instead", expected_type_str, actual_type_str);
+        const char* expectedtypestr = tokentype_tostring(type);
+        const char* actualtypestr = tokentype_tostring(lex->curtoken.type);
+        errorlist_addformat(lex->errors, APE_ERROR_PARSING, lex->curtoken.pos,
+                          "expected current token to be '%s', got '%s' instead", expectedtypestr, actualtypestr);
         return false;
     }
     return true;
@@ -512,22 +512,22 @@ bool lexer_expect_current(ApeLexer_t* lex, ApeTokenType_t type)
 
 static bool lexpriv_readchar(ApeLexer_t* lex)
 {
-    if(lex->next_position >= lex->input_len)
+    if(lex->nextposition >= lex->inputlen)
     {
         lex->ch = '\0';
     }
     else
     {
-        lex->ch = lex->input[lex->next_position];
+        lex->ch = lex->input[lex->nextposition];
     }
-    lex->position = lex->next_position;
-    lex->next_position++;
+    lex->position = lex->nextposition;
+    lex->nextposition++;
 
     if(lex->ch == '\n')
     {
         lex->line++;
         lex->column = -1;
-        bool ok = lexpriv_addline(lex, lex->next_position);
+        bool ok = lexpriv_addline(lex, lex->nextposition);
         if(!ok)
         {
             lex->failed = true;
@@ -543,13 +543,13 @@ static bool lexpriv_readchar(ApeLexer_t* lex)
 
 static char lexpriv_peekchar(ApeLexer_t* lex)
 {
-    if(lex->next_position >= lex->input_len)
+    if(lex->nextposition >= lex->inputlen)
     {
         return '\0';
     }
     else
     {
-        return lex->input[lex->next_position];
+        return lex->input[lex->nextposition];
     }
 }
 
@@ -563,9 +563,9 @@ static bool lexpriv_isdigit(char ch)
     return ch >= '0' && ch <= '9';
 }
 
-static bool lexpriv_isoneof(char ch, const char* allowed, int allowed_len)
+static bool lexpriv_isoneof(char ch, const char* allowed, int allowedlen)
 {
-    for(int i = 0; i < allowed_len; i++)
+    for(int i = 0; i < allowedlen; i++)
     {
         if(ch == allowed[i])
         {
@@ -575,7 +575,7 @@ static bool lexpriv_isoneof(char ch, const char* allowed, int allowed_len)
     return false;
 }
 
-static const char* lexpriv_readident(ApeLexer_t* lex, int* out_len)
+static const char* lexpriv_readident(ApeLexer_t* lex, int* outlen)
 {
     int position = lex->position;
     int len = 0;
@@ -593,11 +593,11 @@ static const char* lexpriv_readident(ApeLexer_t* lex, int* out_len)
     }
 end:
     len = lex->position - position;
-    *out_len = len;
+    *outlen = len;
     return lex->input + position;
 }
 
-static const char* lexpriv_readnumber(ApeLexer_t* lex, int* out_len)
+static const char* lexpriv_readnumber(ApeLexer_t* lex, int* outlen)
 {
     char allowed[] = ".xXaAbBcCdDeEfF";
     int position = lex->position;
@@ -606,13 +606,13 @@ static const char* lexpriv_readnumber(ApeLexer_t* lex, int* out_len)
         lexpriv_readchar(lex);
     }
     int len = lex->position - position;
-    *out_len = len;
+    *outlen = len;
     return lex->input + position;
 }
 
-static const char* lexpriv_readstring(ApeLexer_t* lex, char delimiter, bool is_template, bool* out_template_found, int* out_len)
+static const char* lexpriv_readstring(ApeLexer_t* lex, char delimiter, bool istemplate, bool* outtemplatefound, int* outlen)
 {
-    *out_len = 0;
+    *outlen = 0;
 
     bool escaped = false;
     int position = lex->position;
@@ -627,9 +627,9 @@ static const char* lexpriv_readstring(ApeLexer_t* lex, char delimiter, bool is_t
         {
             break;
         }
-        if(is_template && !escaped && lex->ch == '$' && lexpriv_peekchar(lex) == '{')
+        if(istemplate && !escaped && lex->ch == '$' && lexpriv_peekchar(lex) == '{')
         {
-            *out_template_found = true;
+            *outtemplatefound = true;
             break;
         }
         escaped = false;
@@ -640,7 +640,7 @@ static const char* lexpriv_readstring(ApeLexer_t* lex, char delimiter, bool is_t
         lexpriv_readchar(lex);
     }
     int len = lex->position - position;
-    *out_len = len;
+    *outlen = len;
     return lex->input + position;
 }
 
@@ -701,17 +701,17 @@ static bool lexpriv_addline(ApeLexer_t* lex, int offset)
     {
         return true;
     }
-    const char* line_start = lex->input + offset;
-    const char* new_line_ptr = strchr(line_start, '\n');
+    const char* linestart = lex->input + offset;
+    const char* newlineptr = strchr(linestart, '\n');
     char* line = NULL;
-    if(!new_line_ptr)
+    if(!newlineptr)
     {
-        line = util_strdup(lex->context, line_start);
+        line = util_strdup(lex->context, linestart);
     }
     else
     {
-        size_t line_len = new_line_ptr - line_start;
-        line = util_strndup(lex->context, line_start, line_len);
+        size_t linelen = newlineptr - linestart;
+        line = util_strndup(lex->context, linestart, linelen);
     }
     if(!line)
     {

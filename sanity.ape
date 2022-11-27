@@ -22,7 +22,7 @@ function fun() {
     const str = "lorem ipsum"
     dict["a"] = 1
     const res = function(a, b, c) {
-        const res_str = to_str(a) + to_str(b) + to_str(c)
+        const res_str = tostring(a) + tostring(b) + tostring(c)
         return res_str;
     }
     return res(1, 2, 3)
@@ -43,7 +43,7 @@ function make_person(name) {
 const person = make_person("Krzysztof")
 person.hello()
 _check_result = (keys({"a": 1, "b": 2})[1] == "b"); println(`checking (${"keys({\"a\": 1, \"b\": 2})[1]"} ${"=="} ${"b"}) = ${_check_result}`); assert(_check_result);
-_check_result = (to_str(1) == "1"); println(`checking (${"to_str(1)"} ${"=="} ${"1"}) = ${_check_result}`); assert(_check_result);
+_check_result = (tostring(1) == "1"); println(`checking (${"tostring(1)"} ${"=="} ${"1"}) = ${_check_result}`); assert(_check_result);
 const popular_names = ["Krzysztof", "Zbigniew", "Grzegorz"]
 for (name in popular_names) {
     println(name)

@@ -1,13 +1,13 @@
 
 #include "ape.h"
 
-static const ApePosition_t g_prspriv_src_pos_invalid = { NULL, -1, -1 };
+static const ApePosition_t gprsprivsrcposinvalid = { NULL, -1, -1 };
 
 static ApePrecedence_t get_precedence(ApeTokenType_t tk);
 static ApeOperator_t token_to_operator(ApeTokenType_t tk);
 static char escape_char(const char c);
 static char *process_and_copy_string(ApeAllocator_t *alloc, const char *input, size_t len);
-static ApeExpression_t *wrap_expression_in_function_call(ApeContext_t *ctx, ApeExpression_t *expr, const char *function_name);
+static ApeExpression_t *wrap_expression_in_function_call(ApeContext_t *ctx, ApeExpression_t *expr, const char *functionname);
 
 static ApeIdent_t* ident_make(ApeContext_t* ctx, ApeToken_t tok)
 {
@@ -65,7 +65,7 @@ ApeExpression_t* expression_make_number_literal(ApeContext_t* ctx, ApeFloat_t va
     {
         return NULL;
     }
-    res->number_literal = val;
+    res->numberliteral = val;
     return res;
 }
 
@@ -76,7 +76,7 @@ ApeExpression_t* expression_make_bool_literal(ApeContext_t* ctx, bool val)
     {
         return NULL;
     }
-    res->bool_literal = val;
+    res->boolliteral = val;
     return res;
 }
 
@@ -87,7 +87,7 @@ ApeExpression_t* expression_make_string_literal(ApeContext_t* ctx, char* value)
     {
         return NULL;
     }
-    res->string_literal = value;
+    res->stringliteral = value;
     return res;
 }
 
@@ -156,9 +156,9 @@ ApeExpression_t* expression_make_fn_literal(ApeContext_t* ctx, ApePtrArray_t * p
     {
         return NULL;
     }
-    res->fn_literal.name = NULL;
-    res->fn_literal.params = params;
-    res->fn_literal.body = body;
+    res->fnliteral.name = NULL;
+    res->fnliteral.params = params;
+    res->fnliteral.body = body;
     return res;
 }
 
@@ -169,8 +169,8 @@ ApeExpression_t* expression_make_call(ApeContext_t* ctx, ApeExpression_t* functi
     {
         return NULL;
     }
-    res->call_expr.function = function;
-    res->call_expr.args = args;
+    res->callexpr.function = function;
+    res->callexpr.args = args;
     return res;
 }
 
@@ -181,12 +181,12 @@ ApeExpression_t* expression_make_index(ApeContext_t* ctx, ApeExpression_t* left,
     {
         return NULL;
     }
-    res->index_expr.left = left;
-    res->index_expr.index = index;
+    res->indexexpr.left = left;
+    res->indexexpr.index = index;
     return res;
 }
 
-ApeExpression_t* expression_make_assign(ApeContext_t* ctx, ApeExpression_t* dest, ApeExpression_t* source, bool is_postfix)
+ApeExpression_t* expression_make_assign(ApeContext_t* ctx, ApeExpression_t* dest, ApeExpression_t* source, bool ispostfix)
 {
     ApeExpression_t* res = expression_make(ctx, EXPRESSION_ASSIGN);
     if(!res)
@@ -195,7 +195,7 @@ ApeExpression_t* expression_make_assign(ApeContext_t* ctx, ApeExpression_t* dest
     }
     res->assign.dest = dest;
     res->assign.source = source;
-    res->assign.is_postfix = is_postfix;
+    res->assign.ispostfix = ispostfix;
     return res;
 }
 
@@ -212,7 +212,7 @@ ApeExpression_t* expression_make_logical(ApeContext_t* ctx, ApeOperator_t op, Ap
     return res;
 }
 
-ApeExpression_t* expression_make_ternary(ApeContext_t* ctx, ApeExpression_t* test, ApeExpression_t* if_true, ApeExpression_t* if_false)
+ApeExpression_t* expression_make_ternary(ApeContext_t* ctx, ApeExpression_t* test, ApeExpression_t* iftrue, ApeExpression_t* iffalse)
 {
     ApeExpression_t* res = expression_make(ctx, EXPRESSION_TERNARY);
     if(!res)
@@ -220,8 +220,8 @@ ApeExpression_t* expression_make_ternary(ApeContext_t* ctx, ApeExpression_t* tes
         return NULL;
     }
     res->ternary.test = test;
-    res->ternary.if_true = if_true;
-    res->ternary.if_false = if_false;
+    res->ternary.iftrue = iftrue;
+    res->ternary.iffalse = iffalse;
     return res;
 }
 
@@ -250,7 +250,7 @@ void* expression_destroy(ApeExpression_t* expr)
         }
         case EXPRESSION_STRING_LITERAL:
         {
-            allocator_free(expr->alloc, expr->string_literal);
+            allocator_free(expr->alloc, expr->stringliteral);
             break;
         }
         case EXPRESSION_NULL_LITERAL:
@@ -281,7 +281,7 @@ void* expression_destroy(ApeExpression_t* expr)
         }
         case EXPRESSION_FUNCTION_LITERAL:
         {
-            ApeFnLiteral_t* fn = &expr->fn_literal;
+            ApeFnLiteral_t* fn = &expr->fnliteral;
             allocator_free(expr->alloc, fn->name);
             ptrarray_destroywithitems(fn->params, (ApeDataCallback_t)ident_destroy);
             code_block_destroy(fn->body);
@@ -289,14 +289,14 @@ void* expression_destroy(ApeExpression_t* expr)
         }
         case EXPRESSION_CALL:
         {
-            ptrarray_destroywithitems(expr->call_expr.args, (ApeDataCallback_t)expression_destroy);
-            expression_destroy(expr->call_expr.function);
+            ptrarray_destroywithitems(expr->callexpr.args, (ApeDataCallback_t)expression_destroy);
+            expression_destroy(expr->callexpr.function);
             break;
         }
         case EXPRESSION_INDEX:
         {
-            expression_destroy(expr->index_expr.left);
-            expression_destroy(expr->index_expr.index);
+            expression_destroy(expr->indexexpr.left);
+            expression_destroy(expr->indexexpr.index);
             break;
         }
         case EXPRESSION_ASSIGN:
@@ -314,8 +314,8 @@ void* expression_destroy(ApeExpression_t* expr)
         case EXPRESSION_TERNARY:
         {
             expression_destroy(expr->ternary.test);
-            expression_destroy(expr->ternary.if_true);
-            expression_destroy(expr->ternary.if_false);
+            expression_destroy(expr->ternary.iftrue);
+            expression_destroy(expr->ternary.iffalse);
             break;
         }
     }
@@ -354,25 +354,25 @@ ApeExpression_t* expression_copy(ApeExpression_t* expr)
         }
         case EXPRESSION_NUMBER_LITERAL:
         {
-            res = expression_make_number_literal(expr->context, expr->number_literal);
+            res = expression_make_number_literal(expr->context, expr->numberliteral);
             break;
         }
         case EXPRESSION_BOOL_LITERAL:
         {
-            res = expression_make_bool_literal(expr->context, expr->bool_literal);
+            res = expression_make_bool_literal(expr->context, expr->boolliteral);
             break;
         }
         case EXPRESSION_STRING_LITERAL:
         {
-            char* string_copy = util_strdup(expr->context, expr->string_literal);
-            if(!string_copy)
+            char* stringcopy = util_strdup(expr->context, expr->stringliteral);
+            if(!stringcopy)
             {
                 return NULL;
             }
-            res = expression_make_string_literal(expr->context, string_copy);
+            res = expression_make_string_literal(expr->context, stringcopy);
             if(!res)
             {
-                allocator_free(expr->alloc, string_copy);
+                allocator_free(expr->alloc, stringcopy);
                 return NULL;
             }
             break;
@@ -384,189 +384,189 @@ ApeExpression_t* expression_copy(ApeExpression_t* expr)
         }
         case EXPRESSION_ARRAY_LITERAL:
         {
-            ApePtrArray_t* values_copy = ptrarray_copywithitems(expr->array, (ApeDataCallback_t)expression_copy, (ApeDataCallback_t)expression_destroy);
-            if(!values_copy)
+            ApePtrArray_t* valuescopy = ptrarray_copywithitems(expr->array, (ApeDataCallback_t)expression_copy, (ApeDataCallback_t)expression_destroy);
+            if(!valuescopy)
             {
                 return NULL;
             }
-            res = expression_make_array_literal(expr->context, values_copy);
+            res = expression_make_array_literal(expr->context, valuescopy);
             if(!res)
             {
-                ptrarray_destroywithitems(values_copy, (ApeDataCallback_t)expression_destroy);
+                ptrarray_destroywithitems(valuescopy, (ApeDataCallback_t)expression_destroy);
                 return NULL;
             }
             break;
         }
         case EXPRESSION_MAP_LITERAL:
         {
-            ApePtrArray_t* keys_copy = ptrarray_copywithitems(expr->map.keys, (ApeDataCallback_t)expression_copy, (ApeDataCallback_t)expression_destroy);
-            ApePtrArray_t* values_copy = ptrarray_copywithitems(expr->map.values, (ApeDataCallback_t)expression_copy, (ApeDataCallback_t)expression_destroy);
-            if(!keys_copy || !values_copy)
+            ApePtrArray_t* keyscopy = ptrarray_copywithitems(expr->map.keys, (ApeDataCallback_t)expression_copy, (ApeDataCallback_t)expression_destroy);
+            ApePtrArray_t* valuescopy = ptrarray_copywithitems(expr->map.values, (ApeDataCallback_t)expression_copy, (ApeDataCallback_t)expression_destroy);
+            if(!keyscopy || !valuescopy)
             {
-                ptrarray_destroywithitems(keys_copy, (ApeDataCallback_t)expression_destroy);
-                ptrarray_destroywithitems(values_copy, (ApeDataCallback_t)expression_destroy);
+                ptrarray_destroywithitems(keyscopy, (ApeDataCallback_t)expression_destroy);
+                ptrarray_destroywithitems(valuescopy, (ApeDataCallback_t)expression_destroy);
                 return NULL;
             }
-            res = expression_make_map_literal(expr->context, keys_copy, values_copy);
+            res = expression_make_map_literal(expr->context, keyscopy, valuescopy);
             if(!res)
             {
-                ptrarray_destroywithitems(keys_copy, (ApeDataCallback_t)expression_destroy);
-                ptrarray_destroywithitems(values_copy, (ApeDataCallback_t)expression_destroy);
+                ptrarray_destroywithitems(keyscopy, (ApeDataCallback_t)expression_destroy);
+                ptrarray_destroywithitems(valuescopy, (ApeDataCallback_t)expression_destroy);
                 return NULL;
             }
             break;
         }
         case EXPRESSION_PREFIX:
         {
-            ApeExpression_t* right_copy = expression_copy(expr->prefix.right);
-            if(!right_copy)
+            ApeExpression_t* rightcopy = expression_copy(expr->prefix.right);
+            if(!rightcopy)
             {
                 return NULL;
             }
-            res = expression_make_prefix(expr->context, expr->prefix.op, right_copy);
+            res = expression_make_prefix(expr->context, expr->prefix.op, rightcopy);
             if(!res)
             {
-                expression_destroy(right_copy);
+                expression_destroy(rightcopy);
                 return NULL;
             }
             break;
         }
         case EXPRESSION_INFIX:
         {
-            ApeExpression_t* left_copy = expression_copy(expr->infix.left);
-            ApeExpression_t* right_copy = expression_copy(expr->infix.right);
-            if(!left_copy || !right_copy)
+            ApeExpression_t* leftcopy = expression_copy(expr->infix.left);
+            ApeExpression_t* rightcopy = expression_copy(expr->infix.right);
+            if(!leftcopy || !rightcopy)
             {
-                expression_destroy(left_copy);
-                expression_destroy(right_copy);
+                expression_destroy(leftcopy);
+                expression_destroy(rightcopy);
                 return NULL;
             }
-            res = expression_make_infix(expr->context, expr->infix.op, left_copy, right_copy);
+            res = expression_make_infix(expr->context, expr->infix.op, leftcopy, rightcopy);
             if(!res)
             {
-                expression_destroy(left_copy);
-                expression_destroy(right_copy);
+                expression_destroy(leftcopy);
+                expression_destroy(rightcopy);
                 return NULL;
             }
             break;
         }
         case EXPRESSION_FUNCTION_LITERAL:
         {
-            ApePtrArray_t* params_copy = ptrarray_copywithitems(expr->fn_literal.params, (ApeDataCallback_t)ident_copy,(ApeDataCallback_t) ident_destroy);
-            ApeCodeblock_t* body_copy = code_block_copy(expr->fn_literal.body);
-            char* name_copy = util_strdup(expr->context, expr->fn_literal.name);
-            if(!params_copy || !body_copy)
+            ApePtrArray_t* paramscopy = ptrarray_copywithitems(expr->fnliteral.params, (ApeDataCallback_t)ident_copy,(ApeDataCallback_t) ident_destroy);
+            ApeCodeblock_t* bodycopy = code_block_copy(expr->fnliteral.body);
+            char* namecopy = util_strdup(expr->context, expr->fnliteral.name);
+            if(!paramscopy || !bodycopy)
             {
-                ptrarray_destroywithitems(params_copy, (ApeDataCallback_t)ident_destroy);
-                code_block_destroy(body_copy);
-                allocator_free(expr->alloc, name_copy);
+                ptrarray_destroywithitems(paramscopy, (ApeDataCallback_t)ident_destroy);
+                code_block_destroy(bodycopy);
+                allocator_free(expr->alloc, namecopy);
                 return NULL;
             }
-            res = expression_make_fn_literal(expr->context, params_copy, body_copy);
+            res = expression_make_fn_literal(expr->context, paramscopy, bodycopy);
             if(!res)
             {
-                ptrarray_destroywithitems(params_copy, (ApeDataCallback_t)ident_destroy);
-                code_block_destroy(body_copy);
-                allocator_free(expr->alloc, name_copy);
+                ptrarray_destroywithitems(paramscopy, (ApeDataCallback_t)ident_destroy);
+                code_block_destroy(bodycopy);
+                allocator_free(expr->alloc, namecopy);
                 return NULL;
             }
-            res->fn_literal.name = name_copy;
+            res->fnliteral.name = namecopy;
             break;
         }
         case EXPRESSION_CALL:
         {
-            ApeExpression_t* function_copy = expression_copy(expr->call_expr.function);
-            ApePtrArray_t* args_copy = ptrarray_copywithitems(expr->call_expr.args, (ApeDataCallback_t)expression_copy, (ApeDataCallback_t)expression_destroy);
-            if(!function_copy || !args_copy)
+            ApeExpression_t* functioncopy = expression_copy(expr->callexpr.function);
+            ApePtrArray_t* argscopy = ptrarray_copywithitems(expr->callexpr.args, (ApeDataCallback_t)expression_copy, (ApeDataCallback_t)expression_destroy);
+            if(!functioncopy || !argscopy)
             {
-                expression_destroy(function_copy);
-                ptrarray_destroywithitems(expr->call_expr.args, (ApeDataCallback_t)expression_destroy);
+                expression_destroy(functioncopy);
+                ptrarray_destroywithitems(expr->callexpr.args, (ApeDataCallback_t)expression_destroy);
                 return NULL;
             }
-            res = expression_make_call(expr->context, function_copy, args_copy);
+            res = expression_make_call(expr->context, functioncopy, argscopy);
             if(!res)
             {
-                expression_destroy(function_copy);
-                ptrarray_destroywithitems(expr->call_expr.args, (ApeDataCallback_t)expression_destroy);
+                expression_destroy(functioncopy);
+                ptrarray_destroywithitems(expr->callexpr.args, (ApeDataCallback_t)expression_destroy);
                 return NULL;
             }
             break;
         }
         case EXPRESSION_INDEX:
         {
-            ApeExpression_t* left_copy = expression_copy(expr->index_expr.left);
-            ApeExpression_t* index_copy = expression_copy(expr->index_expr.index);
-            if(!left_copy || !index_copy)
+            ApeExpression_t* leftcopy = expression_copy(expr->indexexpr.left);
+            ApeExpression_t* indexcopy = expression_copy(expr->indexexpr.index);
+            if(!leftcopy || !indexcopy)
             {
-                expression_destroy(left_copy);
-                expression_destroy(index_copy);
+                expression_destroy(leftcopy);
+                expression_destroy(indexcopy);
                 return NULL;
             }
-            res = expression_make_index(expr->context, left_copy, index_copy);
+            res = expression_make_index(expr->context, leftcopy, indexcopy);
             if(!res)
             {
-                expression_destroy(left_copy);
-                expression_destroy(index_copy);
+                expression_destroy(leftcopy);
+                expression_destroy(indexcopy);
                 return NULL;
             }
             break;
         }
         case EXPRESSION_ASSIGN:
         {
-            ApeExpression_t* dest_copy = expression_copy(expr->assign.dest);
-            ApeExpression_t* source_copy = expression_copy(expr->assign.source);
-            if(!dest_copy || !source_copy)
+            ApeExpression_t* destcopy = expression_copy(expr->assign.dest);
+            ApeExpression_t* sourcecopy = expression_copy(expr->assign.source);
+            if(!destcopy || !sourcecopy)
             {
-                expression_destroy(dest_copy);
-                expression_destroy(source_copy);
+                expression_destroy(destcopy);
+                expression_destroy(sourcecopy);
                 return NULL;
             }
-            res = expression_make_assign(expr->context, dest_copy, source_copy, expr->assign.is_postfix);
+            res = expression_make_assign(expr->context, destcopy, sourcecopy, expr->assign.ispostfix);
             if(!res)
             {
-                expression_destroy(dest_copy);
-                expression_destroy(source_copy);
+                expression_destroy(destcopy);
+                expression_destroy(sourcecopy);
                 return NULL;
             }
             break;
         }
         case EXPRESSION_LOGICAL:
         {
-            ApeExpression_t* left_copy = expression_copy(expr->logical.left);
-            ApeExpression_t* right_copy = expression_copy(expr->logical.right);
-            if(!left_copy || !right_copy)
+            ApeExpression_t* leftcopy = expression_copy(expr->logical.left);
+            ApeExpression_t* rightcopy = expression_copy(expr->logical.right);
+            if(!leftcopy || !rightcopy)
             {
-                expression_destroy(left_copy);
-                expression_destroy(right_copy);
+                expression_destroy(leftcopy);
+                expression_destroy(rightcopy);
                 return NULL;
             }
-            res = expression_make_logical(expr->context, expr->logical.op, left_copy, right_copy);
+            res = expression_make_logical(expr->context, expr->logical.op, leftcopy, rightcopy);
             if(!res)
             {
-                expression_destroy(left_copy);
-                expression_destroy(right_copy);
+                expression_destroy(leftcopy);
+                expression_destroy(rightcopy);
                 return NULL;
             }
             break;
         }
         case EXPRESSION_TERNARY:
         {
-            ApeExpression_t* test_copy = expression_copy(expr->ternary.test);
-            ApeExpression_t* if_true_copy = expression_copy(expr->ternary.if_true);
-            ApeExpression_t* if_false_copy = expression_copy(expr->ternary.if_false);
-            if(!test_copy || !if_true_copy || !if_false_copy)
+            ApeExpression_t* testcopy = expression_copy(expr->ternary.test);
+            ApeExpression_t* iftruecopy = expression_copy(expr->ternary.iftrue);
+            ApeExpression_t* iffalsecopy = expression_copy(expr->ternary.iffalse);
+            if(!testcopy || !iftruecopy || !iffalsecopy)
             {
-                expression_destroy(test_copy);
-                expression_destroy(if_true_copy);
-                expression_destroy(if_false_copy);
+                expression_destroy(testcopy);
+                expression_destroy(iftruecopy);
+                expression_destroy(iffalsecopy);
                 return NULL;
             }
-            res = expression_make_ternary(expr->context, test_copy, if_true_copy, if_false_copy);
+            res = expression_make_ternary(expr->context, testcopy, iftruecopy, iffalsecopy);
             if(!res)
             {
-                expression_destroy(test_copy);
-                expression_destroy(if_true_copy);
-                expression_destroy(if_false_copy);
+                expression_destroy(testcopy);
+                expression_destroy(iftruecopy);
+                expression_destroy(iffalsecopy);
                 return NULL;
             }
             break;
@@ -600,8 +600,8 @@ ApeStatement_t* statement_make_if(ApeContext_t* ctx, ApePtrArray_t * cases, ApeC
     {
         return NULL;
     }
-    res->if_statement.cases = cases;
-    res->if_statement.alternative = alternative;
+    res->ifstatement.cases = cases;
+    res->ifstatement.alternative = alternative;
     return res;
 }
 
@@ -612,7 +612,7 @@ ApeStatement_t* statement_make_return(ApeContext_t* ctx, ApeExpression_t* value)
     {
         return NULL;
     }
-    res->return_value = value;
+    res->returnvalue = value;
     return res;
 }
 
@@ -634,8 +634,8 @@ ApeStatement_t* statement_make_while_loop(ApeContext_t* ctx, ApeExpression_t* te
     {
         return NULL;
     }
-    res->while_loop.test = test;
-    res->while_loop.body = body;
+    res->whileloop.test = test;
+    res->whileloop.body = body;
     return res;
 }
 
@@ -669,10 +669,10 @@ ApeStatement_t* statement_make_for_loop(ApeContext_t* ctx, ApeStatement_t* init,
     {
         return NULL;
     }
-    res->for_loop.init = init;
-    res->for_loop.test = test;
-    res->for_loop.update = update;
-    res->for_loop.body = body;
+    res->forloop.init = init;
+    res->forloop.test = test;
+    res->forloop.update = update;
+    res->forloop.body = body;
     return res;
 }
 
@@ -708,14 +708,14 @@ ApeStatement_t* statement_make_import(ApeContext_t* ctx, char* path)
     return res;
 }
 
-ApeStatement_t* statement_make_recover(ApeContext_t* ctx, ApeIdent_t* error_ident, ApeCodeblock_t* body)
+ApeStatement_t* statement_make_recover(ApeContext_t* ctx, ApeIdent_t* errorident, ApeCodeblock_t* body)
 {
     ApeStatement_t* res = statement_make(ctx, STATEMENT_RECOVER);
     if(!res)
     {
         return NULL;
     }
-    res->recover.error_ident = error_ident;
+    res->recover.errorident = errorident;
     res->recover.body = body;
     return res;
 }
@@ -741,13 +741,13 @@ void* statement_destroy(ApeStatement_t* stmt)
         }
         case STATEMENT_IF:
         {
-            ptrarray_destroywithitems(stmt->if_statement.cases, (ApeDataCallback_t)if_case_destroy);
-            code_block_destroy(stmt->if_statement.alternative);
+            ptrarray_destroywithitems(stmt->ifstatement.cases, (ApeDataCallback_t)if_case_destroy);
+            code_block_destroy(stmt->ifstatement.alternative);
             break;
         }
         case STATEMENT_RETURN_VALUE:
         {
-            expression_destroy(stmt->return_value);
+            expression_destroy(stmt->returnvalue);
             break;
         }
         case STATEMENT_EXPRESSION:
@@ -757,8 +757,8 @@ void* statement_destroy(ApeStatement_t* stmt)
         }
         case STATEMENT_WHILE_LOOP:
         {
-            expression_destroy(stmt->while_loop.test);
-            code_block_destroy(stmt->while_loop.body);
+            expression_destroy(stmt->whileloop.test);
+            code_block_destroy(stmt->whileloop.body);
             break;
         }
         case STATEMENT_BREAK:
@@ -778,10 +778,10 @@ void* statement_destroy(ApeStatement_t* stmt)
         }
         case STATEMENT_FOR_LOOP:
         {
-            statement_destroy(stmt->for_loop.init);
-            expression_destroy(stmt->for_loop.test);
-            expression_destroy(stmt->for_loop.update);
-            code_block_destroy(stmt->for_loop.body);
+            statement_destroy(stmt->forloop.init);
+            expression_destroy(stmt->forloop.test);
+            expression_destroy(stmt->forloop.update);
+            code_block_destroy(stmt->forloop.body);
             break;
         }
         case STATEMENT_BLOCK:
@@ -797,7 +797,7 @@ void* statement_destroy(ApeStatement_t* stmt)
         case STATEMENT_RECOVER:
         {
             code_block_destroy(stmt->recover.body);
-            ident_destroy(stmt->recover.error_ident);
+            ident_destroy(stmt->recover.errorident);
             break;
         }
     }
@@ -821,83 +821,83 @@ ApeStatement_t* statement_copy(const ApeStatement_t* stmt)
         }
         case STATEMENT_DEFINE:
         {
-            ApeExpression_t* value_copy = expression_copy(stmt->define.value);
-            if(!value_copy)
+            ApeExpression_t* valuecopy = expression_copy(stmt->define.value);
+            if(!valuecopy)
             {
                 return NULL;
             }
-            res = statement_make_define(stmt->context, ident_copy(stmt->define.name), value_copy, stmt->define.assignable);
+            res = statement_make_define(stmt->context, ident_copy(stmt->define.name), valuecopy, stmt->define.assignable);
             if(!res)
             {
-                expression_destroy(value_copy);
+                expression_destroy(valuecopy);
                 return NULL;
             }
             break;
         }
         case STATEMENT_IF:
         {
-            ApePtrArray_t* cases_copy = ptrarray_copywithitems(stmt->if_statement.cases, (ApeDataCallback_t)if_case_copy, (ApeDataCallback_t)if_case_destroy);
-            ApeCodeblock_t* alternative_copy = code_block_copy(stmt->if_statement.alternative);
-            if(!cases_copy || !alternative_copy)
+            ApePtrArray_t* casescopy = ptrarray_copywithitems(stmt->ifstatement.cases, (ApeDataCallback_t)if_case_copy, (ApeDataCallback_t)if_case_destroy);
+            ApeCodeblock_t* alternativecopy = code_block_copy(stmt->ifstatement.alternative);
+            if(!casescopy || !alternativecopy)
             {
-                ptrarray_destroywithitems(cases_copy, (ApeDataCallback_t)if_case_destroy);
-                code_block_destroy(alternative_copy);
+                ptrarray_destroywithitems(casescopy, (ApeDataCallback_t)if_case_destroy);
+                code_block_destroy(alternativecopy);
                 return NULL;
             }
-            res = statement_make_if(stmt->context, cases_copy, alternative_copy);
+            res = statement_make_if(stmt->context, casescopy, alternativecopy);
             if(res)
             {
-                ptrarray_destroywithitems(cases_copy, (ApeDataCallback_t)if_case_destroy);
-                code_block_destroy(alternative_copy);
+                ptrarray_destroywithitems(casescopy, (ApeDataCallback_t)if_case_destroy);
+                code_block_destroy(alternativecopy);
                 return NULL;
             }
             break;
         }
         case STATEMENT_RETURN_VALUE:
         {
-            ApeExpression_t* value_copy = expression_copy(stmt->return_value);
-            if(!value_copy)
+            ApeExpression_t* valuecopy = expression_copy(stmt->returnvalue);
+            if(!valuecopy)
             {
                 return NULL;
             }
-            res = statement_make_return(stmt->context, value_copy);
+            res = statement_make_return(stmt->context, valuecopy);
             if(!res)
             {
-                expression_destroy(value_copy);
+                expression_destroy(valuecopy);
                 return NULL;
             }
             break;
         }
         case STATEMENT_EXPRESSION:
         {
-            ApeExpression_t* value_copy = expression_copy(stmt->expression);
-            if(!value_copy)
+            ApeExpression_t* valuecopy = expression_copy(stmt->expression);
+            if(!valuecopy)
             {
                 return NULL;
             }
-            res = statement_make_expression(stmt->context, value_copy);
+            res = statement_make_expression(stmt->context, valuecopy);
             if(!res)
             {
-                expression_destroy(value_copy);
+                expression_destroy(valuecopy);
                 return NULL;
             }
             break;
         }
         case STATEMENT_WHILE_LOOP:
         {
-            ApeExpression_t* test_copy = expression_copy(stmt->while_loop.test);
-            ApeCodeblock_t* body_copy = code_block_copy(stmt->while_loop.body);
-            if(!test_copy || !body_copy)
+            ApeExpression_t* testcopy = expression_copy(stmt->whileloop.test);
+            ApeCodeblock_t* bodycopy = code_block_copy(stmt->whileloop.body);
+            if(!testcopy || !bodycopy)
             {
-                expression_destroy(test_copy);
-                code_block_destroy(body_copy);
+                expression_destroy(testcopy);
+                code_block_destroy(bodycopy);
                 return NULL;
             }
-            res = statement_make_while_loop(stmt->context, test_copy, body_copy);
+            res = statement_make_while_loop(stmt->context, testcopy, bodycopy);
             if(!res)
             {
-                expression_destroy(test_copy);
-                code_block_destroy(body_copy);
+                expression_destroy(testcopy);
+                code_block_destroy(bodycopy);
                 return NULL;
             }
             break;
@@ -914,44 +914,44 @@ ApeStatement_t* statement_copy(const ApeStatement_t* stmt)
         }
         case STATEMENT_FOREACH:
         {
-            ApeExpression_t* source_copy = expression_copy(stmt->foreach.source);
-            ApeCodeblock_t* body_copy = code_block_copy(stmt->foreach.body);
-            if(!source_copy || !body_copy)
+            ApeExpression_t* sourcecopy = expression_copy(stmt->foreach.source);
+            ApeCodeblock_t* bodycopy = code_block_copy(stmt->foreach.body);
+            if(!sourcecopy || !bodycopy)
             {
-                expression_destroy(source_copy);
-                code_block_destroy(body_copy);
+                expression_destroy(sourcecopy);
+                code_block_destroy(bodycopy);
                 return NULL;
             }
-            res = statement_make_foreach(stmt->context, ident_copy(stmt->foreach.iterator), source_copy, body_copy);
+            res = statement_make_foreach(stmt->context, ident_copy(stmt->foreach.iterator), sourcecopy, bodycopy);
             if(!res)
             {
-                expression_destroy(source_copy);
-                code_block_destroy(body_copy);
+                expression_destroy(sourcecopy);
+                code_block_destroy(bodycopy);
                 return NULL;
             }
             break;
         }
         case STATEMENT_FOR_LOOP:
         {
-            ApeStatement_t* init_copy = statement_copy(stmt->for_loop.init);
-            ApeExpression_t* test_copy = expression_copy(stmt->for_loop.test);
-            ApeExpression_t* update_copy = expression_copy(stmt->for_loop.update);
-            ApeCodeblock_t* body_copy = code_block_copy(stmt->for_loop.body);
-            if(!init_copy || !test_copy || !update_copy || !body_copy)
+            ApeStatement_t* initcopy = statement_copy(stmt->forloop.init);
+            ApeExpression_t* testcopy = expression_copy(stmt->forloop.test);
+            ApeExpression_t* updatecopy = expression_copy(stmt->forloop.update);
+            ApeCodeblock_t* bodycopy = code_block_copy(stmt->forloop.body);
+            if(!initcopy || !testcopy || !updatecopy || !bodycopy)
             {
-                statement_destroy(init_copy);
-                expression_destroy(test_copy);
-                expression_destroy(update_copy);
-                code_block_destroy(body_copy);
+                statement_destroy(initcopy);
+                expression_destroy(testcopy);
+                expression_destroy(updatecopy);
+                code_block_destroy(bodycopy);
                 return NULL;
             }
-            res = statement_make_for_loop(stmt->context, init_copy, test_copy, update_copy, body_copy);
+            res = statement_make_for_loop(stmt->context, initcopy, testcopy, updatecopy, bodycopy);
             if(!res)
             {
-                statement_destroy(init_copy);
-                expression_destroy(test_copy);
-                expression_destroy(update_copy);
-                code_block_destroy(body_copy);
+                statement_destroy(initcopy);
+                expression_destroy(testcopy);
+                expression_destroy(updatecopy);
+                code_block_destroy(bodycopy);
                 return NULL;
             }
             break;
@@ -973,34 +973,34 @@ ApeStatement_t* statement_copy(const ApeStatement_t* stmt)
         }
         case STATEMENT_IMPORT:
         {
-            char* path_copy = util_strdup(stmt->context, stmt->import.path);
-            if(!path_copy)
+            char* pathcopy = util_strdup(stmt->context, stmt->import.path);
+            if(!pathcopy)
             {
                 return NULL;
             }
-            res = statement_make_import(stmt->context, path_copy);
+            res = statement_make_import(stmt->context, pathcopy);
             if(!res)
             {
-                allocator_free(stmt->alloc, path_copy);
+                allocator_free(stmt->alloc, pathcopy);
                 return NULL;
             }
             break;
         }
         case STATEMENT_RECOVER:
         {
-            ApeCodeblock_t* body_copy = code_block_copy(stmt->recover.body);
-            ApeIdent_t* error_ident_copy = ident_copy(stmt->recover.error_ident);
-            if(!body_copy || !error_ident_copy)
+            ApeCodeblock_t* bodycopy = code_block_copy(stmt->recover.body);
+            ApeIdent_t* erroridentcopy = ident_copy(stmt->recover.errorident);
+            if(!bodycopy || !erroridentcopy)
             {
-                code_block_destroy(body_copy);
-                ident_destroy(error_ident_copy);
+                code_block_destroy(bodycopy);
+                ident_destroy(erroridentcopy);
                 return NULL;
             }
-            res = statement_make_recover(stmt->context, error_ident_copy, body_copy);
+            res = statement_make_recover(stmt->context, erroridentcopy, bodycopy);
             if(!res)
             {
-                code_block_destroy(body_copy);
-                ident_destroy(error_ident_copy);
+                code_block_destroy(bodycopy);
+                ident_destroy(erroridentcopy);
                 return NULL;
             }
             break;
@@ -1043,15 +1043,15 @@ ApeCodeblock_t* code_block_copy(ApeCodeblock_t* block)
     {
         return NULL;
     }
-    ApePtrArray_t* statements_copy = ptrarray_copywithitems(block->statements, (ApeDataCallback_t)statement_copy, (ApeDataCallback_t)statement_destroy);
-    if(!statements_copy)
+    ApePtrArray_t* statementscopy = ptrarray_copywithitems(block->statements, (ApeDataCallback_t)statement_copy, (ApeDataCallback_t)statement_destroy);
+    if(!statementscopy)
     {
         return NULL;
     }
-    ApeCodeblock_t* res = code_block_make(block->alloc, statements_copy);
+    ApeCodeblock_t* res = code_block_make(block->alloc, statementscopy);
     if(!res)
     {
-        ptrarray_destroywithitems(statements_copy, (ApeDataCallback_t)statement_destroy);
+        ptrarray_destroywithitems(statementscopy, (ApeDataCallback_t)statement_destroy);
         return NULL;
     }
     return res;
@@ -1065,7 +1065,7 @@ void* ident_destroy(ApeIdent_t* ident)
     }
     allocator_free(ident->alloc, ident->value);
     ident->value = NULL;
-    ident->pos = g_prspriv_src_pos_invalid;
+    ident->pos = gprsprivsrcposinvalid;
     allocator_free(ident->alloc, ident);
     return NULL;
 }
@@ -1095,35 +1095,35 @@ void* if_case_destroy(ApeIfCase_t* cond)
     return NULL;
 }
 
-ApeIfCase_t* if_case_copy(ApeIfCase_t* if_case)
+ApeIfCase_t* if_case_copy(ApeIfCase_t* ifcase)
 {
-    if(!if_case)
+    if(!ifcase)
     {
         return NULL;
     }
-    ApeExpression_t* test_copy = NULL;
-    ApeCodeblock_t* consequence_copy = NULL;
+    ApeExpression_t* testcopy = NULL;
+    ApeCodeblock_t* consequencecopy = NULL;
     ApeIfCase_t* if_case_copy = NULL;
 
-    test_copy = expression_copy(if_case->test);
-    if(!test_copy)
+    testcopy = expression_copy(ifcase->test);
+    if(!testcopy)
     {
         goto err;
     }
-    consequence_copy = code_block_copy(if_case->consequence);
-    if(!test_copy || !consequence_copy)
+    consequencecopy = code_block_copy(ifcase->consequence);
+    if(!testcopy || !consequencecopy)
     {
         goto err;
     }
-    if_case_copy = if_case_make(if_case->alloc, test_copy, consequence_copy);
+    if_case_copy = if_case_make(ifcase->alloc, testcopy, consequencecopy);
     if(!if_case_copy)
     {
         goto err;
     }
     return if_case_copy;
 err:
-    expression_destroy(test_copy);
-    code_block_destroy(consequence_copy);
+    expression_destroy(testcopy);
+    code_block_destroy(consequencecopy);
     if_case_destroy(if_case_copy);
     return NULL;
 }
@@ -1140,7 +1140,7 @@ ApeExpression_t* expression_make(ApeContext_t* ctx, ApeExprType_t type)
     res->context = ctx;
     res->alloc = &ctx->alloc;
     res->type = type;
-    res->pos = g_prspriv_src_pos_invalid;
+    res->pos = gprsprivsrcposinvalid;
     return res;
 }
 
@@ -1154,7 +1154,7 @@ ApeStatement_t* statement_make(ApeContext_t* ctx, ApeStatementType_t type)
     res->context = ctx;
     res->alloc = &ctx->alloc;
     res->type = type;
-    res->pos = g_prspriv_src_pos_invalid;
+    res->pos = gprsprivsrcposinvalid;
     return res;
 }
 
@@ -1172,57 +1172,57 @@ ApeParser_t* parser_make(ApeContext_t* ctx, const ApeConfig_t* config, ApeErrorL
     parser->alloc = &ctx->alloc;
     parser->config = config;
     parser->errors = errors;
-    parser->right_assoc_parse_fns[TOKEN_IDENT] = parse_identifier;
-    parser->right_assoc_parse_fns[TOKEN_NUMBER] = parse_number_literal;
-    parser->right_assoc_parse_fns[TOKEN_TRUE] = parse_bool_literal;
-    parser->right_assoc_parse_fns[TOKEN_FALSE] = parse_bool_literal;
-    parser->right_assoc_parse_fns[TOKEN_STRING] = parse_string_literal;
-    parser->right_assoc_parse_fns[TOKEN_TEMPLATE_STRING] = parse_template_string_literal;
-    parser->right_assoc_parse_fns[TOKEN_NULL] = parse_null_literal;
-    parser->right_assoc_parse_fns[TOKEN_BANG] = parse_prefix_expression;
-    parser->right_assoc_parse_fns[TOKEN_MINUS] = parse_prefix_expression;
-    parser->right_assoc_parse_fns[TOKEN_LPAREN] = parse_grouped_expression;
-    parser->right_assoc_parse_fns[TOKEN_FUNCTION] = parse_function_literal;
-    parser->right_assoc_parse_fns[TOKEN_LBRACKET] = parse_array_literal;
-    parser->right_assoc_parse_fns[TOKEN_LBRACE] = parse_map_literal;
-    parser->right_assoc_parse_fns[TOKEN_PLUS_PLUS] = parse_incdec_prefix_expression;
-    parser->right_assoc_parse_fns[TOKEN_MINUS_MINUS] = parse_incdec_prefix_expression;
+    parser->rightassocparsefns[TOKEN_IDENT] = parse_identifier;
+    parser->rightassocparsefns[TOKEN_NUMBER] = parse_number_literal;
+    parser->rightassocparsefns[TOKEN_TRUE] = parse_bool_literal;
+    parser->rightassocparsefns[TOKEN_FALSE] = parse_bool_literal;
+    parser->rightassocparsefns[TOKEN_STRING] = parse_string_literal;
+    parser->rightassocparsefns[TOKEN_TEMPLATE_STRING] = parse_template_string_literal;
+    parser->rightassocparsefns[TOKEN_NULL] = parse_null_literal;
+    parser->rightassocparsefns[TOKEN_BANG] = parse_prefix_expression;
+    parser->rightassocparsefns[TOKEN_MINUS] = parse_prefix_expression;
+    parser->rightassocparsefns[TOKEN_LPAREN] = parse_grouped_expression;
+    parser->rightassocparsefns[TOKEN_FUNCTION] = parse_function_literal;
+    parser->rightassocparsefns[TOKEN_LBRACKET] = parse_array_literal;
+    parser->rightassocparsefns[TOKEN_LBRACE] = parse_map_literal;
+    parser->rightassocparsefns[TOKEN_PLUS_PLUS] = parse_incdec_prefix_expression;
+    parser->rightassocparsefns[TOKEN_MINUS_MINUS] = parse_incdec_prefix_expression;
 
-    parser->left_assoc_parse_fns[TOKEN_PLUS] = parse_infix_expression;
-    parser->left_assoc_parse_fns[TOKEN_MINUS] = parse_infix_expression;
-    parser->left_assoc_parse_fns[TOKEN_SLASH] = parse_infix_expression;
-    parser->left_assoc_parse_fns[TOKEN_ASTERISK] = parse_infix_expression;
-    parser->left_assoc_parse_fns[TOKEN_PERCENT] = parse_infix_expression;
-    parser->left_assoc_parse_fns[TOKEN_EQ] = parse_infix_expression;
-    parser->left_assoc_parse_fns[TOKEN_NOT_EQ] = parse_infix_expression;
-    parser->left_assoc_parse_fns[TOKEN_LT] = parse_infix_expression;
-    parser->left_assoc_parse_fns[TOKEN_LTE] = parse_infix_expression;
-    parser->left_assoc_parse_fns[TOKEN_GT] = parse_infix_expression;
-    parser->left_assoc_parse_fns[TOKEN_GTE] = parse_infix_expression;
-    parser->left_assoc_parse_fns[TOKEN_LPAREN] = parse_call_expression;
-    parser->left_assoc_parse_fns[TOKEN_LBRACKET] = parse_index_expression;
-    parser->left_assoc_parse_fns[TOKEN_ASSIGN] = parse_assign_expression;
-    parser->left_assoc_parse_fns[TOKEN_PLUS_ASSIGN] = parse_assign_expression;
-    parser->left_assoc_parse_fns[TOKEN_MINUS_ASSIGN] = parse_assign_expression;
-    parser->left_assoc_parse_fns[TOKEN_SLASH_ASSIGN] = parse_assign_expression;
-    parser->left_assoc_parse_fns[TOKEN_ASTERISK_ASSIGN] = parse_assign_expression;
-    parser->left_assoc_parse_fns[TOKEN_PERCENT_ASSIGN] = parse_assign_expression;
-    parser->left_assoc_parse_fns[TOKEN_BIT_AND_ASSIGN] = parse_assign_expression;
-    parser->left_assoc_parse_fns[TOKEN_BIT_OR_ASSIGN] = parse_assign_expression;
-    parser->left_assoc_parse_fns[TOKEN_BIT_XOR_ASSIGN] = parse_assign_expression;
-    parser->left_assoc_parse_fns[TOKEN_LSHIFT_ASSIGN] = parse_assign_expression;
-    parser->left_assoc_parse_fns[TOKEN_RSHIFT_ASSIGN] = parse_assign_expression;
-    parser->left_assoc_parse_fns[TOKEN_DOT] = parse_dot_expression;
-    parser->left_assoc_parse_fns[TOKEN_AND] = parse_logical_expression;
-    parser->left_assoc_parse_fns[TOKEN_OR] = parse_logical_expression;
-    parser->left_assoc_parse_fns[TOKEN_BIT_AND] = parse_infix_expression;
-    parser->left_assoc_parse_fns[TOKEN_BIT_OR] = parse_infix_expression;
-    parser->left_assoc_parse_fns[TOKEN_BIT_XOR] = parse_infix_expression;
-    parser->left_assoc_parse_fns[TOKEN_LSHIFT] = parse_infix_expression;
-    parser->left_assoc_parse_fns[TOKEN_RSHIFT] = parse_infix_expression;
-    parser->left_assoc_parse_fns[TOKEN_QUESTION] = parse_ternary_expression;
-    parser->left_assoc_parse_fns[TOKEN_PLUS_PLUS] = parse_incdec_postfix_expression;
-    parser->left_assoc_parse_fns[TOKEN_MINUS_MINUS] = parse_incdec_postfix_expression;
+    parser->leftassocparsefns[TOKEN_PLUS] = parse_infix_expression;
+    parser->leftassocparsefns[TOKEN_MINUS] = parse_infix_expression;
+    parser->leftassocparsefns[TOKEN_SLASH] = parse_infix_expression;
+    parser->leftassocparsefns[TOKEN_ASTERISK] = parse_infix_expression;
+    parser->leftassocparsefns[TOKEN_PERCENT] = parse_infix_expression;
+    parser->leftassocparsefns[TOKEN_EQ] = parse_infix_expression;
+    parser->leftassocparsefns[TOKEN_NOT_EQ] = parse_infix_expression;
+    parser->leftassocparsefns[TOKEN_LT] = parse_infix_expression;
+    parser->leftassocparsefns[TOKEN_LTE] = parse_infix_expression;
+    parser->leftassocparsefns[TOKEN_GT] = parse_infix_expression;
+    parser->leftassocparsefns[TOKEN_GTE] = parse_infix_expression;
+    parser->leftassocparsefns[TOKEN_LPAREN] = parse_call_expression;
+    parser->leftassocparsefns[TOKEN_LBRACKET] = parse_index_expression;
+    parser->leftassocparsefns[TOKEN_ASSIGN] = parse_assign_expression;
+    parser->leftassocparsefns[TOKEN_PLUS_ASSIGN] = parse_assign_expression;
+    parser->leftassocparsefns[TOKEN_MINUS_ASSIGN] = parse_assign_expression;
+    parser->leftassocparsefns[TOKEN_SLASH_ASSIGN] = parse_assign_expression;
+    parser->leftassocparsefns[TOKEN_ASTERISK_ASSIGN] = parse_assign_expression;
+    parser->leftassocparsefns[TOKEN_PERCENT_ASSIGN] = parse_assign_expression;
+    parser->leftassocparsefns[TOKEN_BIT_AND_ASSIGN] = parse_assign_expression;
+    parser->leftassocparsefns[TOKEN_BIT_OR_ASSIGN] = parse_assign_expression;
+    parser->leftassocparsefns[TOKEN_BIT_XOR_ASSIGN] = parse_assign_expression;
+    parser->leftassocparsefns[TOKEN_LSHIFT_ASSIGN] = parse_assign_expression;
+    parser->leftassocparsefns[TOKEN_RSHIFT_ASSIGN] = parse_assign_expression;
+    parser->leftassocparsefns[TOKEN_DOT] = parse_dot_expression;
+    parser->leftassocparsefns[TOKEN_AND] = parse_logical_expression;
+    parser->leftassocparsefns[TOKEN_OR] = parse_logical_expression;
+    parser->leftassocparsefns[TOKEN_BIT_AND] = parse_infix_expression;
+    parser->leftassocparsefns[TOKEN_BIT_OR] = parse_infix_expression;
+    parser->leftassocparsefns[TOKEN_BIT_XOR] = parse_infix_expression;
+    parser->leftassocparsefns[TOKEN_LSHIFT] = parse_infix_expression;
+    parser->leftassocparsefns[TOKEN_RSHIFT] = parse_infix_expression;
+    parser->leftassocparsefns[TOKEN_QUESTION] = parse_ternary_expression;
+    parser->leftassocparsefns[TOKEN_PLUS_PLUS] = parse_incdec_postfix_expression;
+    parser->leftassocparsefns[TOKEN_MINUS_MINUS] = parse_incdec_postfix_expression;
 
     parser->depth = 0;
 
@@ -1289,10 +1289,10 @@ err:
 // INTERNAL
 ApeStatement_t* parse_statement(ApeParser_t* p)
 {
-    ApePosition_t pos = p->lexer.cur_token.pos;
+    ApePosition_t pos = p->lexer.curtoken.pos;
 
     ApeStatement_t* res = NULL;
-    switch(p->lexer.cur_token.type)
+    switch(p->lexer.curtoken.type)
     {
         case TOKEN_VAR:
         case TOKEN_CONST:
@@ -1338,37 +1338,37 @@ ApeStatement_t* parse_statement(ApeParser_t* p)
             break;
         }
         case TOKEN_LBRACE:
-        {
-            if(p->config->repl_mode && p->depth == 0)
+            {
+                if(p->config->replmode && p->depth == 0)
+                {
+                    res = parse_expression_statement(p);
+                }
+                else
+                {
+                    res = parse_block_statement(p);
+                }
+            }
+            break;
+        case TOKEN_CONTINUE:
+            {
+                res = parse_continue_statement(p);
+            }
+            break;
+        case TOKEN_IMPORT:
+            {
+                res = parse_import_statement(p);
+            }
+            break;
+        case TOKEN_RECOVER:
+            {
+                res = parse_recover_statement(p);
+            }
+            break;
+        default:
             {
                 res = parse_expression_statement(p);
             }
-            else
-            {
-                res = parse_block_statement(p);
-            }
             break;
-        }
-        case TOKEN_CONTINUE:
-        {
-            res = parse_continue_statement(p);
-            break;
-        }
-        case TOKEN_IMPORT:
-        {
-            res = parse_import_statement(p);
-            break;
-        }
-        case TOKEN_RECOVER:
-        {
-            res = parse_recover_statement(p);
-            break;
-        }
-        default:
-        {
-            res = parse_expression_statement(p);
-            break;
-        }
     }
     if(res)
     {
@@ -1380,10 +1380,10 @@ ApeStatement_t* parse_statement(ApeParser_t* p)
 ApeStatement_t* parse_define_statement(ApeParser_t* p)
 {
     bool assignable;
-    ApeIdent_t* name_ident;
+    ApeIdent_t* nameident;
     ApeExpression_t* value;
     ApeStatement_t* res;
-    name_ident = NULL;
+    nameident = NULL;
     value = NULL;
     assignable = lexer_cur_token_is(&p->lexer, TOKEN_VAR);
     lexer_next_token(&p->lexer);
@@ -1391,8 +1391,8 @@ ApeStatement_t* parse_define_statement(ApeParser_t* p)
     {
         goto err;
     }
-    name_ident = ident_make(p->context, p->lexer.cur_token);
-    if(!name_ident)
+    nameident = ident_make(p->context, p->lexer.curtoken);
+    if(!nameident)
     {
         goto err;
     }
@@ -1409,13 +1409,13 @@ ApeStatement_t* parse_define_statement(ApeParser_t* p)
     }
     if(value->type == EXPRESSION_FUNCTION_LITERAL)
     {
-        value->fn_literal.name = util_strdup(p->context, name_ident->value);
-        if(!value->fn_literal.name)
+        value->fnliteral.name = util_strdup(p->context, nameident->value);
+        if(!value->fnliteral.name)
         {
             goto err;
         }
     }
-    res = statement_make_define(p->context, name_ident, value, assignable);
+    res = statement_make_define(p->context, nameident, value, assignable);
     if(!res)
     {
         goto err;
@@ -1423,7 +1423,7 @@ ApeStatement_t* parse_define_statement(ApeParser_t* p)
     return res;
 err:
     expression_destroy(value);
-    ident_destroy(name_ident);
+    ident_destroy(nameident);
     return NULL;
 }
 
@@ -1566,7 +1566,7 @@ ApeStatement_t* parse_expression_statement(ApeParser_t* p)
         return NULL;
     }
     #if 0
-    if(expr && (!p->config->repl_mode || p->depth > 0))
+    if(expr && (!p->config->replmode || p->depth > 0))
     {
         if(expr->type != EXPRESSION_ASSIGN && expr->type != EXPRESSION_CALL)
         {
@@ -1657,24 +1657,24 @@ ApeStatement_t* parse_block_statement(ApeParser_t* p)
 
 ApeStatement_t* parse_import_statement(ApeParser_t* p)
 {
-    char* processed_name;
+    char* processedname;
     ApeStatement_t* res;
     lexer_next_token(&p->lexer);
     if(!lexer_expect_current(&p->lexer, TOKEN_STRING))
     {
         return NULL;
     }
-    processed_name = process_and_copy_string(p->alloc, p->lexer.cur_token.literal, p->lexer.cur_token.len);
-    if(!processed_name)
+    processedname = process_and_copy_string(p->alloc, p->lexer.curtoken.literal, p->lexer.curtoken.len);
+    if(!processedname)
     {
-        errorlist_add(p->errors, APE_ERROR_PARSING, p->lexer.cur_token.pos, "error when parsing module name");
+        errorlist_add(p->errors, APE_ERROR_PARSING, p->lexer.curtoken.pos, "error when parsing module name");
         return NULL;
     }
     lexer_next_token(&p->lexer);
-    res= statement_make_import(p->context, processed_name);
+    res= statement_make_import(p->context, processedname);
     if(!res)
     {
-        allocator_free(p->alloc, processed_name);
+        allocator_free(p->alloc, processedname);
         return NULL;
     }
     return res;
@@ -1682,10 +1682,10 @@ ApeStatement_t* parse_import_statement(ApeParser_t* p)
 
 ApeStatement_t* parse_recover_statement(ApeParser_t* p)
 {
-    ApeIdent_t* error_ident;
+    ApeIdent_t* errorident;
     ApeCodeblock_t* body;
     ApeStatement_t* res;
-    error_ident = NULL;
+    errorident = NULL;
     body = NULL;
     lexer_next_token(&p->lexer);
     if(!lexer_expect_current(&p->lexer, TOKEN_LPAREN))
@@ -1697,8 +1697,8 @@ ApeStatement_t* parse_recover_statement(ApeParser_t* p)
     {
         return NULL;
     }
-    error_ident = ident_make(p->context, p->lexer.cur_token);
-    if(!error_ident)
+    errorident = ident_make(p->context, p->lexer.curtoken);
+    if(!errorident)
     {
         return NULL;
     }
@@ -1713,7 +1713,7 @@ ApeStatement_t* parse_recover_statement(ApeParser_t* p)
     {
         goto err;
     }
-    res = statement_make_recover(p->context, error_ident, body);
+    res = statement_make_recover(p->context, errorident, body);
     if(!res)
     {
         goto err;
@@ -1721,21 +1721,18 @@ ApeStatement_t* parse_recover_statement(ApeParser_t* p)
     return res;
 err:
     code_block_destroy(body);
-    ident_destroy(error_ident);
+    ident_destroy(errorident);
     return NULL;
 }
 
 ApeStatement_t* parse_for_loop_statement(ApeParser_t* p)
 {
     lexer_next_token(&p->lexer);
-
     if(!lexer_expect_current(&p->lexer, TOKEN_LPAREN))
     {
         return NULL;
     }
-
     lexer_next_token(&p->lexer);
-
     if(lexer_cur_token_is(&p->lexer, TOKEN_IDENT) && lexer_peek_token_is(&p->lexer, TOKEN_IN))
     {
         return parse_foreach(p);
@@ -1747,12 +1744,12 @@ ApeStatement_t* parse_foreach(ApeParser_t* p)
 {
     ApeExpression_t* source;
     ApeCodeblock_t* body;
-    ApeIdent_t* iterator_ident;
+    ApeIdent_t* iteratorident;
     ApeStatement_t* res;
     source = NULL;
     body = NULL;
-    iterator_ident = ident_make(p->context, p->lexer.cur_token);
-    if(!iterator_ident)
+    iteratorident = ident_make(p->context, p->lexer.curtoken);
+    if(!iteratorident)
     {
         goto err;
     }
@@ -1777,7 +1774,7 @@ ApeStatement_t* parse_foreach(ApeParser_t* p)
     {
         goto err;
     }
-    res = statement_make_foreach(p->context, iterator_ident, source, body);
+    res = statement_make_foreach(p->context, iteratorident, source, body);
     if(!res)
     {
         goto err;
@@ -1785,7 +1782,7 @@ ApeStatement_t* parse_foreach(ApeParser_t* p)
     return res;
 err:
     code_block_destroy(body);
-    ident_destroy(iterator_ident);
+    ident_destroy(iteratorident);
     expression_destroy(source);
     return NULL;
 }
@@ -1797,7 +1794,6 @@ ApeStatement_t* parse_classic_for_loop(ApeParser_t* p)
     ApeExpression_t* update;
     ApeCodeblock_t* body;
     ApeStatement_t* res;
-
     init = NULL;
     test = NULL;
     update = NULL;
@@ -1856,7 +1852,6 @@ ApeStatement_t* parse_classic_for_loop(ApeParser_t* p)
     {
         goto err;
     }
-
     return res;
 err:
     statement_destroy(init);
@@ -1868,20 +1863,20 @@ err:
 
 ApeStatement_t* parse_function_statement(ApeParser_t* p)
 {
-    ApeIdent_t* name_ident;
+    ApeIdent_t* nameident;
     ApeExpression_t* value;
     ApePosition_t pos;
     ApeStatement_t* res;
     value = NULL;
-    name_ident = NULL;
-    pos = p->lexer.cur_token.pos;
+    nameident = NULL;
+    pos = p->lexer.curtoken.pos;
     lexer_next_token(&p->lexer);
     if(!lexer_expect_current(&p->lexer, TOKEN_IDENT))
     {
         goto err;
     }
-    name_ident = ident_make(p->context, p->lexer.cur_token);
-    if(!name_ident)
+    nameident = ident_make(p->context, p->lexer.curtoken);
+    if(!nameident)
     {
         goto err;
     }
@@ -1892,21 +1887,20 @@ ApeStatement_t* parse_function_statement(ApeParser_t* p)
         goto err;
     }
     value->pos = pos;
-    value->fn_literal.name = util_strdup(p->context, name_ident->value);
-    if(!value->fn_literal.name)
+    value->fnliteral.name = util_strdup(p->context, nameident->value);
+    if(!value->fnliteral.name)
     {
         goto err;
     }
-    res = statement_make_define(p->context, name_ident, value, false);
+    res = statement_make_define(p->context, nameident, value, false);
     if(!res)
     {
         goto err;
     }
     return res;
-
 err:
     expression_destroy(value);
-    ident_destroy(name_ident);
+    ident_destroy(nameident);
     return NULL;
 }
 
@@ -1931,7 +1925,7 @@ ApeCodeblock_t* parse_code_block(ApeParser_t* p)
     {
         if(lexer_cur_token_is(&p->lexer, TOKEN_EOF))
         {
-            errorlist_add(p->errors, APE_ERROR_PARSING, p->lexer.cur_token.pos, "unexpected EOF");
+            errorlist_add(p->errors, APE_ERROR_PARSING, p->lexer.curtoken.pos, "unexpected EOF");
             goto err;
         }
         if(lexer_cur_token_is(&p->lexer, TOKEN_SEMICOLON))
@@ -1969,55 +1963,55 @@ ApeExpression_t* parse_expression(ApeParser_t* p, ApePrecedence_t prec)
 {
     char* literal;
     ApePosition_t pos;
-    ApeRightAssocParseFNCallback_t parse_right_assoc;
-    ApeLeftAssocParseFNCallback_t parse_left_assoc;
-    ApeExpression_t* left_expr;
-    ApeExpression_t* new_left_expr;
-    pos = p->lexer.cur_token.pos;
-    if(p->lexer.cur_token.type == TOKEN_INVALID)
+    ApeRightAssocParseFNCallback_t prighta;
+    ApeLeftAssocParseFNCallback_t plefta;
+    ApeExpression_t* leftexpr;
+    ApeExpression_t* newleftexpr;
+    pos = p->lexer.curtoken.pos;
+    if(p->lexer.curtoken.type == TOKEN_INVALID)
     {
-        errorlist_add(p->errors, APE_ERROR_PARSING, p->lexer.cur_token.pos, "illegal token");
+        errorlist_add(p->errors, APE_ERROR_PARSING, p->lexer.curtoken.pos, "illegal token");
         return NULL;
     }
-    parse_right_assoc = p->right_assoc_parse_fns[p->lexer.cur_token.type];
-    if(!parse_right_assoc)
+    prighta = p->rightassocparsefns[p->lexer.curtoken.type];
+    if(!prighta)
     {
-        literal = token_duplicate_literal(p->context, &p->lexer.cur_token);
-        errorlist_addformat(p->errors, APE_ERROR_PARSING, p->lexer.cur_token.pos, "no prefix parse function for '%s' found", literal);
+        literal = token_duplicate_literal(p->context, &p->lexer.curtoken);
+        errorlist_addformat(p->errors, APE_ERROR_PARSING, p->lexer.curtoken.pos, "no prefix parse function for '%s' found", literal);
         allocator_free(p->alloc, literal);
         return NULL;
     }
-    left_expr = parse_right_assoc(p);
-    if(!left_expr)
+    leftexpr = prighta(p);
+    if(!leftexpr)
     {
         return NULL;
     }
-    left_expr->pos = pos;
-    while(!lexer_cur_token_is(&p->lexer, TOKEN_SEMICOLON) && prec < get_precedence(p->lexer.cur_token.type))
+    leftexpr->pos = pos;
+    while(!lexer_cur_token_is(&p->lexer, TOKEN_SEMICOLON) && prec < get_precedence(p->lexer.curtoken.type))
     {
-        parse_left_assoc = p->left_assoc_parse_fns[p->lexer.cur_token.type];
-        if(!parse_left_assoc)
+        plefta = p->leftassocparsefns[p->lexer.curtoken.type];
+        if(!plefta)
         {
-            return left_expr;
+            return leftexpr;
         }
-        pos = p->lexer.cur_token.pos;
-        new_left_expr= parse_left_assoc(p, left_expr);
-        if(!new_left_expr)
+        pos = p->lexer.curtoken.pos;
+        newleftexpr= plefta(p, leftexpr);
+        if(!newleftexpr)
         {
-            expression_destroy(left_expr);
+            expression_destroy(leftexpr);
             return NULL;
         }
-        new_left_expr->pos = pos;
-        left_expr = new_left_expr;
+        newleftexpr->pos = pos;
+        leftexpr = newleftexpr;
     }
-    return left_expr;
+    return leftexpr;
 }
 
 ApeExpression_t* parse_identifier(ApeParser_t* p)
 {
     ApeIdent_t* ident;
     ApeExpression_t* res;
-    ident = ident_make(p->context, p->lexer.cur_token);
+    ident = ident_make(p->context, p->lexer.curtoken);
     if(!ident)
     {
         return NULL;
@@ -2037,15 +2031,15 @@ ApeExpression_t* parse_number_literal(ApeParser_t* p)
     char* end;
     char* literal;
     ApeFloat_t number;
-    ApeInt_t parsed_len;
+    ApeInt_t parsedlen;
     number = 0;
     errno = 0;
-    number = strtod(p->lexer.cur_token.literal, &end);
-    parsed_len = end - p->lexer.cur_token.literal;
-    if(errno || parsed_len != (ApeInt_t)p->lexer.cur_token.len)
+    number = strtod(p->lexer.curtoken.literal, &end);
+    parsedlen = end - p->lexer.curtoken.literal;
+    if(errno || parsedlen != (ApeInt_t)p->lexer.curtoken.len)
     {
-        literal = token_duplicate_literal(p->context, &p->lexer.cur_token);
-        errorlist_addformat(p->errors, APE_ERROR_PARSING, p->lexer.cur_token.pos, "parsing number literal '%s' failed", literal);
+        literal = token_duplicate_literal(p->context, &p->lexer.curtoken);
+        errorlist_addformat(p->errors, APE_ERROR_PARSING, p->lexer.curtoken.pos, "parsing number literal '%s' failed", literal);
         allocator_free(p->alloc, literal);
         return NULL;
     }
@@ -2056,25 +2050,26 @@ ApeExpression_t* parse_number_literal(ApeParser_t* p)
 ApeExpression_t* parse_bool_literal(ApeParser_t* p)
 {
     ApeExpression_t* res;
-    res = expression_make_bool_literal(p->context, p->lexer.cur_token.type == TOKEN_TRUE);
+    res = expression_make_bool_literal(p->context, p->lexer.curtoken.type == TOKEN_TRUE);
     lexer_next_token(&p->lexer);
     return res;
 }
 
 ApeExpression_t* parse_string_literal(ApeParser_t* p)
 {
-    char* processed_literal;
-    processed_literal = process_and_copy_string(p->alloc, p->lexer.cur_token.literal, p->lexer.cur_token.len);
-    if(!processed_literal)
+    char* processedliteral;
+    ApeExpression_t* res;
+    processedliteral = process_and_copy_string(p->alloc, p->lexer.curtoken.literal, p->lexer.curtoken.len);
+    if(!processedliteral)
     {
-        errorlist_add(p->errors, APE_ERROR_PARSING, p->lexer.cur_token.pos, "error while parsing string literal");
+        errorlist_add(p->errors, APE_ERROR_PARSING, p->lexer.curtoken.pos, "error while parsing string literal");
         return NULL;
     }
     lexer_next_token(&p->lexer);
-    ApeExpression_t* res = expression_make_string_literal(p->context, processed_literal);
+    res = expression_make_string_literal(p->context, processedliteral);
     if(!res)
     {
-        allocator_free(p->alloc, processed_literal);
+        allocator_free(p->alloc, processedliteral);
         return NULL;
     }
     return res;
@@ -2082,26 +2077,25 @@ ApeExpression_t* parse_string_literal(ApeParser_t* p)
 
 ApeExpression_t* parse_template_string_literal(ApeParser_t* p)
 {
-    char* processed_literal;
-    ApeExpression_t* left_string_expr;
-    ApeExpression_t* template_expr;
-    ApeExpression_t* to_str_call_expr;
-    ApeExpression_t* left_add_expr;
-    ApeExpression_t* right_expr;
-    ApeExpression_t* right_add_expr;
+    char* processedliteral;
+    ApeExpression_t* leftstringexpr;
+    ApeExpression_t* templateexpr;
+    ApeExpression_t* tostrcallexpr;
+    ApeExpression_t* leftaddexpr;
+    ApeExpression_t* rightexpr;
+    ApeExpression_t* rightaddexpr;
     ApePosition_t pos;
-
-    processed_literal = NULL;
-    left_string_expr = NULL;
-    template_expr = NULL;
-    to_str_call_expr = NULL;
-    left_add_expr = NULL;
-    right_expr = NULL;
-    right_add_expr = NULL;
-    processed_literal = process_and_copy_string(p->alloc, p->lexer.cur_token.literal, p->lexer.cur_token.len);
-    if(!processed_literal)
+    processedliteral = NULL;
+    leftstringexpr = NULL;
+    templateexpr = NULL;
+    tostrcallexpr = NULL;
+    leftaddexpr = NULL;
+    rightexpr = NULL;
+    rightaddexpr = NULL;
+    processedliteral = process_and_copy_string(p->alloc, p->lexer.curtoken.literal, p->lexer.curtoken.len);
+    if(!processedliteral)
     {
-        errorlist_add(p->errors, APE_ERROR_PARSING, p->lexer.cur_token.pos, "error while parsing string literal");
+        errorlist_add(p->errors, APE_ERROR_PARSING, p->lexer.curtoken.pos, "error while parsing string literal");
         return NULL;
     }
     lexer_next_token(&p->lexer);
@@ -2112,36 +2106,36 @@ ApeExpression_t* parse_template_string_literal(ApeParser_t* p)
     }
     lexer_next_token(&p->lexer);
 
-    pos = p->lexer.cur_token.pos;
+    pos = p->lexer.curtoken.pos;
 
-    left_string_expr = expression_make_string_literal(p->context, processed_literal);
-    if(!left_string_expr)
+    leftstringexpr = expression_make_string_literal(p->context, processedliteral);
+    if(!leftstringexpr)
     {
         goto err;
     }
-    left_string_expr->pos = pos;
-    processed_literal = NULL;
-    pos = p->lexer.cur_token.pos;
-    template_expr = parse_expression(p, PRECEDENCE_LOWEST);
-    if(!template_expr)
+    leftstringexpr->pos = pos;
+    processedliteral = NULL;
+    pos = p->lexer.curtoken.pos;
+    templateexpr = parse_expression(p, PRECEDENCE_LOWEST);
+    if(!templateexpr)
     {
         goto err;
     }
-    to_str_call_expr = wrap_expression_in_function_call(p->context, template_expr, "to_str");
-    if(!to_str_call_expr)
+    tostrcallexpr = wrap_expression_in_function_call(p->context, templateexpr, "tostring");
+    if(!tostrcallexpr)
     {
         goto err;
     }
-    to_str_call_expr->pos = pos;
-    template_expr = NULL;
-    left_add_expr = expression_make_infix(p->context, OPERATOR_PLUS, left_string_expr, to_str_call_expr);
-    if(!left_add_expr)
+    tostrcallexpr->pos = pos;
+    templateexpr = NULL;
+    leftaddexpr = expression_make_infix(p->context, OPERATOR_PLUS, leftstringexpr, tostrcallexpr);
+    if(!leftaddexpr)
     {
         goto err;
     }
-    left_add_expr->pos = pos;
-    left_string_expr = NULL;
-    to_str_call_expr = NULL;
+    leftaddexpr->pos = pos;
+    leftstringexpr = NULL;
+    tostrcallexpr = NULL;
     if(!lexer_expect_current(&p->lexer, TOKEN_RBRACE))
     {
         goto err;
@@ -2150,30 +2144,30 @@ ApeExpression_t* parse_template_string_literal(ApeParser_t* p)
     lexer_continue_template_string(&p->lexer);
     lexer_next_token(&p->lexer);
     lexer_next_token(&p->lexer);
-    pos = p->lexer.cur_token.pos;
-    right_expr = parse_expression(p, PRECEDENCE_HIGHEST);
-    if(!right_expr)
+    pos = p->lexer.curtoken.pos;
+    rightexpr = parse_expression(p, PRECEDENCE_HIGHEST);
+    if(!rightexpr)
     {
         goto err;
     }
-    right_add_expr = expression_make_infix(p->context, OPERATOR_PLUS, left_add_expr, right_expr);
-    if(!right_add_expr)
+    rightaddexpr = expression_make_infix(p->context, OPERATOR_PLUS, leftaddexpr, rightexpr);
+    if(!rightaddexpr)
     {
         goto err;
     }
-    right_add_expr->pos = pos;
-    left_add_expr = NULL;
-    right_expr = NULL;
+    rightaddexpr->pos = pos;
+    leftaddexpr = NULL;
+    rightexpr = NULL;
 
-    return right_add_expr;
+    return rightaddexpr;
 err:
-    expression_destroy(right_add_expr);
-    expression_destroy(right_expr);
-    expression_destroy(left_add_expr);
-    expression_destroy(to_str_call_expr);
-    expression_destroy(template_expr);
-    expression_destroy(left_string_expr);
-    allocator_free(p->alloc, processed_literal);
+    expression_destroy(rightaddexpr);
+    expression_destroy(rightexpr);
+    expression_destroy(leftaddexpr);
+    expression_destroy(tostrcallexpr);
+    expression_destroy(templateexpr);
+    expression_destroy(leftstringexpr);
+    allocator_free(p->alloc, processedliteral);
     return NULL;
 }
 
@@ -2222,14 +2216,14 @@ ApeExpression_t* parse_map_literal(ApeParser_t* p)
         key = NULL;
         if(lexer_cur_token_is(&p->lexer, TOKEN_IDENT))
         {
-            str = token_duplicate_literal(p->context, &p->lexer.cur_token);
+            str = token_duplicate_literal(p->context, &p->lexer.curtoken);
             key = expression_make_string_literal(p->context, str);
             if(!key)
             {
                 allocator_free(p->alloc, str);
                 goto err;
             }
-            key->pos = p->lexer.cur_token.pos;
+            key->pos = p->lexer.curtoken.pos;
             lexer_next_token(&p->lexer);
         }
         else
@@ -2244,18 +2238,18 @@ ApeExpression_t* parse_map_literal(ApeParser_t* p)
                 case EXPRESSION_STRING_LITERAL:
                 case EXPRESSION_NUMBER_LITERAL:
                 case EXPRESSION_BOOL_LITERAL:
-                {
+                    {
+                    }
                     break;
-                }
                 default:
-                {
-                    errorlist_addformat(p->errors, APE_ERROR_PARSING, key->pos, "invalid map literal key type");
-                    expression_destroy(key);
-                    goto err;
-                }
+                    {
+                        errorlist_addformat(p->errors, APE_ERROR_PARSING, key->pos, "invalid map literal key type");
+                        expression_destroy(key);
+                        goto err;
+                    }
+                    break;
             }
         }
-
         ok = ptrarray_add(keys, key);
         if(!ok)
         {
@@ -2267,9 +2261,7 @@ ApeExpression_t* parse_map_literal(ApeParser_t* p)
         {
             goto err;
         }
-
         lexer_next_token(&p->lexer);
-
         value = parse_expression(p, PRECEDENCE_LOWEST);
         if(!value)
         {
@@ -2281,22 +2273,17 @@ ApeExpression_t* parse_map_literal(ApeParser_t* p)
             expression_destroy(value);
             goto err;
         }
-
         if(lexer_cur_token_is(&p->lexer, TOKEN_RBRACE))
         {
             break;
         }
-
         if(!lexer_expect_current(&p->lexer, TOKEN_COMMA))
         {
             goto err;
         }
-
         lexer_next_token(&p->lexer);
     }
-
     lexer_next_token(&p->lexer);
-
     res = expression_make_map_literal(p->context, keys, values);
     if(!res)
     {
@@ -2314,7 +2301,7 @@ ApeExpression_t* parse_prefix_expression(ApeParser_t* p)
     ApeOperator_t op;
     ApeExpression_t* right;
     ApeExpression_t* res;
-    op = token_to_operator(p->lexer.cur_token.type);
+    op = token_to_operator(p->lexer.curtoken.type);
     lexer_next_token(&p->lexer);
     right = parse_expression(p, PRECEDENCE_PREFIX);
     if(!right)
@@ -2336,8 +2323,8 @@ ApeExpression_t* parse_infix_expression(ApeParser_t* p, ApeExpression_t* left)
     ApePrecedence_t prec;
     ApeExpression_t* right;
     ApeExpression_t* res;
-    op = token_to_operator(p->lexer.cur_token.type);
-    prec = get_precedence(p->lexer.cur_token.type);
+    op = token_to_operator(p->lexer.curtoken.type);
+    prec = get_precedence(p->lexer.curtoken.type);
     lexer_next_token(&p->lexer);
     right = parse_expression(p, prec);
     if(!right)
@@ -2405,7 +2392,7 @@ err:
     return NULL;
 }
 
-bool parse_function_parameters(ApeParser_t* p, ApePtrArray_t * out_params)
+bool parse_function_parameters(ApeParser_t* p, ApePtrArray_t * outparams)
 {
     bool ok;
     ApeIdent_t* ident;
@@ -2423,12 +2410,12 @@ bool parse_function_parameters(ApeParser_t* p, ApePtrArray_t * out_params)
     {
         return false;
     }
-    ident = ident_make(p->context, p->lexer.cur_token);
+    ident = ident_make(p->context, p->lexer.curtoken);
     if(!ident)
     {
         return false;
     }
-    ok = ptrarray_add(out_params, ident);
+    ok = ptrarray_add(outparams, ident);
     if(!ok)
     {
         ident_destroy(ident);
@@ -2442,12 +2429,12 @@ bool parse_function_parameters(ApeParser_t* p, ApePtrArray_t * out_params)
         {
             return false;
         }
-        ident = ident_make(p->context, p->lexer.cur_token);
+        ident = ident_make(p->context, p->lexer.curtoken);
         if(!ident)
         {
             return false;
         }
-        ok = ptrarray_add(out_params, ident);
+        ok = ptrarray_add(outparams, ident);
         if(!ok)
         {
             ident_destroy(ident);
@@ -2484,53 +2471,53 @@ ApeExpression_t* parse_call_expression(ApeParser_t* p, ApeExpression_t* left)
     return res;
 }
 
-ApePtrArray_t* parse_expression_list(ApeParser_t* p, ApeTokenType_t start_token, ApeTokenType_t end_token, bool trailing_comma_allowed)
+ApePtrArray_t* parse_expression_list(ApeParser_t* p, ApeTokenType_t starttoken, ApeTokenType_t endtoken, bool trailingcommaallowed)
 {
     bool ok;
     ApePtrArray_t* res;
-    ApeExpression_t* arg_expr;
-    if(!lexer_expect_current(&p->lexer, start_token))
+    ApeExpression_t* argexpr;
+    if(!lexer_expect_current(&p->lexer, starttoken))
     {
         return NULL;
     }
     lexer_next_token(&p->lexer);
     res = ptrarray_make(p->context);
-    if(lexer_cur_token_is(&p->lexer, end_token))
+    if(lexer_cur_token_is(&p->lexer, endtoken))
     {
         lexer_next_token(&p->lexer);
         return res;
     }
-    arg_expr = parse_expression(p, PRECEDENCE_LOWEST);
-    if(!arg_expr)
+    argexpr = parse_expression(p, PRECEDENCE_LOWEST);
+    if(!argexpr)
     {
         goto err;
     }
-    ok = ptrarray_add(res, arg_expr);
+    ok = ptrarray_add(res, argexpr);
     if(!ok)
     {
-        expression_destroy(arg_expr);
+        expression_destroy(argexpr);
         goto err;
     }
     while(lexer_cur_token_is(&p->lexer, TOKEN_COMMA))
     {
         lexer_next_token(&p->lexer);
-        if(trailing_comma_allowed && lexer_cur_token_is(&p->lexer, end_token))
+        if(trailingcommaallowed && lexer_cur_token_is(&p->lexer, endtoken))
         {
             break;
         }
-        arg_expr = parse_expression(p, PRECEDENCE_LOWEST);
-        if(!arg_expr)
+        argexpr = parse_expression(p, PRECEDENCE_LOWEST);
+        if(!argexpr)
         {
             goto err;
         }
-        ok = ptrarray_add(res, arg_expr);
+        ok = ptrarray_add(res, argexpr);
         if(!ok)
         {
-            expression_destroy(arg_expr);
+            expression_destroy(argexpr);
             goto err;
         }
     }
-    if(!lexer_expect_current(&p->lexer, end_token))
+    if(!lexer_expect_current(&p->lexer, endtoken))
     {
         goto err;
     }
@@ -2568,23 +2555,22 @@ ApeExpression_t* parse_index_expression(ApeParser_t* p, ApeExpression_t* left)
 
 ApeExpression_t* parse_assign_expression(ApeParser_t* p, ApeExpression_t* left)
 {
-    ApeTokenType_t assign_type;
+    ApeTokenType_t assigntype;
     ApePosition_t pos;
     ApeOperator_t op;
     ApeExpression_t* source;
-    ApeExpression_t* left_copy;
-    ApeExpression_t* new_source;
+    ApeExpression_t* leftcopy;
+    ApeExpression_t* newsource;
     ApeExpression_t* res;
-
     source = NULL;
-    assign_type = p->lexer.cur_token.type;
+    assigntype = p->lexer.curtoken.type;
     lexer_next_token(&p->lexer);
     source = parse_expression(p, PRECEDENCE_LOWEST);
     if(!source)
     {
         goto err;
     }
-    switch(assign_type)
+    switch(assigntype)
     {
         case TOKEN_PLUS_ASSIGN:
         case TOKEN_MINUS_ASSIGN:
@@ -2597,21 +2583,21 @@ ApeExpression_t* parse_assign_expression(ApeParser_t* p, ApeExpression_t* left)
         case TOKEN_LSHIFT_ASSIGN:
         case TOKEN_RSHIFT_ASSIGN:
             {
-                op = token_to_operator(assign_type);
-                left_copy = expression_copy(left);
-                if(!left_copy)
+                op = token_to_operator(assigntype);
+                leftcopy = expression_copy(left);
+                if(!leftcopy)
                 {
                     goto err;
                 }
                 pos = source->pos;
-                new_source = expression_make_infix(p->context, op, left_copy, source);
-                if(!new_source)
+                newsource = expression_make_infix(p->context, op, leftcopy, source);
+                if(!newsource)
                 {
-                    expression_destroy(left_copy);
+                    expression_destroy(leftcopy);
                     goto err;
                 }
-                new_source->pos = pos;
-                source = new_source;
+                newsource->pos = pos;
+                source = newsource;
             }
             break;
         case TOKEN_ASSIGN:
@@ -2641,8 +2627,8 @@ ApeExpression_t* parse_logical_expression(ApeParser_t* p, ApeExpression_t* left)
     ApePrecedence_t prec;
     ApeExpression_t* right;
     ApeExpression_t* res;
-    op = token_to_operator(p->lexer.cur_token.type);
-    prec = get_precedence(p->lexer.cur_token.type);
+    op = token_to_operator(p->lexer.curtoken.type);
+    prec = get_precedence(p->lexer.curtoken.type);
     lexer_next_token(&p->lexer);
     right = parse_expression(p, prec);
     if(!right)
@@ -2660,32 +2646,32 @@ ApeExpression_t* parse_logical_expression(ApeParser_t* p, ApeExpression_t* left)
 
 ApeExpression_t* parse_ternary_expression(ApeParser_t* p, ApeExpression_t* left)
 {
-    ApeExpression_t* if_true;
-    ApeExpression_t* if_false;
+    ApeExpression_t* iftrue;
+    ApeExpression_t* iffalse;
     ApeExpression_t* res;
     lexer_next_token(&p->lexer);
-    if_true = parse_expression(p, PRECEDENCE_LOWEST);
-    if(!if_true)
+    iftrue = parse_expression(p, PRECEDENCE_LOWEST);
+    if(!iftrue)
     {
         return NULL;
     }
     if(!lexer_expect_current(&p->lexer, TOKEN_COLON))
     {
-        expression_destroy(if_true);
+        expression_destroy(iftrue);
         return NULL;
     }
     lexer_next_token(&p->lexer);
-    if_false = parse_expression(p, PRECEDENCE_LOWEST);
-    if(!if_false)
+    iffalse = parse_expression(p, PRECEDENCE_LOWEST);
+    if(!iffalse)
     {
-        expression_destroy(if_true);
+        expression_destroy(iftrue);
         return NULL;
     }
-    res = expression_make_ternary(p->context, left, if_true, if_false);
+    res = expression_make_ternary(p->context, left, iftrue, iffalse);
     if(!res)
     {
-        expression_destroy(if_true);
-        expression_destroy(if_false);
+        expression_destroy(iftrue);
+        expression_destroy(iffalse);
         return NULL;
     }
     return res;
@@ -2694,45 +2680,44 @@ ApeExpression_t* parse_ternary_expression(ApeParser_t* p, ApeExpression_t* left)
 ApeExpression_t* parse_incdec_prefix_expression(ApeParser_t* p)
 {
     ApeExpression_t* source;
-    ApeTokenType_t operation_type;
+    ApeTokenType_t operationtype;
     ApePosition_t pos;
     ApeOperator_t op;
     ApeExpression_t* dest;
-    ApeExpression_t* one_literal;
-    ApeExpression_t* dest_copy;
+    ApeExpression_t* oneliteral;
+    ApeExpression_t* destcopy;
     ApeExpression_t* operation;
     ApeExpression_t* res;
-
     source = NULL;
-    operation_type = p->lexer.cur_token.type;
-    pos = p->lexer.cur_token.pos;
+    operationtype = p->lexer.curtoken.type;
+    pos = p->lexer.curtoken.pos;
     lexer_next_token(&p->lexer);
-    op = token_to_operator(operation_type);
+    op = token_to_operator(operationtype);
     dest = parse_expression(p, PRECEDENCE_PREFIX);
     if(!dest)
     {
         goto err;
     }
-    one_literal = expression_make_number_literal(p->context, 1);
-    if(!one_literal)
+    oneliteral = expression_make_number_literal(p->context, 1);
+    if(!oneliteral)
     {
         expression_destroy(dest);
         goto err;
     }
-    one_literal->pos = pos;
-    dest_copy = expression_copy(dest);
-    if(!dest_copy)
+    oneliteral->pos = pos;
+    destcopy = expression_copy(dest);
+    if(!destcopy)
     {
-        expression_destroy(one_literal);
+        expression_destroy(oneliteral);
         expression_destroy(dest);
         goto err;
     }
-    operation = expression_make_infix(p->context, op, dest_copy, one_literal);
+    operation = expression_make_infix(p->context, op, destcopy, oneliteral);
     if(!operation)
     {
-        expression_destroy(dest_copy);
+        expression_destroy(destcopy);
         expression_destroy(dest);
-        expression_destroy(one_literal);
+        expression_destroy(oneliteral);
         goto err;
     }
     operation->pos = pos;
@@ -2753,35 +2738,35 @@ err:
 ApeExpression_t* parse_incdec_postfix_expression(ApeParser_t* p, ApeExpression_t* left)
 {
     ApeExpression_t* source;
-    ApeTokenType_t operation_type;
+    ApeTokenType_t operationtype;
     ApePosition_t pos;
     ApeOperator_t op;
-    ApeExpression_t* left_copy;
-    ApeExpression_t* one_literal;
+    ApeExpression_t* leftcopy;
+    ApeExpression_t* oneliteral;
     ApeExpression_t* operation;
     ApeExpression_t* res;
     source = NULL;
-    operation_type = p->lexer.cur_token.type;
-    pos = p->lexer.cur_token.pos;
+    operationtype = p->lexer.curtoken.type;
+    pos = p->lexer.curtoken.pos;
     lexer_next_token(&p->lexer);
-    op = token_to_operator(operation_type);
-    left_copy = expression_copy(left);
-    if(!left_copy)
+    op = token_to_operator(operationtype);
+    leftcopy = expression_copy(left);
+    if(!leftcopy)
     {
         goto err;
     }
-    one_literal = expression_make_number_literal(p->context, 1);
-    if(!one_literal)
+    oneliteral = expression_make_number_literal(p->context, 1);
+    if(!oneliteral)
     {
-        expression_destroy(left_copy);
+        expression_destroy(leftcopy);
         goto err;
     }
-    one_literal->pos = pos;
-    operation = expression_make_infix(p->context, op, left_copy, one_literal);
+    oneliteral->pos = pos;
+    operation = expression_make_infix(p->context, op, leftcopy, oneliteral);
     if(!operation)
     {
-        expression_destroy(one_literal);
-        expression_destroy(left_copy);
+        expression_destroy(oneliteral);
+        expression_destroy(leftcopy);
         goto err;
     }
     operation->pos = pos;
@@ -2791,35 +2776,32 @@ ApeExpression_t* parse_incdec_postfix_expression(ApeParser_t* p, ApeExpression_t
         expression_destroy(operation);
         goto err;
     }
-
     return res;
 err:
     expression_destroy(source);
     return NULL;
 }
 
-
 ApeExpression_t* parse_dot_expression(ApeParser_t* p, ApeExpression_t* left)
 {
+    char* str;
+    ApeExpression_t* index;
+    ApeExpression_t* res;
     lexer_next_token(&p->lexer);
-
     if(!lexer_expect_current(&p->lexer, TOKEN_IDENT))
     {
         return NULL;
     }
-
-    char* str = token_duplicate_literal(p->context, &p->lexer.cur_token);
-    ApeExpression_t* index = expression_make_string_literal(p->context, str);
+    str = token_duplicate_literal(p->context, &p->lexer.curtoken);
+    index = expression_make_string_literal(p->context, str);
     if(!index)
     {
         allocator_free(p->alloc, str);
         return NULL;
     }
-    index->pos = p->lexer.cur_token.pos;
-
+    index->pos = p->lexer.curtoken.pos;
     lexer_next_token(&p->lexer);
-
-    ApeExpression_t* res = expression_make_index(p->context, left, index);
+    res = expression_make_index(p->context, left, index);
     if(!res)
     {
         expression_destroy(index);
@@ -2903,8 +2885,9 @@ static ApePrecedence_t get_precedence(ApeTokenType_t tk)
         case TOKEN_MINUS_MINUS:
             return PRECEDENCE_INCDEC;
         default:
-            return PRECEDENCE_LOWEST;
+            break;
     }
+    return PRECEDENCE_LOWEST;
 }
 
 static ApeOperator_t token_to_operator(ApeTokenType_t tk)
@@ -2976,11 +2959,10 @@ static ApeOperator_t token_to_operator(ApeTokenType_t tk)
         case TOKEN_MINUS_MINUS:
             return OPERATOR_MINUS;
         default:
-        {
-            APE_ASSERT(false);
-            return OPERATOR_NONE;
-        }
+            break;
     }
+    APE_ASSERT(false);
+    return OPERATOR_NONE;
 }
 
 static char escape_char(const char c)
@@ -3006,95 +2988,94 @@ static char escape_char(const char c)
         case '0':
             return '\0';
         default:
-            return c;
+            break;
     }
+    return c;
 }
 
 static char* process_and_copy_string(ApeAllocator_t* alloc, const char* input, size_t len)
 {
-    size_t in_i;
-    size_t out_i;
+    size_t ini;
+    size_t outi;
     char* output;
     output = (char*)allocator_malloc(alloc, len + 1);
     if(!output)
     {
         return NULL;
     }
-    in_i = 0;
-    out_i = 0;
-    while(input[in_i] != '\0' && in_i < len)
+    ini = 0;
+    outi = 0;
+    while(input[ini] != '\0' && ini < len)
     {
-        if(input[in_i] == '\\')
+        if(input[ini] == '\\')
         {
-            in_i++;
-            output[out_i] = escape_char(input[in_i]);
-            if(output[out_i] < 0)
+            ini++;
+            output[outi] = escape_char(input[ini]);
+            if(output[outi] < 0)
             {
                 goto error;
             }
         }
         else
         {
-            output[out_i] = input[in_i];
+            output[outi] = input[ini];
         }
-        out_i++;
-        in_i++;
+        outi++;
+        ini++;
     }
-    output[out_i] = '\0';
+    output[outi] = '\0';
     return output;
 error:
     allocator_free(alloc, output);
     return NULL;
 }
 
-static ApeExpression_t* wrap_expression_in_function_call(ApeContext_t* ctx, ApeExpression_t* expr, const char* function_name)
+static ApeExpression_t* wrap_expression_in_function_call(ApeContext_t* ctx, ApeExpression_t* expr, const char* functionname)
 {
-    ApeToken_t fn_token;
-    token_init(&fn_token, TOKEN_IDENT, function_name, (int)strlen(function_name));
-    fn_token.pos = expr->pos;
-
-    ApeIdent_t* ident = ident_make(ctx, fn_token);
+    bool ok;
+    ApeExpression_t* callexpr;
+    ApeIdent_t* ident;
+    ApeExpression_t* functionidentexpr;
+    ApePtrArray_t* args;
+    ApeToken_t fntoken;
+    token_init(&fntoken, TOKEN_IDENT, functionname, (int)strlen(functionname));
+    fntoken.pos = expr->pos;
+    ident = ident_make(ctx, fntoken);
     if(!ident)
     {
         return NULL;
     }
-    ident->pos = fn_token.pos;
-
-    ApeExpression_t* function_ident_expr = expression_make_ident(ctx, ident);
-
-    if(!function_ident_expr)
+    ident->pos = fntoken.pos;
+    functionidentexpr = expression_make_ident(ctx, ident);
+    if(!functionidentexpr)
     {
         ident_destroy(ident);
         return NULL;
     }
-    function_ident_expr->pos = expr->pos;
+    functionidentexpr->pos = expr->pos;
     ident = NULL;
-
-    ApePtrArray_t* args = ptrarray_make(ctx);
+    args = ptrarray_make(ctx);
     if(!args)
     {
-        expression_destroy(function_ident_expr);
+        expression_destroy(functionidentexpr);
         return NULL;
     }
-
-    bool ok = ptrarray_add(args, expr);
+    ok = ptrarray_add(args, expr);
     if(!ok)
     {
         ptrarray_destroy(args);
-        expression_destroy(function_ident_expr);
+        expression_destroy(functionidentexpr);
         return NULL;
     }
-
-    ApeExpression_t* call_expr = expression_make_call(ctx, function_ident_expr, args);
-    if(!call_expr)
+    callexpr = expression_make_call(ctx, functionidentexpr, args);
+    if(!callexpr)
     {
         ptrarray_destroy(args);
-        expression_destroy(function_ident_expr);
+        expression_destroy(functionidentexpr);
         return NULL;
     }
-    call_expr->pos = expr->pos;
-
-    return call_expr;
+    callexpr->pos = expr->pos;
+    return callexpr;
 }
 
 

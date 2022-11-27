@@ -169,6 +169,8 @@ function md51(s)
     var txt = "*pad*";
     var n = len(s);
     var state = [1732584193, -271733879, -1732584194, 271733878];
+    println(`state=${state}`)
+
     var i = 0;
     for (i = 64; i <= len(s); i += 64)
     {

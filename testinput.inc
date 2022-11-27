@@ -32,7 +32,7 @@ function fun() {
 // comment 1 dict["a"] // test
 // comment 2
     const res = function(a, b, c) {
-        const res_str = to_str(a) + to_str(b) + to_str(c)
+        const res_str = tostring(a) + tostring(b) + tostring(c)
         return res_str; // comment
     }
     return res(1, 2, 3)
@@ -58,7 +58,7 @@ person.hello()
 
 
 check(keys({"a": 1, "b": 2})[1], "b")
-check(to_str(1), "1")
+check(tostring(1), "1")
 
 const popular_names = ["Krzysztof", "Zbigniew", "Grzegorz"]
 for (name in popular_names) {
