@@ -93,7 +93,7 @@ static bool check_args(ApeVM_t* vm, bool generate_error, ApeSize_t argc, ApeObje
     for(i = 0; i < argc; i++)
     {
         ApeObject_t arg = args[i];
-        ApeObjType_t type = object_value_type(arg);
+        ApeObjType_t type = ape_object_value_type(arg);
         ApeObjType_t expected_type = expected_types[i];
         if(!(type & expected_type))
         {
@@ -125,7 +125,7 @@ static ApeObject_t cfn_object_length(ApeVM_t* vm, void* data, ApeSize_t argc, Ap
     }
 
     ApeObject_t arg = args[0];
-    ApeObjType_t type = object_value_type(arg);
+    ApeObjType_t type = ape_object_value_type(arg);
     if(type == APE_OBJECT_STRING)
     {
         ApeSize_t len = ape_object_string_getlength(arg);
@@ -183,7 +183,7 @@ static ApeObject_t cfn_object_rest(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
         return ape_object_make_null(vm->context);
     }
     ApeObject_t res = ape_object_make_array(vm->context);
-    if(object_value_isnull(res))
+    if(ape_object_value_isnull(res))
     {
         return ape_object_make_null(vm->context);
     }
@@ -209,12 +209,12 @@ static ApeObject_t cfn_reverse(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObjec
         return ape_object_make_null(vm->context);
     }
     ApeObject_t arg = args[0];
-    ApeObjType_t type = object_value_type(arg);
+    ApeObjType_t type = ape_object_value_type(arg);
     if(type == APE_OBJECT_ARRAY)
     {
         len = ape_object_array_getlength(arg);
         ApeObject_t res = ape_object_make_arraycapacity(vm->context, len);
-        if(object_value_isnull(res))
+        if(ape_object_value_isnull(res))
         {
             return ape_object_make_null(vm->context);
         }
@@ -234,7 +234,7 @@ static ApeObject_t cfn_reverse(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObjec
         const char* str = ape_object_string_getdata(arg);
         len = ape_object_string_getlength(arg);
         ApeObject_t res = ape_object_make_stringcapacity(vm->context, len);
-        if(object_value_isnull(res))
+        if(ape_object_value_isnull(res))
         {
             return ape_object_make_null(vm->context);
         }
@@ -261,9 +261,9 @@ static ApeObject_t cfn_array(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
         {
             return ape_object_make_null(vm->context);
         }
-        capacity = (ApeSize_t)object_value_asnumber(args[0]);
+        capacity = (ApeSize_t)ape_object_value_asnumber(args[0]);
         ApeObject_t res = ape_object_make_arraycapacity(vm->context, capacity);
-        if(object_value_isnull(res))
+        if(ape_object_value_isnull(res))
         {
             return ape_object_make_null(vm->context);
         }
@@ -284,9 +284,9 @@ static ApeObject_t cfn_array(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
         {
             return ape_object_make_null(vm->context);
         }
-        capacity = (ApeSize_t)object_value_asnumber(args[0]);
+        capacity = (ApeSize_t)ape_object_value_asnumber(args[0]);
         ApeObject_t res = ape_object_make_arraycapacity(vm->context, capacity);
-        if(object_value_isnull(res))
+        if(ape_object_value_isnull(res))
         {
             return ape_object_make_null(vm->context);
         }
@@ -413,15 +413,15 @@ static ApeObject_t cfn_to_num(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
     }
     ApeFloat_t result = 0;
     const char* string = "";
-    if(object_value_isnumeric(args[0]))
+    if(ape_object_value_isnumeric(args[0]))
     {
-        result = object_value_asnumber(args[0]);
+        result = ape_object_value_asnumber(args[0]);
     }
-    else if(object_value_isnull(args[0]))
+    else if(ape_object_value_isnull(args[0]))
     {
         result = 0;
     }
-    else if(object_value_type(args[0]) == APE_OBJECT_STRING)
+    else if(ape_object_value_type(args[0]) == APE_OBJECT_STRING)
     {
         string = ape_object_string_getdata(args[0]);
         char* end;
@@ -461,7 +461,7 @@ static ApeObject_t cfn_chr(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t*
         return ape_object_make_null(vm->context);
     }
 
-    ApeFloat_t val = object_value_asnumber(args[0]);
+    ApeFloat_t val = ape_object_value_asnumber(args[0]);
 
     char c = (char)val;
     char str[2] = { c, '\0' };
@@ -476,7 +476,7 @@ static ApeObject_t cfn_ord(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t*
     {
         return ape_object_make_null(vm->context);
     }
-    if(object_value_isnull(args[0]))
+    if(ape_object_value_isnull(args[0]))
     {
         return ape_object_make_number(vm->context, 0);
     }
@@ -497,21 +497,21 @@ static ApeObject_t cfn_substr(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
     {
         return ape_object_make_error(vm->context, "too few args to substr()");
     }
-    if((object_value_type(args[0]) != APE_OBJECT_STRING) || (object_value_type(args[1]) != APE_OBJECT_NUMBER))
+    if((ape_object_value_type(args[0]) != APE_OBJECT_STRING) || (ape_object_value_type(args[1]) != APE_OBJECT_NUMBER))
     {
         return ape_object_make_error(vm->context, "substr() expects string, number [, number]");
     }
     str = ape_object_string_getdata(args[0]);
     len = ape_object_string_getlength(args[0]);
-    begin = object_value_asnumber(args[1]);
+    begin = ape_object_value_asnumber(args[1]);
     end = len;
     if(argc > 2)
     {
-        if(object_value_type(args[2]) != APE_OBJECT_NUMBER)
+        if(ape_object_value_type(args[2]) != APE_OBJECT_NUMBER)
         {
             return ape_object_make_error(vm->context, "last argument must be number");
         }
-        end = object_value_asnumber(args[2]);
+        end = ape_object_value_asnumber(args[2]);
     }
     // fixme: this is actually incorrect
     if((begin >= len))
@@ -533,7 +533,7 @@ static ApeObject_t cfn_range(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     (void)data;
     for(i = 0; i < (ApeInt_t)argc; i++)
     {
-        ApeObjType_t type = object_value_type(args[i]);
+        ApeObjType_t type = ape_object_value_type(args[i]);
         if(type != APE_OBJECT_NUMBER)
         {
             const char* type_str = ape_object_value_typename(type);
@@ -549,18 +549,18 @@ static ApeObject_t cfn_range(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
 
     if(argc == 1)
     {
-        end = (ApeInt_t)object_value_asnumber(args[0]);
+        end = (ApeInt_t)ape_object_value_asnumber(args[0]);
     }
     else if(argc == 2)
     {
-        start = (ApeInt_t)object_value_asnumber(args[0]);
-        end = (ApeInt_t)object_value_asnumber(args[1]);
+        start = (ApeInt_t)ape_object_value_asnumber(args[0]);
+        end = (ApeInt_t)ape_object_value_asnumber(args[1]);
     }
     else if(argc == 3)
     {
-        start = (ApeInt_t)object_value_asnumber(args[0]);
-        end = (ApeInt_t)object_value_asnumber(args[1]);
-        step = (ApeInt_t)object_value_asnumber(args[2]);
+        start = (ApeInt_t)ape_object_value_asnumber(args[0]);
+        end = (ApeInt_t)ape_object_value_asnumber(args[1]);
+        step = (ApeInt_t)ape_object_value_asnumber(args[2]);
     }
     else
     {
@@ -575,7 +575,7 @@ static ApeObject_t cfn_range(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     }
 
     ApeObject_t res = ape_object_make_array(vm->context);
-    if(object_value_isnull(res))
+    if(ape_object_value_isnull(res))
     {
         return ape_object_make_null(vm->context);
     }
@@ -602,7 +602,7 @@ static ApeObject_t cfn_object_objkeys(ApeVM_t* vm, void* data, ApeSize_t argc, A
     }
     ApeObject_t arg = args[0];
     ApeObject_t res = ape_object_make_array(vm->context);
-    if(object_value_isnull(res))
+    if(ape_object_value_isnull(res))
     {
         return ape_object_make_null(vm->context);
     }
@@ -630,7 +630,7 @@ static ApeObject_t cfn_object_objvalues(ApeVM_t* vm, void* data, ApeSize_t argc,
     }
     ApeObject_t arg = args[0];
     ApeObject_t res = ape_object_make_array(vm->context);
-    if(object_value_isnull(res))
+    if(ape_object_value_isnull(res))
     {
         return ape_object_make_null(vm->context);
     }
@@ -677,8 +677,8 @@ static ApeObject_t cfn_concat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
     {
         return ape_object_make_null(vm->context);
     }
-    ApeObjType_t type = object_value_type(args[0]);
-    ApeObjType_t item_type = object_value_type(args[1]);
+    ApeObjType_t type = ape_object_value_type(args[0]);
+    ApeObjType_t item_type = ape_object_value_type(args[1]);
     if(type == APE_OBJECT_ARRAY)
     {
         if(item_type != APE_OBJECT_ARRAY)
@@ -709,7 +709,7 @@ static ApeObject_t cfn_concat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
         const char* right_val = ape_object_string_getdata(args[1]);
         right_len = (ApeSize_t)ape_object_string_getlength(args[1]);
         ApeObject_t res = ape_object_make_stringcapacity(vm->context, left_len + right_len);
-        if(object_value_isnull(res))
+        if(ape_object_value_isnull(res))
         {
             return ape_object_make_null(vm->context);
         }
@@ -766,8 +766,8 @@ static ApeObject_t cfn_object_removeat(ApeVM_t* vm, void* data, ApeSize_t argc, 
         return ape_object_make_null(vm->context);
     }
 
-    ApeObjType_t type = object_value_type(args[0]);
-    ApeSize_t ix = (ApeSize_t)object_value_asnumber(args[1]);
+    ApeObjType_t type = ape_object_value_type(args[0]);
+    ApeSize_t ix = (ApeSize_t)ape_object_value_asnumber(args[1]);
 
     switch(type)
     {
@@ -787,7 +787,7 @@ static ApeObject_t cfn_object_removeat(ApeVM_t* vm, void* data, ApeSize_t argc, 
 static ApeObject_t cfn_error(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     (void)data;
-    if(argc == 1 && object_value_type(args[0]) == APE_OBJECT_STRING)
+    if(argc == 1 && ape_object_value_type(args[0]) == APE_OBJECT_STRING)
     {
         return ape_object_make_error(vm->context, ape_object_string_getdata(args[0]));
     }
@@ -800,7 +800,7 @@ static ApeObject_t cfn_error(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
 static ApeObject_t cfn_crash(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     (void)data;
-    if(argc == 1 && object_value_type(args[0]) == APE_OBJECT_STRING)
+    if(argc == 1 && ape_object_value_type(args[0]) == APE_OBJECT_STRING)
     {
         ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame), ape_object_string_getdata(args[0]));
     }
@@ -819,7 +819,7 @@ static ApeObject_t cfn_assert(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
         return ape_object_make_null(vm->context);
     }
 
-    if(!object_value_asbool(args[0]))
+    if(!ape_object_value_asbool(args[0]))
     {
         ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "assertion failed");
         return ape_object_make_null(vm->context);
@@ -835,7 +835,7 @@ static ApeObject_t cfn_random_seed(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
     {
         return ape_object_make_null(vm->context);
     }
-    ApeSize_t seed = (ApeSize_t)object_value_asnumber(args[0]);
+    ApeSize_t seed = (ApeSize_t)ape_object_value_asnumber(args[0]);
     srand(seed);
     return ape_object_make_bool(vm->context, true);
 }
@@ -854,8 +854,8 @@ static ApeObject_t cfn_random(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
         {
             return ape_object_make_null(vm->context);
         }
-        ApeFloat_t min = object_value_asnumber(args[0]);
-        ApeFloat_t max = object_value_asnumber(args[1]);
+        ApeFloat_t min = ape_object_value_asnumber(args[0]);
+        ApeFloat_t max = ape_object_value_asnumber(args[1]);
         if(min >= max)
         {
             ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "max is bigger than min");
@@ -881,8 +881,8 @@ static ApeObject_t cfn_object_slice(ApeVM_t* vm, void* data, ApeSize_t argc, Ape
     {
         return ape_object_make_null(vm->context);
     }
-    ApeObjType_t arg_type = object_value_type(args[0]);
-    ApeInt_t index = (ApeInt_t)object_value_asnumber(args[1]);
+    ApeObjType_t arg_type = ape_object_value_type(args[0]);
+    ApeInt_t index = (ApeInt_t)ape_object_value_asnumber(args[1]);
     if(arg_type == APE_OBJECT_ARRAY)
     {
         len = ape_object_array_getlength(args[0]);
@@ -895,7 +895,7 @@ static ApeObject_t cfn_object_slice(ApeVM_t* vm, void* data, ApeSize_t argc, Ape
             }
         }
         ApeObject_t res = ape_object_make_arraycapacity(vm->context, len - index);
-        if(object_value_isnull(res))
+        if(ape_object_value_isnull(res))
         {
             return ape_object_make_null(vm->context);
         }
@@ -928,7 +928,7 @@ static ApeObject_t cfn_object_slice(ApeVM_t* vm, void* data, ApeSize_t argc, Ape
         }
         ApeInt_t res_len = len - index;
         ApeObject_t res = ape_object_make_stringcapacity(vm->context, res_len);
-        if(object_value_isnull(res))
+        if(ape_object_value_isnull(res))
         {
             return ape_object_make_null(vm->context);
         }
@@ -962,7 +962,7 @@ static ApeObject_t cfn_object_isstring(ApeVM_t* vm, void* data, ApeSize_t argc, 
     {
         return ape_object_make_null(vm->context);
     }
-    return ape_object_make_bool(vm->context, object_value_type(args[0]) == APE_OBJECT_STRING);
+    return ape_object_make_bool(vm->context, ape_object_value_type(args[0]) == APE_OBJECT_STRING);
 }
 
 static ApeObject_t cfn_object_isarray(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
@@ -972,7 +972,7 @@ static ApeObject_t cfn_object_isarray(ApeVM_t* vm, void* data, ApeSize_t argc, A
     {
         return ape_object_make_null(vm->context);
     }
-    return ape_object_make_bool(vm->context, object_value_type(args[0]) == APE_OBJECT_ARRAY);
+    return ape_object_make_bool(vm->context, ape_object_value_type(args[0]) == APE_OBJECT_ARRAY);
 }
 
 static ApeObject_t cfn_object_ismap(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
@@ -982,7 +982,7 @@ static ApeObject_t cfn_object_ismap(ApeVM_t* vm, void* data, ApeSize_t argc, Ape
     {
         return ape_object_make_null(vm->context);
     }
-    return ape_object_make_bool(vm->context, object_value_type(args[0]) == APE_OBJECT_MAP);
+    return ape_object_make_bool(vm->context, ape_object_value_type(args[0]) == APE_OBJECT_MAP);
 }
 
 static ApeObject_t cfn_object_isnumber(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
@@ -992,7 +992,7 @@ static ApeObject_t cfn_object_isnumber(ApeVM_t* vm, void* data, ApeSize_t argc, 
     {
         return ape_object_make_null(vm->context);
     }
-    return ape_object_make_bool(vm->context, object_value_type(args[0]) == APE_OBJECT_NUMBER);
+    return ape_object_make_bool(vm->context, ape_object_value_type(args[0]) == APE_OBJECT_NUMBER);
 }
 
 static ApeObject_t cfn_object_isbool(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
@@ -1002,7 +1002,7 @@ static ApeObject_t cfn_object_isbool(ApeVM_t* vm, void* data, ApeSize_t argc, Ap
     {
         return ape_object_make_null(vm->context);
     }
-    return ape_object_make_bool(vm->context, object_value_type(args[0]) == APE_OBJECT_BOOL);
+    return ape_object_make_bool(vm->context, ape_object_value_type(args[0]) == APE_OBJECT_BOOL);
 }
 
 static ApeObject_t cfn_object_isnull(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
@@ -1012,7 +1012,7 @@ static ApeObject_t cfn_object_isnull(ApeVM_t* vm, void* data, ApeSize_t argc, Ap
     {
         return ape_object_make_null(vm->context);
     }
-    return ape_object_make_bool(vm->context, object_value_type(args[0]) == APE_OBJECT_NULL);
+    return ape_object_make_bool(vm->context, ape_object_value_type(args[0]) == APE_OBJECT_NULL);
 }
 
 static ApeObject_t cfn_object_isfunction(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
@@ -1022,7 +1022,7 @@ static ApeObject_t cfn_object_isfunction(ApeVM_t* vm, void* data, ApeSize_t argc
     {
         return ape_object_make_null(vm->context);
     }
-    return ape_object_make_bool(vm->context, object_value_type(args[0]) == APE_OBJECT_FUNCTION);
+    return ape_object_make_bool(vm->context, ape_object_value_type(args[0]) == APE_OBJECT_FUNCTION);
 }
 
 static ApeObject_t cfn_object_isexternal(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
@@ -1032,7 +1032,7 @@ static ApeObject_t cfn_object_isexternal(ApeVM_t* vm, void* data, ApeSize_t argc
     {
         return ape_object_make_null(vm->context);
     }
-    return ape_object_make_bool(vm->context, object_value_type(args[0]) == APE_OBJECT_EXTERNAL);
+    return ape_object_make_bool(vm->context, ape_object_value_type(args[0]) == APE_OBJECT_EXTERNAL);
 }
 
 static ApeObject_t cfn_object_iserror(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
@@ -1042,7 +1042,7 @@ static ApeObject_t cfn_object_iserror(ApeVM_t* vm, void* data, ApeSize_t argc, A
     {
         return ape_object_make_null(vm->context);
     }
-    return ape_object_make_bool(vm->context, object_value_type(args[0]) == APE_OBJECT_ERROR);
+    return ape_object_make_bool(vm->context, ape_object_value_type(args[0]) == APE_OBJECT_ERROR);
 }
 
 static ApeObject_t cfn_object_isnativefunction(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
@@ -1052,7 +1052,7 @@ static ApeObject_t cfn_object_isnativefunction(ApeVM_t* vm, void* data, ApeSize_
     {
         return ape_object_make_null(vm->context);
     }
-    return ape_object_make_bool(vm->context, object_value_type(args[0]) == APE_OBJECT_NATIVE_FUNCTION);
+    return ape_object_make_bool(vm->context, ape_object_value_type(args[0]) == APE_OBJECT_NATIVE_FUNCTION);
 }
 
 //-----------------------------------------------------------------------------
@@ -1066,7 +1066,7 @@ static ApeObject_t cfn_sqrt(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t
     {
         return ape_object_make_null(vm->context);
     }
-    ApeFloat_t arg = object_value_asnumber(args[0]);
+    ApeFloat_t arg = ape_object_value_asnumber(args[0]);
     ApeFloat_t res = sqrt(arg);
     return ape_object_make_number(vm->context, res);
 }
@@ -1078,8 +1078,8 @@ static ApeObject_t cfn_pow(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t*
     {
         return ape_object_make_null(vm->context);
     }
-    ApeFloat_t arg1 = object_value_asnumber(args[0]);
-    ApeFloat_t arg2 = object_value_asnumber(args[1]);
+    ApeFloat_t arg1 = ape_object_value_asnumber(args[0]);
+    ApeFloat_t arg2 = ape_object_value_asnumber(args[1]);
     ApeFloat_t res = pow(arg1, arg2);
     return ape_object_make_number(vm->context, res);
 }
@@ -1091,7 +1091,7 @@ static ApeObject_t cfn_sin(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t*
     {
         return ape_object_make_null(vm->context);
     }
-    ApeFloat_t arg = object_value_asnumber(args[0]);
+    ApeFloat_t arg = ape_object_value_asnumber(args[0]);
     ApeFloat_t res = sin(arg);
     return ape_object_make_number(vm->context, res);
 }
@@ -1103,7 +1103,7 @@ static ApeObject_t cfn_cos(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t*
     {
         return ape_object_make_null(vm->context);
     }
-    ApeFloat_t arg = object_value_asnumber(args[0]);
+    ApeFloat_t arg = ape_object_value_asnumber(args[0]);
     ApeFloat_t res = cos(arg);
     return ape_object_make_number(vm->context, res);
 }
@@ -1115,7 +1115,7 @@ static ApeObject_t cfn_tan(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t*
     {
         return ape_object_make_null(vm->context);
     }
-    ApeFloat_t arg = object_value_asnumber(args[0]);
+    ApeFloat_t arg = ape_object_value_asnumber(args[0]);
     ApeFloat_t res = tan(arg);
     return ape_object_make_number(vm->context, res);
 }
@@ -1127,7 +1127,7 @@ static ApeObject_t cfn_log(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t*
     {
         return ape_object_make_null(vm->context);
     }
-    ApeFloat_t arg = object_value_asnumber(args[0]);
+    ApeFloat_t arg = ape_object_value_asnumber(args[0]);
     ApeFloat_t res = log(arg);
     return ape_object_make_number(vm->context, res);
 }
@@ -1139,7 +1139,7 @@ static ApeObject_t cfn_ceil(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t
     {
         return ape_object_make_null(vm->context);
     }
-    ApeFloat_t arg = object_value_asnumber(args[0]);
+    ApeFloat_t arg = ape_object_value_asnumber(args[0]);
     ApeFloat_t res = ceil(arg);
     return ape_object_make_number(vm->context, res);
 }
@@ -1151,7 +1151,7 @@ static ApeObject_t cfn_floor(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     {
         return ape_object_make_null(vm->context);
     }
-    ApeFloat_t arg = object_value_asnumber(args[0]);
+    ApeFloat_t arg = ape_object_value_asnumber(args[0]);
     ApeFloat_t res = floor(arg);
     return ape_object_make_number(vm->context, res);
 }
@@ -1163,7 +1163,7 @@ static ApeObject_t cfn_abs(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t*
     {
         return ape_object_make_null(vm->context);
     }
-    ApeFloat_t arg = object_value_asnumber(args[0]);
+    ApeFloat_t arg = ape_object_value_asnumber(args[0]);
     ApeFloat_t res = fabs(arg);
     return ape_object_make_number(vm->context, res);
 }
@@ -1273,37 +1273,97 @@ static ApeObject_t timespec_to_map(ApeVM_t* vm, struct timespec ts)
 
 static ApeObject_t cfn_file_stat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
+    bool specificfield;
     const char* path;
+    const char* field;
     struct stat st;
+    ApeObject_t objsecond;
+    ApeObject_t objpath;
     ApeObject_t map;
     (void)data;
-    if(!CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING))
+    field = NULL;
+    specificfield = false;
+    map.type = APE_OBJECT_NULL;
+    map.handle = NULL;
+    if((argc == 0) || !ape_object_value_isstring(args[0]))
     {
-        return ape_object_make_bool(vm->context, false);
+        ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "File.stat expects at least one string argument");
+        return ape_object_make_null(vm->context);
     }
-    path = ape_object_string_getdata(args[0]);
+    if(argc > 1)
+    {
+        objsecond = args[1];
+        if(!ape_object_value_isstring(objsecond))
+        {
+            ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "File.stat expects second argumt to be a string");
+            return ape_object_make_null(vm->context);
+        }
+        specificfield = true;
+    }
+    objpath = args[0];
+    path = ape_object_string_getdata(objpath);
     if(stat(path, &st) != -1)
     {
-        map = ape_object_make_map(vm->context);
+        #define for_field(f, val, mapfn, retfn) \
+            { \
+                if(specificfield) \
+                { \
+                    if((field != NULL) && (strcmp(field, f) == 0)) \
+                    { \
+                        return retfn(vm->context, (val)); \
+                    } \
+                } \
+                else \
+                { \
+                    mapfn(map, f, val); \
+                } \
+            }
+
+        #define for_field_string(f, val) \
+            for_field(f, val, ape_object_map_setnamedstring, ape_object_make_string)
+
+        #define for_field_number(f, val) \
+            for_field(f, val, ape_object_map_setnamednumber, ape_object_make_number)
+
+        if(specificfield)
+        {
+            field = ape_object_string_getdata(objsecond);
+        }
+        else
+        {
+            map = ape_object_make_map(vm->context);
+        }
+        for_field_string("name", path);
         //ape_object_array_pushstring(ary, dent->d_name);
-        ape_object_map_setnamedstring(map, "name", path);
-        ape_object_map_setnamedstring(map, "path", path);
-        ape_object_map_setnamednumber(map, "dev", st.st_dev);
-        ape_object_map_setnamednumber(map, "inode", st.st_ino);
-        ape_object_map_setnamednumber(map, "mode", st.st_mode);
-        ape_object_map_setnamednumber(map, "nlink", st.st_nlink);
-        ape_object_map_setnamednumber(map, "uid", st.st_uid);
-        ape_object_map_setnamednumber(map, "gid", st.st_gid);
-        ape_object_map_setnamednumber(map, "rdev", st.st_rdev);
-        ape_object_map_setnamednumber(map, "size", st.st_size);
+        for_field_string("name", path);
+        for_field_string("path", path);
+        for_field_number("dev", st.st_dev);
+        for_field_number("inode", st.st_ino);
+        for_field_number("mode", st.st_mode);
+        for_field_number("nlink", st.st_nlink);
+        for_field_number("uid", st.st_uid);
+        for_field_number("gid", st.st_gid);
+        for_field_number("rdev", st.st_rdev);
+        for_field_number("size", st.st_size);
         #if defined(__linux__)
-        ape_object_map_setnamednumber(map, "blksize", st.st_blksize);
-        ape_object_map_setnamednumber(map, "blocks", st.st_blocks);
-        ape_object_map_setnamedvalue(map, "atim", timespec_to_map(vm, st.st_atim));
-        ape_object_map_setnamedvalue(map, "mtim", timespec_to_map(vm, st.st_mtim));
-        ape_object_map_setnamedvalue(map, "ctim", timespec_to_map(vm, st.st_ctim));
+        for_field_number("blksize", st.st_blksize);
+        for_field_number("blocks", st.st_blocks);
+        if(map.handle != NULL)
+        {
+            ape_object_map_setnamedvalue(map, "atim", timespec_to_map(vm, st.st_atim));
+            ape_object_map_setnamedvalue(map, "mtim", timespec_to_map(vm, st.st_mtim));
+            ape_object_map_setnamedvalue(map, "ctim", timespec_to_map(vm, st.st_ctim));
+        }
         #endif
-        return map;
+        if(map.handle != NULL)
+        {
+            return map;
+        }
+        else
+        {
+            ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "File.stat secondary field '%s' does not exist", field);
+        }
+        return ape_object_make_null(vm->context);
     }
     return ape_object_make_null(vm->context);
 }
@@ -1414,7 +1474,7 @@ static ApeObject_t cfn_bitnot(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
     {
         return ape_object_make_null(vm->context);
     }
-    ApeInt_t val = object_value_asnumber(args[0]);
+    ApeInt_t val = ape_object_value_asnumber(args[0]);
     return ape_object_make_number(vm->context, ~val);
 }
 
@@ -1425,8 +1485,8 @@ static ApeObject_t cfn_shiftleft(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObj
     {
         return ape_object_make_null(vm->context);
     }
-    ApeInt_t v1 = object_value_asnumber(args[0]);
-    ApeInt_t v2 = object_value_asnumber(args[1]);
+    ApeInt_t v1 = ape_object_value_asnumber(args[0]);
+    ApeInt_t v2 = ape_object_value_asnumber(args[1]);
     return ape_object_make_number(vm->context, (v1 << v2));
 }
 
@@ -1437,8 +1497,8 @@ static ApeObject_t cfn_shiftright(ApeVM_t* vm, void* data, ApeSize_t argc, ApeOb
     {
         return ape_object_make_null(vm->context);
     }
-    ApeInt_t v1 = object_value_asnumber(args[0]);
-    ApeInt_t v2 = object_value_asnumber(args[1]);
+    ApeInt_t v1 = ape_object_value_asnumber(args[0]);
+    ApeInt_t v2 = ape_object_value_asnumber(args[1]);
     return ape_object_make_number(vm->context, (v1 >> v2));
 }
 

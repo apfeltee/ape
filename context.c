@@ -165,7 +165,7 @@ ApeObject_t ape_context_executesource(ApeContext_t* ctx, const char* code, bool 
     }
     //APE_ASSERT(ctx->vm->sp == 0);
     objres = ape_vm_getlastpopped(ctx->vm);
-    if(object_value_type(objres) == APE_OBJECT_NONE)
+    if(ape_object_value_type(objres) == APE_OBJECT_NONE)
     {
         goto err;
     }
@@ -199,7 +199,7 @@ ApeObject_t ape_context_executefile(ApeContext_t* ctx, const char* path)
     }
     APE_ASSERT(ctx->vm->sp == 0);
     objres = ape_vm_getlastpopped(ctx->vm);
-    if(object_value_type(objres) == APE_OBJECT_NONE)
+    if(ape_object_value_type(objres) == APE_OBJECT_NONE)
     {
         goto err;
     }
@@ -236,7 +236,7 @@ bool ape_context_setnativefunction(ApeContext_t* ctx, const char* name, ApeWrapp
 {
     ApeObject_t obj;
     obj = ape_context_makenamednative(ctx, name, fn, data);
-    if(object_value_isnull(obj))
+    if(ape_object_value_isnull(obj))
     {
         return false;
     }
@@ -304,7 +304,8 @@ static ApeObject_t ape_context_wrapnativefunc(ApeVM_t* vm, void* data, ApeSize_t
     ApeNativeFuncWrapper_t* wrapper;
     (void)vm;
     wrapper = (ApeNativeFuncWrapper_t*)data;
-    APE_ASSERT(vm == wrapper->context->vm);
+    wrapper->context = vm->context;
+    //APE_ASSERT(vm == wrapper->context->vm);
     objres = wrapper->wrapped_funcptr(wrapper->context, wrapper->data, argc, (ApeObject_t*)args);
     if(ape_context_haserrors(wrapper->context))
     {
@@ -319,9 +320,10 @@ ApeObject_t ape_context_makenamednative(ApeContext_t* ctx, const char* name, Ape
     memset(&wrapper, 0, sizeof(ApeNativeFuncWrapper_t));
     wrapper.wrapped_funcptr = fn;
     wrapper.context = ctx;
+    wrapper.context->vm = ctx->vm;
     wrapper.data = data;
     ApeObject_t wrapper_native_function = ape_object_make_nativefuncmemory(ctx, name, ape_context_wrapnativefunc, &wrapper, sizeof(wrapper));
-    if(object_value_isnull(wrapper_native_function))
+    if(ape_object_value_isnull(wrapper_native_function))
     {
         return ape_object_make_null(ctx);
     }

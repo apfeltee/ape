@@ -838,7 +838,6 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
                     // don't ape_compiler_emit jump for the last statement
                     if(i < (ape_ptrarray_count(ifstmt->cases) - 1) || ifstmt->alternative)
                     {
-
                         jumptoendip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)(0xbeef)));
                         ok = ape_valarray_add(jumptoendips, &jumptoendip);
                         if(!ok)
@@ -864,7 +863,6 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
                     ape_compiler_moduint16operand(comp, *pos + 1, afteraltip);
                 }
                 ape_valarray_destroy(jumptoendips);
-
                 break;
             statementiferror:
                 ape_valarray_destroy(jumptoendips);
@@ -944,358 +942,321 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
                 ape_compiler_moduint16operand(comp, jumptoafterbodyip + 1, afterbodyip);
             }
             break;
-
         case APE_STMT_BREAK:
-        {
-            breakip = ape_compiler_getbreakip(comp);
-            if(breakip < 0)
             {
-                ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "nothing to break from");
-                return false;
-            }
-            ip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)breakip));
-            if(ip < 0)
-            {
-                return false;
+                breakip = ape_compiler_getbreakip(comp);
+                if(breakip < 0)
+                {
+                    ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "nothing to break from");
+                    return false;
+                }
+                ip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)breakip));
+                if(ip < 0)
+                {
+                    return false;
+                }
             }
             break;
-        }
         case APE_STMT_CONTINUE:
-        {
-            ApeInt_t continueip = ape_compiler_getcontip(comp);
-            if(continueip < 0)
             {
-                ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "nothing to continue from");
-                return false;
-            }
-            ip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)continueip));
-            if(ip < 0)
-            {
-                return false;
+                ApeInt_t continueip = ape_compiler_getcontip(comp);
+                if(continueip < 0)
+                {
+                    ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "nothing to continue from");
+                    return false;
+                }
+                ip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)continueip));
+                if(ip < 0)
+                {
+                    return false;
+                }
             }
             break;
-        }
         case APE_STMT_FOREACH:
-        {
-            const ApeForeachStmt_t* foreach = &stmt->foreach;
-            ok = ape_symtable_pushblockscope(symbol_table);
-            if(!ok)
             {
-                return false;
-            }
-
-            // Init
-            const ApeSymbol_t* indexsymbol = ape_compiler_definesym(comp, stmt->pos, "@i", false, true);
-            if(!indexsymbol)
-            {
-                return false;
-            }
-
-            ip = ape_compiler_emit(comp, APE_OPCODE_MKNUMBER, 1, make_u64_array((uint64_t)0));
-            if(ip < 0)
-            {
-                return false;
-            }
-
-            ok = ape_compiler_writesym(comp, indexsymbol, true);
-            if(!ok)
-            {
-                return false;
-            }
-
-            const ApeSymbol_t* sourcesymbol = NULL;
-            if(foreach->source->type == APE_EXPR_IDENT)
-            {
-                sourcesymbol = ape_symtable_resolve(symbol_table, foreach->source->ident->value);
-                if(!sourcesymbol)
-                {
-                    ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, foreach->source->pos,
-                                      "symbol '%s' could not be resolved", foreach->source->ident->value);
-                    return false;
-                }
-            }
-            else
-            {
-                ok = ape_compiler_compileexpression(comp, foreach->source);
+                const ApeForeachStmt_t* foreach = &stmt->foreach;
+                ok = ape_symtable_pushblockscope(symbol_table);
                 if(!ok)
                 {
                     return false;
                 }
-                sourcesymbol = ape_compiler_definesym(comp, foreach->source->pos, "@source", false, true);
-                if(!sourcesymbol)
+                // Init
+                const ApeSymbol_t* indexsymbol = ape_compiler_definesym(comp, stmt->pos, "@i", false, true);
+                if(!indexsymbol)
                 {
                     return false;
                 }
-                ok = ape_compiler_writesym(comp, sourcesymbol, true);
+                ip = ape_compiler_emit(comp, APE_OPCODE_MKNUMBER, 1, make_u64_array((uint64_t)0));
+                if(ip < 0)
+                {
+                    return false;
+                }
+                ok = ape_compiler_writesym(comp, indexsymbol, true);
                 if(!ok)
                 {
                     return false;
                 }
-            }
 
-            // Update
-            ApeInt_t jumptoafterupdateip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)0xbeef));
-            if(jumptoafterupdateip < 0)
-            {
-                return false;
-            }
-
-            ApeInt_t updateip = ape_compiler_getip(comp);
-            ok = ape_compiler_readsym(comp, indexsymbol);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ip = ape_compiler_emit(comp, APE_OPCODE_MKNUMBER, 1, make_u64_array((uint64_t)ape_util_floattouint(1)));
-            if(ip < 0)
-            {
-                return false;
-            }
-
-            ip = ape_compiler_emit(comp, APE_OPCODE_ADD, 0, NULL);
-            if(ip < 0)
-            {
-                return false;
-            }
-
-            ok = ape_compiler_writesym(comp, indexsymbol, false);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ApeInt_t afterupdateip = ape_compiler_getip(comp);
-            ape_compiler_moduint16operand(comp, jumptoafterupdateip + 1, afterupdateip);
-
-            // Test
-            ok = ape_valarray_push(comp->srcpositionsstack, &foreach->source->pos);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ok = ape_compiler_readsym(comp, sourcesymbol);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ip = ape_compiler_emit(comp, APE_OPCODE_LEN, 0, NULL);
-            if(ip < 0)
-            {
-                return false;
-            }
-
-            ape_valarray_pop(comp->srcpositionsstack, NULL);
-            ok = ape_compiler_readsym(comp, indexsymbol);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ip = ape_compiler_emit(comp, APE_OPCODE_COMPAREPLAIN, 0, NULL);
-            if(ip < 0)
-            {
-                return false;
-            }
-
-            ip = ape_compiler_emit(comp, APE_OPCODE_ISEQUAL, 0, NULL);
-            if(ip < 0)
-            {
-                return false;
-            }
-
-            ApeInt_t aftertestip = ape_compiler_getip(comp);
-            ip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFFALSE, 1, make_u64_array((uint64_t)(aftertestip + 6)));
-            if(ip < 0)
-            {
-                return false;
-            }
-
-            ApeInt_t jumptoafterbodyip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)0xdead));
-            if(jumptoafterbodyip < 0)
-            {
-                return false;
-            }
-
-            ok = ape_compiler_readsym(comp, sourcesymbol);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ok = ape_compiler_readsym(comp, indexsymbol);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ip = ape_compiler_emit(comp, APE_OPCODE_GETVALUEAT, 0, NULL);
-            if(ip < 0)
-            {
-                return false;
-            }
-
-            const ApeSymbol_t* itersymbol = ape_compiler_definesym(comp, foreach->iterator->pos, foreach->iterator->value, false, false);
-            if(!itersymbol)
-            {
-                return false;
-            }
-
-            ok = ape_compiler_writesym(comp, itersymbol, true);
-            if(!ok)
-            {
-                return false;
-            }
-
-            // Body
-            ok = ape_compiler_pushcontip(comp, updateip);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ok = ape_compiler_pushbreakip(comp, jumptoafterbodyip);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ok = ape_compiler_compilecodeblock(comp, foreach->body);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ape_compiler_popbreakip(comp);
-            ape_compiler_popcontip(comp);
-
-            ip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)updateip));
-            if(ip < 0)
-            {
-                return false;
-            }
-
-            ApeInt_t afterbodyip = ape_compiler_getip(comp);
-            ape_compiler_moduint16operand(comp, jumptoafterbodyip + 1, afterbodyip);
-
-            ape_symtable_popblockscope(symbol_table);
-            break;
-        }
-        case APE_STMT_FORLOOP:
-        {
-            const ApeForLoopStmt_t* loop = &stmt->forloop;
-
-            ok = ape_symtable_pushblockscope(symbol_table);
-            if(!ok)
-            {
-                return false;
-            }
-
-            // Init
-            ApeInt_t jumptoafterupdateip = 0;
-            bool ok = false;
-            if(loop->init)
-            {
-                ok = ape_compiler_compilestatement(comp, loop->init);
-                if(!ok)
+                const ApeSymbol_t* sourcesymbol = NULL;
+                if(foreach->source->type == APE_EXPR_IDENT)
                 {
-                    return false;
+                    sourcesymbol = ape_symtable_resolve(symbol_table, foreach->source->ident->value);
+                    if(!sourcesymbol)
+                    {
+                        ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, foreach->source->pos,
+                                          "symbol '%s' could not be resolved", foreach->source->ident->value);
+                        return false;
+                    }
                 }
-                jumptoafterupdateip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)0xbeef));
+                else
+                {
+                    ok = ape_compiler_compileexpression(comp, foreach->source);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+                    sourcesymbol = ape_compiler_definesym(comp, foreach->source->pos, "@source", false, true);
+                    if(!sourcesymbol)
+                    {
+                        return false;
+                    }
+                    ok = ape_compiler_writesym(comp, sourcesymbol, true);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+                }
+                // Update
+                ApeInt_t jumptoafterupdateip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)0xbeef));
                 if(jumptoafterupdateip < 0)
                 {
                     return false;
                 }
-            }
-
-            // Update
-            ApeInt_t updateip = ape_compiler_getip(comp);
-            if(loop->update)
-            {
-                ok = ape_compiler_compileexpression(comp, loop->update);
+                ApeInt_t updateip = ape_compiler_getip(comp);
+                ok = ape_compiler_readsym(comp, indexsymbol);
                 if(!ok)
                 {
                     return false;
                 }
-                ip = ape_compiler_emit(comp, APE_OPCODE_POP, 0, NULL);
+                ip = ape_compiler_emit(comp, APE_OPCODE_MKNUMBER, 1, make_u64_array((uint64_t)ape_util_floattouint(1)));
                 if(ip < 0)
                 {
                     return false;
                 }
-            }
-
-            if(loop->init)
-            {
+                ip = ape_compiler_emit(comp, APE_OPCODE_ADD, 0, NULL);
+                if(ip < 0)
+                {
+                    return false;
+                }
+                ok = ape_compiler_writesym(comp, indexsymbol, false);
+                if(!ok)
+                {
+                    return false;
+                }
                 ApeInt_t afterupdateip = ape_compiler_getip(comp);
                 ape_compiler_moduint16operand(comp, jumptoafterupdateip + 1, afterupdateip);
-            }
-
-            // Test
-            if(loop->test)
-            {
-                ok = ape_compiler_compileexpression(comp, loop->test);
+                // Test
+                ok = ape_valarray_push(comp->srcpositionsstack, &foreach->source->pos);
                 if(!ok)
                 {
                     return false;
                 }
-            }
-            else
-            {
-                ip = ape_compiler_emit(comp, APE_OPCODE_TRUE, 0, NULL);
+                ok = ape_compiler_readsym(comp, sourcesymbol);
+                if(!ok)
+                {
+                    return false;
+                }
+                ip = ape_compiler_emit(comp, APE_OPCODE_LEN, 0, NULL);
                 if(ip < 0)
                 {
                     return false;
                 }
+                ape_valarray_pop(comp->srcpositionsstack, NULL);
+                ok = ape_compiler_readsym(comp, indexsymbol);
+                if(!ok)
+                {
+                    return false;
+                }
+                ip = ape_compiler_emit(comp, APE_OPCODE_COMPAREPLAIN, 0, NULL);
+                if(ip < 0)
+                {
+                    return false;
+                }
+                ip = ape_compiler_emit(comp, APE_OPCODE_ISEQUAL, 0, NULL);
+                if(ip < 0)
+                {
+                    return false;
+                }
+                ApeInt_t aftertestip = ape_compiler_getip(comp);
+                ip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFFALSE, 1, make_u64_array((uint64_t)(aftertestip + 6)));
+                if(ip < 0)
+                {
+                    return false;
+                }
+                ApeInt_t jumptoafterbodyip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)0xdead));
+                if(jumptoafterbodyip < 0)
+                {
+                    return false;
+                }
+                ok = ape_compiler_readsym(comp, sourcesymbol);
+                if(!ok)
+                {
+                    return false;
+                }
+                ok = ape_compiler_readsym(comp, indexsymbol);
+                if(!ok)
+                {
+                    return false;
+                }
+                ip = ape_compiler_emit(comp, APE_OPCODE_GETVALUEAT, 0, NULL);
+                if(ip < 0)
+                {
+                    return false;
+                }
+                const ApeSymbol_t* itersymbol = ape_compiler_definesym(comp, foreach->iterator->pos, foreach->iterator->value, false, false);
+                if(!itersymbol)
+                {
+                    return false;
+                }
+                ok = ape_compiler_writesym(comp, itersymbol, true);
+                if(!ok)
+                {
+                    return false;
+                }
+                // Body
+                ok = ape_compiler_pushcontip(comp, updateip);
+                if(!ok)
+                {
+                    return false;
+                }
+                ok = ape_compiler_pushbreakip(comp, jumptoafterbodyip);
+                if(!ok)
+                {
+                    return false;
+                }
+                ok = ape_compiler_compilecodeblock(comp, foreach->body);
+                if(!ok)
+                {
+                    return false;
+                }
+                ape_compiler_popbreakip(comp);
+                ape_compiler_popcontip(comp);
+                ip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)updateip));
+                if(ip < 0)
+                {
+                    return false;
+                }
+                ApeInt_t afterbodyip = ape_compiler_getip(comp);
+                ape_compiler_moduint16operand(comp, jumptoafterbodyip + 1, afterbodyip);
+                ape_symtable_popblockscope(symbol_table);
             }
-            ApeInt_t aftertestip = ape_compiler_getip(comp);
-
-            ip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFTRUE, 1, make_u64_array((uint64_t)(aftertestip + 6)));
-            if(ip < 0)
-            {
-                return false;
-            }
-            ApeInt_t jmptoafterbodyip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)0xdead));
-            if(jmptoafterbodyip < 0)
-            {
-                return false;
-            }
-
-            // Body
-            ok = ape_compiler_pushcontip(comp, updateip);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ok = ape_compiler_pushbreakip(comp, jmptoafterbodyip);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ok = ape_compiler_compilecodeblock(comp, loop->body);
-            if(!ok)
-            {
-                return false;
-            }
-
-            ape_compiler_popbreakip(comp);
-            ape_compiler_popcontip(comp);
-
-            ip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)updateip));
-            if(ip < 0)
-            {
-                return false;
-            }
-
-            ApeInt_t afterbodyip = ape_compiler_getip(comp);
-            ape_compiler_moduint16operand(comp, jmptoafterbodyip + 1, afterbodyip);
-
-            ape_symtable_popblockscope(symbol_table);
             break;
-        }
+
+        case APE_STMT_FORLOOP:
+            {
+                const ApeForLoopStmt_t* loop = &stmt->forloop;
+                ok = ape_symtable_pushblockscope(symbol_table);
+                if(!ok)
+                {
+                    return false;
+                }
+                // Init
+                ApeInt_t jumptoafterupdateip = 0;
+                bool ok = false;
+                if(loop->init)
+                {
+                    ok = ape_compiler_compilestatement(comp, loop->init);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+                    jumptoafterupdateip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)0xbeef));
+                    if(jumptoafterupdateip < 0)
+                    {
+                        return false;
+                    }
+                }
+                // Update
+                ApeInt_t updateip = ape_compiler_getip(comp);
+                if(loop->update)
+                {
+                    ok = ape_compiler_compileexpression(comp, loop->update);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+                    ip = ape_compiler_emit(comp, APE_OPCODE_POP, 0, NULL);
+                    if(ip < 0)
+                    {
+                        return false;
+                    }
+                }
+                if(loop->init)
+                {
+                    ApeInt_t afterupdateip = ape_compiler_getip(comp);
+                    ape_compiler_moduint16operand(comp, jumptoafterupdateip + 1, afterupdateip);
+                }
+                // Test
+                if(loop->test)
+                {
+                    ok = ape_compiler_compileexpression(comp, loop->test);
+                    if(!ok)
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    ip = ape_compiler_emit(comp, APE_OPCODE_TRUE, 0, NULL);
+                    if(ip < 0)
+                    {
+                        return false;
+                    }
+                }
+                ApeInt_t aftertestip = ape_compiler_getip(comp);
+                ip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFTRUE, 1, make_u64_array((uint64_t)(aftertestip + 6)));
+                if(ip < 0)
+                {
+                    return false;
+                }
+                ApeInt_t jmptoafterbodyip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)0xdead));
+                if(jmptoafterbodyip < 0)
+                {
+                    return false;
+                }
+                // Body
+                ok = ape_compiler_pushcontip(comp, updateip);
+                if(!ok)
+                {
+                    return false;
+                }
+
+                ok = ape_compiler_pushbreakip(comp, jmptoafterbodyip);
+                if(!ok)
+                {
+                    return false;
+                }
+
+                ok = ape_compiler_compilecodeblock(comp, loop->body);
+                if(!ok)
+                {
+                    return false;
+                }
+
+                ape_compiler_popbreakip(comp);
+                ape_compiler_popcontip(comp);
+
+                ip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)updateip));
+                if(ip < 0)
+                {
+                    return false;
+                }
+                ApeInt_t afterbodyip = ape_compiler_getip(comp);
+                ape_compiler_moduint16operand(comp, jmptoafterbodyip + 1, afterbodyip);
+                ape_symtable_popblockscope(symbol_table);
+            }
+            break;
+
         case APE_STMT_BLOCK:
         {
             ok = ape_compiler_compilecodeblock(comp, stmt->block);
@@ -1556,7 +1517,7 @@ static bool ape_compiler_compileexpression(ApeCompiler_t* comp, ApeExpression_t*
             else
             {
                 ApeObject_t obj = ape_object_make_string(comp->context, expr->stringliteral);
-                if(object_value_isnull(obj))
+                if(ape_object_value_isnull(obj))
                 {
                     goto error;
                 }
@@ -1810,7 +1771,7 @@ static bool ape_compiler_compileexpression(ApeCompiler_t* comp, ApeExpression_t*
 
             ApeObject_t obj = ape_object_make_function(comp->context, fn->name, compres, true, numlocals, ape_ptrarray_count(fn->params), 0);
 
-            if(object_value_isnull(obj))
+            if(ape_object_value_isnull(obj))
             {
                 ape_ptrarray_destroywithitems(freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
                 ape_compresult_destroy(compres);

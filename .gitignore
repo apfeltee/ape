@@ -7,6 +7,9 @@ old/*
 backup
 backup/
 backup/*
+_backup
+_backup/
+_backup/*
 big
 big/
 big/*

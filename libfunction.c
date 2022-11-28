@@ -69,8 +69,8 @@ ApeObject_t ape_object_make_nativefuncmemory(ApeContext_t* ctx, const char* name
 const char* ape_object_function_getname(ApeObject_t obj)
 {
     ApeObjData_t* data;
-    APE_ASSERT(object_value_type(obj) == APE_OBJECT_FUNCTION);
-    data = object_value_allocated_data(obj);
+    APE_ASSERT(ape_object_value_type(obj) == APE_OBJECT_FUNCTION);
+    data = ape_object_value_allocated_data(obj);
     APE_ASSERT(data);
     if(!data)
     {
@@ -87,8 +87,8 @@ ApeObject_t ape_object_function_getfreeval(ApeObject_t obj, ApeInt_t ix)
 {
     ApeObjData_t* data;
     ApeScriptFunction_t* fun;
-    APE_ASSERT(object_value_type(obj) == APE_OBJECT_FUNCTION);
-    data = object_value_allocated_data(obj);
+    APE_ASSERT(ape_object_value_type(obj) == APE_OBJECT_FUNCTION);
+    data = ape_object_value_allocated_data(obj);
     APE_ASSERT(data);
     if(!data)
     {
@@ -108,8 +108,8 @@ void ape_object_function_setfreeval(ApeObject_t obj, ApeInt_t ix, ApeObject_t va
 {
     ApeObjData_t* data;
     ApeScriptFunction_t* fun;
-    APE_ASSERT(object_value_type(obj) == APE_OBJECT_FUNCTION);
-    data = object_value_allocated_data(obj);
+    APE_ASSERT(ape_object_value_type(obj) == APE_OBJECT_FUNCTION);
+    data = ape_object_value_allocated_data(obj);
     APE_ASSERT(data);
     if(!data)
     {

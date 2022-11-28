@@ -71,7 +71,7 @@ ApeObject_t ape_object_make_external(ApeContext_t* ctx, void* ptr)
 bool ape_object_value_ishashable(ApeObject_t obj)
 {
     ApeObjType_t type;
-    type = object_value_type(obj);
+    type = ape_object_value_type(obj);
     switch(type)
     {
         case APE_OBJECT_STRING:
@@ -110,7 +110,7 @@ void ape_tostring_object(ApeObject_t obj, ApeWriter_t* buf, bool quote_str)
     ApeTraceback_t* traceback;
     ApeObjType_t type;
     const ApeScriptFunction_t* compfunc;
-    type = object_value_type(obj);
+    type = ape_object_value_type(obj);
     switch(type)
     {
         case APE_OBJECT_FREED:
@@ -125,7 +125,7 @@ void ape_tostring_object(ApeObject_t obj, ApeWriter_t* buf, bool quote_str)
             break;
         case APE_OBJECT_NUMBER:
             {
-                fltnum = object_value_asnumber(obj);
+                fltnum = ape_object_value_asnumber(obj);
                 #if 1
                 if(fltnum == ((ApeInt_t)fltnum))
                 {
@@ -143,7 +143,7 @@ void ape_tostring_object(ApeObject_t obj, ApeWriter_t* buf, bool quote_str)
             break;
         case APE_OBJECT_BOOL:
             {
-                ape_writer_append(buf, object_value_asbool(obj) ? "true" : "false");
+                ape_writer_append(buf, ape_object_value_asbool(obj) ? "true" : "false");
             }
             break;
         case APE_OBJECT_STRING:
@@ -167,7 +167,7 @@ void ape_tostring_object(ApeObject_t obj, ApeWriter_t* buf, bool quote_str)
             break;
         case APE_OBJECT_FUNCTION:
             {
-                compfunc = object_value_asfunction(obj);
+                compfunc = ape_object_value_asfunction(obj);
                 ape_writer_appendf(buf, "CompiledFunction: %s\n", ape_object_function_getname(obj));
                 ape_tostring_code(compfunc->comp_result->bytecode, compfunc->comp_result->srcpositions, compfunc->comp_result->count, buf);
             }
@@ -400,8 +400,8 @@ char* ape_object_value_serialize(ApeContext_t* ctx, ApeObject_t object, ApeSize_
 bool ape_object_value_setexternaldata(ApeObject_t object, void* ext_data)
 {
     ApeExternalData_t* data;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_EXTERNAL);
-    data = object_value_asexternal(object);
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_EXTERNAL);
+    data = ape_object_value_asexternal(object);
     if(!data)
     {
         return false;
@@ -413,8 +413,8 @@ bool ape_object_value_setexternaldata(ApeObject_t object, void* ext_data)
 bool ape_object_value_setexternalcopy(ApeObject_t object, ApeDataCallback_t copy_fn)
 {
     ApeExternalData_t* data;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_EXTERNAL);
-    data = object_value_asexternal(object);
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_EXTERNAL);
+    data = ape_object_value_asexternal(object);
     if(!data)
     {
         return false;
@@ -431,8 +431,8 @@ ApeObject_t ape_object_getkvpairat(ApeContext_t* ctx, ApeObject_t object, int ix
     ApeObject_t key_obj;
     ApeObject_t val_obj;
     ApeObjData_t* data;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_MAP);
-    data = object_value_allocated_data(object);
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_MAP);
+    data = ape_object_value_allocated_data(object);
     if(ix >= (ApeInt_t)ape_valdict_count(data->valmap))
     {
         return ape_object_make_null(ctx);
@@ -440,18 +440,18 @@ ApeObject_t ape_object_getkvpairat(ApeContext_t* ctx, ApeObject_t object, int ix
     key = ape_object_map_getkeyat(object, ix);
     val = ape_object_map_getvalueat(object, ix);
     res = ape_object_make_map(ctx);
-    if(object_value_isnull(res))
+    if(ape_object_value_isnull(res))
     {
         return ape_object_make_null(ctx);
     }
     key_obj = ape_object_make_string(ctx, "key");
-    if(object_value_isnull(key_obj))
+    if(ape_object_value_isnull(key_obj))
     {
         return ape_object_make_null(ctx);
     }
     ape_object_map_setvalue(res, key_obj, key);
     val_obj = ape_object_make_string(ctx, "value");
-    if(object_value_isnull(val_obj))
+    if(ape_object_value_isnull(val_obj))
     {
         return ape_object_make_null(ctx);
     }
@@ -489,7 +489,7 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
         return *copy_ptr;
     }
     copy = ape_object_make_null(ctx);
-    type = object_value_type(obj);
+    type = ape_object_value_type(obj);
     switch(type)
     {
         case APE_OBJECT_FREED:
@@ -517,7 +517,7 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
 
         case APE_OBJECT_FUNCTION:
             {
-                function = object_value_asfunction(obj);
+                function = ape_object_value_asfunction(obj);
                 bytecode_copy = NULL;
                 src_positions_copy = NULL;
                 comp_res_copy = NULL;
@@ -543,7 +543,7 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
                     return ape_object_make_null(ctx);
                 }
                 copy = ape_object_make_function(ctx, ape_object_function_getname(obj), comp_res_copy, true, function->num_locals, function->num_args, 0);
-                if(object_value_isnull(copy))
+                if(ape_object_value_isnull(copy))
                 {
                     ape_compresult_destroy(comp_res_copy);
                     return ape_object_make_null(ctx);
@@ -553,7 +553,7 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
                 {
                     return ape_object_make_null(ctx);
                 }
-                function_copy = object_value_asfunction(copy);
+                function_copy = ape_object_value_asfunction(copy);
                 function_copy->free_vals_allocated = (ApeObject_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeObject_t) * function->free_vals_count);
                 if(!function_copy->free_vals_allocated)
                 {
@@ -564,7 +564,7 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
                 {
                     free_val = ape_object_function_getfreeval(obj, i);
                     free_val_copy = ape_object_value_internalcopydeep(ctx, free_val, copies);
-                    if(!object_value_isnull(free_val) && object_value_isnull(free_val_copy))
+                    if(!ape_object_value_isnull(free_val) && ape_object_value_isnull(free_val_copy))
                     {
                         return ape_object_make_null(ctx);
                     }
@@ -576,7 +576,7 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
             {
                 len = ape_object_array_getlength(obj);
                 copy = ape_object_make_arraycapacity(ctx, len);
-                if(object_value_isnull(copy))
+                if(ape_object_value_isnull(copy))
                 {
                     return ape_object_make_null(ctx);
                 }
@@ -589,7 +589,7 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
                 {
                     item = ape_object_array_getvalue(obj, i);
                     item_copy = ape_object_value_internalcopydeep(ctx, item, copies);
-                    if(!object_value_isnull(item) && object_value_isnull(item_copy))
+                    if(!ape_object_value_isnull(item) && ape_object_value_isnull(item_copy))
                     {
                         return ape_object_make_null(ctx);
                     }
@@ -604,7 +604,7 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
         case APE_OBJECT_MAP:
             {
                 copy = ape_object_make_map(ctx);
-                if(object_value_isnull(copy))
+                if(ape_object_value_isnull(copy))
                 {
                     return ape_object_make_null(ctx);
                 }
@@ -618,12 +618,12 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
                     key = ape_object_map_getkeyat(obj, i);
                     val = ape_object_map_getvalueat(obj, i);
                     key_copy = ape_object_value_internalcopydeep(ctx, key, copies);
-                    if(!object_value_isnull(key) && object_value_isnull(key_copy))
+                    if(!ape_object_value_isnull(key) && ape_object_value_isnull(key_copy))
                     {
                         return ape_object_make_null(ctx);
                     }
                     val_copy = ape_object_value_internalcopydeep(ctx, val, copies);
-                    if(!object_value_isnull(val) && object_value_isnull(val_copy))
+                    if(!ape_object_value_isnull(val) && ape_object_value_isnull(val_copy))
                     {
                         return ape_object_make_null(ctx);
                     }
@@ -663,18 +663,18 @@ unsigned long ape_object_value_hash(ApeObject_t* obj_ptr)
     ApeObject_t obj;
     ApeObjType_t type;
     obj = *obj_ptr;
-    type = object_value_type(obj);
+    type = ape_object_value_type(obj);
     switch(type)
     {
         case APE_OBJECT_NUMBER:
             {
-                val = object_value_asnumber(obj);
+                val = ape_object_value_asnumber(obj);
                 return ape_util_hashfloat(val);
             }
             break;
         case APE_OBJECT_BOOL:
             {
-                bval = object_value_asbool(obj);
+                bval = ape_object_value_asbool(obj);
                 return bval;
             }
             break;
@@ -720,7 +720,7 @@ ApeObject_t ape_object_value_copyflat(ApeContext_t* ctx, ApeObject_t obj)
     ApeObjType_t type;
     ApeExternalData_t* external;
     copy = ape_object_make_null(ctx);
-    type = object_value_type(obj);
+    type = ape_object_value_type(obj);
     switch(type)
     {
         case APE_OBJECT_ANY:
@@ -733,17 +733,17 @@ ApeObject_t ape_object_value_copyflat(ApeContext_t* ctx, ApeObject_t obj)
             break;
         case APE_OBJECT_NUMBER:
             {
-                copy = ape_object_make_number(ctx, object_value_asnumber(obj));
+                copy = ape_object_make_number(ctx, ape_object_value_asnumber(obj));
             }
             break;
         case APE_OBJECT_BOOL:
             {
-                copy = ape_object_make_bool(ctx, object_value_asbool(obj));
+                copy = ape_object_make_bool(ctx, ape_object_value_asbool(obj));
             }
             break;
         case APE_OBJECT_NULL:
             {
-                copy = ape_object_make_number(ctx, object_value_asnumber(obj));
+                copy = ape_object_make_number(ctx, ape_object_value_asnumber(obj));
             }
             break;
         case APE_OBJECT_FUNCTION:
@@ -763,7 +763,7 @@ ApeObject_t ape_object_value_copyflat(ApeContext_t* ctx, ApeObject_t obj)
             {
                 len = ape_object_array_getlength(obj);
                 copy = ape_object_make_arraycapacity(ctx, len);
-                if(object_value_isnull(copy))
+                if(ape_object_value_isnull(copy))
                 {
                     return ape_object_make_null(ctx);
                 }
@@ -796,11 +796,11 @@ ApeObject_t ape_object_value_copyflat(ApeContext_t* ctx, ApeObject_t obj)
         case APE_OBJECT_EXTERNAL:
             {
                 copy = ape_object_make_external(ctx, NULL);
-                if(object_value_isnull(copy))
+                if(ape_object_value_isnull(copy))
                 {
                     return ape_object_make_null(ctx);
                 }
-                external = object_value_asexternal(obj);
+                external = ape_object_value_asexternal(obj);
                 data_copy = NULL;
                 if(external->data_copy_fn)
                 {
@@ -823,11 +823,11 @@ ApeFloat_t ape_object_value_asnumerica(ApeObject_t obj, ApeObjType_t t)
 {
     if(t == APE_OBJECT_NUMBER)
     {
-        return object_value_asnumber(obj);
+        return ape_object_value_asnumber(obj);
     }
     else if(t == APE_OBJECT_BOOL)
     {
-        return object_value_asbool(obj);
+        return ape_object_value_asbool(obj);
     }
     else if(t == APE_OBJECT_NULL)
     {
@@ -838,7 +838,7 @@ ApeFloat_t ape_object_value_asnumerica(ApeObject_t obj, ApeObjType_t t)
 
 ApeFloat_t ape_object_value_asnumeric(ApeObject_t obj)
 {
-    return ape_object_value_asnumerica(obj, object_value_type(obj));
+    return ape_object_value_asnumerica(obj, ape_object_value_type(obj));
 }
 
 ApeFloat_t ape_object_value_compare(ApeObject_t a, ApeObject_t b, bool* out_ok)
@@ -861,8 +861,8 @@ ApeFloat_t ape_object_value_compare(ApeObject_t a, ApeObject_t b, bool* out_ok)
         return 0;
     }
     *out_ok = true;
-    a_type = object_value_type(a);
-    b_type = object_value_type(b);
+    a_type = ape_object_value_type(a);
+    b_type = ape_object_value_type(b);
     isnumeric = (
         (a_type == APE_OBJECT_NUMBER || a_type == APE_OBJECT_BOOL || a_type == APE_OBJECT_NULL) &&
         (b_type == APE_OBJECT_NUMBER || b_type == APE_OBJECT_BOOL || b_type == APE_OBJECT_NULL)
@@ -891,10 +891,10 @@ ApeFloat_t ape_object_value_compare(ApeObject_t a, ApeObject_t b, bool* out_ok)
         b_string = ape_object_string_getdata(b);
         return strcmp(a_string, b_string);
     }
-    else if((object_value_isallocated(a) || object_value_isnull(a)) && (object_value_isallocated(b) || object_value_isnull(b)))
+    else if((ape_object_value_isallocated(a) || ape_object_value_isnull(a)) && (ape_object_value_isallocated(b) || ape_object_value_isnull(b)))
     {
-        a_data_val = (intptr_t)object_value_allocated_data(a);
-        b_data_val = (intptr_t)object_value_allocated_data(b);
+        a_data_val = (intptr_t)ape_object_value_allocated_data(a);
+        b_data_val = (intptr_t)ape_object_value_allocated_data(b);
         return (ApeFloat_t)(a_data_val - b_data_val);
     }
     else
@@ -910,8 +910,8 @@ bool ape_object_value_equals(ApeObject_t a, ApeObject_t b)
     ApeFloat_t res;
     ApeObjType_t a_type;
     ApeObjType_t b_type;
-    a_type = object_value_type(a);
-    b_type = object_value_type(b);
+    a_type = ape_object_value_type(a);
+    b_type = ape_object_value_type(b);
     if(a_type != b_type)
     {
         return false;
@@ -924,8 +924,8 @@ bool ape_object_value_equals(ApeObject_t a, ApeObject_t b)
 bool ape_object_value_setexternaldestroy(ApeObject_t object, ApeDataCallback_t destroy_fn)
 {
     ApeExternalData_t* data;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_EXTERNAL);
-    data = object_value_asexternal(object);
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_EXTERNAL);
+    data = ape_object_value_asexternal(object);
     if(!data)
     {
         return false;

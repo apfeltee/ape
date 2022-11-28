@@ -89,7 +89,7 @@ THE SOFTWARE.
 #define APE_CONF_SIZE_VM_THISSTACK (512*4)
 #define APE_CONF_SIZE_GCMEM_POOLSIZE (512*4)
 #define APE_CONF_SIZE_GCMEM_POOLCOUNT ((3) + 1)
-#define APE_CONF_CONST_GCMEM_SWEEPINTERVAL (128/1)
+#define APE_CONF_CONST_GCMEM_SWEEPINTERVAL (128/64)
 
 #define APE_CONF_SIZE_NATFN_MAXDATALEN (16*2)
 #define APE_CONF_SIZE_STRING_BUFSIZE (4)
@@ -135,49 +135,52 @@ THE SOFTWARE.
 #endif
 
 /**/
-#define object_value_allocated_data(obj) \
+#define ape_object_value_allocated_data(obj) \
     ((obj).handle)
 
 /**/
-#define object_value_isallocated(o) \
+#define ape_object_value_isallocated(o) \
     (true)
 
-#define object_value_asnumber(obj) \
-    (object_value_allocated_data((obj))->valnum)
+#define ape_object_value_asnumber(obj) \
+    (ape_object_value_allocated_data((obj))->valnum)
 
-#define object_value_asbool(obj) \
-    (object_value_allocated_data((obj))->valbool)
+#define ape_object_value_asbool(obj) \
+    (ape_object_value_allocated_data((obj))->valbool)
 
-#define object_value_asfunction(obj) \
-    (&(object_value_allocated_data((obj))->valscriptfunc))
+#define ape_object_value_asfunction(obj) \
+    (&(ape_object_value_allocated_data((obj))->valscriptfunc))
 
-#define object_value_asnativefunction(obj) \
-    (&(object_value_allocated_data((obj))->valnatfunc))
+#define ape_object_value_asnativefunction(obj) \
+    (&(ape_object_value_allocated_data((obj))->valnatfunc))
 
-#define object_value_asexternal(obj) \
-    (&(object_value_allocated_data((obj))->valextern))
+#define ape_object_value_asexternal(obj) \
+    (&(ape_object_value_allocated_data((obj))->valextern))
 
-#define object_value_getmem(obj) \
-    (object_value_allocated_data(obj)->mem)
+#define ape_object_value_getmem(obj) \
+    (ape_object_value_allocated_data(obj)->mem)
 
 /**/
-#define object_value_type(obj) \
+#define ape_object_value_type(obj) \
     ((obj).handle->type)
 
-#define object_value_istype(o, t) \
-    (object_value_type(o) == (t))
+#define ape_object_value_istype(o, t) \
+    (ape_object_value_type(o) == (t))
 
-#define object_value_isnumber(o) \
-    object_value_istype(o, APE_OBJECT_NUMBER)
+#define ape_object_value_isnumber(o) \
+    ape_object_value_istype(o, APE_OBJECT_NUMBER)
 
-#define object_value_isnumeric(o) \
-    (object_value_istype(o, APE_OBJECT_NUMBER) || object_value_istype(o, APE_OBJECT_BOOL))
+#define ape_object_value_isnumeric(o) \
+    (ape_object_value_istype(o, APE_OBJECT_NUMBER) || ape_object_value_istype(o, APE_OBJECT_BOOL))
 
-#define object_value_isnull(o) \
-    object_value_istype(o, APE_OBJECT_NULL)
+#define ape_object_value_isnull(o) \
+    ape_object_value_istype(o, APE_OBJECT_NULL)
 
-#define object_value_iscallable(o) \
-    (object_value_istype(o, APE_OBJECT_NATIVE_FUNCTION) || object_value_istype(o, APE_OBJECT_FUNCTION))
+#define ape_object_value_isstring(o) \
+    ape_object_value_istype(o, APE_OBJECT_STRING)
+
+#define ape_object_value_iscallable(o) \
+    (ape_object_value_istype(o, APE_OBJECT_NATIVE_FUNCTION) || ape_object_value_istype(o, APE_OBJECT_FUNCTION))
 
 
 enum ApeErrorType_t

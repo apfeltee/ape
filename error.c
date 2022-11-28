@@ -164,7 +164,7 @@ ApeObject_t ape_object_make_error(ApeContext_t* ctx, const char* error)
         return ape_object_make_null(ctx);
     }
     res = ape_object_make_error_nocopy(ctx, error_str);
-    if(object_value_isnull(res))
+    if(ape_object_value_isnull(res))
     {
         ape_allocator_free(&ctx->alloc, error_str);
         return ape_object_make_null(ctx);
@@ -337,20 +337,20 @@ ApeTraceback_t* ape_error_gettraceback(ApeError_t* error)
 const char* ape_object_value_geterrormessage(ApeObject_t object)
 {
     ApeObjData_t* data;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_ERROR);
-    data = object_value_allocated_data(object);
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_ERROR);
+    data = ape_object_value_allocated_data(object);
     return data->valerror.message;
 }
 
 void ape_object_value_seterrortraceback(ApeObject_t object, ApeTraceback_t* traceback)
 {
     ApeObjData_t* data;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_ERROR);
-    if(object_value_type(object) != APE_OBJECT_ERROR)
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_ERROR);
+    if(ape_object_value_type(object) != APE_OBJECT_ERROR)
     {
         return;
     }
-    data = object_value_allocated_data(object);
+    data = ape_object_value_allocated_data(object);
     APE_ASSERT(data->valerror.traceback == NULL);
     data->valerror.traceback = traceback;
 }
@@ -358,8 +358,8 @@ void ape_object_value_seterrortraceback(ApeObject_t object, ApeTraceback_t* trac
 ApeTraceback_t* ape_object_value_geterrortraceback(ApeObject_t object)
 {
     ApeObjData_t* data;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_ERROR);
-    data = object_value_allocated_data(object);
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_ERROR);
+    data = ape_object_value_allocated_data(object);
     return data->valerror.traceback;
 }
 

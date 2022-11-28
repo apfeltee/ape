@@ -433,7 +433,7 @@ ApeObject_t ape_object_array_getvalue(ApeObject_t object, ApeSize_t ix)
 {
     ApeObject_t* res;
     ApeValArray_t* array;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_ARRAY);
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_ARRAY);
     array = ape_object_array_getarray(object);
     if(ix >= ape_valarray_count(array))
     {
@@ -454,7 +454,7 @@ ApeObject_t ape_object_array_getvalue(ApeObject_t object, ApeSize_t ix)
 bool ape_object_array_setat(ApeObject_t object, ApeInt_t ix, ApeObject_t val)
 {
     ApeValArray_t* array;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_ARRAY);
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_ARRAY);
     array = ape_object_array_getarray(object);
     if(ix < 0 || ix >= (ApeInt_t)ape_valarray_count(array))
     {
@@ -473,7 +473,7 @@ bool ape_object_array_setat(ApeObject_t object, ApeInt_t ix, ApeObject_t val)
 bool ape_object_array_pushvalue(ApeObject_t object, ApeObject_t val)
 {
     ApeValArray_t* array;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_ARRAY);
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_ARRAY);
     array = ape_object_array_getarray(object);
     return ape_valarray_add(array, &val);
 }
@@ -481,7 +481,7 @@ bool ape_object_array_pushvalue(ApeObject_t object, ApeObject_t val)
 ApeSize_t ape_object_array_getlength(ApeObject_t object)
 {
     ApeValArray_t* array;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_ARRAY);
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_ARRAY);
     array = ape_object_array_getarray(object);
     return ape_valarray_count(array);
 }
@@ -497,7 +497,7 @@ bool ape_object_array_pushstring(ApeObject_t obj, const char* string)
 {
     ApeObject_t new_value;
     ApeGCMemory_t* mem;
-    mem = object_value_getmem(obj);
+    mem = ape_object_value_getmem(obj);
     if(!mem)
     {
         return false;
@@ -510,8 +510,8 @@ bool ape_object_array_pushstring(ApeObject_t obj, const char* string)
 ApeValArray_t * ape_object_array_getarray(ApeObject_t object)
 {
     ApeObjData_t* data;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_ARRAY);
-    data = object_value_allocated_data(object);
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_ARRAY);
+    data = ape_object_value_allocated_data(object);
     return data->valarray;
 }
 

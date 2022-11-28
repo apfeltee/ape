@@ -21,24 +21,50 @@ function walk(dn, fn)
 {
     for(ent in Dir.read(dn))
     {
-        var suff = ""
-        var pref = "[FILE]"
+        var contwalk = false;
+        var fwd = true;
+        //var suff = ""
+        //var pref = "[FILE]"
         if(ent.type == 4)
         {
-            suff = "/"
-            pref = "[DIR] "
+            contwalk = true;
+            if(ent.name == "." || ent.name == "..")
+            {
+                fwd = false;
+                contwalk = false;
+            }
+            //suff = "/"
+            //pref = "[DIR] "
         }
-        var st = File.stat(ent.name)
         var fullpath = `${dn}/${ent.name}`
-        var sz = st.size
-        fn(pref, sz, readablesize(sz), fullpath, suff);
+        var st = File.stat(fullpath)
+        var ssize = 0
+        if(st == null)
+        {
+            println("could not stat '", fullpath, "'");
+        }
+        else
+        {
+            ssize = st.size
+        }
+        if(fwd)
+        {
+            fn(ssize, fullpath);
+        }
+        if(contwalk)
+        {
+            println("iterating '", fullpath, "' ...");
+            walk(fullpath, fn);
+        }
     }
 }
 
 var totalsz = 0;
-walk(".", function(pref, sz, hsz, name, suff)
+var starthere = (args[1] != null) ? args[1] : "."
+
+walk(starthere, function(sz, name)
 {
     totalsz += sz;
-    println(pref, " ", hsz, " ", name, suff)
+    //println(pref, " ",  readablesize(sz) " ", name, suff)
 })
 println("total size: ", readablesize(totalsz))

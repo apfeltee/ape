@@ -736,8 +736,8 @@ ApeObject_t ape_object_make_mapcapacity(ApeContext_t* ctx, unsigned capacity)
 ApeSize_t ape_object_map_getlength(ApeObject_t object)
 {
     ApeObjData_t* data;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_MAP);
-    data = object_value_allocated_data(object);
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_MAP);
+    data = ape_object_value_allocated_data(object);
     return ape_valdict_count(data->valmap);
 }
 
@@ -745,8 +745,8 @@ ApeObject_t ape_object_map_getkeyat(ApeObject_t object, ApeSize_t ix)
 {
     ApeObject_t* res;
     ApeObjData_t* data;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_MAP);
-    data = object_value_allocated_data(object);
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_MAP);
+    data = ape_object_value_allocated_data(object);
     res= (ApeObject_t*)ape_valdict_getkeyat(data->valmap, ix);
     if(!res)
     {
@@ -759,8 +759,8 @@ ApeObject_t ape_object_map_getvalueat(ApeObject_t object, ApeSize_t ix)
 {
     ApeObject_t* res;
     ApeObjData_t* data;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_MAP);
-    data = object_value_allocated_data(object);
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_MAP);
+    data = ape_object_value_allocated_data(object);
     res = (ApeObject_t*)ape_valdict_getvalueat(data->valmap, ix);
     if(!res)
     {
@@ -772,8 +772,8 @@ ApeObject_t ape_object_map_getvalueat(ApeObject_t object, ApeSize_t ix)
 bool ape_object_map_setvalue(ApeObject_t object, ApeObject_t key, ApeObject_t val)
 {
     ApeObjData_t* data;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_MAP);
-    data = object_value_allocated_data(object);
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_MAP);
+    data = ape_object_value_allocated_data(object);
     return ape_valdict_set(data->valmap, &key, &val);
 }
 
@@ -781,8 +781,8 @@ ApeObject_t ape_object_map_getvalueobject(ApeObject_t object, ApeObject_t key)
 {
     ApeObject_t* res;
     ApeObjData_t* data;
-    APE_ASSERT(object_value_type(object) == APE_OBJECT_MAP);
-    data = object_value_allocated_data(object);
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_MAP);
+    data = ape_object_value_allocated_data(object);
     res = (ApeObject_t*)ape_valdict_get(data->valmap, &key);
     if(!res)
     {
@@ -793,13 +793,13 @@ ApeObject_t ape_object_map_getvalueobject(ApeObject_t object, ApeObject_t key)
 
 bool ape_object_map_setnamedvalue(ApeObject_t obj, const char* key, ApeObject_t value)
 {
-    ApeGCMemory_t* mem = object_value_getmem(obj);
+    ApeGCMemory_t* mem = ape_object_value_getmem(obj);
     if(!mem)
     {
         return false;
     }
     ApeObject_t key_object = ape_object_make_string(mem->context, key);
-    if(object_value_isnull(key_object))
+    if(ape_object_value_isnull(key_object))
     {
         return false;
     }
@@ -808,13 +808,13 @@ bool ape_object_map_setnamedvalue(ApeObject_t obj, const char* key, ApeObject_t 
 
 bool ape_object_map_setnamedstring(ApeObject_t obj, const char* key, const char* string)
 {
-    ApeGCMemory_t* mem = object_value_getmem(obj);
+    ApeGCMemory_t* mem = ape_object_value_getmem(obj);
     if(!mem)
     {
         return false;
     }
     ApeObject_t string_object = ape_object_make_string(mem->context, string);
-    if(object_value_isnull(string_object))
+    if(ape_object_value_isnull(string_object))
     {
         return false;
     }
@@ -824,7 +824,7 @@ bool ape_object_map_setnamedstring(ApeObject_t obj, const char* key, const char*
 bool ape_object_map_setnamednumber(ApeObject_t obj, const char* key, ApeFloat_t number)
 {
     ApeObjData_t* data;
-    data = object_value_allocated_data(obj);
+    data = ape_object_value_allocated_data(obj);
     ApeObject_t number_object = ape_object_make_number(data->context, number);
     return ape_object_map_setnamedvalue(obj, key, number_object);
 }
@@ -832,7 +832,7 @@ bool ape_object_map_setnamednumber(ApeObject_t obj, const char* key, ApeFloat_t 
 bool ape_object_map_setnamedbool(ApeObject_t obj, const char* key, bool value)
 {
     ApeObjData_t* data;
-    data = object_value_allocated_data(obj);
+    data = ape_object_value_allocated_data(obj);
     ApeObject_t bool_object = ape_object_make_bool(data->context, value);
     return ape_object_map_setnamedvalue(obj, key, bool_object);
 }

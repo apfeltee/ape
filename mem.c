@@ -319,11 +319,11 @@ void ape_gcmem_markobject(ApeObject_t obj)
     ApeObject_t free_val;
     ApeObjData_t* free_val_data;
     ApeObjData_t* data;
-    if(!object_value_isallocated(obj))
+    if(!ape_object_value_isallocated(obj))
     {
         return;
     }
-    data = object_value_allocated_data(obj);
+    data = ape_object_value_allocated_data(obj);
     if(data->gcmark)
     {
         return;
@@ -337,20 +337,20 @@ void ape_gcmem_markobject(ApeObject_t obj)
             for(i = 0; i < len; i++)
             {
                 key = ape_object_map_getkeyat(obj, i);
-                if(object_value_isallocated(key))
+                if(ape_object_value_isallocated(key))
                 {
 
-                    key_data = object_value_allocated_data(key);
+                    key_data = ape_object_value_allocated_data(key);
                     if(!key_data->gcmark)
                     {
                         ape_gcmem_markobject(key);
                     }
                 }
                 val = ape_object_map_getvalueat(obj, i);
-                if(object_value_isallocated(val))
+                if(ape_object_value_isallocated(val))
                 {
 
-                    val_data = object_value_allocated_data(val);
+                    val_data = ape_object_value_allocated_data(val);
                     if(!val_data->gcmark)
                     {
                         ape_gcmem_markobject(val);
@@ -365,9 +365,9 @@ void ape_gcmem_markobject(ApeObject_t obj)
                 for(i = 0; i < len; i++)
                 {
                     val = ape_object_array_getvalue(obj, i);
-                    if(object_value_isallocated(val))
+                    if(ape_object_value_isallocated(val))
                     {
-                        val_data = object_value_allocated_data(val);
+                        val_data = ape_object_value_allocated_data(val);
                         if(!val_data->gcmark)
                         {
                             ape_gcmem_markobject(val);
@@ -378,14 +378,14 @@ void ape_gcmem_markobject(ApeObject_t obj)
             break;
         case APE_OBJECT_FUNCTION:
             {
-                function = object_value_asfunction(obj);
+                function = ape_object_value_asfunction(obj);
                 for(i = 0; i < function->free_vals_count; i++)
                 {
                     free_val = ape_object_function_getfreeval(obj, i);
                     ape_gcmem_markobject(free_val);
-                    if(object_value_isallocated(free_val))
+                    if(ape_object_value_isallocated(free_val))
                     {
-                        free_val_data = object_value_allocated_data(free_val);
+                        free_val_data = ape_object_value_allocated_data(free_val);
                         if(!free_val_data->gcmark)
                         {
                             ape_gcmem_markobject(free_val);
