@@ -42,7 +42,7 @@ function make_person(name) {
 }
 const person = make_person("Krzysztof")
 person.hello()
-_check_result = (keys({"a": 1, "b": 2})[1] == "b"); println(`checking (${"keys({\"a\": 1, \"b\": 2})[1]"} ${"=="} ${"b"}) = ${_check_result}`); assert(_check_result);
+_check_result = (Object.keys({"a": 1, "b": 2})[1] == "b"); println(`checking (${"Object.keys({\"a\": 1, \"b\": 2})[1]"} ${"=="} ${"b"}) = ${_check_result}`); assert(_check_result);
 _check_result = (tostring(1) == "1"); println(`checking (${"tostring(1)"} ${"=="} ${"1"}) = ${_check_result}`); assert(_check_result);
 const popular_names = ["Krzysztof", "Zbigniew", "Grzegorz"]
 for (name in popular_names) {
@@ -98,10 +98,10 @@ function vec2(x, y) {
         },
         __operator_minus__: function(a) { return vec2(-a.x, -a.y) },
         __operator_mul__: function(a, b) {
-            if (is_number(a)) {
+            if (Object.isnumber(a)) {
                 return vec2(b.x * a, b.y * a)
             }
-            else if (is_number(b) == true)
+            else if (Object.isnumber(b) == true)
             {
                 return vec2(a.x * b, a.y * b)
             }

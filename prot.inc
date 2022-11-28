@@ -124,6 +124,7 @@ void ape_vm_destroy(ApeVM_t *vm);
 void ape_vm_reset(ApeVM_t *vm);
 bool ape_vm_run(ApeVM_t *vm, ApeCompResult_t *comp_res, ApeValArray_t *constants);
 bool ape_vm_appendstring(ApeVM_t *vm, ApeObject_t left, ApeObject_t right, ApeObjType_t lefttype, ApeObjType_t righttype);
+bool ape_vm_getindex(ApeVM_t *vm, ApeObject_t left, ApeObject_t index, ApeObjType_t lefttype, ApeObjType_t indextype);
 bool ape_vm_executefunction(ApeVM_t *vm, ApeObject_t function, ApeValArray_t *constants);
 /* util.c */
 char *ape_util_stringfmt(ApeContext_t *ctx, const char *format, ...);

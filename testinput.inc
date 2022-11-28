@@ -57,7 +57,7 @@ const person = make_person("Krzysztof")
 person.hello()
 
 
-check(keys({"a": 1, "b": 2})[1], "b")
+check(Object.keys({"a": 1, "b": 2})[1], "b")
 check(tostring(1), "1")
 
 const popular_names = ["Krzysztof", "Zbigniew", "Grzegorz"]
@@ -134,10 +134,10 @@ function vec2(x, y) {
 
         __operator_minus__: function(a) { return vec2(-a.x, -a.y) },
         __operator_mul__: function(a, b) {
-            if (is_number(a)) {
+            if (Object.isnumber(a)) {
                 return vec2(b.x * a, b.y * a)
             }
-            else if (is_number(b) == true)
+            else if (Object.isnumber(b) == true)
             {
                 return vec2(a.x * b, a.y * b)
             }

@@ -8,9 +8,9 @@ function vec3(x, y, z) {
             return vec3(a.x + b.x, a.y + b.y, a.z + b.z)
         },
         __operator_mul__: function(a, b) {
-            if (is_number(b)) {
+            if (Object.isnumber(b)) {
                 return vec3(a.x * b, a.y * b, a.z * b)
-            } else if (is_number(a)) {
+            } else if (Object.isnumber(a)) {
                 return vec3(a * b.x, a * b.y, a * b.z)
             }
             assert(false)

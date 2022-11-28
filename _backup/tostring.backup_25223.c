@@ -21,7 +21,7 @@ static const char* g_type_names[] = {
 * todo: these MUST reflect the order of ApeOpcodeValue_t.
 * meaning its prone to break terribly if and/or when it is changed.
 */
-static ApeOpcodeDef_t g_definitions[APE_OPCODE_MAX + 1] =
+static ApeOpcodeDef_t g_definitions[OPCODE_MAX + 1] =
 {
     { "none", 0, { 0 } },
     { "constant", 1, { 2 } },
@@ -80,7 +80,7 @@ static ApeOpcodeDef_t g_definitions[APE_OPCODE_MAX + 1] =
 
 ApeOpcodeDef_t* ape_tostring_opcodefind(ApeOpByte_t op)
 {
-    if(op <= APE_OPCODE_NONE || op >= APE_OPCODE_MAX)
+    if(op <= OPCODE_NONE || op >= OPCODE_MAX)
     {
         return NULL;
     }
@@ -89,7 +89,7 @@ ApeOpcodeDef_t* ape_tostring_opcodefind(ApeOpByte_t op)
 
 const char* ape_tostring_opcodename(ApeOpByte_t op)
 {
-    if(op <= APE_OPCODE_NONE || op >= APE_OPCODE_MAX)
+    if(op <= OPCODE_NONE || op >= OPCODE_MAX)
     {
         return NULL;
     }
@@ -629,7 +629,7 @@ bool ape_tostring_code(ApeUShort_t* code, ApePosition_t* source_positions, size_
         }
         for(i = 0; i < def->num_operands; i++)
         {
-            if(op == APE_OPCODE_MKNUMBER)
+            if(op == OPCODE_NUMBER)
             {
                 ApeFloat_t val_double = ape_util_uinttofloat(operands[i]);
                 ape_writer_appendf(res, " %1.17g", val_double);

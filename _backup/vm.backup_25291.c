@@ -1849,95 +1849,6 @@ bool ape_vm_appendstring(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOb
 }
 
 
-bool ape_vm_getindex(ApeVM_t* vm, ApeObject_t left, ApeObject_t index, ApeObjType_t lefttype, ApeObjType_t indextype)
-{
-    const char* str;
-    const char* indextypename;
-    const char* lefttypename;
-    ApeInt_t ix;
-    ApeInt_t leftlen;
-    ApeObject_t objres;
-
-
-
-                    #if 0
-                    const char* idxname;
-                    #endif
-
-                    /*
-                    * todo: object method lookup could be implemented here
-                    */
-                    #if 0
-                    {
-                        int argc;
-                        ApeObject_t args[10];
-                        ApeNativeFunc_t afn;
-                        argc = 0;
-                        if(indextype == APE_OBJECT_STRING)
-                        {
-                            idxname = ape_object_string_getdata(index);
-                            fprintf(stderr, "index is a string: name=%s\n", idxname);
-                            if((afn = builtin_get_object(lefttype, idxname)) != NULL)
-                            {
-                                fprintf(stderr, "got a callback: afn=%p\n", afn);
-                                //typedef ApeObject_t (*ApeNativeFunc_t)(ApeVM_t*, void*, int, ApeObject_t*);
-                                args[argc] = left;
-                                argc++;
-                                ape_vm_pushstack(vm, afn(vm, NULL, argc, args));
-                                break;
-                            }
-                        }
-                    }
-                    #endif
-
-                    if(lefttype != APE_OBJECT_ARRAY && lefttype != APE_OBJECT_MAP && lefttype != APE_OBJECT_STRING)
-                    {
-                        lefttypename = ape_object_value_typename(lefttype);
-                        ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),
-                            "type %s is not indexable (in APE_OPCODE_GETINDEX)", lefttypename);
-                        return false;
-                    }
-                    objres = ape_object_make_null(vm->context);
-                    if(lefttype == APE_OBJECT_ARRAY)
-                    {
-                        if(indextype != APE_OBJECT_NUMBER)
-                        {
-                            lefttypename = ape_object_value_typename(lefttype);
-                            indextypename = ape_object_value_typename(indextype);
-                            ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),
-                                              "cannot index %s with %s", lefttypename, indextypename);
-                            return false;
-                        }
-                        ix = (int)object_value_asnumber(index);
-                        if(ix < 0)
-                        {
-                            ix = ape_object_array_getlength(left) + ix;
-                        }
-                        if(ix >= 0 && ix < (ApeInt_t)ape_object_array_getlength(left))
-                        {
-                            objres = ape_object_array_getvalue(left, ix);
-                        }
-                    }
-                    else if(lefttype == APE_OBJECT_MAP)
-                    {
-                        objres = ape_object_map_getvalueobject(left, index);
-                    }
-                    else if(lefttype == APE_OBJECT_STRING)
-                    {
-                        str = ape_object_string_getdata(left);
-                        leftlen = ape_object_string_getlength(left);
-                        ix = (int)object_value_asnumber(index);
-                        if(ix >= 0 && ix < leftlen)
-                        {
-                            char res_str[2] = { str[ix], '\0' };
-                            objres = ape_object_make_string(vm->context, res_str);
-                        }
-                    }
-                    ape_vm_pushstack(vm, objres);
-    return true;
-}
-
-
 /*
 * TODO: there is A LOT of code in this function.
 * some could be easily split into other functions.
@@ -1953,13 +1864,13 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
     const ApeScriptFunction_t* constfunction;
     const char* indextypename;
     const char* keytypename;
-    const char* lefttypename;
-    const char* lefttypestring;
+    const char* left_type_name;
+    const char* left_type_string;
 
     const char* opcode_name;
-    const char* operandtypestring;
-    const char* righttypename;
-    const char* righttypestring;
+    const char* operand_type_string;
+    const char* right_type_name;
+    const char* right_type_string;
     const char* str;
     const char* type_name;
     int elapsed_ms;
@@ -2194,11 +2105,11 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                         if(!overloadfound)
                         {
                             opcode_name = ape_tostring_opcodename(opcode);
-                            lefttypename = ape_object_value_typename(lefttype);
-                            righttypename = ape_object_value_typename(righttype);
+                            left_type_name = ape_object_value_typename(lefttype);
+                            right_type_name = ape_object_value_typename(righttype);
                             ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),
-                                              "invalid operand types for %s, got %s and %s", opcode_name, lefttypename,
-                                              righttypename);
+                                              "invalid operand types for %s, got %s and %s", opcode_name, left_type_name,
+                                              right_type_name);
                             goto err;
                         }
                     }
@@ -2241,10 +2152,10 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                         }
                         else
                         {
-                            righttypestring = ape_object_value_typename(object_value_type(right));
-                            lefttypestring = ape_object_value_typename(object_value_type(left));
+                            right_type_string = ape_object_value_typename(object_value_type(right));
+                            left_type_string = ape_object_value_typename(object_value_type(left));
                             ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),
-                                              "cannot compare %s and %s", lefttypestring, righttypestring);
+                                              "cannot compare %s and %s", left_type_string, right_type_string);
                             goto err;
                         }
                     }
@@ -2306,9 +2217,9 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                         }
                         if(!overloadfound)
                         {
-                            operandtypestring = ape_object_value_typename(operand_type);
+                            operand_type_string = ape_object_value_typename(operand_type);
                             ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),
-                                              "invalid operand type for MINUS, got %s", operandtypestring);
+                                              "invalid operand type for MINUS, got %s", operand_type_string);
                             goto err;
                         }
                     }
@@ -2481,15 +2392,82 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
 
             case APE_OPCODE_GETINDEX:
                 {
+                    #if 0
+                    const char* idxname;
+                    #endif
                     index = ape_vm_popstack(vm);
                     left = ape_vm_popstack(vm);
                     lefttype = object_value_type(left);
                     indextype = object_value_type(index);
-                    ok = ape_vm_getindex(vm, left, index, lefttype, indextype);
-                    if(!ok)
+                    left_type_name = ape_object_value_typename(lefttype);
+                    indextypename = ape_object_value_typename(indextype);
+                    /*
+                    * todo: object method lookup could be implemented here
+                    */
+                    #if 0
                     {
+                        int argc;
+                        ApeObject_t args[10];
+                        ApeNativeFunc_t afn;
+                        argc = 0;
+                        if(indextype == APE_OBJECT_STRING)
+                        {
+                            idxname = ape_object_string_getdata(index);
+                            fprintf(stderr, "index is a string: name=%s\n", idxname);
+                            if((afn = builtin_get_object(lefttype, idxname)) != NULL)
+                            {
+                                fprintf(stderr, "got a callback: afn=%p\n", afn);
+                                //typedef ApeObject_t (*ApeNativeFunc_t)(ApeVM_t*, void*, int, ApeObject_t*);
+                                args[argc] = left;
+                                argc++;
+                                ape_vm_pushstack(vm, afn(vm, NULL, argc, args));
+                                break;
+                            }
+                        }
+                    }
+                    #endif
+
+                    if(lefttype != APE_OBJECT_ARRAY && lefttype != APE_OBJECT_MAP && lefttype != APE_OBJECT_STRING)
+                    {
+                        ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),
+                            "type %s is not indexable (in APE_OPCODE_GETINDEX)", left_type_name);
                         goto err;
                     }
+                    objres = ape_object_make_null(vm->context);
+                    if(lefttype == APE_OBJECT_ARRAY)
+                    {
+                        if(indextype != APE_OBJECT_NUMBER)
+                        {
+                            ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),
+                                              "cannot index %s with %s", left_type_name, indextypename);
+                            goto err;
+                        }
+                        ix = (int)object_value_asnumber(index);
+                        if(ix < 0)
+                        {
+                            ix = ape_object_array_getlength(left) + ix;
+                        }
+                        if(ix >= 0 && ix < (ApeInt_t)ape_object_array_getlength(left))
+                        {
+                            objres = ape_object_array_getvalue(left, ix);
+                        }
+                    }
+                    else if(lefttype == APE_OBJECT_MAP)
+                    {
+                        objres = ape_object_map_getvalueobject(left, index);
+                    }
+                    else if(lefttype == APE_OBJECT_STRING)
+                    {
+                        str = ape_object_string_getdata(left);
+                        leftlen = ape_object_string_getlength(left);
+                        ix = (int)object_value_asnumber(index);
+                        if(ix >= 0 && ix < leftlen)
+                        {
+                            char res_str[2] = { str[ix], '\0' };
+                            objres = ape_object_make_string(vm->context, res_str);
+                        }
+                    }
+                    ape_vm_pushstack(vm, objres);
                 }
                 break;
 
@@ -2499,22 +2477,19 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                 left = ape_vm_popstack(vm);
                 lefttype = object_value_type(left);
                 indextype = object_value_type(index);
-
+                left_type_name = ape_object_value_typename(lefttype);
+                indextypename = ape_object_value_typename(indextype);
                 if(lefttype != APE_OBJECT_ARRAY && lefttype != APE_OBJECT_MAP && lefttype != APE_OBJECT_STRING)
                 {
-                    lefttypename = ape_object_value_typename(lefttype);
-                    indextypename = ape_object_value_typename(indextype);
                     ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),
-                                      "type %s is not indexable (in APE_OPCODE_GETVALUEAT)", lefttypename);
+                                      "type %s is not indexable (in APE_OPCODE_GETVALUEAT)", left_type_name);
                     goto err;
                 }
                 objres = ape_object_make_null(vm->context);
                 if(indextype != APE_OBJECT_NUMBER)
                 {
-                    lefttypename = ape_object_value_typename(lefttype);
-                    indextypename = ape_object_value_typename(indextype);
                     ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),
-                                      "cannot index %s with %s", lefttypename, indextypename);
+                                      "cannot index %s with %s", left_type_name, indextypename);
                     goto err;
                 }
                 ix = (int)object_value_asnumber(index);
@@ -2674,12 +2649,12 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                     new_value = ape_vm_popstack(vm);
                     lefttype = object_value_type(left);
                     indextype = object_value_type(index);
+                    left_type_name = ape_object_value_typename(lefttype);
+                    indextypename = ape_object_value_typename(indextype);
                     if(lefttype != APE_OBJECT_ARRAY && lefttype != APE_OBJECT_MAP)
                     {
-                        lefttypename = ape_object_value_typename(lefttype);
-                        indextypename = ape_object_value_typename(indextype);
                         ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),
-                                          "type %s is not indexable (in APE_OPCODE_SETINDEX)", lefttypename);
+                                          "type %s is not indexable (in APE_OPCODE_SETINDEX)", left_type_name);
                         goto err;
                     }
 
@@ -2687,18 +2662,14 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                     {
                         if(indextype != APE_OBJECT_NUMBER)
                         {
-                            lefttypename = ape_object_value_typename(lefttype);
-                            indextypename = ape_object_value_typename(indextype);
                             ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),
-                                              "cannot index %s with %s", lefttypename, indextypename);
+                                              "cannot index %s with %s", left_type_name, indextypename);
                             goto err;
                         }
                         ix = (int)object_value_asnumber(index);
                         ok = ape_object_array_setat(left, ix, new_value);
                         if(!ok)
                         {
-                            lefttypename = ape_object_value_typename(lefttype);
-                            indextypename = ape_object_value_typename(indextype);
                             ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),
                                              "setting array item failed (index %d out of bounds of %d)", ix, ape_object_array_getlength(left));
                             goto err;

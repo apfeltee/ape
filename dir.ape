@@ -1,15 +1,44 @@
 
 
-for(ent in Dir.read("."))
+function readablesize(size)
 {
-    suff = ""
-    pref = "[FILE]"
-    if(ent.type == 4)
+    // byte, kilobyte, megabyte, gigabyte, terabyte, petabyte, exabyte, zettabyte
+    // the last two seem... unlikely, tbh
+    const units = ['B', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']
+    if(size == 0)
     {
-        suff = "/"
-        pref = "[DIR] "
+        return '0B'
     }
-    st = File.stat(ent.name)
-    sz = st.size
-    println(pref, " ", sz, " ", ent.name, suff)
+    var exp = (Math.log(size) / Math.log(1024))
+    if(exp > 6)
+    {
+        exp = 6
+    }
+    return (`${(size / (Math.pow(1024, exp)))}${units[exp]}`)
 }
+
+function walk(dn, fn)
+{
+    for(ent in Dir.read(dn))
+    {
+        var suff = ""
+        var pref = "[FILE]"
+        if(ent.type == 4)
+        {
+            suff = "/"
+            pref = "[DIR] "
+        }
+        var st = File.stat(ent.name)
+        var fullpath = `${dn}/${ent.name}`
+        var sz = st.size
+        fn(pref, sz, readablesize(sz), fullpath, suff);
+    }
+}
+
+var totalsz = 0;
+walk(".", function(pref, sz, hsz, name, suff)
+{
+    totalsz += sz;
+    println(pref, " ", hsz, " ", name, suff)
+})
+println("total size: ", readablesize(totalsz))
