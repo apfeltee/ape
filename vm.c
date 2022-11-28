@@ -1857,83 +1857,206 @@ bool ape_vm_getindex(ApeVM_t* vm, ApeObject_t left, ApeObject_t index, ApeObjTyp
     ApeInt_t ix;
     ApeInt_t leftlen;
     ApeObject_t objres;
+    #if 0
+    const char* idxname;
+    #endif
+    /*
+    * todo: object method lookup could be implemented here
+    */
+    #if 0
+    {
+        int argc;
+        ApeObject_t args[10];
+        ApeNativeFunc_t afn;
+        argc = 0;
+        if(indextype == APE_OBJECT_STRING)
+        {
+            idxname = ape_object_string_getdata(index);
+            fprintf(stderr, "index is a string: name=%s\n", idxname);
+            if((afn = builtin_get_object(lefttype, idxname)) != NULL)
+            {
+                fprintf(stderr, "got a callback: afn=%p\n", afn);
+                //typedef ApeObject_t (*ApeNativeFunc_t)(ApeVM_t*, void*, int, ApeObject_t*);
+                args[argc] = left;
+                argc++;
+                ape_vm_pushstack(vm, afn(vm, NULL, argc, args));
+                break;
+            }
+        }
+    }
+    #endif
+    if(lefttype != APE_OBJECT_ARRAY && lefttype != APE_OBJECT_MAP && lefttype != APE_OBJECT_STRING)
+    {
+        lefttypename = ape_object_value_typename(lefttype);
+        ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),
+            "type %s is not indexable (in APE_OPCODE_GETINDEX)", lefttypename);
+        return false;
+    }
+    objres = ape_object_make_null(vm->context);
+    if(lefttype == APE_OBJECT_ARRAY)
+    {
+        if(indextype != APE_OBJECT_NUMBER)
+        {
+            lefttypename = ape_object_value_typename(lefttype);
+            indextypename = ape_object_value_typename(indextype);
+            ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),
+                              "cannot index %s with %s", lefttypename, indextypename);
+            return false;
+        }
+        ix = (int)object_value_asnumber(index);
+        if(ix < 0)
+        {
+            ix = ape_object_array_getlength(left) + ix;
+        }
+        if(ix >= 0 && ix < (ApeInt_t)ape_object_array_getlength(left))
+        {
+            objres = ape_object_array_getvalue(left, ix);
+        }
+    }
+    else if(lefttype == APE_OBJECT_MAP)
+    {
+        objres = ape_object_map_getvalueobject(left, index);
+    }
+    else if(lefttype == APE_OBJECT_STRING)
+    {
+        str = ape_object_string_getdata(left);
+        leftlen = ape_object_string_getlength(left);
+        ix = (int)object_value_asnumber(index);
+        if(ix >= 0 && ix < leftlen)
+        {
+            char res_str[2] = { str[ix], '\0' };
+            objres = ape_object_make_string(vm->context, res_str);
+        }
+    }
+    ape_vm_pushstack(vm, objres);
+    return true;
+}
 
-
-
-                    #if 0
-                    const char* idxname;
-                    #endif
-
-                    /*
-                    * todo: object method lookup could be implemented here
-                    */
-                    #if 0
-                    {
-                        int argc;
-                        ApeObject_t args[10];
-                        ApeNativeFunc_t afn;
-                        argc = 0;
-                        if(indextype == APE_OBJECT_STRING)
-                        {
-                            idxname = ape_object_string_getdata(index);
-                            fprintf(stderr, "index is a string: name=%s\n", idxname);
-                            if((afn = builtin_get_object(lefttype, idxname)) != NULL)
-                            {
-                                fprintf(stderr, "got a callback: afn=%p\n", afn);
-                                //typedef ApeObject_t (*ApeNativeFunc_t)(ApeVM_t*, void*, int, ApeObject_t*);
-                                args[argc] = left;
-                                argc++;
-                                ape_vm_pushstack(vm, afn(vm, NULL, argc, args));
-                                break;
-                            }
-                        }
-                    }
-                    #endif
-
-                    if(lefttype != APE_OBJECT_ARRAY && lefttype != APE_OBJECT_MAP && lefttype != APE_OBJECT_STRING)
-                    {
-                        lefttypename = ape_object_value_typename(lefttype);
-                        ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),
-                            "type %s is not indexable (in APE_OPCODE_GETINDEX)", lefttypename);
-                        return false;
-                    }
-                    objres = ape_object_make_null(vm->context);
-                    if(lefttype == APE_OBJECT_ARRAY)
-                    {
-                        if(indextype != APE_OBJECT_NUMBER)
-                        {
-                            lefttypename = ape_object_value_typename(lefttype);
-                            indextypename = ape_object_value_typename(indextype);
-                            ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),
-                                              "cannot index %s with %s", lefttypename, indextypename);
-                            return false;
-                        }
-                        ix = (int)object_value_asnumber(index);
-                        if(ix < 0)
-                        {
-                            ix = ape_object_array_getlength(left) + ix;
-                        }
-                        if(ix >= 0 && ix < (ApeInt_t)ape_object_array_getlength(left))
-                        {
-                            objres = ape_object_array_getvalue(left, ix);
-                        }
-                    }
-                    else if(lefttype == APE_OBJECT_MAP)
-                    {
-                        objres = ape_object_map_getvalueobject(left, index);
-                    }
-                    else if(lefttype == APE_OBJECT_STRING)
-                    {
-                        str = ape_object_string_getdata(left);
-                        leftlen = ape_object_string_getlength(left);
-                        ix = (int)object_value_asnumber(index);
-                        if(ix >= 0 && ix < leftlen)
-                        {
-                            char res_str[2] = { str[ix], '\0' };
-                            objres = ape_object_make_string(vm->context, res_str);
-                        }
-                    }
-                    ape_vm_pushstack(vm, objres);
+bool ape_vm_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValue_t opcode)
+{
+    bool ok;
+    bool overloadfound;
+    const char* lefttypename;
+    const char* righttypename;
+    const char* opcode_name;
+    ApeInt_t bigres;
+    ApeFloat_t leftval;
+    ApeFloat_t rightval;
+    ApeInt_t leftint;
+    ApeInt_t rightint;
+    ApeObjType_t lefttype;
+    ApeObjType_t righttype;
+    // NULL to 0 coercion
+    if(object_value_isnumeric(left) && object_value_isnull(right))
+    {
+        right = ape_object_make_number(vm->context, 0);
+    }
+    if(object_value_isnumeric(right) && object_value_isnull(left))
+    {
+        left = ape_object_make_number(vm->context, 0);
+    }
+    lefttype = object_value_type(left);
+    righttype = object_value_type(right);
+    if(object_value_isnumeric(left) && object_value_isnumeric(right))
+    {
+        rightval = object_value_asnumber(right);
+        leftval = object_value_asnumber(left);
+        leftint = (ApeInt_t)leftval;
+        rightint = (ApeInt_t)rightval;
+        bigres = 0;
+        switch(opcode)
+        {
+            case APE_OPCODE_ADD:
+                {
+                    bigres = leftval + rightval;
+                }
+                break;
+            case APE_OPCODE_SUB:
+                {
+                    bigres = leftval - rightval;
+                }
+                break;
+            case APE_OPCODE_MUL:
+                {
+                    bigres = leftval * rightval;
+                }
+                break;
+            case APE_OPCODE_DIV:
+                {
+                    bigres = leftval / rightval;
+                }
+                break;
+            case APE_OPCODE_MOD:
+                {
+                    //bigres = fmod(leftval, rightval);
+                    bigres = (leftint % rightint);
+                }
+                break;
+            case APE_OPCODE_BITOR:
+                {
+                    bigres = (ApeFloat_t)(leftint | rightint);
+                }
+                break;
+            case APE_OPCODE_BITXOR:
+                {
+                    bigres = (ApeFloat_t)(leftint ^ rightint);
+                }
+                break;
+            case APE_OPCODE_BITAND:
+                {
+                    bigres = (ApeFloat_t)(leftint & rightint);
+                }
+                break;
+            case APE_OPCODE_LEFTSHIFT:
+                {
+                    bigres = (ApeInt_t)(leftint << rightint);
+                }
+                break;
+            case APE_OPCODE_RIGHTSHIFT:
+                {
+                    bigres = (ApeInt_t)(leftint >> rightint);
+                }
+                break;
+            default:
+                {
+                    APE_ASSERT(false);
+                }
+                break;
+        }
+        ape_vm_pushstack(vm, ape_object_make_number(vm->context, bigres));
+    }
+    else if(lefttype == APE_OBJECT_STRING /*&& ((righttype == APE_OBJECT_STRING) || (righttype == APE_OBJECT_NUMBER))*/ && opcode == APE_OPCODE_ADD)
+    {
+        ok = ape_vm_appendstring(vm, left, right, lefttype, righttype);
+        if(!ok)
+        {
+            return false;
+        }
+    }
+    else if((lefttype == APE_OBJECT_ARRAY) && opcode == APE_OPCODE_ADD)
+    {
+        ape_object_array_pushvalue(left, right);
+        ape_vm_pushstack(vm, left);
+    }
+    else
+    {
+        overloadfound = false;
+        ok = ape_vm_tryoverloadoperator(vm, left, right, opcode, &overloadfound);
+        if(!ok)
+        {
+            return false;
+        }
+        if(!overloadfound)
+        {
+            opcode_name = ape_tostring_opcodename(opcode);
+            lefttypename = ape_object_value_typename(lefttype);
+            righttypename = ape_object_value_typename(righttype);
+            ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),
+                              "invalid operand types for %s, got %s and %s", opcode_name, lefttypename,
+                              righttypename);
+            return false;
+        }
+    }
     return true;
 }
 
@@ -1949,16 +2072,12 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
     bool ok;
     bool overloadfound;
     bool resval;
-    bool iseq;
     const ApeScriptFunction_t* constfunction;
     const char* indextypename;
     const char* keytypename;
-    const char* lefttypename;
     const char* lefttypestring;
-
-    const char* opcode_name;
+    const char* lefttypename;
     const char* operandtypestring;
-    const char* righttypename;
     const char* righttypestring;
     const char* str;
     const char* type_name;
@@ -1969,8 +2088,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
     int len;
     int recover_frame_ix;
     ApeInt_t ui;
-    ApeInt_t leftint;
-    ApeInt_t rightint;
+
     ApeUInt_t constant_ix;
     ApeUInt_t count;
     ApeUInt_t items_count;
@@ -1980,21 +2098,22 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
     ApeInt_t pos;
     unsigned time_check_counter;
     unsigned time_check_interval;
-    ApeInt_t bigres;
+
     ApeUShort_t free_ix;
     ApeUShort_t num_args;
     ApeUShort_t num_free;
     ApeFloat_t comparison_res;
-    ApeFloat_t leftval;
+
+
     ApeFloat_t maxexecms;
-    ApeFloat_t rightval;
+
     ApeFloat_t valdouble;
     ApeObjType_t constant_type;
     ApeObjType_t indextype;
     ApeObjType_t keytype;
     ApeObjType_t lefttype;
     ApeObjType_t operand_type;
-    ApeObjType_t righttype;
+
     ApeObjType_t type;
     ApeObject_t array_obj;
     ApeObject_t callee;
@@ -2091,116 +2210,10 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                 {
                     right = ape_vm_popstack(vm);
                     left = ape_vm_popstack(vm);
-                    // NULL to 0 coercion
-                    if(object_value_isnumeric(left) && object_value_isnull(right))
+                    ok = ape_vm_math(vm, left, right, opcode);
+                    if(!ok)
                     {
-                        right = ape_object_make_number(vm->context, 0);
-                    }
-                    if(object_value_isnumeric(right) && object_value_isnull(left))
-                    {
-                        left = ape_object_make_number(vm->context, 0);
-                    }
-                    lefttype = object_value_type(left);
-                    righttype = object_value_type(right);
-                    if(object_value_isnumeric(left) && object_value_isnumeric(right))
-                    {
-                        rightval = object_value_asnumber(right);
-                        leftval = object_value_asnumber(left);
-                        leftint = (ApeInt_t)leftval;
-                        rightint = (ApeInt_t)rightval;
-                        bigres = 0;
-                        switch(opcode)
-                        {
-                            case APE_OPCODE_ADD:
-                                {
-                                    bigres = leftval + rightval;
-                                }
-                                break;
-                            case APE_OPCODE_SUB:
-                                {
-                                    bigres = leftval - rightval;
-                                }
-                                break;
-                            case APE_OPCODE_MUL:
-                                {
-                                    bigres = leftval * rightval;
-                                }
-                                break;
-                            case APE_OPCODE_DIV:
-                                {
-                                    bigres = leftval / rightval;
-                                }
-                                break;
-                            case APE_OPCODE_MOD:
-                                {
-                                    //bigres = fmod(leftval, rightval);
-                                    bigres = (leftint % rightint);
-                                }
-                                break;
-                            case APE_OPCODE_BITOR:
-                                {
-                                    bigres = (ApeFloat_t)(leftint | rightint);
-                                }
-                                break;
-                            case APE_OPCODE_BITXOR:
-                                {
-                                    bigres = (ApeFloat_t)(leftint ^ rightint);
-                                }
-                                break;
-                            case APE_OPCODE_BITAND:
-                                {
-                                    bigres = (ApeFloat_t)(leftint & rightint);
-                                }
-                                break;
-                            case APE_OPCODE_LEFTSHIFT:
-                                {
-                                    bigres = (ApeInt_t)(leftint << rightint);
-                                }
-                                break;
-                            case APE_OPCODE_RIGHTSHIFT:
-                                {
-                                    bigres = (ApeInt_t)(leftint >> rightint);
-                                }
-                                break;
-                            default:
-                                {
-                                    APE_ASSERT(false);
-                                }
-                                break;
-                        }
-                        ape_vm_pushstack(vm, ape_object_make_number(vm->context, bigres));
-                    }
-                    else if(lefttype == APE_OBJECT_STRING /*&& ((righttype == APE_OBJECT_STRING) || (righttype == APE_OBJECT_NUMBER))*/ && opcode == APE_OPCODE_ADD)
-                    {
-                        ok = ape_vm_appendstring(vm, left, right, lefttype, righttype);
-                        if(!ok)
-                        {
-                            goto err;
-                        }
-                    }
-                    else if((lefttype == APE_OBJECT_ARRAY) && opcode == APE_OPCODE_ADD)
-                    {
-                        ape_object_array_pushvalue(left, right);
-                        ape_vm_pushstack(vm, left);
-                    }
-                    else
-                    {
-                        overloadfound = false;
-                        ok = ape_vm_tryoverloadoperator(vm, left, right, opcode, &overloadfound);
-                        if(!ok)
-                        {
-                            goto err;
-                        }
-                        if(!overloadfound)
-                        {
-                            opcode_name = ape_tostring_opcodename(opcode);
-                            lefttypename = ape_object_value_typename(lefttype);
-                            righttypename = ape_object_value_typename(righttype);
-                            ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),
-                                              "invalid operand types for %s, got %s and %s", opcode_name, lefttypename,
-                                              righttypename);
-                            goto err;
-                        }
+                        goto err;
                     }
                 }
                 break;

@@ -125,6 +125,7 @@ void ape_vm_reset(ApeVM_t *vm);
 bool ape_vm_run(ApeVM_t *vm, ApeCompResult_t *comp_res, ApeValArray_t *constants);
 bool ape_vm_appendstring(ApeVM_t *vm, ApeObject_t left, ApeObject_t right, ApeObjType_t lefttype, ApeObjType_t righttype);
 bool ape_vm_getindex(ApeVM_t *vm, ApeObject_t left, ApeObject_t index, ApeObjType_t lefttype, ApeObjType_t indextype);
+bool ape_vm_math(ApeVM_t *vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValue_t opcode);
 bool ape_vm_executefunction(ApeVM_t *vm, ApeObject_t function, ApeValArray_t *constants);
 /* util.c */
 char *ape_util_stringfmt(ApeContext_t *ctx, const char *format, ...);
@@ -356,6 +357,12 @@ void ape_gcmem_markobjlist(ApeObject_t *objects, ApeSize_t count);
 void ape_gcmem_markobject(ApeObject_t obj);
 void ape_gcmem_sweep(ApeGCMemory_t *mem);
 int ape_gcmem_shouldsweep(ApeGCMemory_t *mem);
+/* libfunction.c */
+ApeObject_t ape_object_make_function(ApeContext_t *ctx, const char *name, ApeCompResult_t *cres, bool wdata, ApeInt_t nloc, ApeInt_t nargs, ApeSize_t fvcount);
+ApeObject_t ape_object_make_nativefuncmemory(ApeContext_t *ctx, const char *name, ApeNativeFunc_t fn, void *data, ApeSize_t data_len);
+const char *ape_object_function_getname(ApeObject_t obj);
+ApeObject_t ape_object_function_getfreeval(ApeObject_t obj, ApeInt_t ix);
+void ape_object_function_setfreeval(ApeObject_t obj, ApeInt_t ix, ApeObject_t val);
 /* cclex.c */
 void ape_lexer_token_init(ApeToken_t *tok, ApeTokenType_t type, const char *literal, int len);
 char *ape_lexer_tokendupliteral(ApeContext_t *ctx, const ApeToken_t *tok);
@@ -409,12 +416,6 @@ ApeSize_t ape_object_array_getlength(ApeObject_t object);
 bool ape_object_array_removeat(ApeObject_t object, ApeInt_t ix);
 bool ape_object_array_pushstring(ApeObject_t obj, const char *string);
 ApeValArray_t *ape_object_array_getarray(ApeObject_t object);
-/* libfunction.c */
-ApeObject_t ape_object_make_function(ApeContext_t *ctx, const char *name, ApeCompResult_t *cres, bool wdata, ApeInt_t nloc, ApeInt_t nargs, ApeSize_t fvcount);
-ApeObject_t ape_object_make_nativefuncmemory(ApeContext_t *ctx, const char *name, ApeNativeFunc_t fn, void *data, ApeSize_t data_len);
-const char *ape_object_function_getname(ApeObject_t obj);
-ApeObject_t ape_object_function_getfreeval(ApeObject_t obj, ApeInt_t ix);
-void ape_object_function_setfreeval(ApeObject_t obj, ApeInt_t ix, ApeObject_t val);
 /* writer.c */
 ApeWriter_t *ape_make_writer(ApeContext_t *ctx);
 ApeWriter_t *ape_make_writerdefault(ApeContext_t *ctx);
