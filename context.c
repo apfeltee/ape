@@ -204,9 +204,7 @@ ApeObject_t ape_context_executefile(ApeContext_t* ctx, const char* path)
         goto err;
     }
     ape_compresult_destroy(cres);
-
     return objres;
-
 err:
     ape_compresult_destroy(cres);
     return ape_object_make_null(ctx);

@@ -5,12 +5,15 @@
 ## About
 Ape is an easy to use programming language and library written in C. It's an offspring of [Monkey](https://monkeylang.org) language (from [Writing An Interpreter In Go](https://interpreterbook.com) and [Writing A Compiler In Go](https://compilerbook.com) books by [Thorsten Ball](https://thorstenball.com)), but it evolved to be more procedural with variables, loops, operator overloading, modules, and more.
 
+### This fork in particular
+This fork focuses on making Ape slightly more Javascript-ish, without *being* Javascript. Think of it as a Lite variant of Ecmascript.
+
 ## Current state
 It's under development so everything in the language and the api might change.
 
 ## Example
 ```javascript
-fn contains_item(to_find, items) {
+function contains_item(to_find, items) {
     for (item in items) {
         if (item == to_find) {
             return true
@@ -27,20 +30,22 @@ if (contains_item(city, cities)) {
 ```
 
 ## Embedding
-Add ape.h and ape.c to your project and compile ape.c with a C compiler before linking.
-
 ```c
 #include "ape.h"
 
-int main() {
-    ape_t *ape = ape_make();
-    ape_execute(ape, "println(\"hello world\")");
-    ape_destroy(ape);
+int main()
+{
+    ApeContext_t* ctx;
+    ctx = ape_make_context();
+    /* last option is the 'data' pointer passed to the function! */
+    ape_context_setnativefunction(ctx, "myfunc", myfuncptr, NULL);
+    ape_context_executesource(ctx, "println(\"hello world\")");
+    ape_context_destroy(ctx);
     return 0;
 }
 ```
 
-An example that shows how to call Ape functions from C code and vice versa can be found [here](examples/api.c).
+The best way to get an idea of how to embed Ape in C is currently `main.c` - though, the above code should make it fairly clear.
 
 ## Language
 
@@ -126,13 +131,13 @@ for (var i = 0; i < 10; i++) {
 
 ### Functions
 ```javascript
-const add_1 = fn(a, b) { return a + b }
+const add_1 = function(a, b) { return a + b }
 
-fn add_2(a, b) {
+function add_2(a, b) {
     return a + b
 }
 
-fn map_items(items, map_fn) {
+function map_items(items, map_fn) {
     const res = []
     for (item in items) {
         append(res, map_fn(item))
@@ -140,12 +145,12 @@ fn map_items(items, map_fn) {
     return res
 }
 
-map_items([1, 2, 3], fn(x){ return x + 1 })
+map_items([1, 2, 3], function(x){ return x + 1 })
 
-fn make_person(name) {
+function make_person(name) {
     return {
         name: name,
-        greet: fn() {
+        greet: function() {
             println(`Hello, I'm ${this.name}`)
         },
     }
@@ -159,7 +164,7 @@ if (is_error(err)) {
     println(err)
 }
 
-fn() {
+function() {
     recover (e) { // e is a runtime error wrapped in error
         return null
     }
@@ -179,14 +184,14 @@ baz::foo()
 
 ### Operator overloading
 ```javascript
-fn vec2(x, y) {
+function vec2(x, y) {
     return {
         x: x,
         y: y,
-        __operator_add__: fn(a, b) { return vec2(a.x + b.x, a.y + b.y)},
-        __operator_sub__: fn(a, b) { return vec2(a.x - b.x, a.y - b.y)},
-        __operator_minus__: fn(a) { return vec2(-a.x, -a.y) },
-        __operator_mul__: fn(a, b) {
+        __operator_add__: function(a, b) { return vec2(a.x + b.x, a.y + b.y)},
+        __operator_sub__: function(a, b) { return vec2(a.x - b.x, a.y - b.y)},
+        __operator_minus__: function(a) { return vec2(-a.x, -a.y) },
+        __operator_mul__: function(a, b) {
             if (is_number(a)) {
                 return vec2(b.x * a, b.y * a)
             } else if (is_number(b)) {
@@ -199,28 +204,14 @@ fn vec2(x, y) {
 }
 ```
 
-## Splitting and joining
+To see more code, just read the `*.ape` files scattered about!
 
-ape.c can be split into separate files by running utils/split.py:
+## Build, etc
 
-```
-utils/split.py --input ape.c --output-path ape
-```
-
-It can be joined back into a single file with utils/join.py:
-
-```
-utils/join.py --template utils/ape.c.templ --path ape --output ape.c
-```
-
-## Visual Studio Code extension
-
-A Visual Studio Code extension can be found [here](https://marketplace.visualstudio.com/items?itemName=KrzysztofGabis.apelang).
-
-## My other projects
-* [parson](https://github.com/kgabis/parson) - JSON library
-* [kgflags](https://github.com/kgabis/kgflags) - command-line flag parsing library   
-* [agnes](https://github.com/kgabis/agnes) - header-only NES emulation library
+There's no fancy build setup in place right now, but `make` *should* build cleanly.  
+You may still need `cproto` in your $PATH if you modify sources (specifically, function prototypes); 
+in that case, `apt install cproto` will set you up on debian/ubuntu/wsl. Cygwin also has cproto.  
+The makefile contains some kludge to figure out if you have cproto; needs `make` impl that isn't ancient (~>2.\* should be fine).
 
 ## License
 [The MIT License (MIT)](http://opensource.org/licenses/mit-license.php)
