@@ -1,0 +1,6 @@
+
+var f="fnarhkl".length
+println("f=<", f, ">")
+var l=f()
+println("l=<", l, ">")
+

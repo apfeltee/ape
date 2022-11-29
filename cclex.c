@@ -9,11 +9,10 @@ static bool ape_lexer_isoneof(char ch, const char *allowed, int allowedlen);
 static const char *ape_lexer_readident(ApeLexer_t *lex, int *outlen);
 static const char *ape_lexer_readnumber(ApeLexer_t *lex, int *outlen);
 static const char *ape_lexer_readstring(ApeLexer_t *lex, char delimiter, bool istemplate, bool *outtemplatefound, int *outlen);
-static ApeTokenType_t ape_lexer_lookupident(const char *ident, int len);
 static void ape_lexer_skipspace(ApeLexer_t *lex);
 static bool ape_lexer_addline(ApeLexer_t *lex, int offset);
 
-static ApeTokenType_t ape_lexer_lookupident(const char* ident, int len)
+static ApeTokenType_t ape_lexer_lookupident(const char* ident, ApeSize_t len)
 {
     int i;
     ApeSize_t kwlen;

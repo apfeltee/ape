@@ -129,10 +129,10 @@ ApeGlobalStore_t* ape_make_globalstore(ApeContext_t* ctx, ApeGCMemory_t* mem)
     }
     if(mem)
     {
-        for(i = 0; i < builtins_count(); i++)
+        for(i = 0; i < ape_builtins_count(); i++)
         {
-            name = builtins_get_name(i);
-            builtin = ape_object_make_nativefuncmemory(ctx, name, builtins_get_fn(i), NULL, 0);
+            name = ape_builtins_getname(i);
+            builtin = ape_object_make_nativefuncmemory(ctx, name, ape_builtins_getfunc(i), NULL, 0);
             if(ape_object_value_isnull(builtin))
             {
                 goto err;
@@ -1244,7 +1244,7 @@ bool ape_module_addsymbol(ApeModule_t* module, const ApeSymbol_t* symbol)
 bool ape_frame_init(ApeFrame_t* frame, ApeObject_t function_obj, int base_pointer)
 {
     ApeScriptFunction_t* function;
-    if(ape_object_value_type(function_obj) != APE_OBJECT_FUNCTION)
+    if(ape_object_value_type(function_obj) != APE_OBJECT_SCRIPTFUNCTION)
     {
         return false;
     }
@@ -1513,43 +1513,64 @@ void ape_vm_collectgarbage(ApeVM_t* vm, ApeValArray_t * constants)
     ape_gcmem_sweep(vm->mem);
 }
 
+void ape_vm_dumpstack(ApeVM_t* vm)
+{
+    ApeInt_t i;
+    ApeWriter_t* wr;
+    wr = ape_make_writerio(vm->context, stderr, false, true);
+    fprintf(stderr, "calling function ...\n");
+    {
+        for(i=0; i<vm->sp; i++)
+        {
+            fprintf(stderr, "vm->stack[%d] = (%s) = [[", (int)i, ape_object_value_typename(ape_object_value_type(vm->stack[i])));
+            ape_tostring_object(vm->stack[i], wr, true);
+            fprintf(stderr, "]]\n");
+        }
+    }
+    ape_writer_destroy(wr);
+}
+
 bool ape_vm_callobject(ApeVM_t* vm, ApeObject_t callee, ApeInt_t num_args)
 {
     bool ok;
-    ApeObjType_t callee_type;
-    ApeScriptFunction_t* callee_function;
-    ApeFrame_t callee_frame;
-    ApeObject_t* stack_pos;
+    ApeObjType_t calleetype;
+    ApeScriptFunction_t* calleefunc;
+    ApeFrame_t calleeframe;
+    ApeObject_t* stackpos;
     ApeObject_t objres;
-    const char* callee_type_name;
-    callee_type = ape_object_value_type(callee);
-    if(callee_type == APE_OBJECT_FUNCTION)
+    const char* calleetypename;
+    calleetype = ape_object_value_type(callee);
+    if(calleetype == APE_OBJECT_SCRIPTFUNCTION)
     {
-        callee_function = ape_object_value_asfunction(callee);
-        if(num_args != (ApeInt_t)callee_function->num_args)
+        calleefunc = ape_object_value_asfunction(callee);
+        if(num_args != (ApeInt_t)calleefunc->num_args)
         {
             ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),
                               "invalid number of arguments to \"%s\", expected %d, got %d",
-                              ape_object_function_getname(callee), callee_function->num_args, num_args);
+                              ape_object_function_getname(callee), calleefunc->num_args, num_args);
             return false;
         }
-        ok = ape_frame_init(&callee_frame, callee, vm->sp - num_args);
+        ok = ape_frame_init(&calleeframe, callee, vm->sp - num_args);
         if(!ok)
         {
             ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, g_vmpriv_src_pos_invalid, "frame init failed in ape_vm_callobject");
             return false;
         }
-        ok = ape_vm_pushframe(vm, callee_frame);
+        ok = ape_vm_pushframe(vm, calleeframe);
         if(!ok)
         {
             ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, g_vmpriv_src_pos_invalid, "pushing frame failed in ape_vm_callobject");
             return false;
         }
     }
-    else if(callee_type == APE_OBJECT_NATIVE_FUNCTION)
+    else if(calleetype == APE_OBJECT_NATIVEFUNCTION)
     {
-        stack_pos = vm->stack + vm->sp - num_args;
-        objres = ape_vm_callnativefunction(vm, callee, ape_frame_srcposition(vm->current_frame), num_args, stack_pos);
+        stackpos = vm->stack + vm->sp - num_args;
+        if(vm->context->config.dumpstack)
+        {
+            ape_vm_dumpstack(vm);
+        }
+        objres = ape_vm_callnativefunction(vm, callee, ape_frame_srcposition(vm->current_frame), num_args, stackpos);
         if(ape_vm_haserrors(vm))
         {
             return false;
@@ -1559,8 +1580,8 @@ bool ape_vm_callobject(ApeVM_t* vm, ApeObject_t callee, ApeInt_t num_args)
     }
     else
     {
-        callee_type_name = ape_object_value_typename(callee_type);
-        ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame), "%s object is not callable", callee_type_name);
+        calleetypename = ape_object_value_typename(calleetype);
+        ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame), "%s object is not callable", calleetypename);
         return false;
     }
     return true;
@@ -1568,29 +1589,34 @@ bool ape_vm_callobject(ApeVM_t* vm, ApeObject_t callee, ApeInt_t num_args)
 
 ApeObject_t ape_vm_callnativefunction(ApeVM_t* vm, ApeObject_t callee, ApePosition_t src_pos, int argc, ApeObject_t* args)
 {
-    ApeNativeFunction_t* native_fun = ape_object_value_asnativefunction(callee);
-    ApeObject_t objres = native_fun->native_funcptr(vm, native_fun->data, argc, args);
-    if(ape_errorlist_haserrors(vm->errors) && !APE_STREQ(native_fun->name, "crash"))
+    ApeError_t* err;
+    ApeObject_t objres;
+    ApeObjType_t restype;
+    ApeNativeFunction_t* nfunc;
+    ApeTraceback_t* traceback;
+    nfunc = ape_object_value_asnativefunction(callee);
+    objres = nfunc->native_funcptr(vm, nfunc->data, argc, args);
+    if(ape_errorlist_haserrors(vm->errors) && !APE_STREQ(nfunc->name, "crash"))
     {
-        ApeError_t* err = ape_errorlist_lasterror(vm->errors);
+        err = ape_errorlist_lasterror(vm->errors);
         err->pos = src_pos;
         err->traceback = ape_make_traceback(vm->context);
         if(err->traceback)
         {
-            ape_traceback_append(err->traceback, native_fun->name, g_vmpriv_src_pos_invalid);
+            ape_traceback_append(err->traceback, nfunc->name, g_vmpriv_src_pos_invalid);
         }
         return ape_object_make_null(vm->context);
     }
-    ApeObjType_t res_type = ape_object_value_type(objres);
-    if(res_type == APE_OBJECT_ERROR)
+    restype = ape_object_value_type(objres);
+    if(restype == APE_OBJECT_ERROR)
     {
-        ApeTraceback_t* traceback = ape_make_traceback(vm->context);
+        traceback = ape_make_traceback(vm->context);
         if(traceback)
         {
             // error builtin is treated in a special way
-            if(!APE_STREQ(native_fun->name, "error"))
+            if(!APE_STREQ(nfunc->name, "error"))
             {
-                ape_traceback_append(traceback, native_fun->name, g_vmpriv_src_pos_invalid);
+                ape_traceback_append(traceback, nfunc->name, g_vmpriv_src_pos_invalid);
             }
             ape_traceback_appendfromvm(traceback, vm);
             ape_object_value_seterrortraceback(objres, traceback);
@@ -1851,41 +1877,56 @@ bool ape_vm_appendstring(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOb
 
 bool ape_vm_getindex(ApeVM_t* vm, ApeObject_t left, ApeObject_t index, ApeObjType_t lefttype, ApeObjType_t indextype)
 {
+    bool canindex;
     const char* str;
+    const char* idxname;
     const char* indextypename;
     const char* lefttypename;
     ApeInt_t ix;
     ApeInt_t leftlen;
     ApeObject_t objres;
-    #if 0
-    const char* idxname;
-    #endif
+    (void)idxname;
+    canindex = false;
     /*
     * todo: object method lookup could be implemented here
     */
     #if 0
     {
         int argc;
-        ApeObject_t args[10];
-        ApeNativeFunc_t afn;
+        ApeObject_t objfn;
+        //ApeObject_t args[10];
+        ApeNativeFuncPtr_t afn;
         argc = 0;
         if(indextype == APE_OBJECT_STRING)
         {
             idxname = ape_object_string_getdata(index);
             fprintf(stderr, "index is a string: name=%s\n", idxname);
-            if((afn = builtin_get_object(lefttype, idxname)) != NULL)
+            if((afn = builtin_get_object(vm->context, lefttype, idxname)) != NULL)
             {
                 fprintf(stderr, "got a callback: afn=%p\n", afn);
-                //typedef ApeObject_t (*ApeNativeFunc_t)(ApeVM_t*, void*, int, ApeObject_t*);
-                args[argc] = left;
-                argc++;
-                ape_vm_pushstack(vm, afn(vm, NULL, argc, args));
-                break;
+                //ApeObject_t ape_object_make_nativefuncmemory(ApeContext_t *ctx, const char *name, ApeNativeFuncPtr_t fn, void *data, ApeSize_t data_len
+                //typedef ApeObject_t (*ApeNativeFuncPtr_t)(ApeVM_t*, void*, int, ApeObject_t*);
+                //args[argc] = left;
+                //argc++;
+                //ape_vm_pushstack(vm, afn(vm, NULL, argc, args));
+                objfn = ape_object_make_nativefuncmemory(vm->context, idxname, afn, NULL, 0);
+
+                ape_vm_popstack(vm);
+                //ape_vm_pushstack(vm, ape_object_make_null(vm->context));
+                ape_vm_pushstack(vm, left);                
+                ape_vm_pushstack(vm, objfn);
+
+                return true;
             }
         }
     }
     #endif
-    if(lefttype != APE_OBJECT_ARRAY && lefttype != APE_OBJECT_MAP && lefttype != APE_OBJECT_STRING)
+    canindex = (
+        (lefttype == APE_OBJECT_ARRAY) ||
+        (lefttype == APE_OBJECT_MAP) ||
+        (lefttype == APE_OBJECT_STRING)
+    );
+    if(!canindex)
     {
         lefttypename = ape_object_value_typename(lefttype);
         ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),
@@ -2626,7 +2667,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                         goto err;
                     }
                     constant_type = ape_object_value_type(*constant);
-                    if(constant_type != APE_OBJECT_FUNCTION)
+                    if(constant_type != APE_OBJECT_SCRIPTFUNCTION)
                     {
                         type_name = ape_object_value_typename(constant_type);
                         ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame),

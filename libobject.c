@@ -165,7 +165,7 @@ void ape_tostring_object(ApeObject_t obj, ApeWriter_t* buf, bool quote_str)
                 ape_writer_append(buf, "null");
             }
             break;
-        case APE_OBJECT_FUNCTION:
+        case APE_OBJECT_SCRIPTFUNCTION:
             {
                 compfunc = ape_object_value_asfunction(obj);
                 ape_writer_appendf(buf, "CompiledFunction: %s\n", ape_object_function_getname(obj));
@@ -205,7 +205,7 @@ void ape_tostring_object(ApeObject_t obj, ApeWriter_t* buf, bool quote_str)
                 ape_writer_append(buf, "}");
             }
             break;
-        case APE_OBJECT_NATIVE_FUNCTION:
+        case APE_OBJECT_NATIVEFUNCTION:
             {
                 ape_writer_append(buf, "NATIVE_FUNCTION");
             }
@@ -252,13 +252,13 @@ const char* ape_object_value_typename(const ApeObjType_t type)
             return "STRING";
         case APE_OBJECT_NULL:
             return "NULL";
-        case APE_OBJECT_NATIVE_FUNCTION:
+        case APE_OBJECT_NATIVEFUNCTION:
             return "NATIVE_FUNCTION";
         case APE_OBJECT_ARRAY:
             return "ARRAY";
         case APE_OBJECT_MAP:
             return "MAP";
-        case APE_OBJECT_FUNCTION:
+        case APE_OBJECT_SCRIPTFUNCTION:
             return "FUNCTION";
         case APE_OBJECT_EXTERNAL:
             return "EXTERNAL";
@@ -289,7 +289,7 @@ void ape_object_data_deinit(ApeObjData_t* data)
                 }
             }
             break;
-        case APE_OBJECT_FUNCTION:
+        case APE_OBJECT_SCRIPTFUNCTION:
             {
                 if(data->valscriptfunc.owns_data)
                 {
@@ -309,7 +309,7 @@ void ape_object_data_deinit(ApeObjData_t* data)
                 ape_valdict_destroy(data->valmap);
             }
             break;
-        case APE_OBJECT_NATIVE_FUNCTION:
+        case APE_OBJECT_NATIVEFUNCTION:
             {
                 ape_allocator_free(data->mem->alloc, data->valnatfunc.name);
             }
@@ -368,10 +368,10 @@ char* ape_object_value_typeunionname(ApeContext_t* ctx, const ApeObjType_t type)
     CHECK_TYPE(APE_OBJECT_BOOL);
     CHECK_TYPE(APE_OBJECT_STRING);
     CHECK_TYPE(APE_OBJECT_NULL);
-    CHECK_TYPE(APE_OBJECT_NATIVE_FUNCTION);
+    CHECK_TYPE(APE_OBJECT_NATIVEFUNCTION);
     CHECK_TYPE(APE_OBJECT_ARRAY);
     CHECK_TYPE(APE_OBJECT_MAP);
-    CHECK_TYPE(APE_OBJECT_FUNCTION);
+    CHECK_TYPE(APE_OBJECT_SCRIPTFUNCTION);
     CHECK_TYPE(APE_OBJECT_EXTERNAL);
     CHECK_TYPE(APE_OBJECT_ERROR);
     return ape_writer_getstringanddestroy(res);
@@ -503,7 +503,7 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
         case APE_OBJECT_NUMBER:
         case APE_OBJECT_BOOL:
         case APE_OBJECT_NULL:
-        case APE_OBJECT_NATIVE_FUNCTION:
+        case APE_OBJECT_NATIVEFUNCTION:
             {
                 copy = obj;
             }
@@ -515,7 +515,7 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
             }
             break;
 
-        case APE_OBJECT_FUNCTION:
+        case APE_OBJECT_SCRIPTFUNCTION:
             {
                 function = ape_object_value_asfunction(obj);
                 bytecode_copy = NULL;
@@ -746,8 +746,8 @@ ApeObject_t ape_object_value_copyflat(ApeContext_t* ctx, ApeObject_t obj)
                 copy = ape_object_make_number(ctx, ape_object_value_asnumber(obj));
             }
             break;
-        case APE_OBJECT_FUNCTION:
-        case APE_OBJECT_NATIVE_FUNCTION:
+        case APE_OBJECT_SCRIPTFUNCTION:
+        case APE_OBJECT_NATIVEFUNCTION:
         case APE_OBJECT_ERROR:
             {
                 copy = obj;

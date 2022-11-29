@@ -37,7 +37,8 @@ function walk(dn, fn)
             //pref = "[DIR] "
         }
         var fullpath = `${dn}/${ent.name}`
-        var st = File.stat(fullpath)
+        //var fullpath = dn + "/" + ent.name
+        var st = File.stat(fullpath, "size")
         var ssize = 0
         if(st == null)
         {
@@ -45,7 +46,7 @@ function walk(dn, fn)
         }
         else
         {
-            ssize = st.size
+            ssize = st
         }
         if(fwd)
         {

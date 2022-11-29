@@ -86,6 +86,7 @@ ApeTimer_t ape_util_timerstart()
 
 ApeFloat_t ape_util_timergetelapsed(const ApeTimer_t* timer)
 {
+    (void)timer;
 /*
 #if defined(APE_POSIX)
     struct timeval current_time;

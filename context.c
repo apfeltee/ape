@@ -52,7 +52,7 @@ ApeContext_t* ape_make_contextex(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t f
         goto err;
     }
     ctx->vm->context = ctx;
-    builtins_install(ctx->vm);
+    ape_builtins_install(ctx->vm);
     return ctx;
 err:
     ape_context_deinit(ctx);
@@ -316,18 +316,19 @@ static ApeObject_t ape_context_wrapnativefunc(ApeVM_t* vm, void* data, ApeSize_t
 
 ApeObject_t ape_context_makenamednative(ApeContext_t* ctx, const char* name, ApeWrappedNativeFunc_t fn, void* data)
 {
+    ApeObject_t wrobj;
     ApeNativeFuncWrapper_t wrapper;
     memset(&wrapper, 0, sizeof(ApeNativeFuncWrapper_t));
     wrapper.wrapped_funcptr = fn;
     wrapper.context = ctx;
     wrapper.context->vm = ctx->vm;
     wrapper.data = data;
-    ApeObject_t wrapper_native_function = ape_object_make_nativefuncmemory(ctx, name, ape_context_wrapnativefunc, &wrapper, sizeof(wrapper));
-    if(ape_object_value_isnull(wrapper_native_function))
+    wrobj = ape_object_make_nativefuncmemory(ctx, name, ape_context_wrapnativefunc, &wrapper, sizeof(wrapper));
+    if(ape_object_value_isnull(wrobj))
     {
         return ape_object_make_null(ctx);
     }
-    return wrapper_native_function;
+    return wrobj;
 }
 
 void ape_context_resetstate(ApeContext_t* ctx)
@@ -341,6 +342,7 @@ void ape_context_setdefaultconfig(ApeContext_t* ctx)
     memset(&ctx->config, 0, sizeof(ApeConfig_t));
     ctx->config.dumpbytecode = false;
     ctx->config.dumpast = false;
+    ctx->config.dumpstack = false;
     ape_context_setreplmode(ctx, false);
     ape_context_settimeout(ctx, -1);
     ape_context_setfileread(ctx, ape_util_default_readfile, ctx);

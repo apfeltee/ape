@@ -376,7 +376,7 @@ void ape_gcmem_markobject(ApeObject_t obj)
                 }
             }
             break;
-        case APE_OBJECT_FUNCTION:
+        case APE_OBJECT_SCRIPTFUNCTION:
             {
                 function = ape_object_value_asfunction(obj);
                 for(i = 0; i < function->free_vals_count; i++)

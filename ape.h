@@ -82,14 +82,14 @@ THE SOFTWARE.
 
 #define APE_CONF_INVALID_VALDICT_IX UINT_MAX
 #define APE_CONF_INVALID_STRDICT_IX UINT_MAX
-#define APE_CONF_DICT_INITIAL_SIZE (16)
+#define APE_CONF_DICT_INITIAL_SIZE (2)
 #define APE_CONF_SIZE_VM_STACK (1024)
 #define APE_CONF_SIZE_VM_MAXGLOBALS (512*4)
 #define APE_CONF_SIZE_MAXFRAMES (512*4)
 #define APE_CONF_SIZE_VM_THISSTACK (512*4)
 #define APE_CONF_SIZE_GCMEM_POOLSIZE (512*4)
 #define APE_CONF_SIZE_GCMEM_POOLCOUNT ((3) + 1)
-#define APE_CONF_CONST_GCMEM_SWEEPINTERVAL (128/64)
+#define APE_CONF_CONST_GCMEM_SWEEPINTERVAL (128/1)
 
 #define APE_CONF_SIZE_NATFN_MAXDATALEN (16*2)
 #define APE_CONF_SIZE_STRING_BUFSIZE (4)
@@ -128,11 +128,40 @@ THE SOFTWARE.
     #define APE_LOG(...) ((void)0)
 #endif
 
-#ifdef COLLECTIONS_DEBUG
-    #define COLLECTIONS_ASSERT(x) assert(x)
+#if 0
+    #define APE_CHECK_ARGS(vm, generate_error, argc, args, ...) \
+        ape_args_check( \
+            (vm), \
+            (generate_error), \
+            (argc), \
+            (args),  \
+            (sizeof((ApeObjType_t[]){ __VA_ARGS__ }) / sizeof(ApeObjType_t)), \
+            ((ApeObjType_t*)((ApeObjType_t[]){ __VA_ARGS__ })) \
+        )
 #else
-    #define COLLECTIONS_ASSERT(x)
+    #define APE_CHECK_ARGS(vm, generate_error, argc, args, ...) \
+        ape_args_check( \
+            (vm), \
+            (generate_error), \
+            (argc), \
+            (args),  \
+            (sizeof((int[]){ __VA_ARGS__ }) / sizeof(int)), \
+            ape_args_make_typarray(__VA_ARGS__, -1) \
+        )
 #endif
+
+//ApeObject_t object_make_native_function(ApeGCMemory_t* mem, const char* name, ApeNativeFuncPtr_t fn, void* data, int data_len);
+#define make_fn_data(ctx, name, fnc, dataptr, datasize) \
+    ape_object_make_nativefuncmemory(ctx, name, fnc, dataptr, datasize)
+
+#define make_fn(ctx, name, fnc) \
+    make_fn_data(ctx, name, fnc, NULL, 0)
+
+#define make_fn_entry_data(ctx, map, name, fnc, dataptr, datasize) \
+    ape_object_map_setnamedvalue(map, name, make_fn(ctx, name, fnc))
+
+#define make_fn_entry(ctx, map, name, fnc) \
+    make_fn_entry_data(ctx, map, name, fnc, NULL, 0)
 
 /**/
 #define ape_object_value_allocated_data(obj) \
@@ -180,7 +209,7 @@ THE SOFTWARE.
     ape_object_value_istype(o, APE_OBJECT_STRING)
 
 #define ape_object_value_iscallable(o) \
-    (ape_object_value_istype(o, APE_OBJECT_NATIVE_FUNCTION) || ape_object_value_istype(o, APE_OBJECT_FUNCTION))
+    (ape_object_value_istype(o, APE_OBJECT_NATIVEFUNCTION) || ape_object_value_istype(o, APE_OBJECT_SCRIPTFUNCTION))
 
 
 enum ApeErrorType_t
@@ -202,10 +231,10 @@ enum ApeObjType_t
     APE_OBJECT_BOOL = 1 << 2,
     APE_OBJECT_STRING = 1 << 3,
     APE_OBJECT_NULL = 1 << 4,
-    APE_OBJECT_NATIVE_FUNCTION = 1 << 5,
+    APE_OBJECT_NATIVEFUNCTION = 1 << 5,
     APE_OBJECT_ARRAY = 1 << 6,
     APE_OBJECT_MAP = 1 << 7,
-    APE_OBJECT_FUNCTION = 1 << 8,
+    APE_OBJECT_SCRIPTFUNCTION = 1 << 8,
     APE_OBJECT_EXTERNAL = 1 << 9,
     APE_OBJECT_FREED = 1 << 10,
     APE_OBJECT_ANY = 0xffff,// for checking types with &
@@ -522,10 +551,10 @@ typedef struct /**/ApeModule_t ApeModule_t;
 typedef struct /**/ApeFileScope_t ApeFileScope_t;
 typedef struct /**/ApeCompiler_t ApeCompiler_t;
 typedef struct /**/ApeNativeFuncWrapper_t ApeNativeFuncWrapper_t;
-
+typedef struct ApeNativeItem_t ApeNativeItem_t;
 
 typedef ApeObject_t (*ApeWrappedNativeFunc_t)(ApeContext_t*, void*, ApeSize_t, ApeObject_t*);
-typedef ApeObject_t (*ApeNativeFunc_t)(ApeVM_t*, void*, ApeSize_t, ApeObject_t*);
+typedef ApeObject_t (*ApeNativeFuncPtr_t)(ApeVM_t*, void*, ApeSize_t, ApeObject_t*);
 
 typedef size_t (*ApeIOStdoutWriteFunc_t)(void*, const void*, size_t);
 typedef char* (*ApeIOReadFunc_t)(void*, const char*);
@@ -545,6 +574,11 @@ typedef void* (*ApeDataCallback_t)(void*);
 typedef ApeExpression_t* (*ApeRightAssocParseFNCallback_t)(ApeParser_t* p);
 typedef ApeExpression_t* (*ApeLeftAssocParseFNCallback_t)(ApeParser_t* p, ApeExpression_t* expr);
 
+struct ApeNativeItem_t
+{
+    const char* name;
+    ApeNativeFuncPtr_t fn;
+};
 
 struct ApeScriptFunction_t
 {
@@ -591,7 +625,7 @@ struct ApeObjString_t
 struct ApeNativeFunction_t
 {
     char* name;
-    ApeNativeFunc_t native_funcptr;
+    ApeNativeFuncPtr_t native_funcptr;
 
     void* data;
     ApeSize_t data_len;
@@ -676,6 +710,7 @@ struct ApeConfig_t
     bool max_execution_time_set;
     bool dumpast;
     bool dumpbytecode;
+    bool dumpstack;
 };
 
 struct ApeTimer_t
@@ -979,26 +1014,6 @@ struct ApeOpcodeDef_t
     ApeInt_t operand_widths[2];
 };
 
-struct ApeCompResult_t
-{
-    ApeContext_t* context;
-    ApeAllocator_t* alloc;
-    ApeUShort_t* bytecode;
-    ApePosition_t* srcpositions;
-    ApeSize_t count;
-};
-
-struct ApeCompScope_t
-{
-    ApeContext_t* context;
-    ApeAllocator_t* alloc;
-    ApeCompScope_t* outer;
-    ApeValArray_t * bytecode;
-    ApeValArray_t * srcpositions;
-    ApeValArray_t * breakipstack;
-    ApeValArray_t * continueipstack;
-    ApeOpByte_t lastopcode;
-};
 
 struct ApeGCMemory_t
 {
@@ -1154,6 +1169,27 @@ struct ApeFileScope_t
     ApeSymTable_t* symbol_table;
     ApeCompiledFile_t* file;
     ApePtrArray_t * loadedmodulenames;
+};
+
+struct ApeCompResult_t
+{
+    ApeContext_t* context;
+    ApeAllocator_t* alloc;
+    ApeUShort_t* bytecode;
+    ApePosition_t* srcpositions;
+    ApeSize_t count;
+};
+
+struct ApeCompScope_t
+{
+    ApeContext_t* context;
+    ApeAllocator_t* alloc;
+    ApeCompScope_t* outer;
+    ApeValArray_t * bytecode;
+    ApeValArray_t * srcpositions;
+    ApeValArray_t * breakipstack;
+    ApeValArray_t * continueipstack;
+    ApeOpByte_t lastopcode;
 };
 
 struct ApeCompiler_t

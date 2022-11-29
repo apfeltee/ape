@@ -108,7 +108,7 @@ bool ape_valarray_add(ApeValArray_t* arr, const void* value)
     unsigned char* new_data;
     if(arr->count >= arr->capacity)
     {
-        COLLECTIONS_ASSERT(!arr->lock_capacity);
+        APE_ASSERT(!arr->lock_capacity);
         if(arr->lock_capacity)
         {
             return false;
@@ -169,7 +169,7 @@ bool ape_valarray_set(ApeValArray_t* arr, ApeSize_t ix, void* value)
     ApeSize_t offset;
     if(ix >= arr->count)
     {
-        COLLECTIONS_ASSERT(false);
+        APE_ASSERT(false);
         return false;
     }
     offset = ix * arr->element_size;
@@ -183,7 +183,7 @@ void* ape_valarray_get(ApeValArray_t* arr, ApeSize_t ix)
     ApeSize_t offset;
     if(ix >= arr->count)
     {
-        COLLECTIONS_ASSERT(false);
+        APE_ASSERT(false);
         return NULL;
     }
     offset = ix * arr->element_size;
