@@ -31,33 +31,36 @@ ApeObjType_t* ape_args_make_typarray(int first, ...)
 bool ape_args_check(ApeVM_t* vm, bool generate_error, ApeSize_t argc, ApeObject_t* args, ApeSize_t expected_argc, const ApeObjType_t* expected_types)
 {
     ApeSize_t i;
+    ApeObject_t arg;
+    ApeObjType_t type;
+    ApeObjType_t extype;
+    char* extypestr;
+    const char* typestr;
     if(argc != expected_argc)
     {
         if(generate_error)
         {
-            ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid,
-                              "invalid number of arguments, got %d instead of %d", argc, expected_argc);
+            ape_vm_adderror(vm, APE_ERROR_RUNTIME, "invalid number of arguments, got %d instead of %d", argc, expected_argc);
         }
         return false;
     }
     for(i = 0; i < argc; i++)
     {
-        ApeObject_t arg = args[i];
-        ApeObjType_t type = ape_object_value_type(arg);
-        ApeObjType_t expected_type = expected_types[i];
-        if(!(type & expected_type))
+        arg = args[i];
+        type = ape_object_value_type(arg);
+        extype = expected_types[i];
+        if(!(type & extype))
         {
             if(generate_error)
             {
-                const char* type_str = ape_object_value_typename(type);
-                char* expected_type_str = ape_object_value_typeunionname(vm->context, expected_type);
-                if(!expected_type_str)
+                typestr = ape_object_value_typename(type);
+                extypestr = ape_object_value_typeunionname(vm->context, extype);
+                if(!extypestr)
                 {
                     return false;
                 }
-                ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid,
-                                  "invalid argument %d type, got %s, expected %s", i, type_str, expected_type_str);
-                ape_allocator_free(vm->alloc, expected_type_str);
+                ape_vm_adderror(vm, APE_ERROR_RUNTIME, "invalid argument %d type, got %s, expected %s", i, typestr, extypestr);
+                ape_allocator_free(vm->alloc, extypestr);
             }
             return false;
         }
@@ -68,79 +71,86 @@ bool ape_args_check(ApeVM_t* vm, bool generate_error, ApeSize_t argc, ApeObject_
 // INTERNAL
 static ApeObject_t cfn_object_length(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
+    ApeSize_t len;
+    ApeObject_t arg;
+    ApeObjType_t type;
     (void)data;
     if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING | APE_OBJECT_ARRAY | APE_OBJECT_MAP))
     {
         return ape_object_make_null(vm->context);
     }
-
-    ApeObject_t arg = args[0];
-    ApeObjType_t type = ape_object_value_type(arg);
+    arg = args[0];
+    type = ape_object_value_type(arg);
     if(type == APE_OBJECT_STRING)
     {
-        ApeSize_t len = ape_object_string_getlength(arg);
+        len = ape_object_string_getlength(arg);
         return ape_object_make_number(vm->context, len);
     }
     else if(type == APE_OBJECT_ARRAY)
     {
-        ApeSize_t len = ape_object_array_getlength(arg);
+        len = ape_object_array_getlength(arg);
         return ape_object_make_number(vm->context, len);
     }
     else if(type == APE_OBJECT_MAP)
     {
-        ApeSize_t len = ape_object_map_getlength(arg);
+        len = ape_object_map_getlength(arg);
         return ape_object_make_number(vm->context, len);
     }
-
     return ape_object_make_null(vm->context);
 }
 
 static ApeObject_t cfn_object_first(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
+    ApeObject_t arg;
     (void)data;
     if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ARRAY))
     {
         return ape_object_make_null(vm->context);
     }
-    ApeObject_t arg = args[0];
+    arg = args[0];
     return ape_object_array_getvalue(arg, 0);
 }
 
 static ApeObject_t cfn_object_last(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
+    ApeObject_t arg;
     (void)data;
     if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ARRAY))
     {
         return ape_object_make_null(vm->context);
     }
-    ApeObject_t arg = args[0];
+    arg = args[0];
     return ape_object_array_getvalue(arg, ape_object_array_getlength(arg) - 1);
 }
 
 static ApeObject_t cfn_object_rest(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
+    bool ok;
     ApeSize_t i;
     ApeSize_t len;
+    ApeObject_t arg;
+    ApeObject_t res;
+    ApeObject_t item;
     (void)data;
     if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ARRAY))
     {
         return ape_object_make_null(vm->context);
     }
-    ApeObject_t arg = args[0];
+    arg = args[0];
     len = ape_object_array_getlength(arg);
     if(len == 0)
     {
         return ape_object_make_null(vm->context);
     }
-    ApeObject_t res = ape_object_make_array(vm->context);
+    res = ape_object_make_array(vm->context);
     if(ape_object_value_isnull(res))
     {
         return ape_object_make_null(vm->context);
     }
     for(i = 1; i < len; i++)
     {
-        ApeObject_t item = ape_object_array_getvalue(arg, i);
-        bool ok = ape_object_array_pushvalue(res, item);
+        item = ape_object_array_getvalue(arg, i);
+        ok = ape_object_array_pushvalue(res, item);
         if(!ok)
         {
             return ape_object_make_null(vm->context);
@@ -399,7 +409,7 @@ static ApeObject_t cfn_to_num(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
     }
     return ape_object_make_number(vm->context, result);
 err:
-    ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "cannot convert '%s' to number", string);
+    ape_vm_adderror(vm, APE_ERROR_RUNTIME, "cannot convert '%s' to number", string);
     return ape_object_make_null(vm->context);
 }
 
@@ -486,10 +496,9 @@ static ApeObject_t cfn_range(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
         ApeObjType_t type = ape_object_value_type(args[i]);
         if(type != APE_OBJECT_NUMBER)
         {
-            const char* type_str = ape_object_value_typename(type);
+            const char* typestr = ape_object_value_typename(type);
             const char* expected_str = ape_object_value_typename(APE_OBJECT_NUMBER);
-            ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid,
-                              "invalid argument %d passed to range, got %s instead of %s", i, type_str, expected_str);
+            ape_vm_adderror(vm, APE_ERROR_RUNTIME, "invalid argument %d passed to range, got %s instead of %s", i, typestr, expected_str);
             return ape_object_make_null(vm->context);
         }
     }
@@ -514,13 +523,13 @@ static ApeObject_t cfn_range(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     }
     else
     {
-        ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "invalid number of arguments passed to range, got %d", argc);
+        ape_vm_adderror(vm, APE_ERROR_RUNTIME, "invalid number of arguments passed to range, got %d", argc);
         return ape_object_make_null(vm->context);
     }
 
     if(step == 0)
     {
-        ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "range step cannot be 0");
+        ape_vm_adderror(vm, APE_ERROR_RUNTIME, "range step cannot be 0");
         return ape_object_make_null(vm->context);
     }
 
@@ -634,7 +643,7 @@ static ApeObject_t cfn_concat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
         if(item_type != APE_OBJECT_ARRAY)
         {
             const char* item_type_str = ape_object_value_typename(item_type);
-            ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "invalid argument 2 passed to concat, got %s", item_type_str);
+            ape_vm_adderror(vm, APE_ERROR_RUNTIME, "invalid argument 2 passed to concat, got %s", item_type_str);
             return ape_object_make_null(vm->context);
         }
         for(i = 0; i < ape_object_array_getlength(args[1]); i++)
@@ -752,11 +761,11 @@ static ApeObject_t cfn_crash(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     (void)data;
     if(argc == 1 && ape_object_value_type(args[0]) == APE_OBJECT_STRING)
     {
-        ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame), ape_object_string_getdata(args[0]));
+        ape_vm_adderror(vm, APE_ERROR_RUNTIME, "%s", ape_object_string_getdata(args[0]));
     }
     else
     {
-        ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->current_frame), "");
+        ape_vm_adderror(vm, APE_ERROR_RUNTIME, "");
     }
     return ape_object_make_null(vm->context);
 }
@@ -771,7 +780,7 @@ static ApeObject_t cfn_assert(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
 
     if(!ape_object_value_asbool(args[0]))
     {
-        ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "assertion failed");
+        ape_vm_adderror(vm, APE_ERROR_RUNTIME, "assertion failed");
         return ape_object_make_null(vm->context);
     }
 
@@ -808,7 +817,7 @@ static ApeObject_t cfn_random(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
         ApeFloat_t max = ape_object_value_asnumber(args[1]);
         if(min >= max)
         {
-            ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "max is bigger than min");
+            ape_vm_adderror(vm, APE_ERROR_RUNTIME, "max is bigger than min");
             return ape_object_make_null(vm->context);
         }
         ApeFloat_t range = max - min;
@@ -817,7 +826,7 @@ static ApeObject_t cfn_random(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
     }
     else
     {
-        ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "invalid number or arguments");
+        ape_vm_adderror(vm, APE_ERROR_RUNTIME, "invalid number or arguments");
         return ape_object_make_null(vm->context);
     }
 }
@@ -903,7 +912,7 @@ static ApeObject_t cfn_object_slice(ApeVM_t* vm, void* data, ApeSize_t argc, Ape
         return res;
     }
     typestr = ape_object_value_typename(argtype);
-    ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "invalid argument 0 passed to slice, got %s instead", typestr);
+    ape_vm_adderror(vm, APE_ERROR_RUNTIME, "invalid argument 0 passed to slice, got %s instead", typestr);
     return ape_object_make_null(vm->context);
     
 }
@@ -1084,7 +1093,7 @@ static ApeObject_t cfn_string_join(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
     slen = 0;
     if((argc == 0) || (ape_object_value_type(args[0]) != APE_OBJECT_ARRAY))
     {
-        ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "String.join expects first argument to be a array");
+        ape_vm_adderror(vm, APE_ERROR_RUNTIME, "String.join expects first argument to be a array");
         return ape_object_make_null(vm->context);
     }
     arrobj = args[0];
@@ -1093,7 +1102,7 @@ static ApeObject_t cfn_string_join(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
         sjoin = args[1];
         if(ape_object_value_type(sjoin) != APE_OBJECT_STRING)
         {
-            ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, g_bltpriv_src_pos_invalid, "String.join expects second argument to be a string");
+            ape_vm_adderror(vm, APE_ERROR_RUNTIME, "String.join expects second argument to be a string");
             return ape_object_make_null(vm->context);
         }
         sstr = ape_object_string_getdata(sjoin);
@@ -1168,16 +1177,32 @@ static ApeObject_t cfn_object_eval(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
     return rt;
 }
 
+static ApeObject_t cfn_vm_gcsweep(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+{
+    (void)data;
+    (void)argc;
+    (void)args;
+    ape_gcmem_sweep(vm->mem);
+    return ape_object_make_null(vm->context);
+}
+
+
+static ApeObject_t cfn_vm_gccollect(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+{
+    (void)data;
+    (void)argc;
+    (void)args;
+    ape_vm_collectgarbage(vm, NULL, false);
+    return ape_object_make_null(vm);
+}
 
 static ApeNativeItem_t g_core_globalfuncs[] =
 {
     { "println", cfn_println },
     { "print", cfn_print },
-
     { "tostring", cfn_to_str },
     { "to_num", cfn_to_num },
     { "range", cfn_range },
-
     { "concat", cfn_concat },
     { "chr", cfn_chr },
     { "ord", cfn_ord },
@@ -1192,53 +1217,13 @@ static ApeNativeItem_t g_core_globalfuncs[] =
     { "slice", cfn_object_slice },
     { "len", cfn_object_length },
     { "length", cfn_object_length },
-
     { "eval", cfn_object_eval },
-
     // Math
     { "bitnot", cfn_bitnot },
     { "shiftleft", cfn_shiftleft },
     { "shiftright", cfn_shiftright },
-
-};
-
-/*
-Object.copy instead of clone?
-*/
-
-
-static ApeNativeItem_t g_core_objectfuncs[]=
-{
-    {"isstring", cfn_object_isstring},
-    {"isarray", cfn_object_isarray },
-    {"ismap", cfn_object_ismap },
-    {"isnumber", cfn_object_isnumber },
-    {"isbool", cfn_object_isbool },
-    {"isnull", cfn_object_isnull },
-    {"isfunction", cfn_object_isfunction },
-    {"isexternal", cfn_object_isexternal },
-    {"iserror", cfn_object_iserror },
-    {"isnativefunction", cfn_object_isnativefunction },
-
-
-    { "len", cfn_object_length },
-    { "first", cfn_object_first },
-    { "last", cfn_object_last },
-    { "rest", cfn_object_rest },
-    { "append", cfn_object_append },
-    { "remove", cfn_object_removekey },
-    { "removeat", cfn_object_removeat },
-
-    { "keys", cfn_object_objkeys },
-    { "values", cfn_object_objvalues },
-
-    { "copy", cfn_object_copy },
-    { "deepcopy", cfn_object_deepcopy },
-
-
     {NULL, NULL},
 };
-
 
 void ape_builtins_setup_namespace(ApeVM_t* vm, const char* nsname, ApeNativeItem_t* fnarray)
 {
@@ -1254,7 +1239,7 @@ void ape_builtins_setup_namespace(ApeVM_t* vm, const char* nsname, ApeNativeItem
 
 void ape_builtins_install_string(ApeVM_t* vm)
 {
-    static ApeNativeItem_t g_core_stringfuncs[]=
+    static ApeNativeItem_t stringfuncs[]=
     {
         {"split", cfn_string_split},
         {"join", cfn_string_join},
@@ -1263,24 +1248,66 @@ void ape_builtins_install_string(ApeVM_t* vm)
         #endif
         {NULL, NULL},
     };
-    ape_builtins_setup_namespace(vm, "String", g_core_stringfuncs);    
+    ape_builtins_setup_namespace(vm, "String", stringfuncs);    
+}
+
+void ape_builtins_install_vm(ApeVM_t* vm)
+{
+    static ApeNativeItem_t vmfuncs[]=
+    {
+        {"sweep", cfn_vm_gcsweep},
+        {"collect", cfn_vm_gccollect},
+        {NULL, NULL},
+    };
+    ape_builtins_setup_namespace(vm, "VM", vmfuncs);    
+}
+
+void ape_builtins_install_object(ApeVM_t* vm)
+{
+    /*
+    Object.copy instead of clone?
+    */
+    static ApeNativeItem_t objectfuncs[]=
+    {
+        {"isstring", cfn_object_isstring},
+        {"isarray", cfn_object_isarray },
+        {"ismap", cfn_object_ismap },
+        {"isnumber", cfn_object_isnumber },
+        {"isbool", cfn_object_isbool },
+        {"isnull", cfn_object_isnull },
+        {"isfunction", cfn_object_isfunction },
+        {"isexternal", cfn_object_isexternal },
+        {"iserror", cfn_object_iserror },
+        {"isnativefunction", cfn_object_isnativefunction },
+        { "len", cfn_object_length },
+        { "first", cfn_object_first },
+        { "last", cfn_object_last },
+        { "rest", cfn_object_rest },
+        { "append", cfn_object_append },
+        { "remove", cfn_object_removekey },
+        { "removeat", cfn_object_removeat },
+        { "keys", cfn_object_objkeys },
+        { "values", cfn_object_objvalues },
+        { "copy", cfn_object_copy },
+        { "deepcopy", cfn_object_deepcopy },
+        {NULL, NULL},
+    };
+    ape_builtins_setup_namespace(vm, "Object", objectfuncs);
 }
 
 // TODO: this is an attempt to get rid of (most) global functions.
 void ape_builtins_install(ApeVM_t* vm)
 {
-    ape_builtins_setup_namespace(vm, "Object", g_core_objectfuncs);
+    ape_builtins_install_object(vm);
     ape_builtins_install_io(vm);
     ape_builtins_install_string(vm);
-    // TODO: implement me!
-    #if 0
-    ape_builtins_setup_namespace(vm, "VM", g_core_vmfuncs);
-    #endif
+    ape_builtins_install_math(vm);
+    ape_builtins_install_vm(vm);
 }
 
 ApeSize_t ape_builtins_count()
 {
-    return APE_ARRAY_LEN(g_core_globalfuncs);
+    return (APE_ARRAY_LEN(g_core_globalfuncs) - 1);
 }
 
 ApeNativeFuncPtr_t ape_builtins_getfunc(ApeSize_t ix)
@@ -1292,7 +1319,6 @@ const char* ape_builtins_getname(ApeSize_t ix)
 {
     return g_core_globalfuncs[ix].name;
 }
-
 
 ApeNativeFuncPtr_t ape_builtin_find_objectfunc(ApeContext_t* ctx, ApeNativeItem_t* nf, const char* idxname)
 {

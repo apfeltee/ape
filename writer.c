@@ -18,9 +18,9 @@ ApeWriter_t* ape_make_writerdefault(ApeContext_t* ctx)
     buf->context = ctx;
     buf->alloc = &ctx->alloc;
     buf->failed = false;
-    buf->stringdata = NULL;
-    buf->capacity = 0;
-    buf->len = 0;
+    buf->datastring = NULL;
+    buf->datacapacity = 0;
+    buf->datalength = 0;
     buf->iohandle = NULL;
     buf->iowriter = NULL;
     buf->iomustclose = false;
@@ -31,15 +31,15 @@ ApeWriter_t* ape_make_writercapacity(ApeContext_t* ctx, ApeSize_t capacity)
 {
     ApeWriter_t* buf;
     buf = ape_make_writerdefault(ctx);
-    buf->stringdata = (char*)ape_allocator_alloc(&ctx->alloc, capacity);
-    if(buf->stringdata == NULL)
+    buf->datastring = (char*)ape_allocator_alloc(&ctx->alloc, capacity);
+    if(buf->datastring == NULL)
     {
         ape_allocator_free(&ctx->alloc, buf);
         return NULL;
     }
-    buf->capacity = capacity;
-    buf->len = 0;
-    buf->stringdata[0] = '\0';
+    buf->datacapacity = capacity;
+    buf->datalength = 0;
+    buf->datastring[0] = '\0';
     return buf;
 }
 
@@ -89,7 +89,7 @@ void ape_writer_destroy(ApeWriter_t* buf)
     }
     else
     {
-        ape_allocator_free(buf->alloc, buf->stringdata);
+        ape_allocator_free(buf->alloc, buf->datastring);
     }
     ape_allocator_free(buf->alloc, buf);
 
@@ -117,8 +117,8 @@ bool ape_writer_appendn(ApeWriter_t* buf, const char* str, ApeSize_t str_len)
         }
         return true;
     }
-    required_capacity = buf->len + str_len + 1;
-    if(required_capacity > buf->capacity)
+    required_capacity = buf->datalength + str_len + 1;
+    if(required_capacity > buf->datacapacity)
     {
         ok = ape_writer_grow(buf, required_capacity * 2);
         if(!ok)
@@ -126,9 +126,9 @@ bool ape_writer_appendn(ApeWriter_t* buf, const char* str, ApeSize_t str_len)
             return false;
         }
     }
-    memcpy(buf->stringdata + buf->len, str, str_len);
-    buf->len = buf->len + str_len;
-    buf->stringdata[buf->len] = '\0';
+    memcpy(buf->datastring + buf->datalength, str, str_len);
+    buf->datalength = buf->datalength + str_len;
+    buf->datastring[buf->datalength] = '\0';
     return true;
 }
 
@@ -157,9 +157,9 @@ bool ape_writer_appendf(ApeWriter_t* buf, const char* fmt, ...)
     {
         return true;
     }
-    required_capacity = buf->len + to_write + 1;
+    required_capacity = buf->datalength + to_write + 1;
     /*
-    if(required_capacity > buf->capacity)
+    if(required_capacity > buf->datacapacity)
     {
         ok = ape_writer_grow(buf, required_capacity * 2);
         if(!ok)
@@ -168,14 +168,14 @@ bool ape_writer_appendf(ApeWriter_t* buf, const char* fmt, ...)
         }
     }
     va_start(args, fmt);
-    written = vsprintf(buf->stringdata + buf->len, fmt, args);
+    written = vsprintf(buf->datastring + buf->datalength, fmt, args);
     va_end(args);
     if(written != to_write)
     {
         return false;
     }
-    buf->len = buf->len + to_write;
-    buf->stringdata[buf->len] = '\0';
+    buf->datalength = buf->datalength + to_write;
+    buf->datastring[buf->datalength] = '\0';
     */
 
     tbuf = (char*)ape_allocator_alloc(buf->alloc, required_capacity);
@@ -193,7 +193,7 @@ const char* ape_writer_getdata(const ApeWriter_t* buf)
     {
         return NULL;
     }
-    return buf->stringdata;
+    return buf->datastring;
 }
 
 ApeSize_t ape_writer_getlength(const ApeWriter_t* buf)
@@ -202,7 +202,7 @@ ApeSize_t ape_writer_getlength(const ApeWriter_t* buf)
     {
         return 0;
     }
-    return buf->len;
+    return buf->datalength;
 }
 
 char* ape_writer_getstringanddestroy(ApeWriter_t* buf)
@@ -213,8 +213,8 @@ char* ape_writer_getstringanddestroy(ApeWriter_t* buf)
         ape_writer_destroy(buf);
         return NULL;
     }
-    res = buf->stringdata;
-    buf->stringdata = NULL;
+    res = buf->datastring;
+    buf->datastring = NULL;
     ape_writer_destroy(buf);
     return res;
 }
@@ -233,11 +233,11 @@ bool ape_writer_grow(ApeWriter_t* buf, ApeSize_t new_capacity)
         buf->failed = true;
         return false;
     }
-    memcpy(new_data, buf->stringdata, buf->len);
-    new_data[buf->len] = '\0';
-    ape_allocator_free(buf->alloc, buf->stringdata);
-    buf->stringdata = new_data;
-    buf->capacity = new_capacity;
+    memcpy(new_data, buf->datastring, buf->datalength);
+    new_data[buf->datalength] = '\0';
+    ape_allocator_free(buf->alloc, buf->datastring);
+    buf->datastring = new_data;
+    buf->datacapacity = new_capacity;
     return true;
 }
 

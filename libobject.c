@@ -388,7 +388,7 @@ char* ape_object_value_serialize(ApeContext_t* ctx, ApeObject_t object, ApeSize_
         return NULL;
     }
     ape_tostring_object(object, buf, true);
-    l = buf->len;
+    l = buf->datalength;
     string = ape_writer_getstringanddestroy(buf);
     if(lendest != NULL)
     {

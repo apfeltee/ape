@@ -221,7 +221,7 @@ ApeSymTable_t* ape_compiler_getsymboltable(ApeCompiler_t* comp)
         APE_ASSERT(false);
         return NULL;
     }
-    return filescope->symbol_table;
+    return filescope->symtable;
 }
 
 static void ape_compiler_setsymtable(ApeCompiler_t* comp, ApeSymTable_t* table)
@@ -233,7 +233,7 @@ static void ape_compiler_setsymtable(ApeCompiler_t* comp, ApeSymTable_t* table)
         APE_ASSERT(false);
         return;
     }
-    filescope->symbol_table = table;
+    filescope->symtable = table;
 }
 
 ApeValArray_t* ape_compiler_getconstants(const ApeCompiler_t* comp)
@@ -490,11 +490,11 @@ static bool ape_compiler_pushsymtable(ApeCompiler_t* comp, ApeInt_t globaloffset
         APE_ASSERT(false);
         return false;
     }
-    ApeSymTable_t* currenttable = filescope->symbol_table;
-    filescope->symbol_table = ape_make_symtable(comp->context, currenttable, comp->globalstore, globaloffset);
-    if(!filescope->symbol_table)
+    ApeSymTable_t* currenttable = filescope->symtable;
+    filescope->symtable = ape_make_symtable(comp->context, currenttable, comp->globalstore, globaloffset);
+    if(!filescope->symtable)
     {
-        filescope->symbol_table = currenttable;
+        filescope->symtable = currenttable;
         return false;
     }
     return true;
@@ -510,13 +510,13 @@ static void ape_compiler_popsymtable(ApeCompiler_t* comp)
         APE_ASSERT(false);
         return;
     }
-    currenttable = filescope->symbol_table;
+    currenttable = filescope->symtable;
     if(!currenttable)
     {
         APE_ASSERT(false);
         return;
     }
-    filescope->symbol_table = currenttable->outer;
+    filescope->symtable = currenttable->outer;
     ape_symtable_destroy(currenttable);
 }
 
@@ -2246,7 +2246,7 @@ static ApeFileScope_t* ape_compiler_makefilescope(ApeCompiler_t* comp, ApeCompil
     {
         goto err;
     }
-    filescope->symbol_table = NULL;
+    filescope->symtable = NULL;
     filescope->file = file;
     filescope->loadedmodulenames = ape_make_ptrarray(comp->context);
     if(!filescope->loadedmodulenames)

@@ -239,6 +239,21 @@ void ape_errorlist_addformat(ApeErrorList_t* errors, ApeErrorType_t type, ApePos
     ape_errorlist_add(errors, type, pos, res);
 }
 
+void ape_errorlist_addformatv(ApeErrorList_t* errors, ApeErrorType_t type, ApePosition_t pos, const char* format, va_list va)
+{
+    int to_write;
+    int written;
+    char res[APE_CONF_SIZE_ERROR_MAXMSGLENGTH];
+    va_list copy;
+    (void)to_write;
+    (void)written;
+    va_copy(copy, va);
+    to_write = vsnprintf(NULL, 0, format, copy);
+    written = vsnprintf(res, APE_CONF_SIZE_ERROR_MAXMSGLENGTH, format, va);
+    APE_ASSERT(to_write == written);
+    ape_errorlist_add(errors, type, pos, res);
+}
+
 void ape_errorlist_clear(ApeErrorList_t* errors)
 {
     ApeSize_t i;

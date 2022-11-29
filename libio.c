@@ -150,7 +150,7 @@ static ApeObject_t cfn_file_stat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObj
     map.handle = NULL;
     if((argc == 0) || !ape_object_value_isstring(args[0]))
     {
-        ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, libio_pos_invalid, "File.stat expects at least one string argument");
+        ape_vm_adderror(vm, APE_ERROR_RUNTIME, "File.stat expects at least one string argument");
         return ape_object_make_null(vm->context);
     }
     if(argc > 1)
@@ -158,7 +158,7 @@ static ApeObject_t cfn_file_stat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObj
         objsecond = args[1];
         if(!ape_object_value_isstring(objsecond))
         {
-            ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, libio_pos_invalid, "File.stat expects second argument to be a string");
+            ape_vm_adderror(vm, APE_ERROR_RUNTIME, "File.stat expects second argument to be a string");
             return ape_object_make_null(vm->context);
         }
         specificfield = true;
@@ -203,7 +203,7 @@ static ApeObject_t cfn_file_stat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObj
         }
         else
         {
-            ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, libio_pos_invalid, "File.stat secondary field '%s' does not exist", field);
+            ape_vm_adderror(vm, APE_ERROR_RUNTIME, "File.stat secondary field '%s' does not exist", field);
         }
         return ape_object_make_null(vm->context);
     }

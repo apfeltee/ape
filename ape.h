@@ -83,6 +83,8 @@ THE SOFTWARE.
 #define APE_CONF_INVALID_VALDICT_IX UINT_MAX
 #define APE_CONF_INVALID_STRDICT_IX UINT_MAX
 #define APE_CONF_DICT_INITIAL_SIZE (2)
+#define APE_CONF_ARRAY_INITIAL_CAPACITY 4
+#define APE_CONF_MAP_INITIAL_CAPACITY 4
 #define APE_CONF_SIZE_VM_STACK (1024)
 #define APE_CONF_SIZE_VM_MAXGLOBALS (512*4)
 #define APE_CONF_SIZE_MAXFRAMES (512*4)
@@ -1044,13 +1046,13 @@ struct ApeFrame_t
 {
     ApeObject_t function;
     ApeInt_t ip;
-    ApeInt_t base_pointer;
+    ApeInt_t basepointer;
     ApePosition_t* srcpositions;
     ApeUShort_t* bytecode;
-    ApeInt_t src_ip;
-    ApeSize_t bytecode_size;
-    ApeInt_t recover_ip;
-    bool is_recovering;
+    ApeInt_t srcip;
+    ApeSize_t bcsize;
+    ApeInt_t recoverip;
+    bool isrecovering;
 };
 
 struct ApeVM_t
@@ -1062,15 +1064,15 @@ struct ApeVM_t
     ApeErrorList_t* errors;
     ApeGlobalStore_t* globalstore;
     ApeObject_t globals[APE_CONF_SIZE_VM_MAXGLOBALS];
-    ApeSize_t globals_count;
+    ApeSize_t globalscount;
     ApeObject_t stack[APE_CONF_SIZE_VM_STACK];
     int sp;
     ApeObject_t this_stack[APE_CONF_SIZE_VM_THISSTACK];
     int this_sp;
     ApeFrame_t frames[APE_CONF_SIZE_MAXFRAMES];
     ApeSize_t frames_count;
-    ApeObject_t last_popped;
-    ApeFrame_t* current_frame;
+    ApeObject_t lastpopped;
+    ApeFrame_t* currentframe;
     bool running;
     ApeObject_t operator_oveload_keys[APE_OPCODE_MAX];
 };
@@ -1079,20 +1081,20 @@ struct ApeValDict_t
 {
     ApeContext_t* context;
     ApeAllocator_t* alloc;
-    ApeSize_t key_size;
-    ApeSize_t val_size;
+    ApeSize_t keysize;
+    ApeSize_t valsize;
     unsigned int* cells;
     unsigned long* hashes;
     void* keys;
     void* values;
-    unsigned int* cell_ixs;
+    unsigned int* cellindices;
     ApeSize_t count;
-    ApeSize_t item_capacity;
-    ApeSize_t cell_capacity;
+    ApeSize_t itemcap;
+    ApeSize_t cellcap;
     ApeDataHashFunc_t _hash_key;
     ApeDataEqualsFunc_t _keys_equals;
-    ApeDataCallback_t copy_fn;
-    ApeDataCallback_t destroy_fn;
+    ApeDataCallback_t fnvalcopy;
+    ApeDataCallback_t fnvaldestroy;
 };
 
 struct ApeStrDict_t
@@ -1103,12 +1105,12 @@ struct ApeStrDict_t
     unsigned long* hashes;
     char** keys;
     void** values;
-    unsigned int* cell_ixs;
+    unsigned int* cellindices;
     ApeSize_t count;
-    ApeSize_t item_capacity;
-    ApeSize_t cell_capacity;
-    ApeDataCallback_t copy_fn;
-    ApeDataCallback_t destroy_fn;
+    ApeSize_t itemcap;
+    ApeSize_t cellcap;
+    ApeDataCallback_t fnstrcopy;
+    ApeDataCallback_t fnstrdestroy;
 };
 
 struct ApeValArray_t
@@ -1116,10 +1118,10 @@ struct ApeValArray_t
     ApeContext_t* context;
     ApeAllocator_t* alloc;
     unsigned char* arraydata;
-    unsigned char* data_allocated;
+    unsigned char* allocdata;
     ApeSize_t count;
     ApeSize_t capacity;
-    ApeSize_t element_size;
+    ApeSize_t elemsize;
     bool lock_capacity;
 };
 
@@ -1135,9 +1137,9 @@ struct ApeWriter_t
     ApeContext_t* context;
     ApeAllocator_t* alloc;
     bool failed;
-    char* stringdata;
-    ApeSize_t capacity;
-    ApeSize_t len;
+    char* datastring;
+    ApeSize_t datacapacity;
+    ApeSize_t datalength;
     void* iohandle;
     ApeWriterWriteFunc_t iowriter;
     ApeWriterFlushFunc_t ioflusher;
@@ -1166,7 +1168,7 @@ struct ApeFileScope_t
     ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeParser_t* parser;
-    ApeSymTable_t* symbol_table;
+    ApeSymTable_t* symtable;
     ApeCompiledFile_t* file;
     ApePtrArray_t * loadedmodulenames;
 };
