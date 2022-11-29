@@ -1,7 +1,7 @@
 
 #include "ape.h"
 
-static const ApePosition_t g_mempriv_src_pos_invalid = { NULL, -1, -1 };
+static const ApePosition_t g_mempriv_srcposinvalid = { NULL, -1, -1 };
 
 void* ape_mem_defaultmalloc(void* opaqptr, size_t size)
 {
@@ -11,7 +11,7 @@ void* ape_mem_defaultmalloc(void* opaqptr, size_t size)
     resptr = (void*)ape_allocator_alloc(&ctx->custom_allocator, size);
     if(!resptr)
     {
-        ape_errorlist_add(&ctx->errors, APE_ERROR_ALLOCATION, g_mempriv_src_pos_invalid, "allocation failed");
+        ape_errorlist_add(&ctx->errors, APE_ERROR_ALLOCATION, g_mempriv_srcposinvalid, "allocation failed");
     }
     return resptr;
 }

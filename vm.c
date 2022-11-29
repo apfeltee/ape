@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "ape.h"
 
-static const ApePosition_t g_vmpriv_src_pos_invalid = { NULL, -1, -1 };
+static const ApePosition_t g_vmpriv_srcposinvalid = { NULL, -1, -1 };
 
 
 static bool ape_vm_setsymbol(ApeSymTable_t *table, ApeSymbol_t *symbol);
@@ -1319,7 +1319,7 @@ ApePosition_t ape_frame_srcposition(const ApeFrame_t* frame)
     {
         return frame->srcpositions[frame->srcip];
     }
-    return g_vmpriv_src_pos_invalid;
+    return g_vmpriv_srcposinvalid;
 }
 
 ApeObject_t ape_vm_getlastpopped(ApeVM_t* vm)
@@ -1571,13 +1571,13 @@ bool ape_vm_callobject(ApeVM_t* vm, ApeObject_t callee, ApeInt_t num_args)
         ok = ape_frame_init(&calleeframe, callee, vm->sp - num_args);
         if(!ok)
         {
-            ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, g_vmpriv_src_pos_invalid, "frame init failed in ape_vm_callobject");
+            ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, g_vmpriv_srcposinvalid, "frame init failed in ape_vm_callobject");
             return false;
         }
         ok = ape_vm_pushframe(vm, calleeframe);
         if(!ok)
         {
-            ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, g_vmpriv_src_pos_invalid, "pushing frame failed in ape_vm_callobject");
+            ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, g_vmpriv_srcposinvalid, "pushing frame failed in ape_vm_callobject");
             return false;
         }
     }
@@ -1621,7 +1621,7 @@ ApeObject_t ape_vm_callnativefunction(ApeVM_t* vm, ApeObject_t callee, ApePositi
         err->traceback = ape_make_traceback(vm->context);
         if(err->traceback)
         {
-            ape_traceback_append(err->traceback, nfunc->name, g_vmpriv_src_pos_invalid);
+            ape_traceback_append(err->traceback, nfunc->name, g_vmpriv_srcposinvalid);
         }
         return ape_object_make_null(vm->context);
     }
@@ -1634,7 +1634,7 @@ ApeObject_t ape_vm_callnativefunction(ApeVM_t* vm, ApeObject_t callee, ApePositi
             // error builtin is treated in a special way
             if(!APE_STREQ(nfunc->name, "error"))
             {
-                ape_traceback_append(traceback, nfunc->name, g_vmpriv_src_pos_invalid);
+                ape_traceback_append(traceback, nfunc->name, g_vmpriv_srcposinvalid);
             }
             ape_traceback_appendfromvm(traceback, vm);
             ape_object_value_seterrortraceback(objres, traceback);
@@ -2205,7 +2205,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
     #if 0
     if(vm->running)
     {
-        ape_errorlist_add(vm->errors, APE_ERROR_USER, g_vmpriv_src_pos_invalid, "VM is already executing code");
+        ape_errorlist_add(vm->errors, APE_ERROR_USER, g_vmpriv_srcposinvalid, "VM is already executing code");
         return false;
     }
     #endif
@@ -2219,7 +2219,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
     ok = ape_vm_pushframe(vm, new_frame);
     if(!ok)
     {
-        ape_errorlist_add(vm->errors, APE_ERROR_USER, g_vmpriv_src_pos_invalid, "pushing frame failed");
+        ape_errorlist_add(vm->errors, APE_ERROR_USER, g_vmpriv_srcposinvalid, "pushing frame failed");
         return false;
     }
     vm->running = true;

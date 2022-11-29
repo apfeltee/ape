@@ -760,7 +760,7 @@ struct ApeCompiledFile_t
     ApeAllocator_t* alloc;
     char* dirpath;
     char* path;
-    ApePtrArray_t * lines;
+    ApePtrArray_t* lines;
 };
 
 struct ApeLexer_t
@@ -795,13 +795,13 @@ struct ApeCodeblock_t
 {
     ApeContext_t* context;
     ApeAllocator_t* alloc;
-    ApePtrArray_t * statements;
+    ApePtrArray_t* statements;
 };
 
 struct ApeMapLiteral_t
 {
-    ApePtrArray_t * keys;
-    ApePtrArray_t * values;
+    ApePtrArray_t* keys;
+    ApePtrArray_t* values;
 };
 
 
@@ -829,14 +829,14 @@ struct ApeIfCase_t
 struct ApeFnLiteral_t
 {
     char* name;
-    ApePtrArray_t * params;
+    ApePtrArray_t* params;
     ApeCodeblock_t* body;
 };
 
 struct ApeCallExpr_t
 {
     ApeExpression_t* function;
-    ApePtrArray_t * args;
+    ApePtrArray_t* args;
 };
 
 struct ApeIndexExpr_t
@@ -885,7 +885,7 @@ struct ApeExpression_t
         ApeFloat_t numberliteral;
         bool boolliteral;
         char* stringliteral;
-        ApePtrArray_t * array;
+        ApePtrArray_t* array;
         ApeMapLiteral_t map;
         ApePrefixExpr_t prefix;
         ApeInfixExpr_t infix;
@@ -908,7 +908,7 @@ struct ApeDefineStmt_t
 
 struct ApeIfStmt_t
 {
-    ApePtrArray_t * cases;
+    ApePtrArray_t* cases;
     ApeCodeblock_t* alternative;
 };
 
@@ -991,7 +991,7 @@ struct ApeBlockScope_t
 {
     ApeContext_t* context;
     ApeAllocator_t* alloc;
-    ApeStrDict_t * store;
+    ApeStrDict_t* store;
     ApeInt_t offset;
     ApeSize_t numdefinitions;
 };
@@ -1002,9 +1002,9 @@ struct ApeSymTable_t
     ApeAllocator_t* alloc;
     ApeSymTable_t* outer;
     ApeGlobalStore_t* globalstore;
-    ApePtrArray_t * blockscopes;
-    ApePtrArray_t * freesymbols;
-    ApePtrArray_t * module_global_symbols;
+    ApePtrArray_t* blockscopes;
+    ApePtrArray_t* freesymbols;
+    ApePtrArray_t* module_global_symbols;
     ApeSize_t maxnumdefinitions;
     ApeInt_t module_global_offset;
 };
@@ -1022,9 +1022,9 @@ struct ApeGCMemory_t
     ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeSize_t allocations_since_sweep;
-    ApePtrArray_t * objects;
-    ApePtrArray_t * objects_back;
-    ApeValArray_t * objects_not_gced;
+    ApePtrArray_t* objects;
+    ApePtrArray_t* objects_back;
+    ApeValArray_t* objects_not_gced;
     ApeObjPool_t data_only_pool;
     ApeObjPool_t pools[APE_CONF_SIZE_GCMEM_POOLCOUNT];
 };
@@ -1039,7 +1039,7 @@ struct ApeTraceback_t
 {
     ApeContext_t* context;
     ApeAllocator_t* alloc;
-    ApeValArray_t * items;
+    ApeValArray_t* items;
 };
 
 struct ApeFrame_t
@@ -1151,8 +1151,8 @@ struct ApeGlobalStore_t
 {
     ApeContext_t* context;
     ApeAllocator_t* alloc;
-    ApeStrDict_t * symbols;
-    ApeValArray_t * objects;
+    ApeStrDict_t* symbols;
+    ApeValArray_t* objects;
 };
 
 struct ApeModule_t
@@ -1160,7 +1160,7 @@ struct ApeModule_t
     ApeContext_t* context;
     ApeAllocator_t* alloc;
     char* name;
-    ApePtrArray_t * symbols;
+    ApePtrArray_t* symbols;
 };
 
 struct ApeFileScope_t
@@ -1170,7 +1170,7 @@ struct ApeFileScope_t
     ApeParser_t* parser;
     ApeSymTable_t* symtable;
     ApeCompiledFile_t* file;
-    ApePtrArray_t * loadedmodulenames;
+    ApePtrArray_t* loadedmodulenames;
 };
 
 struct ApeCompResult_t
@@ -1187,10 +1187,10 @@ struct ApeCompScope_t
     ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeCompScope_t* outer;
-    ApeValArray_t * bytecode;
-    ApeValArray_t * srcpositions;
-    ApeValArray_t * breakipstack;
-    ApeValArray_t * continueipstack;
+    ApeValArray_t* bytecode;
+    ApeValArray_t* srcpositions;
+    ApeValArray_t* breakipstack;
+    ApeValArray_t* continueipstack;
     ApeOpByte_t lastopcode;
 };
 
@@ -1201,14 +1201,14 @@ struct ApeCompiler_t
     const ApeConfig_t* config;
     ApeGCMemory_t* mem;
     ApeErrorList_t* errors;
-    ApePtrArray_t * files;
+    ApePtrArray_t* files;
     ApeGlobalStore_t* globalstore;
-    ApeValArray_t * constants;
+    ApeValArray_t* constants;
     ApeCompScope_t* compilation_scope;
-    ApePtrArray_t * filescopes;
-    ApeValArray_t * srcpositionsstack;
-    ApeStrDict_t * modules;
-    ApeStrDict_t * stringconstantspositions;
+    ApePtrArray_t* filescopes;
+    ApeValArray_t* srcpositionsstack;
+    ApeStrDict_t* modules;
+    ApeStrDict_t* stringconstantspositions;
 };
 
 
@@ -1222,7 +1222,7 @@ struct ApeContext_t
 {
     ApeAllocator_t alloc;
     ApeGCMemory_t* mem;
-    ApePtrArray_t * files;
+    ApePtrArray_t* files;
     ApeGlobalStore_t* globalstore;
     ApeCompiler_t* compiler;
     ApeVM_t* vm;

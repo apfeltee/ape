@@ -73,7 +73,6 @@ bool ape_object_string_reservecapacity(ApeObjData_t* data, ApeSize_t capacity)
 {
     char* new_value;
     ApeObjString_t* string;
-    APE_ASSERT(capacity >= 0);
     string = &data->valstring;
     string->length = 0;
     string->hash = 0;

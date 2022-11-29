@@ -113,12 +113,12 @@ static bool populate_flags(int argc, int begin, char** argv, const char* expectv
     return true;
 }
 
-static void print_errors(ApeContext_t *ctx)
+static void print_errors(ApeContext_t* ctx)
 {
     int i;
     int count;
-    char *err_str;
-    ApeError_t *err;
+    char* err_str;
+    ApeError_t* err;
     count = ape_context_errorcount(ctx);
     for (i = 0; i < count; i++)
     {
@@ -129,9 +129,9 @@ static void print_errors(ApeContext_t *ctx)
     }
 }
 
-static ApeObject_t exit_repl(ApeContext_t *ctx, void *data, ApeSize_t argc, ApeObject_t *args)
+static ApeObject_t exit_repl(ApeContext_t* ctx, void* data, ApeSize_t argc, ApeObject_t* args)
 {
-    bool *exit_repl;
+    bool* exit_repl;
     (void)ctx;
     (void)argc;
     (void)args;
@@ -158,8 +158,8 @@ static bool notjustspace(const char* line)
 static void do_repl(ApeContext_t* ctx)
 {
     size_t len;
-    char *line;
-    char *object_str;
+    char* line;
+    char* object_str;
     ApeObject_t res;
     ape_context_setreplmode(ctx, true);
     ape_context_settimeout(ctx, 100.0);
@@ -258,14 +258,14 @@ static bool parse_options(Options_t* opts, Flag_t* flags, int fcnt)
     return true;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     int i;
     bool replexit;
     const char* filename;
     FlagContext_t fx;
     Options_t opts;
-    ApeContext_t *ctx;
+    ApeContext_t* ctx;
     ApeObject_t args_array;
     replexit = false;
     populate_flags(argc, 1, argv, "epI", &fx);

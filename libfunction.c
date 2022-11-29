@@ -25,7 +25,7 @@ ApeObject_t ape_object_make_function(ApeContext_t* ctx, const char* name, ApeCom
     data->valscriptfunc.owns_data = wdata;
     data->valscriptfunc.num_locals = nloc;
     data->valscriptfunc.num_args = nargs;
-    if(fvcount >= 0)
+    if(((ApeInt_t)fvcount) >= 0)
     {
         data->valscriptfunc.free_vals_allocated = (ApeObject_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeObject_t) * fvcount);
         if(!data->valscriptfunc.free_vals_allocated)

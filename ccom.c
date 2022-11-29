@@ -20,43 +20,43 @@ struct ApeTempU64Array_t
     #define make_u64_array(...) ((uint64_t[]){__VA_ARGS__ })
 #endif
 
-static const ApePosition_t gccprivsrcposinvalid = { NULL, -1, -1 };
+static const ApePosition_t g_ccpriv_srcposinvalid = { NULL, -1, -1 };
 
 
-static const ApeSymbol_t *ape_compiler_definesym(ApeCompiler_t *comp, ApePosition_t pos, const char *name, bool assignable, bool canshadow);
-static void ape_compiler_setsymtable(ApeCompiler_t *comp, ApeSymTable_t *table);
-static ApeInt_t ape_compiler_emit(ApeCompiler_t *comp, ApeOpByte_t op, ApeSize_t operandscount, uint64_t *operands);
-static ApeCompScope_t *ape_compiler_getcompscope(ApeCompiler_t *comp);
-static bool ape_compiler_pushcompscope(ApeCompiler_t *comp);
-static void ape_compiler_popcompscope(ApeCompiler_t *comp);
-static bool ape_compiler_pushsymtable(ApeCompiler_t *comp, ApeInt_t globaloffset);
-static void ape_compiler_popsymtable(ApeCompiler_t *comp);
-static ApeOpByte_t ape_compiler_getlastopcode(ApeCompiler_t *comp);
-static bool ape_compiler_compilecode(ApeCompiler_t *comp, const char *code);
-static bool ape_compiler_compilestmtlist(ApeCompiler_t *comp, ApePtrArray_t *statements);
-static bool ape_compiler_importmodule(ApeCompiler_t *comp, const ApeStatement_t *importstmt);
-static bool ape_compiler_compilestatement(ApeCompiler_t *comp, const ApeStatement_t *stmt);
-static bool ape_compiler_compileexpression(ApeCompiler_t *comp, ApeExpression_t *expr);
-static bool ape_compiler_compilecodeblock(ApeCompiler_t *comp, const ApeCodeblock_t *block);
-static ApeInt_t ape_compiler_addconstant(ApeCompiler_t *comp, ApeObject_t obj);
-static void ape_compiler_moduint16operand(ApeCompiler_t *comp, ApeInt_t ip, uint64_t operand);
-static bool ape_compiler_lastopcodeis(ApeCompiler_t *comp, ApeOpByte_t op);
-static bool ape_compiler_readsym(ApeCompiler_t *comp, const ApeSymbol_t *symbol);
-static bool ape_compiler_writesym(ApeCompiler_t *comp, const ApeSymbol_t *symbol, bool define);
-static bool ape_compiler_pushbreakip(ApeCompiler_t *comp, ApeInt_t ip);
-static void ape_compiler_popbreakip(ApeCompiler_t *comp);
-static ApeInt_t ape_compiler_getbreakip(ApeCompiler_t *comp);
-static bool ape_compiler_pushcontip(ApeCompiler_t *comp, ApeInt_t ip);
-static void ape_compiler_popcontip(ApeCompiler_t *comp);
-static ApeInt_t ape_compiler_getcontip(ApeCompiler_t *comp);
-static ApeInt_t ape_compiler_getip(ApeCompiler_t *comp);
-static ApeValArray_t *ape_compiler_getsrcpositions(ApeCompiler_t *comp);
-static ApeValArray_t *ape_compiler_getbytecode(ApeCompiler_t *comp);
-static ApeFileScope_t *ape_compiler_makefilescope(ApeCompiler_t *comp, ApeCompiledFile_t *file);
-static void ape_compiler_destroyfilescope(ApeFileScope_t *scope);
-static bool ape_compiler_pushfilescope(ApeCompiler_t *comp, const char *filepath);
-static void ape_compiler_popfilescope(ApeCompiler_t *comp);
-static void ape_compiler_setcompscope(ApeCompiler_t *comp, ApeCompScope_t *scope);
+static const ApeSymbol_t* ape_compiler_definesym(ApeCompiler_t* comp, ApePosition_t pos, const char* name, bool assignable, bool canshadow);
+static void ape_compiler_setsymtable(ApeCompiler_t* comp, ApeSymTable_t* table);
+static ApeInt_t ape_compiler_emit(ApeCompiler_t* comp, ApeOpByte_t op, ApeSize_t operandscount, uint64_t* operands);
+static ApeCompScope_t* ape_compiler_getcompscope(ApeCompiler_t* comp);
+static bool ape_compiler_pushcompscope(ApeCompiler_t* comp);
+static void ape_compiler_popcompscope(ApeCompiler_t* comp);
+static bool ape_compiler_pushsymtable(ApeCompiler_t* comp, ApeInt_t globaloffset);
+static void ape_compiler_popsymtable(ApeCompiler_t* comp);
+static ApeOpByte_t ape_compiler_getlastopcode(ApeCompiler_t* comp);
+static bool ape_compiler_compilecode(ApeCompiler_t* comp, const char* code);
+static bool ape_compiler_compilestmtlist(ApeCompiler_t* comp, ApePtrArray_t* statements);
+static bool ape_compiler_importmodule(ApeCompiler_t* comp, const ApeStatement_t* importstmt);
+static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* stmt);
+static bool ape_compiler_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr);
+static bool ape_compiler_compilecodeblock(ApeCompiler_t* comp, const ApeCodeblock_t* block);
+static ApeInt_t ape_compiler_addconstant(ApeCompiler_t* comp, ApeObject_t obj);
+static void ape_compiler_moduint16operand(ApeCompiler_t* comp, ApeInt_t ip, uint64_t operand);
+static bool ape_compiler_lastopcodeis(ApeCompiler_t* comp, ApeOpByte_t op);
+static bool ape_compiler_readsym(ApeCompiler_t* comp, const ApeSymbol_t* symbol);
+static bool ape_compiler_writesym(ApeCompiler_t* comp, const ApeSymbol_t* symbol, bool define);
+static bool ape_compiler_pushbreakip(ApeCompiler_t* comp, ApeInt_t ip);
+static void ape_compiler_popbreakip(ApeCompiler_t* comp);
+static ApeInt_t ape_compiler_getbreakip(ApeCompiler_t* comp);
+static bool ape_compiler_pushcontip(ApeCompiler_t* comp, ApeInt_t ip);
+static void ape_compiler_popcontip(ApeCompiler_t* comp);
+static ApeInt_t ape_compiler_getcontip(ApeCompiler_t* comp);
+static ApeInt_t ape_compiler_getip(ApeCompiler_t* comp);
+static ApeValArray_t* ape_compiler_getsrcpositions(ApeCompiler_t* comp);
+static ApeValArray_t* ape_compiler_getbytecode(ApeCompiler_t* comp);
+static ApeFileScope_t* ape_compiler_makefilescope(ApeCompiler_t* comp, ApeCompiledFile_t* file);
+static void ape_compiler_destroyfilescope(ApeFileScope_t* scope);
+static bool ape_compiler_pushfilescope(ApeCompiler_t* comp, const char* filepath);
+static void ape_compiler_popfilescope(ApeCompiler_t* comp);
+static void ape_compiler_setcompscope(ApeCompiler_t* comp, ApeCompScope_t* scope);
 
 
 static const ApeSymbol_t* ape_compiler_definesym(ApeCompiler_t* comp, ApePosition_t pos, const char* name, bool assignable, bool canshadow)
@@ -84,7 +84,7 @@ static const ApeSymbol_t* ape_compiler_definesym(ApeCompiler_t* comp, ApePositio
 }
 
 
-ApeCompiler_t* ape_compiler_make(ApeContext_t* ctx, const ApeConfig_t* config, ApeGCMemory_t* mem, ApeErrorList_t* errors, ApePtrArray_t * files, ApeGlobalStore_t* globalstore)
+ApeCompiler_t* ape_compiler_make(ApeContext_t* ctx, const ApeConfig_t* config, ApeGCMemory_t* mem, ApeErrorList_t* errors, ApePtrArray_t* files, ApeGlobalStore_t* globalstore)
 {
     bool ok;
     ApeCompiler_t* comp;
@@ -170,13 +170,13 @@ ApeCompResult_t* ape_compiler_compilefile(ApeCompiler_t* comp, const char* path)
     res = NULL;
     if(!comp->config->fileio.read_file.read_file)
     {// todo: read code function
-        ape_errorlist_add(comp->errors, APE_ERROR_COMPILATION, gccprivsrcposinvalid, "file read function not configured");
+        ape_errorlist_add(comp->errors, APE_ERROR_COMPILATION, g_ccpriv_srcposinvalid, "file read function not configured");
         goto err;
     }
     code = comp->config->fileio.read_file.read_file(comp->config->fileio.read_file.context, path);
     if(!code)
     {
-        ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, gccprivsrcposinvalid, "reading file '%s' failed", path);
+        ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, g_ccpriv_srcposinvalid, "reading file '%s' failed", path);
         goto err;
     }
     file = ape_make_compiledfile(comp->context, path);
@@ -247,7 +247,7 @@ bool ape_compiler_init(ApeCompiler_t* comp,
                           const ApeConfig_t* config,
                           ApeGCMemory_t* mem,
                           ApeErrorList_t* errors,
-                          ApePtrArray_t * files,
+                          ApePtrArray_t* files,
                           ApeGlobalStore_t* globalstore)
 {
     bool ok;
@@ -549,7 +549,7 @@ static bool ape_compiler_compilecode(ApeCompiler_t* comp, const char* code)
 
     // Left for debugging purposes
     //    if (ok) {
-    //        ApeWriter_t *buf = ape_make_writer(NULL);
+    //        ApeWriter_t* buf = ape_make_writer(NULL);
     //        ape_tostring_code(ape_valarray_data(comp->compilation_scope->bytecode),
     //                       ape_valarray_data(comp->compilation_scope->srcpositions),
     //                       ape_valarray_count(comp->compilation_scope->bytecode), buf);
@@ -560,7 +560,7 @@ static bool ape_compiler_compilecode(ApeCompiler_t* comp, const char* code)
     return ok;
 }
 
-static bool ape_compiler_compilestmtlist(ApeCompiler_t* comp, ApePtrArray_t * statements)
+static bool ape_compiler_compilestmtlist(ApeCompiler_t* comp, ApePtrArray_t* statements)
 {
     ApeSize_t i;
     bool ok;
@@ -2220,13 +2220,13 @@ static ApeInt_t ape_compiler_getip(ApeCompiler_t* comp)
     return ape_valarray_count(compilation_scope->bytecode);
 }
 
-static ApeValArray_t * ape_compiler_getsrcpositions(ApeCompiler_t* comp)
+static ApeValArray_t* ape_compiler_getsrcpositions(ApeCompiler_t* comp)
 {
     ApeCompScope_t* compilation_scope = ape_compiler_getcompscope(comp);
     return compilation_scope->srcpositions;
 }
 
-static ApeValArray_t * ape_compiler_getbytecode(ApeCompiler_t* comp)
+static ApeValArray_t* ape_compiler_getbytecode(ApeCompiler_t* comp)
 {
     ApeCompScope_t* compilation_scope = ape_compiler_getcompscope(comp);
     return compilation_scope->bytecode;

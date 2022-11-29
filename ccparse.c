@@ -1,7 +1,7 @@
 
 #include "ape.h"
 
-static const ApePosition_t gprsprivsrcposinvalid = { NULL, -1, -1 };
+static const ApePosition_t g_prspriv_srcposinvalid = { NULL, -1, -1 };
 
 static ApePrecedence_t ape_parser_getprecedence(ApeTokenType_t tk);
 static ApeOperator_t ape_parser_tokentooperator(ApeTokenType_t tk);
@@ -1069,7 +1069,7 @@ void* ape_ast_destroy_ident(ApeIdent_t* ident)
     }
     ape_allocator_free(ident->alloc, ident->value);
     ident->value = NULL;
-    ident->pos = gprsprivsrcposinvalid;
+    ident->pos = g_prspriv_srcposinvalid;
     ape_allocator_free(ident->alloc, ident);
     return NULL;
 }
@@ -1147,7 +1147,7 @@ ApeExpression_t* ape_ast_make_expression(ApeContext_t* ctx, ApeExprType_t type)
     res->context = ctx;
     res->alloc = &ctx->alloc;
     res->type = type;
-    res->pos = gprsprivsrcposinvalid;
+    res->pos = g_prspriv_srcposinvalid;
     return res;
 }
 
@@ -1161,7 +1161,7 @@ ApeStatement_t* ape_ast_make_statement(ApeContext_t* ctx, ApeStmtType_t type)
     res->context = ctx;
     res->alloc = &ctx->alloc;
     res->type = type;
-    res->pos = gprsprivsrcposinvalid;
+    res->pos = g_prspriv_srcposinvalid;
     return res;
 }
 

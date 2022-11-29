@@ -9,8 +9,6 @@
 #endif
 #include "ape.h"
 
-static const ApePosition_t libio_pos_invalid = { NULL, -1, -1 };
-
 static ApeObject_t cfn_file_write(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     (void)data;
