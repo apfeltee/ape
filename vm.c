@@ -1541,7 +1541,7 @@ void ape_vm_dumpstack(ApeVM_t* vm)
         for(i=0; i<vm->sp; i++)
         {
             fprintf(stderr, "vm->stack[%d] = (%s) = [[", (int)i, ape_object_value_typename(ape_object_value_type(vm->stack[i])));
-            ape_tostring_object(vm->stack[i], wr, true);
+            ape_tostring_object(wr, vm->stack[i], true);
             fprintf(stderr, "]]\n");
         }
     }
@@ -1876,7 +1876,7 @@ bool ape_vm_appendstring(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOb
         allbuf = ape_make_writer(vm->context);
         tostrbuf = ape_make_writer(vm->context);
         ape_writer_appendn(allbuf, ape_object_string_getdata(left), ape_object_string_getlength(left));
-        ape_tostring_object(right, tostrbuf, false);
+        ape_tostring_object(tostrbuf, right, false);
         ape_writer_appendn(allbuf, ape_writer_getdata(tostrbuf), ape_writer_getlength(tostrbuf));
         buflen = ape_writer_getlength(allbuf);
         objres = ape_object_make_stringcapacity(vm->context, buflen);

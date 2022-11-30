@@ -544,9 +544,9 @@ static bool ape_compiler_compilecode(ApeCompiler_t* comp, const char* code)
     // Left for debugging purposes
     //    if (ok) {
     //        ApeWriter_t* buf = ape_make_writer(NULL);
-    //        ape_tostring_code(ape_valarray_data(comp->compilation_scope->bytecode),
+    //        ape_tostring_bytecode(buf, ape_valarray_data(comp->compilation_scope->bytecode),
     //                       ape_valarray_data(comp->compilation_scope->srcpositions),
-    //                       ape_valarray_count(comp->compilation_scope->bytecode), buf);
+    //                       ape_valarray_count(comp->compilation_scope->bytecode));
     //        puts(ape_writer_getdata(buf));
     //        ape_writer_destroy(buf);
     //    }

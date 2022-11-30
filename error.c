@@ -84,7 +84,7 @@ const char* ape_traceback_itemgetfilepath(ApeTracebackItem_t* item)
     return item->pos.file->path;
 }
 
-bool ape_tostring_traceback(ApeTraceback_t* traceback, ApeWriter_t* buf)
+bool ape_tostring_traceback(ApeWriter_t* buf, ApeTraceback_t* traceback)
 {
     ApeSize_t i;
     ApeSize_t depth;

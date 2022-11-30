@@ -4,7 +4,7 @@ ApeObject_t ape_object_make_bool(ApeContext_t *ctx, bool val);
 ApeObject_t ape_object_make_null(ApeContext_t *ctx);
 ApeObject_t ape_object_make_external(ApeContext_t *ctx, void *ptr);
 bool ape_object_value_ishashable(ApeObject_t obj);
-void ape_tostring_object(ApeObject_t obj, ApeWriter_t *buf, bool quote_str);
+void ape_tostring_object(ApeWriter_t *buf, ApeObject_t obj, bool quote_str);
 const char *ape_object_value_typename(const ApeObjType_t type);
 void ape_object_data_deinit(ApeObjData_t *data);
 char *ape_object_value_typeunionname(ApeContext_t *ctx, const ApeObjType_t type);
@@ -28,7 +28,7 @@ void ape_traceback_destroy(ApeTraceback_t *traceback);
 bool ape_traceback_append(ApeTraceback_t *traceback, const char *function_name, ApePosition_t pos);
 bool ape_traceback_appendfromvm(ApeTraceback_t *traceback, ApeVM_t *vm);
 const char *ape_traceback_itemgetfilepath(ApeTracebackItem_t *item);
-bool ape_tostring_traceback(ApeTraceback_t *traceback, ApeWriter_t *buf);
+bool ape_tostring_traceback(ApeWriter_t *buf, ApeTraceback_t *traceback);
 const char *ape_tostring_errortype(ApeErrorType_t type);
 ApeErrorType_t ape_error_gettype(ApeError_t *error);
 const char *ape_error_gettypestring(ApeError_t *error);
@@ -226,6 +226,9 @@ bool ape_object_map_setnamedstring(ApeObject_t obj, const char *key, const char 
 bool ape_object_map_setnamednumber(ApeObject_t obj, const char *key, ApeFloat_t number);
 bool ape_object_map_setnamedbool(ApeObject_t obj, const char *key, bool value);
 /* main.c */
+bool casecmplen(const char *s1, size_t l1, const char *s2, size_t l2);
+bool casecmp(const char *s1, const char *s2);
+bool icontains(const char **strlist, const char *findme);
 int main(int argc, char *argv[]);
 /* ccparse.c */
 ApeExpression_t *ape_ast_make_identexpr(ApeContext_t *ctx, ApeIdent_t *ident);
@@ -429,16 +432,16 @@ char *ape_writer_getstringanddestroy(ApeWriter_t *buf);
 bool ape_writer_failed(ApeWriter_t *buf);
 bool ape_writer_grow(ApeWriter_t *buf, ApeSize_t new_capacity);
 /* tostring.c */
-ApeOpcodeDef_t *ape_tostring_opcodefind(ApeOpByte_t op);
-const char *ape_tostring_opcodename(ApeOpByte_t op);
-bool ape_tostring_stmtlist(ApePtrArray_t *statements, ApeWriter_t *buf);
-bool ape_tostring_statement(ApeStatement_t *stmt, ApeWriter_t *buf);
-bool ape_tostring_expression(ApeExpression_t *expr, ApeWriter_t *buf);
-bool ape_tostring_codeblock(ApeCodeblock_t *stmt, ApeWriter_t *buf);
 const char *ape_tostring_operator(ApeOperator_t op);
 const char *ape_tostring_exprtype(ApeExprType_t type);
-bool ape_tostring_compresult(ApeCompResult_t *res, ApeWriter_t *buf);
-bool ape_tostring_code(ApeUShort_t *code, ApePosition_t *source_positions, size_t code_size, ApeWriter_t *res);
+ApeOpcodeDef_t *ape_tostring_opcodefind(ApeOpByte_t op);
+const char *ape_tostring_opcodename(ApeOpByte_t op);
+bool ape_tostring_stmtlist(ApeWriter_t *buf, ApePtrArray_t *statements);
+bool ape_tostring_statement(ApeWriter_t *buf, ApeStatement_t *stmt);
+bool ape_tostring_expression(ApeWriter_t *buf, ApeExpression_t *expr);
+bool ape_tostring_codeblock(ApeWriter_t *buf, ApeCodeblock_t *stmt);
+bool ape_tostring_compresult(ApeWriter_t *buf, ApeCompResult_t *res);
+bool ape_tostring_bytecode(ApeWriter_t *buf, ApeUShort_t *code, ApePosition_t *source_positions, size_t code_size);
 const char *ape_tostring_tokentype(ApeTokenType_t type);
 /* builtins.c */
 ApeObjType_t *ape_args_make_typarray(int first, ...);

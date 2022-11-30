@@ -366,7 +366,7 @@ static ApeObject_t cfn_println(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObjec
     for(i = 0; i < argc; i++)
     {
         arg = args[i];
-        ape_tostring_object(arg, buf, false);
+        ape_tostring_object(buf, arg, false);
     }
     ape_writer_append(buf, "\n");
     ape_writer_destroy(buf);
@@ -383,7 +383,7 @@ static ApeObject_t cfn_print(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     for(i = 0; i < argc; i++)
     {
         arg = args[i];
-        ape_tostring_object(arg, buf, false);
+        ape_tostring_object(buf, arg, false);
     }
     ape_writer_destroy(buf);
     return ape_object_make_null(vm->context);
@@ -412,7 +412,7 @@ static ApeObject_t cfn_tostring(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObje
     {
         return ape_object_make_null(vm->context);
     }
-    ape_tostring_object(arg, buf, false);
+    ape_tostring_object(buf, arg, false);
     if(ape_writer_failed(buf))
     {
         ape_writer_destroy(buf);
@@ -1237,7 +1237,7 @@ static ApeObject_t cfn_string_join(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
     for(i=0; i<alen; i++)
     {
         arritem = ape_object_array_getvalue(arrobj, i);
-        ape_tostring_object(arritem, wr, false);
+        ape_tostring_object(wr, arritem, false);
         if((i + 1) < alen)
         {
             ape_writer_appendn(wr, sstr, slen);

@@ -98,7 +98,7 @@ bool ape_object_value_ishashable(ApeObject_t obj)
 
 }
 
-void ape_tostring_object(ApeObject_t obj, ApeWriter_t* buf, bool quote_str)
+void ape_tostring_object(ApeWriter_t* buf, ApeObject_t obj, bool quote_str)
 {
     const char* sdata;
     ApeSize_t slen;
@@ -169,7 +169,7 @@ void ape_tostring_object(ApeObject_t obj, ApeWriter_t* buf, bool quote_str)
             {
                 compfunc = ape_object_value_asfunction(obj);
                 ape_writer_appendf(buf, "CompiledFunction: %s\n", ape_object_function_getname(obj));
-                ape_tostring_code(compfunc->comp_result->bytecode, compfunc->comp_result->srcpositions, compfunc->comp_result->count, buf);
+                ape_tostring_bytecode(buf, compfunc->comp_result->bytecode, compfunc->comp_result->srcpositions, compfunc->comp_result->count);
             }
             break;
         case APE_OBJECT_ARRAY:
@@ -178,7 +178,7 @@ void ape_tostring_object(ApeObject_t obj, ApeWriter_t* buf, bool quote_str)
                 for(i = 0; i < ape_object_array_getlength(obj); i++)
                 {
                     iobj = ape_object_array_getvalue(obj, i);
-                    ape_tostring_object(iobj, buf, true);
+                    ape_tostring_object(buf, iobj, true);
                     if(i < (ape_object_array_getlength(obj) - 1))
                     {
                         ape_writer_append(buf, ", ");
@@ -194,9 +194,9 @@ void ape_tostring_object(ApeObject_t obj, ApeWriter_t* buf, bool quote_str)
                 {
                     key = ape_object_map_getkeyat(obj, i);
                     val = ape_object_map_getvalueat(obj, i);
-                    ape_tostring_object(key, buf, true);
+                    ape_tostring_object(buf, key, true);
                     ape_writer_append(buf, ": ");
-                    ape_tostring_object(val, buf, true);
+                    ape_tostring_object(buf, val, true);
                     if(i < (ape_object_map_getlength(obj) - 1))
                     {
                         ape_writer_append(buf, ", ");
@@ -223,7 +223,7 @@ void ape_tostring_object(ApeObject_t obj, ApeWriter_t* buf, bool quote_str)
                 if(traceback)
                 {
                     ape_writer_append(buf, "Traceback:\n");
-                    ape_tostring_traceback(traceback, buf);
+                    ape_tostring_traceback(buf, traceback);
                 }
             }
             break;
@@ -387,7 +387,7 @@ char* ape_object_value_serialize(ApeContext_t* ctx, ApeObject_t object, ApeSize_
     {
         return NULL;
     }
-    ape_tostring_object(object, buf, true);
+    ape_tostring_object(buf, object, true);
     l = buf->datalength;
     string = ape_writer_getstringanddestroy(buf);
     if(lendest != NULL)

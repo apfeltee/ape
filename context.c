@@ -125,7 +125,7 @@ void ape_context_dumpast(ApeContext_t* ctx, ApePtrArray_t* statements)
     ApeWriter_t* strbuf;
     strbuf = ape_make_writerio(ctx, stderr, false, true);
     fprintf(stderr, "parsed AST:\n");
-    ape_tostring_stmtlist(statements, strbuf);
+    ape_tostring_stmtlist(strbuf, statements);
     fprintf(stderr, "\n");
     ape_writer_destroy(strbuf);
 }
@@ -135,7 +135,7 @@ void ape_context_dumpbytecode(ApeContext_t* ctx, ApeCompResult_t* cres)
     ApeWriter_t* strbuf;
     strbuf = ape_make_writerio(ctx, stderr, false, true);
     fprintf(stderr, "bytecode:\n");
-    ape_tostring_compresult(cres, strbuf);
+    ape_tostring_compresult(strbuf, cres);
     fprintf(stderr, "\n");
     ape_writer_destroy(strbuf);
 }
@@ -276,7 +276,7 @@ char* ape_context_errortostring(ApeContext_t* ctx, ApeError_t* err)
     if(traceback)
     {
         ape_writer_appendf(buf, "traceback:\n");
-        ape_tostring_traceback(ape_error_gettraceback(err), buf);
+        ape_tostring_traceback(buf, ape_error_gettraceback(err));
     }
     if(ape_writer_failed(buf))
     {
