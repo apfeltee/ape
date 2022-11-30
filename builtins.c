@@ -1325,7 +1325,6 @@ static ApeObject_t cfn_vm_gcsweep(ApeVM_t* vm, void* data, ApeSize_t argc, ApeOb
     return ape_object_make_null(vm->context);
 }
 
-
 static ApeObject_t cfn_vm_gccollect(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     (void)data;
@@ -1370,7 +1369,7 @@ void ape_builtins_setup_namespace(ApeVM_t* vm, const char* nsname, ApeNativeItem
     ApeObject_t map;
     ApeSymbol_t* sym;
     static ApePosition_t posinvalid = { NULL, -1, -1 };
-    //ApeSymbol_t* ape_compiler_definesym(ApeCompiler_t* comp, ApePosition_t pos, const char* name, bool assignable, bool canshadow)
+    /* this ensures that the namespace does not get assigned to */
     sym = ape_compiler_definesym(vm->context->compiler, posinvalid, nsname, false, false);
     if(!sym)
     {

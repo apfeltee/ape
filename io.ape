@@ -1,0 +1,23 @@
+
+// a demo of a 'class', and operator overloading
+
+function iobuf()
+{
+    return {
+        buffer: [],
+        string: function()
+        {
+            return String.join(this.buffer)
+        },
+        __operator_lshift__: function(self, a)
+        {
+            Object.append(self.buffer, a)
+            return self
+        },
+    }
+}
+
+var b = iobuf()
+b << "hello" << " " << "world";
+println(b.string());
+

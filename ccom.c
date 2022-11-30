@@ -57,12 +57,6 @@ static bool ape_compiler_pushfilescope(ApeCompiler_t* comp, const char* filepath
 static void ape_compiler_popfilescope(ApeCompiler_t* comp);
 static void ape_compiler_setcompscope(ApeCompiler_t* comp, ApeCompScope_t* scope);
 
-/*
-                symtable = ape_compiler_getsymboltable(comp);
-                if(fn->name)
-                {
-                    fnsymbol = ape_symtable_definefuncname(symtable, fn->name, false);
-*/
 ApeSymbol_t* ape_compiler_definesym(ApeCompiler_t* comp, ApePosition_t pos, const char* name, bool assignable, bool canshadow)
 {
     ApeSymTable_t* symtable;
@@ -403,7 +397,6 @@ bool ape_compiler_initshallowcopy(ApeCompiler_t* copy, ApeCompiler_t* src)
     copyloadedmodulenames = copyfilescope->loadedmodulenames;
     for(i = 0; i < ape_ptrarray_count(srcloadedmodulenames); i++)
     {
-
         loadedname = (const char*)ape_ptrarray_get(srcloadedmodulenames, i);
         loadednamecopy = ape_util_strdup(copy->context, loadedname);
         if(!loadednamecopy)
@@ -484,13 +477,14 @@ static void ape_compiler_popcompscope(ApeCompiler_t* comp)
 static bool ape_compiler_pushsymtable(ApeCompiler_t* comp, ApeInt_t globaloffset)
 {
     ApeFileScope_t* filescope;
+    ApeSymTable_t* currenttable;
     filescope = (ApeFileScope_t*)ape_ptrarray_top(comp->filescopes);
     if(!filescope)
     {
         APE_ASSERT(false);
         return false;
     }
-    ApeSymTable_t* currenttable = filescope->symtable;
+    currenttable = filescope->symtable;
     filescope->symtable = ape_make_symtable(comp->context, currenttable, comp->globalstore, globaloffset);
     if(!filescope->symtable)
     {
