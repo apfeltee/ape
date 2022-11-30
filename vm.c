@@ -51,17 +51,17 @@ void ape_vm_adderror(ApeVM_t* vm, ApeErrorType_t etype, const char* fmt, ...)
     va_end(va);
 }
 
-ApeCompiledFile_t* ape_make_compiledfile(ApeContext_t* ctx, const char* path)
+ApeCompFile_t* ape_make_compfile(ApeContext_t* ctx, const char* path)
 {
     size_t len;
     const char* last_slash_pos;
-    ApeCompiledFile_t* file;
-    file = (ApeCompiledFile_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeCompiledFile_t));
+    ApeCompFile_t* file;
+    file = (ApeCompFile_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeCompFile_t));
     if(!file)
     {
         return NULL;
     }
-    memset(file, 0, sizeof(ApeCompiledFile_t));
+    memset(file, 0, sizeof(ApeCompFile_t));
     file->context = ctx;
     file->alloc = &ctx->alloc;
     last_slash_pos = strrchr(path, '/');
@@ -90,11 +90,11 @@ ApeCompiledFile_t* ape_make_compiledfile(ApeContext_t* ctx, const char* path)
     }
     return file;
 error:
-    compiled_file_destroy(file);
+    ape_compfile_destroy(file);
     return NULL;
 }
 
-void* compiled_file_destroy(ApeCompiledFile_t* file)
+void* ape_compfile_destroy(ApeCompFile_t* file)
 {
     ApeSize_t i;
     void* item;
@@ -975,24 +975,24 @@ ApeExpression_t* ape_optimizer_optinfixexpr(ApeExpression_t* expr)
     const char* leftstr;
     const char* rightstr;
     ApeExpression_t* left;
-    ApeExpression_t* left_optimised;
+    ApeExpression_t* left_optimized;
     ApeExpression_t* right;
-    ApeExpression_t* right_optimised;
+    ApeExpression_t* right_optimized;
     ApeExpression_t* res;
     ApeAllocator_t* alloc;
     ApeFloat_t leftval;
     ApeFloat_t rightval;
     left = expr->infix.left;
-    left_optimised = ape_optimizer_optexpr(left);
-    if(left_optimised)
+    left_optimized = ape_optimizer_optexpr(left);
+    if(left_optimized)
     {
-        left = left_optimised;
+        left = left_optimized;
     }
     right = expr->infix.right;
-    right_optimised = ape_optimizer_optexpr(right);
-    if(right_optimised)
+    right_optimized = ape_optimizer_optexpr(right);
+    if(right_optimized)
     {
-        right = right_optimised;
+        right = right_optimized;
     }
     res = NULL;
     left_is_numeric = left->type == APE_EXPR_LITERALNUMBER || left->type == APE_EXPR_LITERALBOOL;
@@ -1110,8 +1110,8 @@ ApeExpression_t* ape_optimizer_optinfixexpr(ApeExpression_t* expr)
             }
         }
     }
-    ape_ast_destroy_expr(left_optimised);
-    ape_ast_destroy_expr(right_optimised);
+    ape_ast_destroy_expr(left_optimized);
+    ape_ast_destroy_expr(right_optimized);
     if(res)
     {
         res->pos = expr->pos;
@@ -1123,13 +1123,13 @@ ApeExpression_t* ape_optimizer_optinfixexpr(ApeExpression_t* expr)
 ApeExpression_t* ape_optimizer_optprefixexpr(ApeExpression_t* expr)
 {
     ApeExpression_t* right;
-    ApeExpression_t* right_optimised;
+    ApeExpression_t* right_optimized;
     ApeExpression_t* res;
     right = expr->prefix.right;
-    right_optimised = ape_optimizer_optexpr(right);
-    if(right_optimised)
+    right_optimized = ape_optimizer_optexpr(right);
+    if(right_optimized)
     {
-        right = right_optimised;
+        right = right_optimized;
     }
     res = NULL;
     if(expr->prefix.op == APE_OPERATOR_MINUS && right->type == APE_EXPR_LITERALNUMBER)
@@ -1140,7 +1140,7 @@ ApeExpression_t* ape_optimizer_optprefixexpr(ApeExpression_t* expr)
     {
         res = ape_ast_make_boolliteralexpr(expr->context, !right->boolliteral);
     }
-    ape_ast_destroy_expr(right_optimised);
+    ape_ast_destroy_expr(right_optimized);
     if(res)
     {
         res->pos = expr->pos;
@@ -1613,7 +1613,7 @@ ApeObject_t ape_vm_callnativefunction(ApeVM_t* vm, ApeObject_t callee, ApePositi
     ApeNativeFunction_t* nfunc;
     ApeTraceback_t* traceback;
     nfunc = ape_object_value_asnativefunction(callee);
-    objres = nfunc->native_funcptr(vm, nfunc->data, argc, args);
+    objres = nfunc->nativefnptr(vm, nfunc->dataptr, argc, args);
     if(ape_errorlist_haserrors(vm->errors) && !APE_STREQ(nfunc->name, "crash"))
     {
         err = ape_errorlist_lasterror(vm->errors);
@@ -1922,7 +1922,7 @@ bool ape_vm_getindex(ApeVM_t* vm, ApeObject_t left, ApeObject_t index, ApeObjTyp
             if((afn = builtin_get_object(vm->context, lefttype, idxname)) != NULL)
             {
                 fprintf(stderr, "got a callback: afn=%p\n", afn);
-                //ApeObject_t ape_object_make_nativefuncmemory(ApeContext_t *ctx, const char *name, ApeNativeFuncPtr_t fn, void *data, ApeSize_t data_len
+                //ApeObject_t ape_object_make_nativefuncmemory(ApeContext_t *ctx, const char *name, ApeNativeFuncPtr_t fn, void *data, ApeSize_t dlen
                 //typedef ApeObject_t (*ApeNativeFuncPtr_t)(ApeVM_t*, void*, int, ApeObject_t*);
                 //args[argc] = left;
                 //argc++;

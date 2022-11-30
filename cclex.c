@@ -53,7 +53,7 @@ static ApeTokenType_t ape_lexer_lookupident(const char* ident, ApeSize_t len)
     return TOKEN_VALIDENT;
 }
 
-static ApePosition_t ape_lexer_makesourcepos(const ApeCompiledFile_t* file, int line, int column)
+static ApePosition_t ape_lexer_makesourcepos(const ApeCompFile_t* file, int line, int column)
 {
     return (ApePosition_t){
         .file = file,
@@ -74,7 +74,7 @@ char* ape_lexer_tokendupliteral(ApeContext_t* ctx, const ApeToken_t* tok)
     return ape_util_strndup(ctx, tok->literal, tok->len);
 }
 
-bool ape_lexer_init(ApeLexer_t* lex, ApeContext_t* ctx, ApeErrorList_t* errs, const char* input, ApeCompiledFile_t* file)
+bool ape_lexer_init(ApeLexer_t* lex, ApeContext_t* ctx, ApeErrorList_t* errs, const char* input, ApeCompFile_t* file)
 {
     lex->context = ctx;
     lex->alloc = &ctx->alloc;

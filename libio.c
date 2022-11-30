@@ -19,7 +19,7 @@ static ApeObject_t cfn_file_write(ApeVM_t* vm, void* data, ApeSize_t argc, ApeOb
 
     const ApeConfig_t* config = vm->config;
 
-    if(!config->fileio.write_file.write_file)
+    if(!config->fileio.iowriter.fnwritefile)
     {
         return ape_object_make_null(vm->context);
     }
@@ -28,7 +28,7 @@ static ApeObject_t cfn_file_write(ApeVM_t* vm, void* data, ApeSize_t argc, ApeOb
     const char* string = ape_object_string_getdata(args[1]);
     ApeSize_t string_len = ape_object_string_getlength(args[1]);
 
-    ApeSize_t written = (ApeSize_t)config->fileio.write_file.write_file(config->fileio.write_file.context, path, string, string_len);
+    ApeSize_t written = (ApeSize_t)config->fileio.iowriter.fnwritefile(config->fileio.iowriter.context, path, string, string_len);
 
     return ape_object_make_number(vm->context, written);
 }
@@ -43,14 +43,14 @@ static ApeObject_t cfn_file_read(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObj
 
     const ApeConfig_t* config = vm->config;
 
-    if(!config->fileio.read_file.read_file)
+    if(!config->fileio.ioreader.fnreadfile)
     {
         return ape_object_make_null(vm->context);
     }
 
     const char* path = ape_object_string_getdata(args[0]);
 
-    char* contents = config->fileio.read_file.read_file(config->fileio.read_file.context, path);
+    char* contents = config->fileio.ioreader.fnreadfile(config->fileio.ioreader.context, path);
     if(!contents)
     {
         return ape_object_make_null(vm->context);

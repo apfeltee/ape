@@ -37,10 +37,10 @@ ApeObject_t ape_object_make_function(ApeContext_t* ctx, const char* name, ApeCom
     return object_make_from_data(ctx, APE_OBJECT_SCRIPTFUNCTION, data);
 }
 
-ApeObject_t ape_object_make_nativefuncmemory(ApeContext_t* ctx, const char* name, ApeNativeFuncPtr_t fn, void* data, ApeSize_t data_len)
+ApeObject_t ape_object_make_nativefuncmemory(ApeContext_t* ctx, const char* name, ApeNativeFuncPtr_t fn, void* data, ApeSize_t dlen)
 {
     ApeObjData_t* obj;
-    if(data_len > APE_CONF_SIZE_NATFN_MAXDATALEN)
+    if(dlen > APE_CONF_SIZE_NATFN_MAXDATALEN)
     {
         return ape_object_make_null(ctx);
     }
@@ -54,13 +54,13 @@ ApeObject_t ape_object_make_nativefuncmemory(ApeContext_t* ctx, const char* name
     {
         return ape_object_make_null(ctx);
     }
-    obj->valnatfunc.native_funcptr = fn;
+    obj->valnatfunc.nativefnptr = fn;
     if(data)
     {
-        //memcpy(obj->valnatfunc.data, data, data_len);
-        obj->valnatfunc.data = data;
+        //memcpy(obj->valnatfunc.data, data, dlen);
+        obj->valnatfunc.dataptr = data;
     }
-    obj->valnatfunc.data_len = data_len;
+    obj->valnatfunc.datalen = dlen;
     return object_make_from_data(ctx, APE_OBJECT_NATIVEFUNCTION, obj);
 }
 

@@ -83,8 +83,8 @@ THE SOFTWARE.
 #define APE_CONF_INVALID_VALDICT_IX UINT_MAX
 #define APE_CONF_INVALID_STRDICT_IX UINT_MAX
 #define APE_CONF_DICT_INITIAL_SIZE (2)
-#define APE_CONF_ARRAY_INITIAL_CAPACITY 4
-#define APE_CONF_MAP_INITIAL_CAPACITY 4
+#define APE_CONF_ARRAY_INITIAL_CAPACITY 64
+#define APE_CONF_MAP_INITIAL_CAPACITY 64
 #define APE_CONF_SIZE_VM_STACK (1024)
 #define APE_CONF_SIZE_VM_MAXGLOBALS (512*4)
 #define APE_CONF_SIZE_MAXFRAMES (512*4)
@@ -152,7 +152,7 @@ THE SOFTWARE.
         )
 #endif
 
-//ApeObject_t object_make_native_function(ApeGCMemory_t* mem, const char* name, ApeNativeFuncPtr_t fn, void* data, int data_len);
+
 #define make_fn_data(ctx, name, fnc, dataptr, datasize) \
     ape_object_make_nativefuncmemory(ctx, name, fnc, dataptr, datasize)
 
@@ -193,7 +193,7 @@ THE SOFTWARE.
 
 /**/
 #define ape_object_value_type(obj) \
-    ((obj).handle->type)
+    (((obj).handle == NULL) ? APE_OBJECT_NULL : ((obj).handle->type))
 
 #define ape_object_value_istype(o, t) \
     (ape_object_value_type(o) == (t))
@@ -501,7 +501,7 @@ typedef struct /**/ApeAllocator_t ApeAllocator_t;
 typedef struct /**/ApeError_t ApeError_t;
 typedef struct /**/ApeErrorList_t ApeErrorList_t;
 typedef struct /**/ApeToken_t ApeToken_t;
-typedef struct /**/ApeCompiledFile_t ApeCompiledFile_t;
+typedef struct /**/ApeCompFile_t ApeCompFile_t;
 typedef struct /**/ApeLexer_t ApeLexer_t;
 typedef struct /**/ApeCodeblock_t ApeCodeblock_t;
 typedef struct /**/ApeMapLiteral_t ApeMapLiteral_t;
@@ -553,7 +553,9 @@ typedef struct /**/ApeModule_t ApeModule_t;
 typedef struct /**/ApeFileScope_t ApeFileScope_t;
 typedef struct /**/ApeCompiler_t ApeCompiler_t;
 typedef struct /**/ApeNativeFuncWrapper_t ApeNativeFuncWrapper_t;
-typedef struct ApeNativeItem_t ApeNativeItem_t;
+typedef struct /**/ApeNativeItem_t ApeNativeItem_t;
+typedef struct /**/ApeArgCheck_t ApeArgCheck_t;
+
 
 typedef ApeObject_t (*ApeWrappedNativeFunc_t)(ApeContext_t*, void*, ApeSize_t, ApeObject_t*);
 typedef ApeObject_t (*ApeNativeFuncPtr_t)(ApeVM_t*, void*, ApeSize_t, ApeObject_t*);
@@ -575,6 +577,17 @@ typedef void* (*ApeDataCallback_t)(void*);
 
 typedef ApeExpression_t* (*ApeRightAssocParseFNCallback_t)(ApeParser_t* p);
 typedef ApeExpression_t* (*ApeLeftAssocParseFNCallback_t)(ApeParser_t* p, ApeExpression_t* expr);
+
+struct ApeArgCheck_t
+{
+    ApeVM_t* vm;
+    const char* name;
+    bool haveminargs;
+    bool counterror;
+    ApeSize_t minargs;
+    ApeSize_t argc;
+    ApeObject_t* args;
+};
 
 struct ApeNativeItem_t
 {
@@ -627,16 +640,15 @@ struct ApeObjString_t
 struct ApeNativeFunction_t
 {
     char* name;
-    ApeNativeFuncPtr_t native_funcptr;
-
-    void* data;
-    ApeSize_t data_len;
+    ApeNativeFuncPtr_t nativefnptr;
+    void* dataptr;
+    ApeSize_t datalen;
 };
 
 
 struct ApeNativeFuncWrapper_t
 {
-    ApeWrappedNativeFunc_t wrapped_funcptr;
+    ApeWrappedNativeFunc_t wrappedfnptr;
     ApeContext_t* context;
     void* data;
 };
@@ -676,7 +688,7 @@ struct ApeObjPool_t
 
 struct ApePosition_t
 {
-    const ApeCompiledFile_t* file;
+    const ApeCompFile_t* file;
     int line;
     int column;
 };
@@ -696,15 +708,15 @@ struct ApeConfig_t
     {
         struct
         {
-            ApeIOReadFunc_t read_file;
+            ApeIOReadFunc_t fnreadfile;
             void* context;
-        } read_file;
+        } ioreader;
 
         struct
         {
-            ApeIOWriteFunc_t write_file;
+            ApeIOWriteFunc_t fnwritefile;
             void* context;
-        } write_file;
+        } iowriter;
     } fileio;
 
     bool replmode;// allows redefinition of symbols
@@ -754,7 +766,7 @@ struct ApeToken_t
     ApePosition_t pos;
 };
 
-struct ApeCompiledFile_t
+struct ApeCompFile_t
 {
     ApeContext_t* context;
     ApeAllocator_t* alloc;
@@ -775,7 +787,7 @@ struct ApeLexer_t
     char ch;
     ApeInt_t line;
     ApeInt_t column;
-    ApeCompiledFile_t* file;
+    ApeCompFile_t* file;
     bool failed;
     bool continue_template_string;
     struct
@@ -1169,7 +1181,7 @@ struct ApeFileScope_t
     ApeAllocator_t* alloc;
     ApeParser_t* parser;
     ApeSymTable_t* symtable;
-    ApeCompiledFile_t* file;
+    ApeCompFile_t* file;
     ApePtrArray_t* loadedmodulenames;
 };
 

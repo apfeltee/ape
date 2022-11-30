@@ -55,6 +55,11 @@ function println(...args)
     console.log(...args);
 }
 
+function print(...args)
+{
+    process.stdout.write(...args);
+}
+
 // this jank is needed so we don't accidentally override something in the actual target script.
 var __noderun_data = {};
 __noderun_data.process = process;

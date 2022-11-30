@@ -377,6 +377,3 @@ ApeTraceback_t* ape_object_value_geterrortraceback(ApeObject_t object)
     data = ape_object_value_allocated_data(object);
     return data->valerror.traceback;
 }
-
-
-

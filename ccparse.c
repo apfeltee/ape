@@ -1245,7 +1245,7 @@ void ape_parser_destroy(ApeParser_t* parser)
     ape_allocator_free(parser->alloc, parser);
 }
 
-ApePtrArray_t * ape_parser_parseall(ApeParser_t* parser, const char* input, ApeCompiledFile_t* file)
+ApePtrArray_t * ape_parser_parseall(ApeParser_t* parser, const char* input, ApeCompFile_t* file)
 {
     bool ok;
     ApePtrArray_t* statements;

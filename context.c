@@ -110,14 +110,14 @@ void ape_context_setstdoutwrite(ApeContext_t* ctx, ApeIOStdoutWriteFunc_t stdout
 
 void ape_context_setfilewrite(ApeContext_t* ctx, ApeIOWriteFunc_t file_write, void* context)
 {
-    ctx->config.fileio.write_file.write_file = file_write;
-    ctx->config.fileio.write_file.context = context;
+    ctx->config.fileio.iowriter.fnwritefile = file_write;
+    ctx->config.fileio.iowriter.context = context;
 }
 
 void ape_context_setfileread(ApeContext_t* ctx, ApeIOReadFunc_t file_read, void* context)
 {
-    ctx->config.fileio.read_file.read_file = file_read;
-    ctx->config.fileio.read_file.context = context;
+    ctx->config.fileio.ioreader.fnreadfile = file_read;
+    ctx->config.fileio.ioreader.context = context;
 }
 
 void ape_context_dumpast(ApeContext_t* ctx, ApePtrArray_t* statements)
@@ -292,7 +292,7 @@ void ape_context_deinit(ApeContext_t* ctx)
     ape_compiler_destroy(ctx->compiler);
     ape_globalstore_destroy(ctx->globalstore);
     ape_gcmem_destroy(ctx->mem);
-    ape_ptrarray_destroywithitems(ctx->files, (ApeDataCallback_t)compiled_file_destroy);
+    ape_ptrarray_destroywithitems(ctx->files, (ApeDataCallback_t)ape_compfile_destroy);
     ape_errorlist_destroy(&ctx->errors);
 }
 
@@ -304,7 +304,7 @@ static ApeObject_t ape_context_wrapnativefunc(ApeVM_t* vm, void* data, ApeSize_t
     wrapper = (ApeNativeFuncWrapper_t*)data;
     wrapper->context = vm->context;
     //APE_ASSERT(vm == wrapper->context->vm);
-    objres = wrapper->wrapped_funcptr(wrapper->context, wrapper->data, argc, (ApeObject_t*)args);
+    objres = wrapper->wrappedfnptr(wrapper->context, wrapper->data, argc, (ApeObject_t*)args);
     if(ape_context_haserrors(wrapper->context))
     {
         return ape_object_make_null(vm->context);
@@ -317,7 +317,7 @@ ApeObject_t ape_context_makenamednative(ApeContext_t* ctx, const char* name, Ape
     ApeObject_t wrobj;
     ApeNativeFuncWrapper_t wrapper;
     memset(&wrapper, 0, sizeof(ApeNativeFuncWrapper_t));
-    wrapper.wrapped_funcptr = fn;
+    wrapper.wrappedfnptr = fn;
     wrapper.context = ctx;
     wrapper.context->vm = ctx->vm;
     wrapper.data = data;

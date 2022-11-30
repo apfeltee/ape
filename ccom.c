@@ -23,7 +23,6 @@ struct ApeTempU64Array_t
 static const ApePosition_t g_ccpriv_srcposinvalid = { NULL, -1, -1 };
 
 
-static const ApeSymbol_t* ape_compiler_definesym(ApeCompiler_t* comp, ApePosition_t pos, const char* name, bool assignable, bool canshadow);
 static void ape_compiler_setsymtable(ApeCompiler_t* comp, ApeSymTable_t* table);
 static ApeInt_t ape_compiler_emit(ApeCompiler_t* comp, ApeOpByte_t op, ApeSize_t operandscount, uint64_t* operands);
 static ApeCompScope_t* ape_compiler_getcompscope(ApeCompiler_t* comp);
@@ -34,15 +33,15 @@ static void ape_compiler_popsymtable(ApeCompiler_t* comp);
 static ApeOpByte_t ape_compiler_getlastopcode(ApeCompiler_t* comp);
 static bool ape_compiler_compilecode(ApeCompiler_t* comp, const char* code);
 static bool ape_compiler_compilestmtlist(ApeCompiler_t* comp, ApePtrArray_t* statements);
-static bool ape_compiler_importmodule(ApeCompiler_t* comp, const ApeStatement_t* importstmt);
-static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* stmt);
+static bool ape_compiler_importmodule(ApeCompiler_t* comp, ApeStatement_t* importstmt);
+static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* stmt);
 static bool ape_compiler_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr);
-static bool ape_compiler_compilecodeblock(ApeCompiler_t* comp, const ApeCodeblock_t* block);
+static bool ape_compiler_compilecodeblock(ApeCompiler_t* comp, ApeCodeblock_t* block);
 static ApeInt_t ape_compiler_addconstant(ApeCompiler_t* comp, ApeObject_t obj);
 static void ape_compiler_moduint16operand(ApeCompiler_t* comp, ApeInt_t ip, uint64_t operand);
 static bool ape_compiler_lastopcodeis(ApeCompiler_t* comp, ApeOpByte_t op);
-static bool ape_compiler_readsym(ApeCompiler_t* comp, const ApeSymbol_t* symbol);
-static bool ape_compiler_writesym(ApeCompiler_t* comp, const ApeSymbol_t* symbol, bool define);
+static bool ape_compiler_readsym(ApeCompiler_t* comp, ApeSymbol_t* symbol);
+static bool ape_compiler_writesym(ApeCompiler_t* comp, ApeSymbol_t* symbol, bool define);
 static bool ape_compiler_pushbreakip(ApeCompiler_t* comp, ApeInt_t ip);
 static void ape_compiler_popbreakip(ApeCompiler_t* comp);
 static ApeInt_t ape_compiler_getbreakip(ApeCompiler_t* comp);
@@ -52,29 +51,34 @@ static ApeInt_t ape_compiler_getcontip(ApeCompiler_t* comp);
 static ApeInt_t ape_compiler_getip(ApeCompiler_t* comp);
 static ApeValArray_t* ape_compiler_getsrcpositions(ApeCompiler_t* comp);
 static ApeValArray_t* ape_compiler_getbytecode(ApeCompiler_t* comp);
-static ApeFileScope_t* ape_compiler_makefilescope(ApeCompiler_t* comp, ApeCompiledFile_t* file);
+static ApeFileScope_t* ape_compiler_makefilescope(ApeCompiler_t* comp, ApeCompFile_t* file);
 static void ape_compiler_destroyfilescope(ApeFileScope_t* scope);
 static bool ape_compiler_pushfilescope(ApeCompiler_t* comp, const char* filepath);
 static void ape_compiler_popfilescope(ApeCompiler_t* comp);
 static void ape_compiler_setcompscope(ApeCompiler_t* comp, ApeCompScope_t* scope);
 
-
-static const ApeSymbol_t* ape_compiler_definesym(ApeCompiler_t* comp, ApePosition_t pos, const char* name, bool assignable, bool canshadow)
+/*
+                symtable = ape_compiler_getsymboltable(comp);
+                if(fn->name)
+                {
+                    fnsymbol = ape_symtable_definefuncname(symtable, fn->name, false);
+*/
+ApeSymbol_t* ape_compiler_definesym(ApeCompiler_t* comp, ApePosition_t pos, const char* name, bool assignable, bool canshadow)
 {
-    ApeSymTable_t* symbol_table;
-    const ApeSymbol_t* currentsymbol;
-    const ApeSymbol_t* symbol;
-    symbol_table = ape_compiler_getsymboltable(comp);
-    if(!canshadow && !ape_symtable_istopglobalscope(symbol_table))
+    ApeSymTable_t* symtable;
+    ApeSymbol_t* currentsymbol;
+    ApeSymbol_t* symbol;
+    symtable = ape_compiler_getsymboltable(comp);
+    if(!canshadow && !ape_symtable_istopglobalscope(symtable))
     {
-        currentsymbol = ape_symtable_resolve(symbol_table, name);
+        currentsymbol = ape_symtable_resolve(symtable, name);
         if(currentsymbol)
         {
             ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, pos, "symbol '%s' is already defined", name);
             return NULL;
         }
     }
-    symbol = ape_symtable_define(symbol_table, name, assignable);
+    symbol = ape_symtable_define(symtable, name, assignable);
     if(!symbol)
     {
         ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, pos, "cannot define symbol '%s'", name);
@@ -84,7 +88,7 @@ static const ApeSymbol_t* ape_compiler_definesym(ApeCompiler_t* comp, ApePositio
 }
 
 
-ApeCompiler_t* ape_compiler_make(ApeContext_t* ctx, const ApeConfig_t* config, ApeGCMemory_t* mem, ApeErrorList_t* errors, ApePtrArray_t* files, ApeGlobalStore_t* globalstore)
+ApeCompiler_t* ape_compiler_make(ApeContext_t* ctx, ApeConfig_t* cfg, ApeGCMemory_t* mem, ApeErrorList_t* el, ApePtrArray_t* files, ApeGlobalStore_t* gs)
 {
     bool ok;
     ApeCompiler_t* comp;
@@ -94,7 +98,7 @@ ApeCompiler_t* ape_compiler_make(ApeContext_t* ctx, const ApeConfig_t* config, A
         return NULL;
     }
     comp->context = ctx;
-    ok = ape_compiler_init(comp, ctx, config, mem, errors, files, globalstore);
+    ok = ape_compiler_init(comp, ctx, cfg, mem, el, files, gs);
     if(!ok)
     {
         ape_allocator_free(&ctx->alloc, comp);
@@ -119,18 +123,18 @@ ApeCompResult_t* ape_compiler_compilesource(ApeCompiler_t* comp, const char* cod
 {
     bool ok;
     ApeCompiler_t compshallowcopy;
-    ApeCompScope_t* compilation_scope;
+    ApeCompScope_t* compscope;
     ApeCompResult_t* res;
-    compilation_scope = ape_compiler_getcompscope(comp);
+    compscope = ape_compiler_getcompscope(comp);
     APE_ASSERT(ape_valarray_count(comp->srcpositionsstack) == 0);
-    APE_ASSERT(ape_valarray_count(compilation_scope->bytecode) == 0);
-    APE_ASSERT(ape_valarray_count(compilation_scope->breakipstack) == 0);
-    APE_ASSERT(ape_valarray_count(compilation_scope->continueipstack) == 0);
+    APE_ASSERT(ape_valarray_count(compscope->bytecode) == 0);
+    APE_ASSERT(ape_valarray_count(compscope->breakipstack) == 0);
+    APE_ASSERT(ape_valarray_count(compscope->continueipstack) == 0);
     ape_valarray_clear(comp->srcpositionsstack);
-    ape_valarray_clear(compilation_scope->bytecode);
-    ape_valarray_clear(compilation_scope->srcpositions);
-    ape_valarray_clear(compilation_scope->breakipstack);
-    ape_valarray_clear(compilation_scope->continueipstack);
+    ape_valarray_clear(compscope->bytecode);
+    ape_valarray_clear(compscope->srcpositions);
+    ape_valarray_clear(compscope->breakipstack);
+    ape_valarray_clear(compscope->continueipstack);
     ok = ape_compiler_initshallowcopy(&compshallowcopy, comp);
     if(!ok)
     {
@@ -141,10 +145,10 @@ ApeCompResult_t* ape_compiler_compilesource(ApeCompiler_t* comp, const char* cod
     {
         goto err;
     }
-    compilation_scope = ape_compiler_getcompscope(comp);// might've changed
-    APE_ASSERT(compilation_scope->outer == NULL);
-    compilation_scope = ape_compiler_getcompscope(comp);
-    res = ape_compscope_orphanresult(compilation_scope);
+    compscope = ape_compiler_getcompscope(comp);// might've changed
+    APE_ASSERT(compscope->outer == NULL);
+    compscope = ape_compiler_getcompscope(comp);
+    res = ape_compscope_orphanresult(compscope);
     if(!res)
     {
         goto err;
@@ -161,25 +165,26 @@ ApeCompResult_t* ape_compiler_compilefile(ApeCompiler_t* comp, const char* path)
 {
     bool ok;
     char* code;
-    ApeCompiledFile_t* file;
+    ApeCompFile_t* file;
     ApeCompResult_t* res;
     ApeFileScope_t* filescope;
-    ApeCompiledFile_t* prevfile;
+    ApeCompFile_t* prevfile;
     code = NULL;
     file = NULL;
     res = NULL;
-    if(!comp->config->fileio.read_file.read_file)
-    {// todo: read code function
+    // todo: read code function
+    if(!comp->config->fileio.ioreader.fnreadfile)
+    {
         ape_errorlist_add(comp->errors, APE_ERROR_COMPILATION, g_ccpriv_srcposinvalid, "file read function not configured");
         goto err;
     }
-    code = comp->config->fileio.read_file.read_file(comp->config->fileio.read_file.context, path);
+    code = comp->config->fileio.ioreader.fnreadfile(comp->config->fileio.ioreader.context, path);
     if(!code)
     {
         ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, g_ccpriv_srcposinvalid, "reading file '%s' failed", path);
         goto err;
     }
-    file = ape_make_compiledfile(comp->context, path);
+    file = ape_make_compfile(comp->context, path);
     if(!file)
     {
         goto err;
@@ -187,7 +192,7 @@ ApeCompResult_t* ape_compiler_compilefile(ApeCompiler_t* comp, const char* path)
     ok = ape_ptrarray_add(comp->files, file);
     if(!ok)
     {
-        compiled_file_destroy(file);
+        ape_compfile_destroy(file);
         goto err;
     }
     APE_ASSERT(ape_ptrarray_count(comp->filescopes) == 1);
@@ -196,7 +201,8 @@ ApeCompResult_t* ape_compiler_compilefile(ApeCompiler_t* comp, const char* path)
     {
         goto err;
     }
-    prevfile = filescope->file;// todo: push file scope instead?
+    // todo: push file scope instead?
+    prevfile = filescope->file;
     filescope->file = file;
     res = ape_compiler_compilesource(comp, code);
     if(!res)
@@ -236,29 +242,23 @@ static void ape_compiler_setsymtable(ApeCompiler_t* comp, ApeSymTable_t* table)
     filescope->symtable = table;
 }
 
-ApeValArray_t* ape_compiler_getconstants(const ApeCompiler_t* comp)
+ApeValArray_t* ape_compiler_getconstants(ApeCompiler_t* comp)
 {
     return comp->constants;
 }
 
 // INTERNAL
-bool ape_compiler_init(ApeCompiler_t* comp,
-                          ApeContext_t* ctx,
-                          const ApeConfig_t* config,
-                          ApeGCMemory_t* mem,
-                          ApeErrorList_t* errors,
-                          ApePtrArray_t* files,
-                          ApeGlobalStore_t* globalstore)
+bool ape_compiler_init(ApeCompiler_t* comp, ApeContext_t* ctx, ApeConfig_t* cfg, ApeGCMemory_t* mem, ApeErrorList_t* el, ApePtrArray_t* fl, ApeGlobalStore_t* gs)
 {
     bool ok;
     memset(comp, 0, sizeof(ApeCompiler_t));
     comp->context = ctx;
     comp->alloc = &ctx->alloc;
-    comp->config = config;
+    comp->config = cfg;
     comp->mem = mem;
-    comp->errors = errors;
-    comp->files = files;
-    comp->globalstore = globalstore;
+    comp->errors = el;
+    comp->files = fl;
+    comp->globalstore = gs;
     comp->filescopes = ape_make_ptrarray(ctx);
     if(!comp->filescopes)
     {
@@ -430,7 +430,7 @@ static ApeInt_t ape_compiler_emit(ApeCompiler_t* comp, ApeOpByte_t op, ApeSize_t
     ApeInt_t len;
     bool ok;
     ApePosition_t* srcpos;
-    ApeCompScope_t* compilation_scope;
+    ApeCompScope_t* compscope;
     ip = ape_compiler_getip(comp);
     len = ape_make_code(op, operandscount, operands, ape_compiler_getbytecode(comp));
     if(len == 0)
@@ -448,8 +448,8 @@ static ApeInt_t ape_compiler_emit(ApeCompiler_t* comp, ApeOpByte_t op, ApeSize_t
             return -1;
         }
     }
-    compilation_scope = ape_compiler_getcompscope(comp);
-    compilation_scope->lastopcode = op;
+    compscope = ape_compiler_getcompscope(comp);
+    compscope->lastopcode = op;
     return ip;
 }
 
@@ -564,11 +564,11 @@ static bool ape_compiler_compilestmtlist(ApeCompiler_t* comp, ApePtrArray_t* sta
 {
     ApeSize_t i;
     bool ok;
-    const ApeStatement_t* stmt;
+    ApeStatement_t* stmt;
     ok = true;
     for(i = 0; i < ape_ptrarray_count(statements); i++)
     {
-        stmt = (const ApeStatement_t*)ape_ptrarray_get(statements, i);
+        stmt = (ApeStatement_t*)ape_ptrarray_get(statements, i);
         ok = ape_compiler_compilestatement(comp, stmt);
         if(!ok)
         {
@@ -578,7 +578,7 @@ static bool ape_compiler_compilestmtlist(ApeCompiler_t* comp, ApePtrArray_t* sta
     return ok;
 }
 
-static bool ape_compiler_importmodule(ApeCompiler_t* comp, const ApeStatement_t* importstmt)
+static bool ape_compiler_importmodule(ApeCompiler_t* comp, ApeStatement_t* importstmt)
 {
     // todo: split into smaller functions
     ApeSize_t i;
@@ -593,7 +593,7 @@ static bool ape_compiler_importmodule(ApeCompiler_t* comp, const ApeStatement_t*
     const char* filepathnoncanonicalised;
     ApeFileScope_t* filescope;
     ApeWriter_t* filepathbuf;
-    ApeSymTable_t* symbol_table;
+    ApeSymTable_t* symtable;
     ApeFileScope_t* fs;
     ApeModule_t* module;
     ApeSymTable_t* st;
@@ -642,8 +642,8 @@ static bool ape_compiler_importmodule(ApeCompiler_t* comp, const ApeStatement_t*
         result = false;
         goto end;
     }
-    symbol_table = ape_compiler_getsymboltable(comp);
-    if(symbol_table->outer != NULL || ape_ptrarray_count(symbol_table->blockscopes) > 1)
+    symtable = ape_compiler_getsymboltable(comp);
+    if(symtable->outer != NULL || ape_ptrarray_count(symtable->blockscopes) > 1)
     {
         ape_errorlist_add(comp->errors, APE_ERROR_COMPILATION, importstmt->pos, "modules can only be imported in global scope");
         result = false;
@@ -663,14 +663,14 @@ static bool ape_compiler_importmodule(ApeCompiler_t* comp, const ApeStatement_t*
     if(!module)
     {
         // todo: create new module function
-        if(!comp->config->fileio.read_file.read_file)
+        if(!comp->config->fileio.ioreader.fnreadfile)
         {
             ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, importstmt->pos,
                               "cannot import module '%s', file read function not configured", filepath);
             result = false;
             goto end;
         }
-        code = comp->config->fileio.read_file.read_file(comp->config->fileio.read_file.context, filepath);
+        code = comp->config->fileio.ioreader.fnreadfile(comp->config->fileio.ioreader.context, filepath);
         if(!code)
         {
             ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, importstmt->pos, "reading module file '%s' failed", filepath);
@@ -715,7 +715,7 @@ static bool ape_compiler_importmodule(ApeCompiler_t* comp, const ApeStatement_t*
     for(i = 0; i < ape_ptrarray_count(module->symbols); i++)
     {
         symbol = (ApeSymbol_t*)ape_ptrarray_get(module->symbols, i);
-        ok = ape_symtable_addmodulesymbol(symbol_table, symbol);
+        ok = ape_symtable_addmodulesymbol(symtable, symbol);
         if(!ok)
         {
             result = false;
@@ -742,30 +742,44 @@ end:
     return result;
 }
 
-static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatement_t* stmt)
+static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* stmt)
 {
-    ApeSize_t i;
-    ApeInt_t ip;
-    ApeInt_t nextcasejumpip;
-    ApeInt_t afteraltip;
-    ApeInt_t afterelifip;
-    ApeInt_t* pos;
-    ApeInt_t jumptoendip;
-    ApeInt_t beforetestip;
-    ApeInt_t aftertestip;
-    ApeInt_t jumptoafterbodyip;
-    ApeInt_t afterbodyip;
-    ApeInt_t breakip;
     bool ok;
-
-    const ApeWhileLoopStmt_t* loop;
-    ApeCompScope_t* compilation_scope;
-    ApeSymTable_t* symbol_table;
-    const ApeSymbol_t* symbol;
-    const ApeIfStmt_t* ifstmt;
-    ApeValArray_t* jumptoendips;
+    ApeInt_t afteraltip;
+    ApeInt_t afterbodyip;
+    ApeInt_t afterelifip;
+    ApeInt_t afterjumptorecoverip;
+    ApeInt_t afterrecoverip;
+    ApeInt_t aftertestip;
+    ApeInt_t afterupdateip;
+    ApeInt_t beforetestip;
+    ApeInt_t breakip;
+    ApeInt_t continueip;
+    ApeInt_t ip;
+    ApeInt_t jmptoafterbodyip;
+    ApeInt_t jumptoafterbodyip;
+    ApeInt_t jumptoafterrecoverip;
+    ApeInt_t jumptoafterupdateip;
+    ApeInt_t jumptoendip;
+    ApeInt_t nextcasejumpip;
+    ApeInt_t recoverip;
+    ApeInt_t updateip;
+    ApeInt_t* pos;
+    ApeSize_t i;
+    ApeCompScope_t* compscope;
+    ApeForLoopStmt_t* forloop;
+    ApeForeachStmt_t* foreach;
     ApeIfCase_t* ifcase;
-
+    ApeIfStmt_t* ifstmt;
+    ApeRecoverStmt_t* recover;
+    ApeSymTable_t* symtable;
+    ApeSymbol_t* errorsymbol;
+    ApeSymbol_t* indexsymbol;
+    ApeSymbol_t* itersymbol;
+    ApeSymbol_t* sourcesymbol;
+    ApeSymbol_t* symbol;
+    ApeValArray_t* jumptoendips;
+    ApeWhileLoopStmt_t* whileloop;
     breakip = 0;
     ok = false;
     ip = -1;
@@ -774,8 +788,8 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
     {
         return false;
     }
-    compilation_scope = ape_compiler_getcompscope(comp);
-    symbol_table = ape_compiler_getsymboltable(comp);
+    compscope = ape_compiler_getcompscope(comp);
+    symtable = ape_compiler_getsymboltable(comp);
     switch(stmt->type)
     {
         case APE_STMT_EXPRESSION:
@@ -792,7 +806,6 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
                 }
             }
             break;
-
         case APE_STMT_DEFINE:
             {
                 ok = ape_compiler_compileexpression(comp, stmt->define.value);
@@ -871,7 +884,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
             break;
         case APE_STMT_RETURNVALUE:
             {
-                if(compilation_scope->outer == NULL)
+                if(compscope->outer == NULL)
                 {
                     ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "nothing to return from");
                     return false;
@@ -898,9 +911,9 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
             break;
         case APE_STMT_WHILELOOP:
             {
-                loop = &stmt->whileloop;
+                whileloop = &stmt->whileloop;
                 beforetestip = ape_compiler_getip(comp);
-                ok = ape_compiler_compileexpression(comp, loop->test);
+                ok = ape_compiler_compileexpression(comp, whileloop->test);
                 if(!ok)
                 {
                     return false;
@@ -926,7 +939,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
                 {
                     return false;
                 }
-                ok = ape_compiler_compilecodeblock(comp, loop->body);
+                ok = ape_compiler_compilecodeblock(comp, whileloop->body);
                 if(!ok)
                 {
                     return false;
@@ -959,7 +972,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
             break;
         case APE_STMT_CONTINUE:
             {
-                ApeInt_t continueip = ape_compiler_getcontip(comp);
+                continueip = ape_compiler_getcontip(comp);
                 if(continueip < 0)
                 {
                     ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "nothing to continue from");
@@ -974,14 +987,14 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
             break;
         case APE_STMT_FOREACH:
             {
-                const ApeForeachStmt_t* foreach = &stmt->foreach;
-                ok = ape_symtable_pushblockscope(symbol_table);
+                foreach = &stmt->foreach;
+                ok = ape_symtable_pushblockscope(symtable);
                 if(!ok)
                 {
                     return false;
                 }
                 // Init
-                const ApeSymbol_t* indexsymbol = ape_compiler_definesym(comp, stmt->pos, "@i", false, true);
+                indexsymbol = ape_compiler_definesym(comp, stmt->pos, "@i", false, true);
                 if(!indexsymbol)
                 {
                     return false;
@@ -996,11 +1009,10 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
                 {
                     return false;
                 }
-
-                const ApeSymbol_t* sourcesymbol = NULL;
+                sourcesymbol = NULL;
                 if(foreach->source->type == APE_EXPR_IDENT)
                 {
-                    sourcesymbol = ape_symtable_resolve(symbol_table, foreach->source->ident->value);
+                    sourcesymbol = ape_symtable_resolve(symtable, foreach->source->ident->value);
                     if(!sourcesymbol)
                     {
                         ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, foreach->source->pos,
@@ -1027,12 +1039,12 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
                     }
                 }
                 // Update
-                ApeInt_t jumptoafterupdateip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)0xbeef));
+                jumptoafterupdateip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)0xbeef));
                 if(jumptoafterupdateip < 0)
                 {
                     return false;
                 }
-                ApeInt_t updateip = ape_compiler_getip(comp);
+                updateip = ape_compiler_getip(comp);
                 ok = ape_compiler_readsym(comp, indexsymbol);
                 if(!ok)
                 {
@@ -1053,7 +1065,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
                 {
                     return false;
                 }
-                ApeInt_t afterupdateip = ape_compiler_getip(comp);
+                afterupdateip = ape_compiler_getip(comp);
                 ape_compiler_moduint16operand(comp, jumptoafterupdateip + 1, afterupdateip);
                 // Test
                 ok = ape_valarray_push(comp->srcpositionsstack, &foreach->source->pos);
@@ -1087,7 +1099,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
                 {
                     return false;
                 }
-                ApeInt_t aftertestip = ape_compiler_getip(comp);
+                aftertestip = ape_compiler_getip(comp);
                 ip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFFALSE, 1, make_u64_array((uint64_t)(aftertestip + 6)));
                 if(ip < 0)
                 {
@@ -1113,7 +1125,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
                 {
                     return false;
                 }
-                const ApeSymbol_t* itersymbol = ape_compiler_definesym(comp, foreach->iterator->pos, foreach->iterator->value, false, false);
+                itersymbol = ape_compiler_definesym(comp, foreach->iterator->pos, foreach->iterator->value, false, false);
                 if(!itersymbol)
                 {
                     return false;
@@ -1146,26 +1158,26 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
                 {
                     return false;
                 }
-                ApeInt_t afterbodyip = ape_compiler_getip(comp);
+                afterbodyip = ape_compiler_getip(comp);
                 ape_compiler_moduint16operand(comp, jumptoafterbodyip + 1, afterbodyip);
-                ape_symtable_popblockscope(symbol_table);
+                ape_symtable_popblockscope(symtable);
             }
             break;
 
         case APE_STMT_FORLOOP:
             {
-                const ApeForLoopStmt_t* loop = &stmt->forloop;
-                ok = ape_symtable_pushblockscope(symbol_table);
+                forloop = &stmt->forloop;
+                ok = ape_symtable_pushblockscope(symtable);
                 if(!ok)
                 {
                     return false;
                 }
                 // Init
-                ApeInt_t jumptoafterupdateip = 0;
-                bool ok = false;
-                if(loop->init)
+                jumptoafterupdateip = 0;
+                ok = false;
+                if(forloop->init)
                 {
-                    ok = ape_compiler_compilestatement(comp, loop->init);
+                    ok = ape_compiler_compilestatement(comp, forloop->init);
                     if(!ok)
                     {
                         return false;
@@ -1177,10 +1189,10 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
                     }
                 }
                 // Update
-                ApeInt_t updateip = ape_compiler_getip(comp);
-                if(loop->update)
+                updateip = ape_compiler_getip(comp);
+                if(forloop->update)
                 {
-                    ok = ape_compiler_compileexpression(comp, loop->update);
+                    ok = ape_compiler_compileexpression(comp, forloop->update);
                     if(!ok)
                     {
                         return false;
@@ -1191,15 +1203,15 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
                         return false;
                     }
                 }
-                if(loop->init)
+                if(forloop->init)
                 {
-                    ApeInt_t afterupdateip = ape_compiler_getip(comp);
+                    afterupdateip = ape_compiler_getip(comp);
                     ape_compiler_moduint16operand(comp, jumptoafterupdateip + 1, afterupdateip);
                 }
                 // Test
-                if(loop->test)
+                if(forloop->test)
                 {
-                    ok = ape_compiler_compileexpression(comp, loop->test);
+                    ok = ape_compiler_compileexpression(comp, forloop->test);
                     if(!ok)
                     {
                         return false;
@@ -1213,13 +1225,13 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
                         return false;
                     }
                 }
-                ApeInt_t aftertestip = ape_compiler_getip(comp);
+                aftertestip = ape_compiler_getip(comp);
                 ip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFTRUE, 1, make_u64_array((uint64_t)(aftertestip + 6)));
                 if(ip < 0)
                 {
                     return false;
                 }
-                ApeInt_t jmptoafterbodyip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)0xdead));
+                jmptoafterbodyip= ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)0xdead));
                 if(jmptoafterbodyip < 0)
                 {
                     return false;
@@ -1237,7 +1249,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
                     return false;
                 }
 
-                ok = ape_compiler_compilecodeblock(comp, loop->body);
+                ok = ape_compiler_compilecodeblock(comp, forloop->body);
                 if(!ok)
                 {
                     return false;
@@ -1251,9 +1263,9 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
                 {
                     return false;
                 }
-                ApeInt_t afterbodyip = ape_compiler_getip(comp);
+                afterbodyip = ape_compiler_getip(comp);
                 ape_compiler_moduint16operand(comp, jmptoafterbodyip + 1, afterbodyip);
-                ape_symtable_popblockscope(symbol_table);
+                ape_symtable_popblockscope(symtable);
             }
             break;
 
@@ -1277,79 +1289,69 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
         }
         case APE_STMT_RECOVER:
         {
-            const ApeRecoverStmt_t* recover = &stmt->recover;
+            recover = &stmt->recover;
 
-            if(ape_symtable_ismoduleglobalscope(symbol_table))
+            if(ape_symtable_ismoduleglobalscope(symtable))
             {
                 ape_errorlist_add(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "recover statement cannot be defined in global scope");
                 return false;
             }
 
-            if(!ape_symtable_istopblockscope(symbol_table))
+            if(!ape_symtable_istopblockscope(symtable))
             {
                 ape_errorlist_add(comp->errors, APE_ERROR_COMPILATION, stmt->pos,
                                  "recover statement cannot be defined within other statements");
                 return false;
             }
-
-            ApeInt_t recoverip = ape_compiler_emit(comp, APE_OPCODE_SETRECOVER, 1, make_u64_array((uint64_t)0xbeef));
+            recoverip = ape_compiler_emit(comp, APE_OPCODE_SETRECOVER, 1, make_u64_array((uint64_t)0xbeef));
             if(recoverip < 0)
             {
                 return false;
             }
-
-            ApeInt_t jumptoafterrecoverip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)0xbeef));
+            jumptoafterrecoverip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)0xbeef));
             if(jumptoafterrecoverip < 0)
             {
                 return false;
             }
 
-            ApeInt_t afterjumptorecoverip = ape_compiler_getip(comp);
+            afterjumptorecoverip = ape_compiler_getip(comp);
             ape_compiler_moduint16operand(comp, recoverip + 1, afterjumptorecoverip);
-
-            ok = ape_symtable_pushblockscope(symbol_table);
+            ok = ape_symtable_pushblockscope(symtable);
             if(!ok)
             {
                 return false;
             }
-
-            const ApeSymbol_t* errorsymbol
-            = ape_compiler_definesym(comp, recover->errorident->pos, recover->errorident->value, false, false);
+            errorsymbol = ape_compiler_definesym(comp, recover->errorident->pos, recover->errorident->value, false, false);
             if(!errorsymbol)
             {
                 return false;
             }
-
             ok = ape_compiler_writesym(comp, errorsymbol, true);
             if(!ok)
             {
                 return false;
             }
-
             ok = ape_compiler_compilecodeblock(comp, recover->body);
             if(!ok)
             {
                 return false;
             }
-
             if(!ape_compiler_lastopcodeis(comp, APE_OPCODE_RETURNNOTHING) && !ape_compiler_lastopcodeis(comp, APE_OPCODE_RETURNVALUE))
             {
                 ape_errorlist_add(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "recover body must end with a return statement");
                 return false;
             }
-
-            ape_symtable_popblockscope(symbol_table);
-
-            ApeInt_t afterrecoverip = ape_compiler_getip(comp);
+            ape_symtable_popblockscope(symtable);
+            afterrecoverip = ape_compiler_getip(comp);
             ape_compiler_moduint16operand(comp, jumptoafterrecoverip + 1, afterrecoverip);
-
             break;
         }
         default:
-        {
-            APE_ASSERT(false);
-            return false;
-        }
+            {
+                APE_ASSERT(false);
+                return false;
+            }
+            break;
     }
     ape_valarray_pop(comp->srcpositionsstack, NULL);
     return true;
@@ -1357,544 +1359,374 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, const ApeStatemen
 
 static bool ape_compiler_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr)
 {
+    bool ok;
+    bool res;
+    bool rearrange;
+    ApeAssignExpr_t* assign;
+    ApeCompResult_t* compres;
+    ApeCompScope_t* compscope;
+    ApeExpression_t* argexpr;
+    ApeExpression_t* exproptimized;
+    ApeExpression_t* key;
+    ApeExpression_t* left;
+    ApeExpression_t* right;
+    ApeExpression_t* val;
+    ApeFloat_t number;
+    ApeFnLiteral_t* fn;
+    ApeIdent_t* ident;
+    ApeIdent_t* param;
+    ApeIndexExpr_t* index;
+    ApeInt_t afterleftjumpip;
+    ApeInt_t afterrightip;
+    ApeInt_t elseip;
+    ApeInt_t elsejumpip;
+    ApeInt_t endip;
+    ApeInt_t endjumpip;
+    ApeInt_t ip;
+    ApeInt_t numlocals;
+    ApeInt_t pos;
+    ApeInt_t* currentpos;
+    ApeInt_t* posval;
+    ApeLogicalExpr_t* logi;
+    ApeMapLiteral_t* map;
+    ApeObject_t obj;
+    ApeOpByte_t op;
+    ApePtrArray_t* freesymbols;
     ApeSize_t i;
-    bool ok = false;
-    ApeInt_t ip = -1;
-
-    ApeExpression_t* exproptimised = ape_optimizer_optexpr(expr);
-    if(exproptimised)
+    ApeSize_t len;
+    ApeSymTable_t* symtable;
+    ApeSymbol_t* fnsymbol;
+    ApeSymbol_t* paramsymbol;
+    ApeSymbol_t* symbol;
+    ApeSymbol_t* thissymbol;
+    ApeTernaryExpr_t* ternary;
+    ok = false;
+    ip = -1;
+    exproptimized = ape_optimizer_optexpr(expr);
+    if(exproptimized)
     {
-        expr = exproptimised;
+        expr = exproptimized;
     }
-
     ok = ape_valarray_push(comp->srcpositionsstack, &expr->pos);
     if(!ok)
     {
         return false;
     }
-
-    ApeCompScope_t* compilation_scope = ape_compiler_getcompscope(comp);
-    ApeSymTable_t* symbol_table = ape_compiler_getsymboltable(comp);
-
-    bool res = false;
-
+    compscope = ape_compiler_getcompscope(comp);
+    symtable = ape_compiler_getsymboltable(comp);
+    res = false;
     switch(expr->type)
     {
         case APE_EXPR_INFIX:
-        {
-            bool rearrange = false;
-
-            ApeOpByte_t op = APE_OPCODE_NONE;
-            switch(expr->infix.op)
             {
-                case APE_OPERATOR_PLUS:
-                    op = APE_OPCODE_ADD;
-                    break;
-                case APE_OPERATOR_MINUS:
-                    op = APE_OPCODE_SUB;
-                    break;
-                case APE_OPERATOR_STAR:
-                    op = APE_OPCODE_MUL;
-                    break;
-                case APE_OPERATOR_SLASH:
-                    op = APE_OPCODE_DIV;
-                    break;
-                case APE_OPERATOR_MODULUS:
-                    op = APE_OPCODE_MOD;
-                    break;
-                case APE_OPERATOR_EQUAL:
-                    op = APE_OPCODE_ISEQUAL;
-                    break;
-                case APE_OPERATOR_NOTEQUAL:
-                    op = APE_OPCODE_NOTEQUAL;
-                    break;
-                case APE_OPERATOR_GREATERTHAN:
-                    op = APE_OPCODE_GREATERTHAN;
-                    break;
-                case APE_OPERATOR_GREATEREQUAL:
-                    op = APE_OPCODE_GREATEREQUAL;
-                    break;
-                case APE_OPERATOR_LESSTHAN:
-                    op = APE_OPCODE_GREATERTHAN;
-                    rearrange = true;
-                    break;
-                case APE_OPERATOR_LESSEQUAL:
-                    op = APE_OPCODE_GREATEREQUAL;
-                    rearrange = true;
-                    break;
-                case APE_OPERATOR_BITOR:
-                    op = APE_OPCODE_BITOR;
-                    break;
-                case APE_OPERATOR_BITXOR:
-                    op = APE_OPCODE_BITXOR;
-                    break;
-                case APE_OPERATOR_BITAND:
-                    op = APE_OPCODE_BITAND;
-                    break;
-                case APE_OPERATOR_LEFTSHIFT:
-                    op = APE_OPCODE_LEFTSHIFT;
-                    break;
-                case APE_OPERATOR_RIGHTSHIFT:
-                    op = APE_OPCODE_RIGHTSHIFT;
-                    break;
-                default:
+                rearrange = false;
+                op = APE_OPCODE_NONE;
+                switch(expr->infix.op)
                 {
-                    ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, expr->pos, "unknown infix operator");
-                    goto error;
+                    case APE_OPERATOR_PLUS:
+                        {
+                            op = APE_OPCODE_ADD;
+                        }
+                        break;
+                    case APE_OPERATOR_MINUS:
+                        {
+                            op = APE_OPCODE_SUB;
+                        }
+                        break;
+                    case APE_OPERATOR_STAR:
+                        {
+                            op = APE_OPCODE_MUL;
+                        }
+                        break;
+                    case APE_OPERATOR_SLASH:
+                        {
+                            op = APE_OPCODE_DIV;
+                        }
+                        break;
+                    case APE_OPERATOR_MODULUS:
+                        {
+                            op = APE_OPCODE_MOD;
+                        }
+                        break;
+                    case APE_OPERATOR_EQUAL:
+                        {
+                            op = APE_OPCODE_ISEQUAL;
+                        }
+                        break;
+                    case APE_OPERATOR_NOTEQUAL:
+                        {
+                            op = APE_OPCODE_NOTEQUAL;
+                        }
+                        break;
+                    case APE_OPERATOR_GREATERTHAN:
+                        {
+                            op = APE_OPCODE_GREATERTHAN;
+                        }
+                        break;
+                    case APE_OPERATOR_GREATEREQUAL:
+                        {
+                            op = APE_OPCODE_GREATEREQUAL;
+                        }
+                        break;
+                    case APE_OPERATOR_LESSTHAN:
+                        {
+                            op = APE_OPCODE_GREATERTHAN;
+                            rearrange = true;
+                        }
+                        break;
+                    case APE_OPERATOR_LESSEQUAL:
+                        {
+                            op = APE_OPCODE_GREATEREQUAL;
+                            rearrange = true;
+                        }
+                        break;
+                    case APE_OPERATOR_BITOR:
+                        {
+                            op = APE_OPCODE_BITOR;
+                        }
+                        break;
+                    case APE_OPERATOR_BITXOR:
+                        {
+                            op = APE_OPCODE_BITXOR;
+                        }
+                        break;
+                    case APE_OPERATOR_BITAND:
+                        {
+                            op = APE_OPCODE_BITAND;
+                        }
+                        break;
+                    case APE_OPERATOR_LEFTSHIFT:
+                        {
+                            op = APE_OPCODE_LEFTSHIFT;
+                        }
+                        break;
+                    case APE_OPERATOR_RIGHTSHIFT:
+                        {
+                            op = APE_OPCODE_RIGHTSHIFT;
+                        }
+                        break;
+                    default:
+                        {
+                            ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, expr->pos, "unknown infix operator");
+                            goto error;
+                        }
+                        break;
                 }
-            }
-
-            ApeExpression_t* left = rearrange ? expr->infix.right : expr->infix.left;
-            ApeExpression_t* right = rearrange ? expr->infix.left : expr->infix.right;
-
-            ok = ape_compiler_compileexpression(comp, left);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            ok = ape_compiler_compileexpression(comp, right);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            switch(expr->infix.op)
-            {
-                case APE_OPERATOR_EQUAL:
-                case APE_OPERATOR_NOTEQUAL:
-                {
-                    ip = ape_compiler_emit(comp, APE_OPCODE_COMPAREEQUAL, 0, NULL);
-                    if(ip < 0)
-                    {
-                        goto error;
-                    }
-                    break;
-                }
-                case APE_OPERATOR_GREATERTHAN:
-                case APE_OPERATOR_GREATEREQUAL:
-                case APE_OPERATOR_LESSTHAN:
-                case APE_OPERATOR_LESSEQUAL:
-                {
-                    ip = ape_compiler_emit(comp, APE_OPCODE_COMPAREPLAIN, 0, NULL);
-                    if(ip < 0)
-                    {
-                        goto error;
-                    }
-                    break;
-                }
-                default:
-                    break;
-            }
-
-            ip = ape_compiler_emit(comp, op, 0, NULL);
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            break;
-        }
-        case APE_EXPR_LITERALNUMBER:
-        {
-            ApeFloat_t number = expr->numberliteral;
-            ip = ape_compiler_emit(comp, APE_OPCODE_MKNUMBER, 1, make_u64_array((uint64_t)ape_util_floattouint(number)));
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            break;
-        }
-        case APE_EXPR_LITERALSTRING:
-        {
-            ApeInt_t pos = 0;
-            ApeInt_t* currentpos = (ApeInt_t*)ape_strdict_get(comp->stringconstantspositions, expr->stringliteral);
-            if(currentpos)
-            {
-                pos = *currentpos;
-            }
-            else
-            {
-                ApeObject_t obj = ape_object_make_string(comp->context, expr->stringliteral);
-                if(ape_object_value_isnull(obj))
-                {
-                    goto error;
-                }
-
-                pos = ape_compiler_addconstant(comp, obj);
-                if(pos < 0)
-                {
-                    goto error;
-                }
-
-                ApeInt_t* posval = (ApeInt_t*)ape_allocator_alloc(comp->alloc, sizeof(ApeInt_t));
-                if(!posval)
-                {
-                    goto error;
-                }
-
-                *posval = pos;
-                ok = ape_strdict_set(comp->stringconstantspositions, expr->stringliteral, posval);
-                if(!ok)
-                {
-                    ape_allocator_free(comp->alloc, posval);
-                    goto error;
-                }
-            }
-
-            ip = ape_compiler_emit(comp, APE_OPCODE_CONSTANT, 1, make_u64_array((uint64_t)pos));
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            break;
-        }
-        case APE_EXPR_LITERALNULL:
-        {
-            ip = ape_compiler_emit(comp, APE_OPCODE_NULL, 0, NULL);
-            if(ip < 0)
-            {
-                goto error;
-            }
-            break;
-        }
-        case APE_EXPR_LITERALBOOL:
-        {
-            ip = ape_compiler_emit(comp, expr->boolliteral ? APE_OPCODE_TRUE : APE_OPCODE_FALSE, 0, NULL);
-            if(ip < 0)
-            {
-                goto error;
-            }
-            break;
-        }
-        case APE_EXPR_LITERALARRAY:
-        {
-            for(i = 0; i < ape_ptrarray_count(expr->array); i++)
-            {
-                ok = ape_compiler_compileexpression(comp, (ApeExpression_t*)ape_ptrarray_get(expr->array, i));
+                left = rearrange ? expr->infix.right : expr->infix.left;
+                right = rearrange ? expr->infix.left : expr->infix.right;
+                ok = ape_compiler_compileexpression(comp, left);
                 if(!ok)
                 {
                     goto error;
                 }
-            }
-            ip = ape_compiler_emit(comp, APE_OPCODE_MKARRAY, 1, make_u64_array((uint64_t)ape_ptrarray_count(expr->array)));
-            if(ip < 0)
-            {
-                goto error;
-            }
-            break;
-        }
-        case APE_EXPR_LITERALMAP:
-        {
-            const ApeMapLiteral_t* map = &expr->map;
-            ApeSize_t len = ape_ptrarray_count(map->keys);
-            ip = ape_compiler_emit(comp, APE_OPCODE_MAPSTART, 1, make_u64_array((uint64_t)len));
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            for(i = 0; i < len; i++)
-            {
-                ApeExpression_t* key = (ApeExpression_t*)ape_ptrarray_get(map->keys, i);
-                ApeExpression_t* val = (ApeExpression_t*)ape_ptrarray_get(map->values, i);
-
-                ok = ape_compiler_compileexpression(comp, key);
+                ok = ape_compiler_compileexpression(comp, right);
                 if(!ok)
                 {
                     goto error;
                 }
-
-                ok = ape_compiler_compileexpression(comp, val);
-                if(!ok)
+                switch(expr->infix.op)
                 {
-                    goto error;
+                    case APE_OPERATOR_EQUAL:
+                    case APE_OPERATOR_NOTEQUAL:
+                        {
+                            ip = ape_compiler_emit(comp, APE_OPCODE_COMPAREEQUAL, 0, NULL);
+                            if(ip < 0)
+                            {
+                                goto error;
+                            }
+                        }
+                        break;
+                    case APE_OPERATOR_GREATERTHAN:
+                    case APE_OPERATOR_GREATEREQUAL:
+                    case APE_OPERATOR_LESSTHAN:
+                    case APE_OPERATOR_LESSEQUAL:
+                        {
+                            ip = ape_compiler_emit(comp, APE_OPCODE_COMPAREPLAIN, 0, NULL);
+                            if(ip < 0)
+                            {
+                                goto error;
+                            }
+                        }
+                        break;
+                    default:
+                        break;
                 }
-            }
-
-            ip = ape_compiler_emit(comp, APE_OPCODE_MAPEND, 1, make_u64_array((uint64_t)len));
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            break;
-        }
-        case APE_EXPR_PREFIX:
-        {
-            ok = ape_compiler_compileexpression(comp, expr->prefix.right);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            ApeOpByte_t op = APE_OPCODE_NONE;
-            switch(expr->prefix.op)
-            {
-                case APE_OPERATOR_MINUS:
-                    op = APE_OPCODE_MINUS;
-                    break;
-                case APE_OPERATOR_NOT:
-                    op = APE_OPCODE_NOT;
-                    break;
-                default:
-                {
-                    ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, expr->pos, "unknown prefix operator.");
-                    goto error;
-                }
-            }
-            ip = ape_compiler_emit(comp, op, 0, NULL);
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            break;
-        }
-        case APE_EXPR_IDENT:
-        {
-            const ApeIdent_t* ident = expr->ident;
-            const ApeSymbol_t* symbol = ape_symtable_resolve(symbol_table, ident->value);
-            if(!symbol)
-            {
-                ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, ident->pos, "symbol '%s' could not be resolved",
-                                  ident->value);
-                goto error;
-            }
-            ok = ape_compiler_readsym(comp, symbol);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            break;
-        }
-        case APE_EXPR_INDEX:
-        {
-            const ApeIndexExpr_t* index = &expr->indexexpr;
-            ok = ape_compiler_compileexpression(comp, index->left);
-            if(!ok)
-            {
-                goto error;
-            }
-            ok = ape_compiler_compileexpression(comp, index->index);
-            if(!ok)
-            {
-                goto error;
-            }
-            ip = ape_compiler_emit(comp, APE_OPCODE_GETINDEX, 0, NULL);
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            break;
-        }
-        case APE_EXPR_LITERALFUNCTION:
-        {
-            const ApeFnLiteral_t* fn = &expr->fnliteral;
-
-            ok = ape_compiler_pushcompscope(comp);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            ok = ape_compiler_pushsymtable(comp, 0);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            compilation_scope = ape_compiler_getcompscope(comp);
-            symbol_table = ape_compiler_getsymboltable(comp);
-
-            if(fn->name)
-            {
-                const ApeSymbol_t* fnsymbol = ape_symtable_definefuncname(symbol_table, fn->name, false);
-                if(!fnsymbol)
-                {
-                    ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, expr->pos, "cannot define symbol '%s'", fn->name);
-                    goto error;
-                }
-            }
-
-            const ApeSymbol_t* thissymbol = ape_symtable_definethis(symbol_table);
-            if(!thissymbol)
-            {
-                ape_errorlist_add(comp->errors, APE_ERROR_COMPILATION, expr->pos, "cannot define symbol 'this'");
-                goto error;
-            }
-
-            for(i = 0; i < ape_ptrarray_count(expr->fnliteral.params); i++)
-            {
-                ApeIdent_t* param = (ApeIdent_t*)ape_ptrarray_get(expr->fnliteral.params, i);
-                const ApeSymbol_t* paramsymbol = ape_compiler_definesym(comp, param->pos, param->value, true, false);
-                if(!paramsymbol)
-                {
-                    goto error;
-                }
-            }
-
-            ok = ape_compiler_compilestmtlist(comp, fn->body->statements);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            if(!ape_compiler_lastopcodeis(comp, APE_OPCODE_RETURNVALUE) && !ape_compiler_lastopcodeis(comp, APE_OPCODE_RETURNNOTHING))
-            {
-                ip = ape_compiler_emit(comp, APE_OPCODE_RETURNNOTHING, 0, NULL);
+                ip = ape_compiler_emit(comp, op, 0, NULL);
                 if(ip < 0)
                 {
                     goto error;
                 }
             }
-
-            ApePtrArray_t* freesymbols = symbol_table->freesymbols;
-            symbol_table->freesymbols = NULL;// because it gets destroyed with compiler_pop_compilation_scope()
-
-            ApeInt_t numlocals = symbol_table->maxnumdefinitions;
-
-            ApeCompResult_t* compres = ape_compscope_orphanresult(compilation_scope);
-            if(!compres)
+            break;
+        case APE_EXPR_LITERALNUMBER:
             {
-                ape_ptrarray_destroywithitems(freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
-                goto error;
+                number = expr->numberliteral;
+                ip = ape_compiler_emit(comp, APE_OPCODE_MKNUMBER, 1, make_u64_array((uint64_t)ape_util_floattouint(number)));
+                if(ip < 0)
+                {
+                    goto error;
+                }
             }
-            ape_compiler_popsymtable(comp);
-            ape_compiler_popcompscope(comp);
-            compilation_scope = ape_compiler_getcompscope(comp);
-            symbol_table = ape_compiler_getsymboltable(comp);
-
-            ApeObject_t obj = ape_object_make_function(comp->context, fn->name, compres, true, numlocals, ape_ptrarray_count(fn->params), 0);
-
-            if(ape_object_value_isnull(obj))
+            break;
+        case APE_EXPR_LITERALSTRING:
             {
-                ape_ptrarray_destroywithitems(freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
-                ape_compresult_destroy(compres);
-                goto error;
+                pos = 0;
+                currentpos = (ApeInt_t*)ape_strdict_get(comp->stringconstantspositions, expr->stringliteral);
+                if(currentpos)
+                {
+                    pos = *currentpos;
+                }
+                else
+                {
+                    obj = ape_object_make_string(comp->context, expr->stringliteral);
+                    if(ape_object_value_isnull(obj))
+                    {
+                        goto error;
+                    }
+                    pos = ape_compiler_addconstant(comp, obj);
+                    if(pos < 0)
+                    {
+                        goto error;
+                    }
+                    posval = (ApeInt_t*)ape_allocator_alloc(comp->alloc, sizeof(ApeInt_t));
+                    if(!posval)
+                    {
+                        goto error;
+                    }
+                    *posval = pos;
+                    ok = ape_strdict_set(comp->stringconstantspositions, expr->stringliteral, posval);
+                    if(!ok)
+                    {
+                        ape_allocator_free(comp->alloc, posval);
+                        goto error;
+                    }
+                }
+                ip = ape_compiler_emit(comp, APE_OPCODE_CONSTANT, 1, make_u64_array((uint64_t)pos));
+                if(ip < 0)
+                {
+                    goto error;
+                }
             }
-
-            for(i = 0; i < ape_ptrarray_count(freesymbols); i++)
+            break;
+        case APE_EXPR_LITERALNULL:
             {
-                ApeSymbol_t* symbol = (ApeSymbol_t*)ape_ptrarray_get(freesymbols, i);
+                ip = ape_compiler_emit(comp, APE_OPCODE_NULL, 0, NULL);
+                if(ip < 0)
+                {
+                    goto error;
+                }
+            }
+            break;
+        case APE_EXPR_LITERALBOOL:
+            {
+                ip = ape_compiler_emit(comp, expr->boolliteral ? APE_OPCODE_TRUE : APE_OPCODE_FALSE, 0, NULL);
+                if(ip < 0)
+                {
+                    goto error;
+                }
+            }
+            break;
+        case APE_EXPR_LITERALARRAY:
+            {
+                for(i = 0; i < ape_ptrarray_count(expr->array); i++)
+                {
+                    ok = ape_compiler_compileexpression(comp, (ApeExpression_t*)ape_ptrarray_get(expr->array, i));
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+                }
+                ip = ape_compiler_emit(comp, APE_OPCODE_MKARRAY, 1, make_u64_array((uint64_t)ape_ptrarray_count(expr->array)));
+                if(ip < 0)
+                {
+                    goto error;
+                }
+            }
+            break;
+        case APE_EXPR_LITERALMAP:
+            {
+                map = &expr->map;
+                len = ape_ptrarray_count(map->keys);
+                ip = ape_compiler_emit(comp, APE_OPCODE_MAPSTART, 1, make_u64_array((uint64_t)len));
+                if(ip < 0)
+                {
+                    goto error;
+                }
+                for(i = 0; i < len; i++)
+                {
+                    key = (ApeExpression_t*)ape_ptrarray_get(map->keys, i);
+                    val = (ApeExpression_t*)ape_ptrarray_get(map->values, i);
+                    ok = ape_compiler_compileexpression(comp, key);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+                    ok = ape_compiler_compileexpression(comp, val);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+                }
+                ip = ape_compiler_emit(comp, APE_OPCODE_MAPEND, 1, make_u64_array((uint64_t)len));
+                if(ip < 0)
+                {
+                    goto error;
+                }
+            }
+            break;
+        case APE_EXPR_PREFIX:
+            {
+                ok = ape_compiler_compileexpression(comp, expr->prefix.right);
+                if(!ok)
+                {
+                    goto error;
+                }
+                op = APE_OPCODE_NONE;
+                switch(expr->prefix.op)
+                {
+                    case APE_OPERATOR_MINUS:
+                        {
+                            op = APE_OPCODE_MINUS;
+                        }
+                        break;
+                    case APE_OPERATOR_NOT:
+                        {
+                            op = APE_OPCODE_NOT;
+                        }
+                        break;
+                    default:
+                        {
+                            ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, expr->pos, "unknown prefix operator.");
+                            goto error;
+                        }
+                        break;
+                }
+                ip = ape_compiler_emit(comp, op, 0, NULL);
+                if(ip < 0)
+                {
+                    goto error;
+                }
+            }
+            break;
+        case APE_EXPR_IDENT:
+            {
+                ident = expr->ident;
+                symbol = ape_symtable_resolve(symtable, ident->value);
+                if(!symbol)
+                {
+                    ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, ident->pos, "symbol '%s' could not be resolved", ident->value);
+                    goto error;
+                }
                 ok = ape_compiler_readsym(comp, symbol);
                 if(!ok)
                 {
-                    ape_ptrarray_destroywithitems(freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
                     goto error;
                 }
             }
-
-            ApeInt_t pos = ape_compiler_addconstant(comp, obj);
-            if(pos < 0)
-            {
-                ape_ptrarray_destroywithitems(freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
-                goto error;
-            }
-
-            ip = ape_compiler_emit(comp, APE_OPCODE_MKFUNCTION, 2, make_u64_array((uint64_t)pos, (uint64_t)ape_ptrarray_count(freesymbols)));
-            if(ip < 0)
-            {
-                ape_ptrarray_destroywithitems(freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
-                goto error;
-            }
-
-            ape_ptrarray_destroywithitems(freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
-
             break;
-        }
-        case APE_EXPR_CALL:
-        {
-            ok = ape_compiler_compileexpression(comp, expr->callexpr.function);
-            if(!ok)
+        case APE_EXPR_INDEX:
             {
-                goto error;
-            }
-
-            for(i = 0; i < ape_ptrarray_count(expr->callexpr.args); i++)
-            {
-                ApeExpression_t* argexpr = (ApeExpression_t*)ape_ptrarray_get(expr->callexpr.args, i);
-                ok = ape_compiler_compileexpression(comp, argexpr);
-                if(!ok)
-                {
-                    goto error;
-                }
-            }
-
-            ip = ape_compiler_emit(comp, APE_OPCODE_CALL, 1, make_u64_array((uint64_t)ape_ptrarray_count(expr->callexpr.args)));
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            break;
-        }
-        case APE_EXPR_ASSIGN:
-        {
-            const ApeAssignExpr_t* assign = &expr->assign;
-            if(assign->dest->type != APE_EXPR_IDENT && assign->dest->type != APE_EXPR_INDEX)
-            {
-                ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos, "expression is not assignable");
-                goto error;
-            }
-
-            if(assign->ispostfix)
-            {
-                ok = ape_compiler_compileexpression(comp, assign->dest);
-                if(!ok)
-                {
-                    goto error;
-                }
-            }
-
-            ok = ape_compiler_compileexpression(comp, assign->source);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            ip = ape_compiler_emit(comp, APE_OPCODE_DUP, 0, NULL);
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            ok = ape_valarray_push(comp->srcpositionsstack, &assign->dest->pos);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            if(assign->dest->type == APE_EXPR_IDENT)
-            {
-                const ApeIdent_t* ident = assign->dest->ident;
-                const ApeSymbol_t* symbol = ape_symtable_resolve(symbol_table, ident->value);
-                if(!symbol)
-                {
-                    //ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos, "symbol '%s' could not be resolved", ident->value);
-                    //goto error;
-                    //ape_symtable_define(ApeSymTable_t* table, const char* name, bool assignable)
-                    symbol = ape_symtable_define(symbol_table, ident->value, true);
-                }
-                if(!symbol->assignable)
-                {
-                    ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos,
-                                      "symbol '%s' is not assignable", ident->value);
-                    goto error;
-                }
-                ok = ape_compiler_writesym(comp, symbol, false);
-                if(!ok)
-                {
-                    goto error;
-                }
-            }
-            else if(assign->dest->type == APE_EXPR_INDEX)
-            {
-                const ApeIndexExpr_t* index = &assign->dest->indexexpr;
+                index = &expr->indexexpr;
                 ok = ape_compiler_compileexpression(comp, index->left);
                 if(!ok)
                 {
@@ -1905,112 +1737,288 @@ static bool ape_compiler_compileexpression(ApeCompiler_t* comp, ApeExpression_t*
                 {
                     goto error;
                 }
-                ip = ape_compiler_emit(comp, APE_OPCODE_SETINDEX, 0, NULL);
+                ip = ape_compiler_emit(comp, APE_OPCODE_GETINDEX, 0, NULL);
                 if(ip < 0)
                 {
                     goto error;
                 }
             }
-
-            if(assign->ispostfix)
+            break;
+        case APE_EXPR_LITERALFUNCTION:
             {
+                fn = &expr->fnliteral;
+                ok = ape_compiler_pushcompscope(comp);
+                if(!ok)
+                {
+                    goto error;
+                }
+                ok = ape_compiler_pushsymtable(comp, 0);
+                if(!ok)
+                {
+                    goto error;
+                }
+                compscope = ape_compiler_getcompscope(comp);
+                symtable = ape_compiler_getsymboltable(comp);
+                if(fn->name)
+                {
+                    fnsymbol = ape_symtable_definefuncname(symtable, fn->name, false);
+                    if(!fnsymbol)
+                    {
+                        ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, expr->pos, "cannot define symbol '%s'", fn->name);
+                        goto error;
+                    }
+                }
+                thissymbol = ape_symtable_definethis(symtable);
+                if(!thissymbol)
+                {
+                    ape_errorlist_add(comp->errors, APE_ERROR_COMPILATION, expr->pos, "cannot define symbol 'this'");
+                    goto error;
+                }
+                for(i = 0; i < ape_ptrarray_count(expr->fnliteral.params); i++)
+                {
+                    param = (ApeIdent_t*)ape_ptrarray_get(expr->fnliteral.params, i);
+                    paramsymbol = ape_compiler_definesym(comp, param->pos, param->value, true, false);
+                    if(!paramsymbol)
+                    {
+                        goto error;
+                    }
+                }
+                ok = ape_compiler_compilestmtlist(comp, fn->body->statements);
+                if(!ok)
+                {
+                    goto error;
+                }
+                if(!ape_compiler_lastopcodeis(comp, APE_OPCODE_RETURNVALUE) && !ape_compiler_lastopcodeis(comp, APE_OPCODE_RETURNNOTHING))
+                {
+                    ip = ape_compiler_emit(comp, APE_OPCODE_RETURNNOTHING, 0, NULL);
+                    if(ip < 0)
+                    {
+                        goto error;
+                    }
+                }
+                freesymbols = symtable->freesymbols;
+                symtable->freesymbols = NULL;// because it gets destroyed with compiler_pop_compilation_scope()
+                numlocals = symtable->maxnumdefinitions;
+                compres = ape_compscope_orphanresult(compscope);
+                if(!compres)
+                {
+                    ape_ptrarray_destroywithitems(freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
+                    goto error;
+                }
+                ape_compiler_popsymtable(comp);
+                ape_compiler_popcompscope(comp);
+                compscope = ape_compiler_getcompscope(comp);
+                symtable = ape_compiler_getsymboltable(comp);
+                obj = ape_object_make_function(comp->context, fn->name, compres, true, numlocals, ape_ptrarray_count(fn->params), 0);
+                if(ape_object_value_isnull(obj))
+                {
+                    ape_ptrarray_destroywithitems(freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
+                    ape_compresult_destroy(compres);
+                    goto error;
+                }
+                for(i = 0; i < ape_ptrarray_count(freesymbols); i++)
+                {
+                    symbol = (ApeSymbol_t*)ape_ptrarray_get(freesymbols, i);
+                    ok = ape_compiler_readsym(comp, symbol);
+                    if(!ok)
+                    {
+                        ape_ptrarray_destroywithitems(freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
+                        goto error;
+                    }
+                }
+                pos = ape_compiler_addconstant(comp, obj);
+                if(pos < 0)
+                {
+                    ape_ptrarray_destroywithitems(freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
+                    goto error;
+                }
+                ip = ape_compiler_emit(comp, APE_OPCODE_MKFUNCTION, 2, make_u64_array((uint64_t)pos, (uint64_t)ape_ptrarray_count(freesymbols)));
+                if(ip < 0)
+                {
+                    ape_ptrarray_destroywithitems(freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
+                    goto error;
+                }
+                ape_ptrarray_destroywithitems(freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
+            }
+            break;
+        case APE_EXPR_CALL:
+            {
+                ok = ape_compiler_compileexpression(comp, expr->callexpr.function);
+                if(!ok)
+                {
+                    goto error;
+                }
+                for(i = 0; i < ape_ptrarray_count(expr->callexpr.args); i++)
+                {
+                    argexpr = (ApeExpression_t*)ape_ptrarray_get(expr->callexpr.args, i);
+                    ok = ape_compiler_compileexpression(comp, argexpr);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+                }
+                ip = ape_compiler_emit(comp, APE_OPCODE_CALL, 1, make_u64_array((uint64_t)ape_ptrarray_count(expr->callexpr.args)));
+                if(ip < 0)
+                {
+                    goto error;
+                }
+            }
+            break;
+        case APE_EXPR_ASSIGN:
+            {
+                assign = &expr->assign;
+                if(assign->dest->type != APE_EXPR_IDENT && assign->dest->type != APE_EXPR_INDEX)
+                {
+                    ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos, "expression is not assignable");
+                    goto error;
+                }
+                if(assign->ispostfix)
+                {
+                    ok = ape_compiler_compileexpression(comp, assign->dest);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+                }
+                ok = ape_compiler_compileexpression(comp, assign->source);
+                if(!ok)
+                {
+                    goto error;
+                }
+                ip = ape_compiler_emit(comp, APE_OPCODE_DUP, 0, NULL);
+                if(ip < 0)
+                {
+                    goto error;
+                }
+                ok = ape_valarray_push(comp->srcpositionsstack, &assign->dest->pos);
+                if(!ok)
+                {
+                    goto error;
+                }
+                if(assign->dest->type == APE_EXPR_IDENT)
+                {
+                    ident = assign->dest->ident;
+                    symbol = ape_symtable_resolve(symtable, ident->value);
+                    if(!symbol)
+                    {
+                        //ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos, "symbol '%s' could not be resolved", ident->value);
+                        //goto error;
+                        //ape_symtable_define(ApeSymTable_t* table, const char* name, bool assignable)
+                        symbol = ape_symtable_define(symtable, ident->value, true);
+                    }
+                    if(!symbol->assignable)
+                    {
+                        ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos,
+                                          "symbol '%s' is not assignable", ident->value);
+                        goto error;
+                    }
+                    ok = ape_compiler_writesym(comp, symbol, false);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+                }
+                else if(assign->dest->type == APE_EXPR_INDEX)
+                {
+                    index = &assign->dest->indexexpr;
+                    ok = ape_compiler_compileexpression(comp, index->left);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+                    ok = ape_compiler_compileexpression(comp, index->index);
+                    if(!ok)
+                    {
+                        goto error;
+                    }
+                    ip = ape_compiler_emit(comp, APE_OPCODE_SETINDEX, 0, NULL);
+                    if(ip < 0)
+                    {
+                        goto error;
+                    }
+                }
+                if(assign->ispostfix)
+                {
+                    ip = ape_compiler_emit(comp, APE_OPCODE_POP, 0, NULL);
+                    if(ip < 0)
+                    {
+                        goto error;
+                    }
+                }
+                ape_valarray_pop(comp->srcpositionsstack, NULL);
+            }
+            break;
+        case APE_EXPR_LOGICAL:
+            {
+                logi = &expr->logical;
+                ok = ape_compiler_compileexpression(comp, logi->left);
+                if(!ok)
+                {
+                    goto error;
+                }
+                ip = ape_compiler_emit(comp, APE_OPCODE_DUP, 0, NULL);
+                if(ip < 0)
+                {
+                    goto error;
+                }
+                afterleftjumpip = 0;
+                if(logi->op == APE_OPERATOR_LOGICALAND)
+                {
+                    afterleftjumpip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFFALSE, 1, make_u64_array((uint64_t)0xbeef));
+                }
+                else
+                {
+                    afterleftjumpip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFTRUE, 1, make_u64_array((uint64_t)0xbeef));
+                }
+                if(afterleftjumpip < 0)
+                {
+                    goto error;
+                }
                 ip = ape_compiler_emit(comp, APE_OPCODE_POP, 0, NULL);
                 if(ip < 0)
                 {
                     goto error;
                 }
+                ok = ape_compiler_compileexpression(comp, logi->right);
+                if(!ok)
+                {
+                    goto error;
+                }
+                afterrightip = ape_compiler_getip(comp);
+                ape_compiler_moduint16operand(comp, afterleftjumpip + 1, afterrightip);
             }
-
-            ape_valarray_pop(comp->srcpositionsstack, NULL);
             break;
-        }
-        case APE_EXPR_LOGICAL:
-        {
-            const ApeLogicalExpr_t* logi = &expr->logical;
-
-            ok = ape_compiler_compileexpression(comp, logi->left);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            ip = ape_compiler_emit(comp, APE_OPCODE_DUP, 0, NULL);
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            ApeInt_t afterleftjumpip = 0;
-            if(logi->op == APE_OPERATOR_LOGICALAND)
-            {
-                afterleftjumpip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFFALSE, 1, make_u64_array((uint64_t)0xbeef));
-            }
-            else
-            {
-                afterleftjumpip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFTRUE, 1, make_u64_array((uint64_t)0xbeef));
-            }
-
-            if(afterleftjumpip < 0)
-            {
-                goto error;
-            }
-
-            ip = ape_compiler_emit(comp, APE_OPCODE_POP, 0, NULL);
-            if(ip < 0)
-            {
-                goto error;
-            }
-
-            ok = ape_compiler_compileexpression(comp, logi->right);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            ApeInt_t afterrightip = ape_compiler_getip(comp);
-            ape_compiler_moduint16operand(comp, afterleftjumpip + 1, afterrightip);
-
-            break;
-        }
         case APE_EXPR_TERNARY:
-        {
-            const ApeTernaryExpr_t* ternary = &expr->ternary;
-
-            ok = ape_compiler_compileexpression(comp, ternary->test);
-            if(!ok)
             {
-                goto error;
+                ternary = &expr->ternary;
+                ok = ape_compiler_compileexpression(comp, ternary->test);
+                if(!ok)
+                {
+                    goto error;
+                }
+                elsejumpip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFFALSE, 1, make_u64_array((uint64_t)0xbeef));
+                ok = ape_compiler_compileexpression(comp, ternary->iftrue);
+                if(!ok)
+                {
+                    goto error;
+                }
+                endjumpip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)0xbeef));
+                elseip = ape_compiler_getip(comp);
+                ape_compiler_moduint16operand(comp, elsejumpip + 1, elseip);
+                ok = ape_compiler_compileexpression(comp, ternary->iffalse);
+                if(!ok)
+                {
+                    goto error;
+                }
+                endip = ape_compiler_getip(comp);
+                ape_compiler_moduint16operand(comp, endjumpip + 1, endip);
             }
-
-            ApeInt_t elsejumpip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFFALSE, 1, make_u64_array((uint64_t)0xbeef));
-
-            ok = ape_compiler_compileexpression(comp, ternary->iftrue);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            ApeInt_t endjumpip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)0xbeef));
-
-            ApeInt_t elseip = ape_compiler_getip(comp);
-            ape_compiler_moduint16operand(comp, elsejumpip + 1, elseip);
-
-            ok = ape_compiler_compileexpression(comp, ternary->iffalse);
-            if(!ok)
-            {
-                goto error;
-            }
-
-            ApeInt_t endip = ape_compiler_getip(comp);
-            ape_compiler_moduint16operand(comp, endjumpip + 1, endip);
-
             break;
-        }
         default:
-        {
-            APE_ASSERT(false);
+            {
+                APE_ASSERT(false);
+            }
             break;
-        }
     }
     res = true;
     goto end;
@@ -2018,28 +2026,30 @@ error:
     res = false;
 end:
     ape_valarray_pop(comp->srcpositionsstack, NULL);
-    ape_ast_destroy_expr(exproptimised);
+    ape_ast_destroy_expr(exproptimized);
     return res;
 }
 
-static bool ape_compiler_compilecodeblock(ApeCompiler_t* comp, const ApeCodeblock_t* block)
+static bool ape_compiler_compilecodeblock(ApeCompiler_t* comp, ApeCodeblock_t* block)
 {
+    bool ok;
+    ApeInt_t ip;
     ApeSize_t i;
-    ApeSymTable_t* symbol_table = ape_compiler_getsymboltable(comp);
-    if(!symbol_table)
+    ApeSymTable_t* symtable;
+    ApeStatement_t* stmt;
+    symtable = ape_compiler_getsymboltable(comp);
+    if(!symtable)
     {
         return false;
     }
-
-    bool ok = ape_symtable_pushblockscope(symbol_table);
+    ok = ape_symtable_pushblockscope(symtable);
     if(!ok)
     {
         return false;
     }
-
     if(ape_ptrarray_count(block->statements) == 0)
     {
-        ApeInt_t ip = ape_compiler_emit(comp, APE_OPCODE_NULL, 0, NULL);
+        ip = ape_compiler_emit(comp, APE_OPCODE_NULL, 0, NULL);
         if(ip < 0)
         {
             return false;
@@ -2050,54 +2060,60 @@ static bool ape_compiler_compilecodeblock(ApeCompiler_t* comp, const ApeCodebloc
             return false;
         }
     }
-
     for(i = 0; i < ape_ptrarray_count(block->statements); i++)
     {
-        const ApeStatement_t* stmt = (ApeStatement_t*)ape_ptrarray_get(block->statements, i);
-        bool ok = ape_compiler_compilestatement(comp, stmt);
+        stmt = (ApeStatement_t*)ape_ptrarray_get(block->statements, i);
+        ok = ape_compiler_compilestatement(comp, stmt);
         if(!ok)
         {
             return false;
         }
     }
-    ape_symtable_popblockscope(symbol_table);
+    ape_symtable_popblockscope(symtable);
     return true;
 }
 
 static ApeInt_t ape_compiler_addconstant(ApeCompiler_t* comp, ApeObject_t obj)
 {
-    bool ok = ape_valarray_add(comp->constants, &obj);
+    bool ok;
+    ApeInt_t pos;
+    ok = ape_valarray_add(comp->constants, &obj);
     if(!ok)
     {
         return -1;
     }
-    ApeInt_t pos = ape_valarray_count(comp->constants) - 1;
+    pos = ape_valarray_count(comp->constants) - 1;
     return pos;
 }
 
 static void ape_compiler_moduint16operand(ApeCompiler_t* comp, ApeInt_t ip, uint64_t operand)
 {
-    ApeValArray_t* bytecode = ape_compiler_getbytecode(comp);
+    ApeUShort_t hi;
+    ApeUShort_t lo;
+    ApeValArray_t* bytecode;
+    bytecode = ape_compiler_getbytecode(comp);
     if((ip + 1) >= (ApeInt_t)ape_valarray_count(bytecode))
     {
         APE_ASSERT(false);
         return;
     }
-    ApeUShort_t hi = (ApeUShort_t)(operand >> 8);
+    hi = (ApeUShort_t)(operand >> 8);
     ape_valarray_set(bytecode, ip, &hi);
-    ApeUShort_t lo = (ApeUShort_t)(operand);
+    lo = (ApeUShort_t)(operand);
     ape_valarray_set(bytecode, ip + 1, &lo);
 }
 
 static bool ape_compiler_lastopcodeis(ApeCompiler_t* comp, ApeOpByte_t op)
 {
-    ApeOpByte_t lastopcode = ape_compiler_getlastopcode(comp);
+    ApeOpByte_t lastopcode;
+    lastopcode = ape_compiler_getlastopcode(comp);
     return lastopcode == op;
 }
 
-static bool ape_compiler_readsym(ApeCompiler_t* comp, const ApeSymbol_t* symbol)
+static bool ape_compiler_readsym(ApeCompiler_t* comp, ApeSymbol_t* symbol)
 {
-    ApeInt_t ip = -1;
+    ApeInt_t ip;
+    ip = -1;
     if(symbol->type == APE_SYMBOL_MODULEGLOBAL)
     {
         ip = ape_compiler_emit(comp, APE_OPCODE_GETMODULEGLOBAL, 1, make_u64_array((uint64_t)(symbol->index)));
@@ -2125,9 +2141,10 @@ static bool ape_compiler_readsym(ApeCompiler_t* comp, const ApeSymbol_t* symbol)
     return ip >= 0;
 }
 
-static bool ape_compiler_writesym(ApeCompiler_t* comp, const ApeSymbol_t* symbol, bool define)
+static bool ape_compiler_writesym(ApeCompiler_t* comp, ApeSymbol_t* symbol, bool define)
 {
-    ApeInt_t ip = -1;
+    ApeInt_t ip;
+    ip = -1;
     if(symbol->type == APE_SYMBOL_MODULEGLOBAL)
     {
         if(define)
@@ -2159,13 +2176,15 @@ static bool ape_compiler_writesym(ApeCompiler_t* comp, const ApeSymbol_t* symbol
 
 static bool ape_compiler_pushbreakip(ApeCompiler_t* comp, ApeInt_t ip)
 {
-    ApeCompScope_t* compscope = ape_compiler_getcompscope(comp);
+    ApeCompScope_t* compscope;
+    compscope = ape_compiler_getcompscope(comp);
     return ape_valarray_push(compscope->breakipstack, &ip);
 }
 
 static void ape_compiler_popbreakip(ApeCompiler_t* comp)
 {
-    ApeCompScope_t* compscope = ape_compiler_getcompscope(comp);
+    ApeCompScope_t* compscope;
+    compscope = ape_compiler_getcompscope(comp);
     if(ape_valarray_count(compscope->breakipstack) == 0)
     {
         APE_ASSERT(false);
@@ -2176,24 +2195,28 @@ static void ape_compiler_popbreakip(ApeCompiler_t* comp)
 
 static ApeInt_t ape_compiler_getbreakip(ApeCompiler_t* comp)
 {
-    ApeCompScope_t* compscope = ape_compiler_getcompscope(comp);
+    ApeInt_t* res;
+    ApeCompScope_t* compscope;
+    compscope = ape_compiler_getcompscope(comp);
     if(ape_valarray_count(compscope->breakipstack) == 0)
     {
         return -1;
     }
-    ApeInt_t* res = (ApeInt_t*)ape_valarray_top(compscope->breakipstack);
+    res = (ApeInt_t*)ape_valarray_top(compscope->breakipstack);
     return *res;
 }
 
 static bool ape_compiler_pushcontip(ApeCompiler_t* comp, ApeInt_t ip)
 {
-    ApeCompScope_t* compscope = ape_compiler_getcompscope(comp);
+    ApeCompScope_t* compscope;
+    compscope = ape_compiler_getcompscope(comp);
     return ape_valarray_push(compscope->continueipstack, &ip);
 }
 
 static void ape_compiler_popcontip(ApeCompiler_t* comp)
 {
-    ApeCompScope_t* compscope = ape_compiler_getcompscope(comp);
+    ApeCompScope_t* compscope;
+    compscope = ape_compiler_getcompscope(comp);
     if(ape_valarray_count(compscope->continueipstack) == 0)
     {
         APE_ASSERT(false);
@@ -2204,37 +2227,41 @@ static void ape_compiler_popcontip(ApeCompiler_t* comp)
 
 static ApeInt_t ape_compiler_getcontip(ApeCompiler_t* comp)
 {
-    ApeCompScope_t* compscope = ape_compiler_getcompscope(comp);
+    ApeInt_t* res;
+    ApeCompScope_t* compscope;
+    compscope = ape_compiler_getcompscope(comp);
     if(ape_valarray_count(compscope->continueipstack) == 0)
     {
         APE_ASSERT(false);
         return -1;
     }
-    ApeInt_t* res = (ApeInt_t*)ape_valarray_top(compscope->continueipstack);
+    res = (ApeInt_t*)ape_valarray_top(compscope->continueipstack);
     return *res;
 }
 
 static ApeInt_t ape_compiler_getip(ApeCompiler_t* comp)
 {
-    ApeCompScope_t* compilation_scope = ape_compiler_getcompscope(comp);
-    return ape_valarray_count(compilation_scope->bytecode);
+    ApeCompScope_t* compscope;
+    compscope = ape_compiler_getcompscope(comp);
+    return ape_valarray_count(compscope->bytecode);
 }
 
 static ApeValArray_t* ape_compiler_getsrcpositions(ApeCompiler_t* comp)
 {
-    ApeCompScope_t* compilation_scope = ape_compiler_getcompscope(comp);
-    return compilation_scope->srcpositions;
+    ApeCompScope_t* compscope = ape_compiler_getcompscope(comp);
+    return compscope->srcpositions;
 }
 
 static ApeValArray_t* ape_compiler_getbytecode(ApeCompiler_t* comp)
 {
-    ApeCompScope_t* compilation_scope = ape_compiler_getcompscope(comp);
-    return compilation_scope->bytecode;
+    ApeCompScope_t* compscope = ape_compiler_getcompscope(comp);
+    return compscope->bytecode;
 }
 
-static ApeFileScope_t* ape_compiler_makefilescope(ApeCompiler_t* comp, ApeCompiledFile_t* file)
+static ApeFileScope_t* ape_compiler_makefilescope(ApeCompiler_t* comp, ApeCompFile_t* file)
 {
-    ApeFileScope_t* filescope = (ApeFileScope_t*)ape_allocator_alloc(comp->alloc, sizeof(ApeFileScope_t));
+    ApeFileScope_t* filescope;
+    filescope = (ApeFileScope_t*)ape_allocator_alloc(comp->alloc, sizeof(ApeFileScope_t));
     if(!filescope)
     {
         return NULL;
@@ -2262,9 +2289,10 @@ err:
 static void ape_compiler_destroyfilescope(ApeFileScope_t* scope)
 {
     ApeSize_t i;
+    void* name;
     for(i = 0; i < ape_ptrarray_count(scope->loadedmodulenames); i++)
     {
-        void* name = ape_ptrarray_get(scope->loadedmodulenames, i);
+        name = ape_ptrarray_get(scope->loadedmodulenames, i);
         ape_allocator_free(scope->alloc, name);
     }
     ape_ptrarray_destroy(scope->loadedmodulenames);
@@ -2278,39 +2306,36 @@ static bool ape_compiler_pushfilescope(ApeCompiler_t* comp, const char* filepath
     ApeBlockScope_t* prevsttopscope;
     ApeSymTable_t* prevst;
     ApeFileScope_t* filescope;
+    ApeCompFile_t* file;
+    ApeInt_t globaloffset;
     prevst = NULL;
     if(ape_ptrarray_count(comp->filescopes) > 0)
     {
         prevst = ape_compiler_getsymboltable(comp);
     }
-    ApeCompiledFile_t* file;
-    file = ape_make_compiledfile(comp->context, filepath);
+    file = ape_make_compfile(comp->context, filepath);
     if(!file)
     {
         return false;
     }
-
     ok = ape_ptrarray_add(comp->files, file);
     if(!ok)
     {
-        compiled_file_destroy(file);
+        ape_compfile_destroy(file);
         return false;
     }
-
     filescope = ape_compiler_makefilescope(comp, file);
     if(!filescope)
     {
         return false;
     }
-
     ok = ape_ptrarray_push(comp->filescopes, filescope);
     if(!ok)
     {
         ape_compiler_destroyfilescope(filescope);
         return false;
     }
-
-    ApeInt_t globaloffset = 0;
+    globaloffset = 0;
     if(prevst)
     {
         prevsttopscope = ape_symtable_getblockscope(prevst);
