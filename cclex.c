@@ -36,6 +36,7 @@ static ApeTokenType_t ape_lexer_lookupident(const char* ident, ApeSize_t len)
         { "continue", TOKEN_KWCONTINUE },
         { "null", TOKEN_KWNULL },
         { "import", TOKEN_KWIMPORT },
+        { "include", TOKEN_KWINCLUDE },
         { "recover", TOKEN_KWRECOVER },
         #if 0
         { "global", TOKEN_KWGLOBAL },

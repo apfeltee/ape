@@ -11,7 +11,7 @@ function iobuf()
         },
         __operator_lshift__: function(self, a)
         {
-            Object.append(self.buffer, a)
+            self.buffer.push(a)
             return self
         },
     }

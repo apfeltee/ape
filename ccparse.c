@@ -697,14 +697,14 @@ ApeStatement_t* ape_ast_make_blockstmt(ApeContext_t* ctx, ApeCodeblock_t* block)
     return res;
 }
 
-ApeStatement_t* ape_ast_make_importstmt(ApeContext_t* ctx, char* path)
+ApeStatement_t* ape_ast_make_includestmt(ApeContext_t* ctx, char* path)
 {
-    ApeStatement_t* res = ape_ast_make_statement(ctx, APE_STMT_IMPORT);
+    ApeStatement_t* res = ape_ast_make_statement(ctx, APE_STMT_INCLUDE);
     if(!res)
     {
         return NULL;
     }
-    res->import.path = path;
+    res->stmtinclude.path = path;
     return res;
 }
 
@@ -789,9 +789,9 @@ void* ape_ast_destroy_stmt(ApeStatement_t* stmt)
                 ape_ast_destroy_codeblock(stmt->block);
             }
             break;
-        case APE_STMT_IMPORT:
+        case APE_STMT_INCLUDE:
             {
-                ape_allocator_free(stmt->alloc, stmt->import.path);
+                ape_allocator_free(stmt->alloc, stmt->stmtinclude.path);
             }
             break;
         case APE_STMT_RECOVER:
@@ -971,14 +971,14 @@ ApeStatement_t* ape_ast_copy_stmt(const ApeStatement_t* stmt)
                 }
             }
             break;
-        case APE_STMT_IMPORT:
+        case APE_STMT_INCLUDE:
             {
-                char* pathcopy = ape_util_strdup(stmt->context, stmt->import.path);
+                char* pathcopy = ape_util_strdup(stmt->context, stmt->stmtinclude.path);
                 if(!pathcopy)
                 {
                     return NULL;
                 }
-                res = ape_ast_make_importstmt(stmt->context, pathcopy);
+                res = ape_ast_make_includestmt(stmt->context, pathcopy);
                 if(!res)
                 {
                     ape_allocator_free(stmt->alloc, pathcopy);
@@ -1361,9 +1361,9 @@ ApeStatement_t* ape_parser_parsestmt(ApeParser_t* p)
                 res = ape_parser_parsecontinuestmt(p);
             }
             break;
-        case TOKEN_KWIMPORT:
+        case TOKEN_KWINCLUDE:
             {
-                res = ape_parser_parseimportstmt(p);
+                res = ape_parser_parseincludestmt(p);
             }
             break;
         case TOKEN_KWRECOVER:
@@ -1662,7 +1662,7 @@ ApeStatement_t* ape_parser_parseblockstmt(ApeParser_t* p)
     return res;
 }
 
-ApeStatement_t* ape_parser_parseimportstmt(ApeParser_t* p)
+ApeStatement_t* ape_parser_parseincludestmt(ApeParser_t* p)
 {
     char* processedname;
     ApeStatement_t* res;
@@ -1678,7 +1678,7 @@ ApeStatement_t* ape_parser_parseimportstmt(ApeParser_t* p)
         return NULL;
     }
     ape_lexer_nexttoken(&p->lexer);
-    res= ape_ast_make_importstmt(p->context, processedname);
+    res= ape_ast_make_includestmt(p->context, processedname);
     if(!res)
     {
         ape_allocator_free(p->alloc, processedname);

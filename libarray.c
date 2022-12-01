@@ -476,6 +476,17 @@ bool ape_object_array_pushvalue(ApeObject_t object, ApeObject_t val)
     return ape_valarray_add(array, &val);
 }
 
+//bool ape_valarray_pop(ApeValArray_t *arr, void *out_value);
+
+bool ape_object_array_popvalue(ApeObject_t object, ApeObject_t* dest)
+{
+
+    ApeValArray_t* array;
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_ARRAY);
+    array = ape_object_array_getarray(object);
+    return ape_valarray_pop(array, dest);
+}
+
 ApeSize_t ape_object_array_getlength(ApeObject_t object)
 {
     ApeValArray_t* array;
@@ -513,3 +524,59 @@ ApeValArray_t * ape_object_array_getarray(ApeObject_t object)
     return data->valarray;
 }
 
+static ApeObject_t objfn_array_length(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+{
+    ApeObject_t self;
+    (void)vm;
+    (void)data;
+    (void)argc;
+    (void)args;
+    self = ape_vm_popthisstack(vm);
+    return ape_object_make_number(vm->context, ape_object_array_getlength(self));
+}
+
+static ApeObject_t objfn_array_push(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+{
+    size_t i;
+    ApeObject_t self;
+    (void)vm;
+    (void)data;
+    (void)argc;
+    (void)args;
+    self = ape_vm_popthisstack(vm);
+    for(i=0; i<argc; i++)
+    {
+        ape_object_array_pushvalue(self, args[i]);
+    }
+    return ape_object_make_null(vm->context);
+}
+
+static ApeObject_t objfn_array_pop(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+{
+    size_t i;
+    ApeObject_t self;
+    ApeObject_t rt;
+    (void)vm;
+    (void)data;
+    (void)argc;
+    (void)args;
+    self = ape_vm_popthisstack(vm);
+    if(ape_object_array_popvalue(self, &rt))
+    {
+        return rt;
+    }
+    return ape_object_make_null(vm->context);
+}
+
+bool ape_builtin_objectfunc_find_array(ApeContext_t* ctx, const char* idxname, ApeObjMemberItem_t* dest)
+{
+    static ApeObjMemberItem_t funcs[]=
+    {
+        {"length", false, objfn_array_length},
+        {"push", true, objfn_array_push},
+        {"append", true, objfn_array_push},
+        {"pop", true, objfn_array_pop},
+        {NULL, false, NULL},
+    };
+    return ape_builtin_find_objectfunc(ctx, funcs, idxname, dest);
+}

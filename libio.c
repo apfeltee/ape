@@ -9,6 +9,39 @@
 #endif
 #include "ape.h"
 
+#if !defined(S_IFMT)
+    #define S_IFMT  00170000
+#endif
+#if !defined(S_IFSOCK)
+    #define S_IFSOCK 0140000
+#endif
+#if !defined(S_IFLNK)
+    #define S_IFLNK  0120000
+#endif
+#if !defined(S_IFREG)
+    #define S_IFREG  0100000
+#endif
+#if !defined(S_IFBLK)
+    #define S_IFBLK  0060000
+#endif
+#if !defined(S_IFDIR)
+    #define S_IFDIR  0040000
+#endif
+#if !defined(S_IFCHR)
+    #define S_IFCHR  0020000
+#endif
+#if !defined(S_IFIFO)
+    #define S_IFIFO  0010000
+#endif
+
+#if !defined(DT_DIR)
+    #define DT_DIR 4
+#endif
+
+#if !defined(DT_REG)
+    #define DT_REG 8
+#endif
+
 static ApeObject_t cfn_file_write(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     (void)data;
@@ -100,7 +133,8 @@ static ApeObject_t cfn_file_isdirectory(ApeVM_t* vm, void* data, ApeSize_t argc,
     return ape_object_make_bool(vm->context, false);
 }
 
-#if defined(__linux__)
+/* strict ansi does not have timespec */
+#if defined(__linux__) && !defined(APE_CCENV_ANSIMODE)
 static ApeObject_t timespec_to_map(ApeVM_t* vm, struct timespec ts)
 {
     ApeObject_t map;
@@ -185,7 +219,7 @@ static ApeObject_t cfn_file_stat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObj
         for_field_number("gid", st.st_gid);
         for_field_number("rdev", st.st_rdev);
         for_field_number("size", st.st_size);
-        #if defined(__linux__)
+        #if defined(__linux__) && !defined(APE_CCENV_ANSIMODE)
         for_field_number("blksize", st.st_blksize);
         for_field_number("blocks", st.st_blocks);
         if(map.handle != NULL)

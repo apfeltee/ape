@@ -10,12 +10,12 @@ function len(thing)
     return thing.length;
 }
 
-function ord(s)
+String.ord = function(s)
 {
     return s.charCodeAt(0);
 }
 
-function chr(n)
+String.chr = function(n)
 {
     return String.fromCharCode(n);
 }

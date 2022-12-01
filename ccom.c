@@ -720,6 +720,171 @@ static bool ape_compiler_compilestmtlist(ApeCompiler_t* comp, ApePtrArray_t* sta
 }
 
 
+bool ape_compiler_includemodule(ApeCompiler_t* comp, ApeStatement_t* includestmt)
+{
+    // todo: split into smaller functions
+    ApeSize_t i;
+    bool ok;
+    bool result;
+    char* filepath;
+    char* code;
+    char* namecopy;
+    const char* loadedname;
+    const char* modulepath;
+    const char* module_name;
+    const char* filepathnoncanonicalised;
+    ApeFileScope_t* filescope;
+    ApeWriter_t* filepathbuf;
+    ApeSymTable_t* symtable;
+    ApeFileScope_t* fs;
+    ApeModule_t* module;
+    ApeSymTable_t* st;
+    ApeSymbol_t* symbol;
+    result = false;
+    filepath = NULL;
+    code = NULL;
+    filescope = (ApeFileScope_t*)ape_ptrarray_top(comp->filescopes);
+    modulepath = includestmt->stmtinclude.path;
+    module_name = ape_module_getname(modulepath);
+    for(i = 0; i < ape_ptrarray_count(filescope->loadedmodulenames); i++)
+    {
+        loadedname = (const char*)ape_ptrarray_get(filescope->loadedmodulenames, i);
+        if(ape_util_strequal(loadedname, module_name))
+        {
+            ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, includestmt->pos, "module '%s' was already included", module_name);
+            result = false;
+            goto end;
+        }
+    }
+    filepathbuf = ape_make_writer(comp->context);
+    if(!filepathbuf)
+    {
+        result = false;
+        goto end;
+    }
+    if(ape_util_isabspath(modulepath))
+    {
+        ape_writer_appendf(filepathbuf, "%s.ape", modulepath);
+    }
+    else
+    {
+        ape_writer_appendf(filepathbuf, "%s%s.ape", filescope->file->dirpath, modulepath);
+    }
+    if(ape_writer_failed(filepathbuf))
+    {
+        ape_writer_destroy(filepathbuf);
+        result = false;
+        goto end;
+    }
+    filepathnoncanonicalised = ape_writer_getdata(filepathbuf);
+    filepath = ape_util_canonicalisepath(comp->context, filepathnoncanonicalised);
+    ape_writer_destroy(filepathbuf);
+    if(!filepath)
+    {
+        result = false;
+        goto end;
+    }
+    symtable = ape_compiler_getsymboltable(comp);
+    if(symtable->outer != NULL || ape_ptrarray_count(symtable->blockscopes) > 1)
+    {
+        ape_errorlist_add(comp->errors, APE_ERROR_COMPILATION, includestmt->pos, "modules can only be included in global scope");
+        result = false;
+        goto end;
+    }
+    for(i = 0; i < ape_ptrarray_count(comp->filescopes); i++)
+    {
+        fs = (ApeFileScope_t*)ape_ptrarray_get(comp->filescopes, i);
+        if(APE_STREQ(fs->file->path, filepath))
+        {
+            ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, includestmt->pos, "cyclic reference of file '%s'", filepath);
+            result = false;
+            goto end;
+        }
+    }
+    module = (ApeModule_t*)ape_strdict_get(comp->modules, filepath);
+    if(!module)
+    {
+        // todo: create new module function
+        if(!comp->config->fileio.ioreader.fnreadfile)
+        {
+            ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, includestmt->pos,
+                              "cannot include file '%s', file read function not configured", filepath);
+            result = false;
+            goto end;
+        }
+        code = comp->config->fileio.ioreader.fnreadfile(comp->config->fileio.ioreader.context, filepath);
+        if(!code)
+        {
+            ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, includestmt->pos, "reading file '%s' failed", filepath);
+            result = false;
+            goto end;
+        }
+        module = ape_make_module(comp->context, module_name);
+        if(!module)
+        {
+            result = false;
+            goto end;
+        }
+        ok = ape_compiler_pushfilescope(comp, filepath);
+        if(!ok)
+        {
+            ape_module_destroy(module);
+            result = false;
+            goto end;
+        }
+        ok = ape_compiler_compilecode(comp, code);
+        if(!ok)
+        {
+            ape_module_destroy(module);
+            result = false;
+            goto end;
+        }
+        st = ape_compiler_getsymboltable(comp);
+        for(i = 0; i < ape_symtable_getmoduleglobalsymbolcount(st); i++)
+        {
+            symbol = (ApeSymbol_t*)ape_symtable_getmoduleglobalsymbolat(st, i);
+            ape_module_addsymbol(module, symbol);
+        }
+        ape_compiler_popfilescope(comp);
+        ok = ape_strdict_set(comp->modules, filepath, module);
+        if(!ok)
+        {
+            ape_module_destroy(module);
+            result = false;
+            goto end;
+        }
+    }
+    for(i = 0; i < ape_ptrarray_count(module->symbols); i++)
+    {
+        symbol = (ApeSymbol_t*)ape_ptrarray_get(module->symbols, i);
+        ok = ape_symtable_addmodulesymbol(symtable, symbol);
+        if(!ok)
+        {
+            result = false;
+            goto end;
+        }
+    }
+    namecopy = ape_util_strdup(comp->context, module_name);
+    if(!namecopy)
+    {
+        result = false;
+        goto end;
+    }
+    ok = ape_ptrarray_add(filescope->loadedmodulenames, namecopy);
+    if(!ok)
+    {
+        ape_allocator_free(comp->alloc, namecopy);
+        result = false;
+        goto end;
+    }
+    result = true;
+end:
+    ape_allocator_free(comp->alloc, filepath);
+    ape_allocator_free(comp->alloc, code);
+    return result;
+}
+
+
 static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* stmt)
 {
     bool ok;
@@ -1250,9 +1415,9 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* s
                 }
             }
             break;
-        case APE_STMT_IMPORT:
+        case APE_STMT_INCLUDE:
             {
-                ok = ape_compiler_importmodule(comp, stmt);
+                ok = ape_compiler_includemodule(comp, stmt);
                 if(!ok)
                 {
                     return false;

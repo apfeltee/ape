@@ -53,7 +53,6 @@ THE SOFTWARE.
 #include <assert.h>
 #include <errno.h>
 
-//#include <sys/time.h>
 #if defined(__linux__)
     #define APE_LINUX
     #define APE_POSIX
@@ -79,6 +78,15 @@ THE SOFTWARE.
 
 #define APE_VERSION_STRING "0.14.0"
 
+#if defined(__STRICT_ANSI__)
+    #define APE_CCENV_ANSIMODE 1
+#endif
+
+#if defined(APE_CCENV_ANSIMODE)
+    #define APE_INLINE
+#else
+    #define APE_INLINE inline
+#endif
 
 #define APE_CONF_INVALID_VALDICT_IX UINT_MAX
 #define APE_CONF_INVALID_STRDICT_IX UINT_MAX
@@ -222,7 +230,8 @@ enum ApeErrorType_t
     APE_ERROR_RUNTIME,
     APE_ERROR_TIMEOUT,
     APE_ERROR_ALLOCATION,
-    APE_ERROR_USER,// from ape_add_error() or ape_add_errorf()
+    /* from ape_add_error() or ape_add_errorf() */
+    APE_ERROR_USER,
 };
 
 enum ApeObjType_t
@@ -239,7 +248,8 @@ enum ApeObjType_t
     APE_OBJECT_SCRIPTFUNCTION = 1 << 8,
     APE_OBJECT_EXTERNAL = 1 << 9,
     APE_OBJECT_FREED = 1 << 10,
-    APE_OBJECT_ANY = 0xffff,// for checking types with &
+    /* for checking types with & */
+    APE_OBJECT_ANY = 0xffff,
 };
 
 enum ApeTokenType_t
@@ -247,7 +257,7 @@ enum ApeTokenType_t
     TOKEN_INVALID = 0,
     TOKEN_EOF,
 
-    // Operators
+    /* Operators */
     TOKEN_ASSIGN,
     TOKEN_ASSIGNPLUS,
     TOKEN_ASSIGNMINUS,
@@ -281,7 +291,7 @@ enum ApeTokenType_t
     TOKEN_OPLEFTSHIFT,
     TOKEN_OPRIGHTSHIFT,
 
-    // Delimiters
+    /* Delimiters */
     TOKEN_OPCOMMA,
     TOKEN_OPSEMICOLON,
     TOKEN_OPCOLON,
@@ -294,7 +304,7 @@ enum ApeTokenType_t
     TOKEN_OPDOT,
     TOKEN_OPMODULO,
 
-    // Keywords
+    /* Keywords */
     TOKEN_KWFUNCTION,
     TOKEN_KWCONST,
     TOKEN_KWVAR,
@@ -309,16 +319,17 @@ enum ApeTokenType_t
     TOKEN_KWIN,
     TOKEN_KWCONTINUE,
     TOKEN_KWNULL,
+    TOKEN_KWINCLUDE,
     TOKEN_KWIMPORT,
     TOKEN_KWRECOVER,
 
-    // Identifiers and literals
+    /* Identifiers and literals */
     TOKEN_VALIDENT,
     TOKEN_VALNUMBER,
     TOKEN_VALSTRING,
     TOKEN_VALTPLSTRING,
 
-    // MUST be last
+    /* MUST be last */
     TOKEN_TYPE_MAX
 };
 
@@ -381,7 +392,7 @@ enum ApeStmtType_t
     APE_STMT_FOREACH,
     APE_STMT_FORLOOP,
     APE_STMT_BLOCK,
-    APE_STMT_IMPORT,
+    APE_STMT_INCLUDE,
     APE_STMT_RECOVER,
 };
 
@@ -450,27 +461,45 @@ enum ApeOpcodeValue_t
     APE_OPCODE_BITAND,
     APE_OPCODE_LEFTSHIFT,
     APE_OPCODE_RIGHTSHIFT,
+    APE_OPCODE_IMPORT,
     APE_OPCODE_MAX,
 };
 
 enum ApePrecedence_t
 {
     PRECEDENCE_LOWEST = 0,
-    PRECEDENCE_ASSIGN,// a = b
-    PRECEDENCE_TERNARY,// a ? b : c
-    PRECEDENCE_LOGICAL_OR,// ||
-    PRECEDENCE_LOGICAL_AND,// &&
-    PRECEDENCE_BIT_OR,// |
-    PRECEDENCE_BIT_XOR,// ^
-    PRECEDENCE_BIT_AND,// &
-    PRECEDENCE_EQUALS,// == !=
-    PRECEDENCE_LESSGREATER,// >, >=, <, <=
-    PRECEDENCE_SHIFT,// << >>
-    PRECEDENCE_SUM,// + -
-    PRECEDENCE_PRODUCT,// * / %
-    PRECEDENCE_PREFIX,// -x !x ++x --x
-    PRECEDENCE_INCDEC,// x++ x--
-    PRECEDENCE_POSTFIX,// myFunction(x) x["foo"] x.foo
+    /* a = b */
+    PRECEDENCE_ASSIGN,
+    /* a ? b : c */
+    PRECEDENCE_TERNARY,
+    /* || */
+    PRECEDENCE_LOGICAL_OR,
+    /* && */
+    PRECEDENCE_LOGICAL_AND,
+    /* | */
+    PRECEDENCE_BIT_OR,
+    /* ^ */
+    PRECEDENCE_BIT_XOR,
+    /* & */
+    PRECEDENCE_BIT_AND,
+    /* == != */
+    PRECEDENCE_EQUALS,
+    /* >, >=, <, <= */
+    PRECEDENCE_LESSGREATER,
+    /* << >> */
+    PRECEDENCE_SHIFT,
+    /* + - */
+    PRECEDENCE_SUM,
+    /* * / % */
+    PRECEDENCE_PRODUCT,
+    /* -x !x ++x --x */
+    PRECEDENCE_PREFIX,
+    /* x++ x-- */
+    PRECEDENCE_INCDEC,
+    /* myFunction(x) x["foo"] x.foo */
+    PRECEDENCE_POSTFIX,
+
+    /* MUST be last */
     PRECEDENCE_HIGHEST
 };
 
@@ -521,7 +550,7 @@ typedef struct /**/ApeIfStmt_t ApeIfStmt_t;
 typedef struct /**/ApeWhileLoopStmt_t ApeWhileLoopStmt_t;
 typedef struct /**/ApeForeachStmt_t ApeForeachStmt_t;
 typedef struct /**/ApeForLoopStmt_t ApeForLoopStmt_t;
-typedef struct /**/ApeImportStmt_t ApeImportStmt_t;
+typedef struct /**/ApeIncludeStmt_t ApeIncludeStmt_t;
 typedef struct /**/ApeRecoverStmt_t ApeRecoverStmt_t;
 typedef struct /**/ApeStatement_t ApeStatement_t;
 typedef struct /**/ApeParser_t ApeParser_t;
@@ -554,6 +583,7 @@ typedef struct /**/ApeFileScope_t ApeFileScope_t;
 typedef struct /**/ApeCompiler_t ApeCompiler_t;
 typedef struct /**/ApeNativeFuncWrapper_t ApeNativeFuncWrapper_t;
 typedef struct /**/ApeNativeItem_t ApeNativeItem_t;
+typedef struct /**/ApeObjMemberItem_t ApeObjMemberItem_t;
 typedef struct /**/ApeArgCheck_t ApeArgCheck_t;
 
 
@@ -592,6 +622,13 @@ struct ApeArgCheck_t
 struct ApeNativeItem_t
 {
     const char* name;
+    ApeNativeFuncPtr_t fn;
+};
+
+struct ApeObjMemberItem_t
+{
+    const char* name;
+    bool isfunction;
     ApeNativeFuncPtr_t fn;
 };
 
@@ -719,7 +756,8 @@ struct ApeConfig_t
         } iowriter;
     } fileio;
 
-    bool replmode;// allows redefinition of symbols
+    /* allows redefinition of symbols */
+    bool replmode;
     double max_execution_time_ms;
     bool max_execution_time_set;
     bool dumpast;
@@ -945,9 +983,10 @@ struct ApeForLoopStmt_t
     ApeCodeblock_t* body;
 };
 
-struct ApeImportStmt_t
+struct ApeIncludeStmt_t
 {
     char* path;
+    ApeExpression_t* left;
 };
 
 struct ApeRecoverStmt_t
@@ -971,7 +1010,7 @@ struct ApeStatement_t
         ApeForeachStmt_t foreach;
         ApeForLoopStmt_t forloop;
         ApeCodeblock_t* block;
-        ApeImportStmt_t import;
+        ApeIncludeStmt_t stmtinclude;
         ApeRecoverStmt_t recover;
     };
     ApePosition_t pos;
@@ -1249,7 +1288,7 @@ struct ApeContext_t
 #endif
 
 
-static inline ApeObject_t object_make_from_data(ApeContext_t* ctx, ApeObjType_t type, ApeObjData_t* data)
+static APE_INLINE ApeObject_t object_make_from_data(ApeContext_t* ctx, ApeObjType_t type, ApeObjData_t* data)
 {
     ApeObject_t object;
     object.type = type;

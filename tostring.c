@@ -13,70 +13,12 @@ static const char* g_type_names[] = {
     "}",        "[",     "]",        ".",      "%",
     "function", "const", "var",      "true",   "false",
     "if",       "else",  "return",   "while",  "break",
-    "for",      "in",    "continue", "null",   "import",
-    "recover",  "ident", "number",   "string", "templatestring",
+    "for",      "in",    "continue", "null",   "include",
+    "import", "recover",  "ident", "number",   "string",
+    "templatestring",
 };
 
-/*
-* todo: these MUST reflect the order of ApeOpcodeValue_t.
-* meaning its prone to break terribly if and/or when it is changed.
-*/
-static ApeOpcodeDef_t g_definitions[APE_OPCODE_MAX + 1] =
-{
-    { "none", 0, { 0 } },
-    { "constant", 1, { 2 } },
-    { "op(+)", 0, { 0 } },
-    { "pop", 0, { 0 } },
-    { "sub", 0, { 0 } },
-    { "op(*)", 0, { 0 } },
-    { "op(/)", 0, { 0 } },
-    { "op(%)", 0, { 0 } },
-    { "true", 0, { 0 } },
-    { "false", 0, { 0 } },
-    { "compare", 0, { 0 } },
-    { "compareeq", 0, { 0 } },
-    { "equal", 0, { 0 } },
-    { "notequal", 0, { 0 } },
-    { "greaterthan", 0, { 0 } },
-    { "greaterequal", 0, { 0 } },
-    { "op(-)", 0, { 0 } },
-    { "op(!)", 0, { 0 } },
-    { "jump", 1, { 2 } },
-    { "jumpiffalse", 1, { 2 } },
-    { "jumpiftrue", 1, { 2 } },
-    { "null", 0, { 0 } },
-    { "getmoduleglobal", 1, { 2 } },
-    { "setmoduleglobal", 1, { 2 } },
-    { "definemoduleglobal", 1, { 2 } },
-    { "array", 1, { 2 } },
-    { "mapstart", 1, { 2 } },
-    { "mapend", 1, { 2 } },
-    { "getthis", 0, { 0 } },
-    { "getindex", 0, { 0 } },
-    { "setindex", 0, { 0 } },
-    { "getvalue_at", 0, { 0 } },
-    { "call", 1, { 1 } },
-    { "returnvalue", 0, { 0 } },
-    { "return", 0, { 0 } },
-    { "getlocal", 1, { 1 } },
-    { "definelocal", 1, { 1 } },
-    { "setlocal", 1, { 1 } },
-    { "getcontextglobal", 1, { 2 } },
-    { "function", 2, { 2, 1 } },
-    { "getfree", 1, { 1 } },
-    { "setfree", 1, { 1 } },
-    { "currentfunction", 0, { 0 } },
-    { "dup", 0, { 0 } },
-    { "number", 1, { 8 } },
-    { "len", 0, { 0 } },
-    { "setrecover", 1, { 2 } },
-    { "op(|)", 0, { 0 } },
-    { "op(^)", 0, { 0 } },
-    { "op(&)", 0, { 0 } },
-    { "op(<<)", 0, { 0 } },
-    { "op(>>)", 0, { 0 } },
-    { "invalid_max", 0, { 0 } },
-};
+
 
 const char* ape_tostring_operator(ApeOperator_t op)
 {
@@ -166,23 +108,7 @@ const char* ape_tostring_exprtype(ApeExprType_t type)
     return "unknown";
 }
 
-ApeOpcodeDef_t* ape_tostring_opcodefind(ApeOpByte_t op)
-{
-    if(op <= APE_OPCODE_NONE || op >= APE_OPCODE_MAX)
-    {
-        return NULL;
-    }
-    return &g_definitions[op];
-}
 
-const char* ape_tostring_opcodename(ApeOpByte_t op)
-{
-    if(op <= APE_OPCODE_NONE || op >= APE_OPCODE_MAX)
-    {
-        return NULL;
-    }
-    return g_definitions[op].name;
-}
 
 static bool ape_tostring_opcodecoderead(ApeOpcodeDef_t* def, ApeUShort_t* instr, uint64_t outop[2])
 {
@@ -387,9 +313,9 @@ bool ape_tostring_statement(ApeWriter_t* buf, ApeStatement_t* stmt)
                 ape_writer_append(buf, "continue");
             }
             break;
-        case APE_STMT_IMPORT:
+        case APE_STMT_INCLUDE:
             {
-                ape_writer_appendf(buf, "import \"%s\"", stmt->import.path);
+                ape_writer_appendf(buf, "include \"%s\"", stmt->stmtinclude.path);
             }
             break;
         case APE_STMT_NONE:
@@ -615,7 +541,7 @@ bool ape_tostring_bytecode(ApeWriter_t* buf, ApeUShort_t* code, ApePosition_t* s
     while(pos < code_size)
     {
         op = code[pos];
-        def = ape_tostring_opcodefind(op);
+        def = ape_vm_opcodefind(op);
         APE_ASSERT(def);
         ape_writer_append(buf, "  ");
         if(source_positions)

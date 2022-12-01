@@ -177,8 +177,6 @@ unsigned long ape_object_string_gethash(ApeObject_t obj)
 
 static ApeObject_t objfn_string_length(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
-    const char* str;
-    ApeSize_t i;
     ApeInt_t len;
     ApeObject_t self;
     (void)vm;
@@ -187,15 +185,7 @@ static ApeObject_t objfn_string_length(ApeVM_t* vm, void* data, ApeSize_t argc, 
     (void)args;
     /* fixme: value is passed incorrectly? */
     self = ape_vm_popthisstack(vm);
-    fprintf(stderr, "objfn_string_length: argc=%d\n", (int)argc);
-    fprintf(stderr, "objfn_string_length: self.type=%s\n", ape_object_value_typename(ape_object_value_type(self)));
-    for(i=0; i<argc; i++)
-    {
-        fprintf(stderr, "objfn_string_length: args[%d] = %s\n", i, ape_object_value_typename(ape_object_value_type(args[i])));
-    }
-    str = ape_object_string_getdata(self);
     len = ape_object_string_getlength(self);
-    fprintf(stderr, "objfn_string_length: self.string=<%.*s>\n", (int)len, str);
     return ape_object_make_number(vm->context, len);
 }
 
@@ -435,15 +425,15 @@ void ape_builtins_install_string(ApeVM_t* vm)
     ape_builtins_setup_namespace(vm, "String", stringfuncs);    
 }
 
-ApeNativeFuncPtr_t ape_builtin_objectfunc_find_string(ApeContext_t* ctx, const char* idxname)
+bool ape_builtin_objectfunc_find_string(ApeContext_t* ctx, const char* idxname, ApeObjMemberItem_t* dest)
 {
-    static ApeNativeItem_t g_object_stringfuncs[]=
+    static ApeObjMemberItem_t funcs[]=
     {
-        {"length", objfn_string_length},
-        {"split", objfn_string_split},
-        {"index", objfn_string_indexof},
-        {"substr", objfn_string_substr},
-        {NULL, NULL},
+        {"length", false, objfn_string_length},
+        {"split", true, objfn_string_split},
+        {"index", true, objfn_string_indexof},
+        {"substr", true, objfn_string_substr},
+        {NULL, false, NULL},
     };
-    return ape_builtin_find_objectfunc(ctx, g_object_stringfuncs, idxname);    
+    return ape_builtin_find_objectfunc(ctx, funcs, idxname, dest);
 }

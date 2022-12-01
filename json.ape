@@ -207,7 +207,7 @@ JSON.parseArray = function(state)
     while(true)
     {
         var value = JSON.parseValue(state);
-        Object.append(a, value);
+        a.push(value);
         JSON.skipWhiteSpace(state);
         c = state.m_source[state.m_index];
         if (c == ",")

@@ -66,7 +66,7 @@ function sha1_actual(obytes)
     var bytes = obytes;
     var constants = [0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xca62c1d6];
     var hashs = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0];
-    append(bytes, 0x80);
+    bytes.push(0x80);
     var l = len(bytes) / 4 + 2;
     var n = Math.ceil(l / 16);
     println("n = ", n);
@@ -78,7 +78,7 @@ function sha1_actual(obytes)
         arr = []
         for(var j = 0; j < 16; j++)
         {
-            append(arr, bytes[i * 64 + j * 4] << 24 | bytes[i * 64 + j * 4 + 1] << 16 | bytes[i * 64 + j * 4 + 2] << 8 | bytes[i * 64 + j * 4 + 3]);
+            arr.push(bytes[i * 64 + j * 4] << 24 | bytes[i * 64 + j * 4 + 1] << 16 | bytes[i * 64 + j * 4 + 2] << 8 | bytes[i * 64 + j * 4 + 3]);
         }
         mapping[i] = arr;
     }
@@ -146,12 +146,12 @@ function sha1_actual(obytes)
 function sha1(s)
 {
     var bytes = [];
-    var chars = String.split(s, "");
+    var chars = s.split("");
     for(var i=0; i<len(chars); i++)
     {
         var och = String.ord(chars[i]);
         //bytes[i] = och;
-        append(bytes, och);
+        bytes.push(och);
     }
     var r = sha1_actual(bytes);
     println("r = ", r);

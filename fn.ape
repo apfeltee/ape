@@ -1,9 +1,15 @@
 
 var f="fnarhkl".length
 println("f=<", f, ">")
-var l=f(34)
-println("l=<", l, ">")
 
 str = "borkliq"
 v = str.substr(0, 5).substr(0, 5)
 println(`v=${v}`)
+
+a = []
+a.push("foo")
+a.push(1, "yellow", 42, ["stuff"])
+println(`a = (len=${a.length}) : ${a}`)
+last = a.pop()
+println(`last: (len=${a.length}) : ${last}`)
+println(`a = (len=${a.length}) : ${a}`)

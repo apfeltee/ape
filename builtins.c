@@ -1227,7 +1227,7 @@ const char* ape_builtins_getname(ApeSize_t ix)
     return g_core_globalfuncs[ix].name;
 }
 
-ApeNativeFuncPtr_t ape_builtin_find_objectfunc(ApeContext_t* ctx, ApeNativeItem_t* nf, const char* idxname)
+bool ape_builtin_find_objectfunc(ApeContext_t* ctx, ApeObjMemberItem_t* nf, const char* idxname, ApeObjMemberItem_t* dest)
 {
     ApeInt_t i;
     (void)ctx;
@@ -1235,10 +1235,11 @@ ApeNativeFuncPtr_t ape_builtin_find_objectfunc(ApeContext_t* ctx, ApeNativeItem_
     {
         if(APE_STREQ(nf[i].name, idxname))
         {
-            return nf[i].fn;
+            *dest = nf[i];
+            return true;
         }
     }
-    return NULL;
+    return false;
 }
 
 
@@ -1253,11 +1254,15 @@ ApeNativeFuncPtr_t ape_builtin_find_objectfunc(ApeContext_t* ctx, ApeNativeItem_
 * lookups to these functions.
 */
 
-ApeNativeFuncPtr_t builtin_get_object(ApeContext_t* ctx, ApeObjType_t objt, const char* idxname)
+bool builtin_get_object(ApeContext_t* ctx, ApeObjType_t objt, const char* idxname, ApeObjMemberItem_t* dest)
 {
     if(objt == APE_OBJECT_STRING)
     {
-        return ape_builtin_objectfunc_find_string(ctx, idxname);
+        return ape_builtin_objectfunc_find_string(ctx, idxname, dest);
     }
-    return NULL;
+    else if(objt == APE_OBJECT_ARRAY)
+    {
+        return ape_builtin_objectfunc_find_array(ctx, idxname, dest);
+    }
+    return false;
 }

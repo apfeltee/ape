@@ -30,6 +30,8 @@ const char *ape_object_value_geterrormessage(ApeObject_t object);
 void ape_object_value_seterrortraceback(ApeObject_t object, ApeTraceback_t *traceback);
 ApeTraceback_t *ape_object_value_geterrortraceback(ApeObject_t object);
 /* vm.c */
+ApeOpcodeDef_t *ape_vm_opcodefind(ApeOpByte_t op);
+const char *ape_vm_opcodename(ApeOpByte_t op);
 void ape_vm_adderrorv(ApeVM_t *vm, ApeErrorType_t etype, const char *fmt, va_list va);
 void ape_vm_adderror(ApeVM_t *vm, ApeErrorType_t etype, const char *fmt, ...);
 ApeGlobalStore_t *ape_make_globalstore(ApeContext_t *ctx, ApeGCMemory_t *mem);
@@ -246,7 +248,7 @@ ApeStatement_t *ape_ast_make_foreachstmt(ApeContext_t *ctx, ApeIdent_t *iterator
 ApeStatement_t *ape_ast_make_forloopstmt(ApeContext_t *ctx, ApeStatement_t *init, ApeExpression_t *test, ApeExpression_t *update, ApeCodeblock_t *body);
 ApeStatement_t *ape_ast_make_continuestmt(ApeContext_t *ctx);
 ApeStatement_t *ape_ast_make_blockstmt(ApeContext_t *ctx, ApeCodeblock_t *block);
-ApeStatement_t *ape_ast_make_importstmt(ApeContext_t *ctx, char *path);
+ApeStatement_t *ape_ast_make_includestmt(ApeContext_t *ctx, char *path);
 ApeStatement_t *ape_ast_make_recoverstmt(ApeContext_t *ctx, ApeIdent_t *errorident, ApeCodeblock_t *body);
 void *ape_ast_destroy_stmt(ApeStatement_t *stmt);
 ApeStatement_t *ape_ast_copy_stmt(const ApeStatement_t *stmt);
@@ -271,7 +273,7 @@ ApeStatement_t *ape_parser_parsewhileloopstmt(ApeParser_t *p);
 ApeStatement_t *ape_parser_parsebreakstmt(ApeParser_t *p);
 ApeStatement_t *ape_parser_parsecontinuestmt(ApeParser_t *p);
 ApeStatement_t *ape_parser_parseblockstmt(ApeParser_t *p);
-ApeStatement_t *ape_parser_parseimportstmt(ApeParser_t *p);
+ApeStatement_t *ape_parser_parseincludestmt(ApeParser_t *p);
 ApeStatement_t *ape_parser_parserecoverstmt(ApeParser_t *p);
 ApeStatement_t *ape_parser_parseforloopstmt(ApeParser_t *p);
 ApeStatement_t *ape_parser_parseforeachstmt(ApeParser_t *p);
@@ -314,7 +316,7 @@ char *ape_object_string_getmutable(ApeObject_t object);
 bool ape_object_string_append(ApeObject_t obj, const char *src, ApeSize_t len);
 unsigned long ape_object_string_gethash(ApeObject_t obj);
 void ape_builtins_install_string(ApeVM_t *vm);
-ApeNativeFuncPtr_t ape_builtin_objectfunc_find_string(ApeContext_t *ctx, const char *idxname);
+bool ape_builtin_objectfunc_find_string(ApeContext_t *ctx, const char *idxname, ApeObjMemberItem_t *dest);
 /* libio.c */
 void ape_builtins_install_io(ApeVM_t *vm);
 /* ccom.c */
@@ -341,6 +343,7 @@ void ape_compiler_popcompscope(ApeCompiler_t *comp);
 bool ape_compiler_pushsymtable(ApeCompiler_t *comp, ApeInt_t globaloffset);
 void ape_compiler_popsymtable(ApeCompiler_t *comp);
 bool ape_compiler_compilecode(ApeCompiler_t *comp, const char *code);
+bool ape_compiler_includemodule(ApeCompiler_t *comp, ApeStatement_t *includestmt);
 bool ape_compiler_pushfilescope(ApeCompiler_t *comp, const char *filepath);
 void ape_compiler_popfilescope(ApeCompiler_t *comp);
 void ape_compiler_setcompscope(ApeCompiler_t *comp, ApeCompScope_t *scope);
@@ -410,17 +413,18 @@ ApeObject_t ape_object_make_arraycapacity(ApeContext_t *ctx, unsigned capacity);
 ApeObject_t ape_object_array_getvalue(ApeObject_t object, ApeSize_t ix);
 bool ape_object_array_setat(ApeObject_t object, ApeInt_t ix, ApeObject_t val);
 bool ape_object_array_pushvalue(ApeObject_t object, ApeObject_t val);
+bool ape_object_array_popvalue(ApeObject_t object, ApeObject_t *dest);
 ApeSize_t ape_object_array_getlength(ApeObject_t object);
 bool ape_object_array_removeat(ApeObject_t object, ApeInt_t ix);
 bool ape_object_array_pushstring(ApeObject_t obj, const char *string);
 ApeValArray_t *ape_object_array_getarray(ApeObject_t object);
+bool ape_builtin_objectfunc_find_array(ApeContext_t *ctx, const char *idxname, ApeObjMemberItem_t *dest);
 /* libmod.c */
 ApeModule_t *ape_make_module(ApeContext_t *ctx, const char *name);
 void *ape_module_destroy(ApeModule_t *module);
 ApeModule_t *ape_module_copy(ApeModule_t *src);
 const char *ape_module_getname(const char *path);
 bool ape_module_addsymbol(ApeModule_t *module, const ApeSymbol_t *symbol);
-bool ape_compiler_importmodule(ApeCompiler_t *comp, ApeStatement_t *importstmt);
 /* libmath.c */
 void ape_builtins_install_math(ApeVM_t *vm);
 /* ccopt.c */
@@ -450,8 +454,6 @@ bool ape_writer_grow(ApeWriter_t *buf, ApeSize_t new_capacity);
 /* tostring.c */
 const char *ape_tostring_operator(ApeOperator_t op);
 const char *ape_tostring_exprtype(ApeExprType_t type);
-ApeOpcodeDef_t *ape_tostring_opcodefind(ApeOpByte_t op);
-const char *ape_tostring_opcodename(ApeOpByte_t op);
 bool ape_tostring_stmtlist(ApeWriter_t *buf, ApePtrArray_t *statements);
 bool ape_tostring_statement(ApeWriter_t *buf, ApeStatement_t *stmt);
 bool ape_tostring_expression(ApeWriter_t *buf, ApeExpression_t *expr);
@@ -473,5 +475,5 @@ void ape_builtins_install(ApeVM_t *vm);
 ApeSize_t ape_builtins_count(void);
 ApeNativeFuncPtr_t ape_builtins_getfunc(ApeSize_t ix);
 const char *ape_builtins_getname(ApeSize_t ix);
-ApeNativeFuncPtr_t ape_builtin_find_objectfunc(ApeContext_t *ctx, ApeNativeItem_t *nf, const char *idxname);
-ApeNativeFuncPtr_t builtin_get_object(ApeContext_t *ctx, ApeObjType_t objt, const char *idxname);
+bool ape_builtin_find_objectfunc(ApeContext_t *ctx, ApeObjMemberItem_t *nf, const char *idxname, ApeObjMemberItem_t *dest);
+bool builtin_get_object(ApeContext_t *ctx, ApeObjType_t objt, const char *idxname, ApeObjMemberItem_t *dest);

@@ -35,6 +35,86 @@ static int ape_vm_countnumdefs(ApeSymTable_t *table);
 static void ape_vm_setstackpointer(ApeVM_t *vm, int new_sp);
 static bool ape_vm_tryoverloadoperator(ApeVM_t *vm, ApeObject_t left, ApeObject_t right, ApeOpByte_t op, bool *out_overload_found);
 
+/*
+* todo: these MUST reflect the order of ApeOpcodeValue_t.
+* meaning its prone to break terribly if and/or when it is changed.
+*/
+static ApeOpcodeDef_t g_definitions[APE_OPCODE_MAX + 1] =
+{
+    { "none", 0, { 0 } },
+    { "constant", 1, { 2 } },
+    { "op(+)", 0, { 0 } },
+    { "pop", 0, { 0 } },
+    { "sub", 0, { 0 } },
+    { "op(*)", 0, { 0 } },
+    { "op(/)", 0, { 0 } },
+    { "op(%)", 0, { 0 } },
+    { "true", 0, { 0 } },
+    { "false", 0, { 0 } },
+    { "compare", 0, { 0 } },
+    { "compareeq", 0, { 0 } },
+    { "equal", 0, { 0 } },
+    { "notequal", 0, { 0 } },
+    { "greaterthan", 0, { 0 } },
+    { "greaterequal", 0, { 0 } },
+    { "op(-)", 0, { 0 } },
+    { "op(!)", 0, { 0 } },
+    { "jump", 1, { 2 } },
+    { "jumpiffalse", 1, { 2 } },
+    { "jumpiftrue", 1, { 2 } },
+    { "null", 0, { 0 } },
+    { "getmoduleglobal", 1, { 2 } },
+    { "setmoduleglobal", 1, { 2 } },
+    { "definemoduleglobal", 1, { 2 } },
+    { "array", 1, { 2 } },
+    { "mapstart", 1, { 2 } },
+    { "mapend", 1, { 2 } },
+    { "getthis", 0, { 0 } },
+    { "getindex", 0, { 0 } },
+    { "setindex", 0, { 0 } },
+    { "getvalue_at", 0, { 0 } },
+    { "call", 1, { 1 } },
+    { "returnvalue", 0, { 0 } },
+    { "return", 0, { 0 } },
+    { "getlocal", 1, { 1 } },
+    { "definelocal", 1, { 1 } },
+    { "setlocal", 1, { 1 } },
+    { "getcontextglobal", 1, { 2 } },
+    { "function", 2, { 2, 1 } },
+    { "getfree", 1, { 1 } },
+    { "setfree", 1, { 1 } },
+    { "currentfunction", 0, { 0 } },
+    { "dup", 0, { 0 } },
+    { "number", 1, { 8 } },
+    { "len", 0, { 0 } },
+    { "setrecover", 1, { 2 } },
+    { "op(|)", 0, { 0 } },
+    { "op(^)", 0, { 0 } },
+    { "op(&)", 0, { 0 } },
+    { "op(<<)", 0, { 0 } },
+    { "op(>>)", 0, { 0 } },
+    { "import", 1, {1} },
+    { "invalid_max", 0, { 0 } },
+};
+
+ApeOpcodeDef_t* ape_vm_opcodefind(ApeOpByte_t op)
+{
+    if(op <= APE_OPCODE_NONE || op >= APE_OPCODE_MAX)
+    {
+        return NULL;
+    }
+    return &g_definitions[op];
+}
+
+const char* ape_vm_opcodename(ApeOpByte_t op)
+{
+    if(op <= APE_OPCODE_NONE || op >= APE_OPCODE_MAX)
+    {
+        return NULL;
+    }
+    return g_definitions[op].name;
+}
+
 void ape_vm_adderrorv(ApeVM_t* vm, ApeErrorType_t etype, const char* fmt, va_list va)
 {
     ape_errorlist_addformatv(vm->errors, etype, ape_frame_srcposition(vm->currentframe), fmt, va);
@@ -716,7 +796,7 @@ int ape_make_code(ApeOpByte_t op, ApeSize_t operands_count, uint64_t* operands, 
     bool ok;
     ApeUShort_t val;
     ApeOpcodeDef_t* def;
-    def = ape_tostring_opcodefind(op);
+    def = ape_vm_opcodefind(op);
     if(!def)
     {
         return 0;
@@ -1439,20 +1519,31 @@ bool ape_vm_getindex(ApeVM_t* vm, ApeObject_t left, ApeObject_t index, ApeObjTyp
     {
         int argc;
         ApeObject_t objfn;
-        ApeNativeFuncPtr_t afn;
+        ApeObject_t objval;
+        ApeObjMemberItem_t afn;
         argc = 0;
         if(indextype == APE_OBJECT_STRING)
         {
             idxname = ape_object_string_getdata(index);
             //fprintf(stderr, "index is a string: name=%s\n", idxname);
-            if((afn = builtin_get_object(vm->context, lefttype, idxname)) != NULL)
+            if(builtin_get_object(vm->context, lefttype, idxname, &afn))
             {
-                //ape_vm_pushstack(vm, afn(vm, NULL, argc, args));
-                objfn = ape_object_make_nativefuncmemory(vm->context, idxname, afn, NULL, 0);
-                //ape_vm_popstack(vm);
-                //ape_vm_pushstack(vm, left);
-                ape_vm_pushthisstack(vm, left);
-                ape_vm_pushstack(vm, objfn);
+                objval = ape_object_make_null(vm->context);
+                if(afn.isfunction)
+                {
+                    objfn = ape_object_make_nativefuncmemory(vm->context, idxname, afn.fn, NULL, 0);
+                    //ape_vm_pushstack(vm, afn(vm, NULL, argc, args));
+                    //ape_vm_popstack(vm);
+                    //ape_vm_pushstack(vm, left);
+                    ape_vm_pushthisstack(vm, left);
+                    objval = objfn;
+                }
+                else
+                {
+                    ape_vm_pushthisstack(vm, left);
+                    objval = afn.fn(vm, NULL, 0, NULL);
+                }
+                ape_vm_pushstack(vm, objval);
                 return true;
             }
         }
@@ -1626,7 +1717,7 @@ bool ape_vm_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValu
         }
         if(!overloadfound)
         {
-            opcode_name = ape_tostring_opcodename(opcode);
+            opcode_name = ape_vm_opcodename(opcode);
             lefttypename = ape_object_value_typename(lefttype);
             righttypename = ape_object_value_typename(righttype);
             ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->currentframe),
@@ -2346,6 +2437,11 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                 {
                     recip = ape_frame_readuint16(vm->currentframe);
                     vm->currentframe->recoverip = recip;
+                }
+                break;
+            case APE_OPCODE_IMPORT:
+                {
+                    
                 }
                 break;
             default:
