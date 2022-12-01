@@ -175,3 +175,275 @@ unsigned long ape_object_string_gethash(ApeObject_t obj)
 }
 
 
+static ApeObject_t objfn_string_length(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+{
+    const char* str;
+    ApeSize_t i;
+    ApeInt_t len;
+    ApeObject_t self;
+    (void)vm;
+    (void)data;
+    (void)argc;
+    (void)args;
+    /* fixme: value is passed incorrectly? */
+    self = ape_vm_popthisstack(vm);
+    fprintf(stderr, "objfn_string_length: argc=%d\n", (int)argc);
+    fprintf(stderr, "objfn_string_length: self.type=%s\n", ape_object_value_typename(ape_object_value_type(self)));
+    for(i=0; i<argc; i++)
+    {
+        fprintf(stderr, "objfn_string_length: args[%d] = %s\n", i, ape_object_value_typename(ape_object_value_type(args[i])));
+    }
+    str = ape_object_string_getdata(self);
+    len = ape_object_string_getlength(self);
+    fprintf(stderr, "objfn_string_length: self.string=<%.*s>\n", (int)len, str);
+    return ape_object_make_number(vm->context, len);
+}
+
+static ApeObject_t objfn_string_substr(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+{
+    ApeInt_t begin;
+    ApeInt_t end;
+    ApeInt_t len;
+    ApeInt_t nlen;
+    ApeObject_t self;
+    ApeArgCheck_t check;
+    const char* str;
+    (void)data;
+    self = ape_vm_popthisstack(vm);
+    ape_args_checkinit(vm, &check, "substr", argc, args);
+    if(!ape_args_checktype(&check, 0, APE_OBJECT_NUMBER))
+    {
+        return ape_object_make_null(vm->context);        
+    }
+    str = ape_object_string_getdata(self);
+    len = ape_object_string_getlength(self);
+    begin = ape_object_value_asnumber(args[0]);
+    end = len;
+    if(ape_args_checkoptional(&check, 1, APE_OBJECT_NUMBER, true))
+    {
+        end = ape_object_value_asnumber(args[1]);
+    }
+    /* fixme: this is actually incorrect */
+    if((begin >= len))
+    {
+        return ape_object_make_null(vm->context);
+    }
+    if(end >= len)
+    {
+        end = len;
+    }
+    nlen = end - begin;
+    fprintf(stderr, "substr: len=%d, begin=%d, end=%d, nlen=%d\n", (int)len, (int)begin, (int)end, (int)nlen);
+    return ape_object_make_stringlen(vm->context, str+begin, nlen);
+}
+
+static ApeObject_t objfn_string_split(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+{
+    char c;
+    const char* inpstr;
+    const char* delimstr;
+    char* itm;
+    ApeSize_t i;
+    ApeSize_t inplen;
+    ApeSize_t delimlen;
+    ApeObject_t arr;
+    ApeObject_t self;
+    ApePtrArray_t* parr;
+    ApeArgCheck_t check;
+    (void)data;
+    delimstr = "";
+    delimlen = 0;
+    ape_args_checkinit(vm, &check, "split", argc, args);
+    self = ape_vm_popthisstack(vm);
+    inpstr = ape_object_string_getdata(self);
+    if(ape_args_checkoptional(&check, 0, APE_OBJECT_STRING, true))
+    {
+        delimstr = ape_object_string_getdata(args[0]);
+        delimlen = ape_object_string_getlength(args[0]);
+    }
+    arr = ape_object_make_array(vm->context);
+    if(delimlen == 0)
+    {
+        inplen = ape_object_string_getlength(self);
+        for(i=0; i<inplen; i++)
+        {
+            c = inpstr[i];
+            ape_object_array_pushvalue(arr, ape_object_make_stringlen(vm->context, &c, 1));
+        }
+    }
+    else
+    {
+        parr = ape_util_splitstring(vm->context, inpstr, delimstr);
+        for(i=0; i<ape_ptrarray_count(parr); i++)
+        {
+            itm = (char*)ape_ptrarray_get(parr, i);
+            ape_object_array_pushvalue(arr, ape_object_make_string(vm->context, itm));
+            ape_allocator_free(vm->alloc, (void*)itm);
+        }
+        ape_ptrarray_destroy(parr);
+    }
+    return arr;
+}
+
+static ApeObject_t objfn_string_indexof(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+{
+    char findme;
+    const char* findstr;
+    const char* inpstr;
+    ApeSize_t i;
+    ApeSize_t inplen;
+    ApeSize_t findlen;
+    ApeObject_t self;
+    ApeObjType_t styp;
+    ApeArgCheck_t check;
+    (void)data;
+    self = ape_vm_popthisstack(vm);
+    ape_args_checkinit(vm, &check, "index", argc, args);
+    if(!ape_args_checktype(&check, 0, APE_OBJECT_STRING | APE_OBJECT_NUMBER))
+    {
+        return ape_object_make_null(vm->context);
+    }
+    findme = -1;
+    inpstr = ape_object_string_getdata(self);
+    inplen = ape_object_string_getlength(self);
+    styp = ape_object_value_type(args[0]);
+    if(styp == APE_OBJECT_STRING)
+    {
+        findstr = ape_object_string_getdata(args[0]);
+        findlen = ape_object_string_getlength(args[0]);
+        if(findlen == 0)
+        {
+            return ape_object_make_number(vm->context, -1);
+        }
+        findme = findstr[0];
+    }
+    else if(styp == APE_OBJECT_NUMBER)
+    {
+        findme = ape_object_value_asnumber(args[0]);
+        if(findme == -1)
+        {
+            return ape_object_make_number(vm->context, -1);
+        }
+    }
+    for(i=0; i<inplen; i++)
+    {
+        if(inpstr[i] == findme)
+        {
+            return ape_object_make_number(vm->context, i);
+        }
+    }
+    return ape_object_make_number(vm->context, -1);
+}
+
+static ApeObject_t cfn_string_chr(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+{
+    char c;
+    char buf[2];
+    ApeFloat_t val;
+    (void)data;
+    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER))
+    {
+        return ape_object_make_null(vm->context);
+    }
+    val = ape_object_value_asnumber(args[0]);
+    c = (char)val;
+    buf[0] = c;
+    buf[1] = '\0';
+    return ape_object_make_stringlen(vm->context, buf, 1);
+}
+
+static ApeObject_t cfn_string_ord(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+{
+    const char* str;
+    (void)data;
+    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING | APE_OBJECT_NULL))
+    {
+        return ape_object_make_null(vm->context);
+    }
+    if(ape_object_value_isnull(args[0]))
+    {
+        return ape_object_make_number(vm->context, 0);
+    }
+    str = ape_object_string_getdata(args[0]);
+    return ape_object_make_number(vm->context, str[0]);
+}
+
+static ApeObject_t cfn_string_join(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+{
+    const char* sstr;
+    const char* bstr;
+    ApeSize_t i;
+    ApeSize_t slen;
+    ApeSize_t alen;
+    ApeSize_t blen;
+    ApeObject_t rt;
+    ApeObject_t arritem;
+    ApeObject_t arrobj;
+    ApeObject_t sjoin;
+    ApeWriter_t* wr;
+    ApeArgCheck_t check;
+    (void)data;
+    sstr = "";
+    slen = 0;
+    ape_args_checkinit(vm, &check, "String.join", argc, args);
+    if(!ape_args_checktype(&check, 0, APE_OBJECT_ARRAY))
+    {
+        return ape_object_make_null(vm->context);        
+    }
+    arrobj = args[0];
+    if(ape_args_checkoptional(&check, 1, APE_OBJECT_STRING, true))
+    {
+        sjoin = args[1];
+        if(ape_object_value_type(sjoin) != APE_OBJECT_STRING)
+        {
+            ape_vm_adderror(vm, APE_ERROR_RUNTIME, "String.join expects second argument to be a string");
+            return ape_object_make_null(vm->context);
+        }
+        sstr = ape_object_string_getdata(sjoin);
+        slen = ape_object_string_getlength(sjoin);
+    }
+    alen = ape_object_array_getlength(arrobj);
+    wr = ape_make_writer(vm->context);
+    for(i=0; i<alen; i++)
+    {
+        arritem = ape_object_array_getvalue(arrobj, i);
+        ape_tostring_object(wr, arritem, false);
+        if((i + 1) < alen)
+        {
+            ape_writer_appendn(wr, sstr, slen);
+        }
+    }
+    bstr = ape_writer_getdata(wr);
+    blen = ape_writer_getlength(wr);
+    rt = ape_object_make_stringlen(vm->context, bstr, blen);
+    ape_writer_destroy(wr);
+    return rt;
+}
+
+void ape_builtins_install_string(ApeVM_t* vm)
+{
+    static ApeNativeItem_t stringfuncs[]=
+    {
+        {"join", cfn_string_join},
+        { "chr", cfn_string_chr },
+        { "ord", cfn_string_ord },
+        #if 0
+        {"trim", cfn_string_trim},
+        #endif
+        {NULL, NULL},
+    };
+    ape_builtins_setup_namespace(vm, "String", stringfuncs);    
+}
+
+ApeNativeFuncPtr_t ape_builtin_objectfunc_find_string(ApeContext_t* ctx, const char* idxname)
+{
+    static ApeNativeItem_t g_object_stringfuncs[]=
+    {
+        {"length", objfn_string_length},
+        {"split", objfn_string_split},
+        {"index", objfn_string_indexof},
+        {"substr", objfn_string_substr},
+        {NULL, NULL},
+    };
+    return ape_builtin_find_objectfunc(ctx, g_object_stringfuncs, idxname);    
+}

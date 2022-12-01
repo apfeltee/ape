@@ -1,6 +1,9 @@
 
 var f="fnarhkl".length
 println("f=<", f, ">")
-var l=f()
+var l=f(34)
 println("l=<", l, ">")
 
+str = "borkliq"
+v = str.substr(0, 5).substr(0, 5)
+println(`v=${v}`)

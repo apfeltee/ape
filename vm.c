@@ -33,9 +33,6 @@ static bool ape_vm_setsymbol(ApeSymTable_t *table, ApeSymbol_t *symbol);
 static int ape_vm_nextsymbolindex(ApeSymTable_t *table);
 static int ape_vm_countnumdefs(ApeSymTable_t *table);
 static void ape_vm_setstackpointer(ApeVM_t *vm, int new_sp);
-static void ape_vm_pushthisstack(ApeVM_t *vm, ApeObject_t obj);
-static ApeObject_t ape_vm_popthisstack(ApeVM_t *vm);
-static ApeObject_t ape_vm_getthisstack(ApeVM_t *vm, int nth_item);
 static bool ape_vm_tryoverloadoperator(ApeVM_t *vm, ApeObject_t left, ApeObject_t right, ApeOpByte_t op, bool *out_overload_found);
 
 void ape_vm_adderrorv(ApeVM_t* vm, ApeErrorType_t etype, const char* fmt, va_list va)
@@ -51,68 +48,6 @@ void ape_vm_adderror(ApeVM_t* vm, ApeErrorType_t etype, const char* fmt, ...)
     va_end(va);
 }
 
-ApeCompFile_t* ape_make_compfile(ApeContext_t* ctx, const char* path)
-{
-    size_t len;
-    const char* last_slash_pos;
-    ApeCompFile_t* file;
-    file = (ApeCompFile_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeCompFile_t));
-    if(!file)
-    {
-        return NULL;
-    }
-    memset(file, 0, sizeof(ApeCompFile_t));
-    file->context = ctx;
-    file->alloc = &ctx->alloc;
-    last_slash_pos = strrchr(path, '/');
-    if(last_slash_pos)
-    {
-        len = last_slash_pos - path + 1;
-        file->dirpath = ape_util_strndup(ctx, path, len);
-    }
-    else
-    {
-        file->dirpath = ape_util_strdup(ctx, "");
-    }
-    if(!file->dirpath)
-    {
-        goto error;
-    }
-    file->path = ape_util_strdup(ctx, path);
-    if(!file->path)
-    {
-        goto error;
-    }
-    file->lines = ape_make_ptrarray(ctx);
-    if(!file->lines)
-    {
-        goto error;
-    }
-    return file;
-error:
-    ape_compfile_destroy(file);
-    return NULL;
-}
-
-void* ape_compfile_destroy(ApeCompFile_t* file)
-{
-    ApeSize_t i;
-    void* item;
-    if(!file)
-    {
-        return NULL;
-    }
-    for(i = 0; i < ape_ptrarray_count(file->lines); i++)
-    {
-        item = (void*)ape_ptrarray_get(file->lines, i);
-        ape_allocator_free(file->alloc, item);
-    }
-    ape_ptrarray_destroy(file->lines);
-    ape_allocator_free(file->alloc, file->dirpath);
-    ape_allocator_free(file->alloc, file->path);
-    ape_allocator_free(file->alloc, file);
-    return NULL;
-}
 
 ApeGlobalStore_t* ape_make_globalstore(ApeContext_t* ctx, ApeGCMemory_t* mem)
 {
@@ -173,7 +108,7 @@ void ape_globalstore_destroy(ApeGlobalStore_t* store)
     ape_allocator_free(store->alloc, store);
 }
 
-const ApeSymbol_t* ape_globalstore_getsymbol(ApeGlobalStore_t* store, const char* name)
+ApeSymbol_t* ape_globalstore_getsymbol(ApeGlobalStore_t* store, const char* name)
 {
     return (ApeSymbol_t*)ape_strdict_get(store->symbols, name);
 }
@@ -396,9 +331,8 @@ bool ape_symtable_addmodulesymbol(ApeSymTable_t* st, ApeSymbol_t* symbol)
     return true;
 }
 
-const ApeSymbol_t* ape_symtable_define(ApeSymTable_t* table, const char* name, bool assignable)
-{
-    
+ApeSymbol_t* ape_symtable_define(ApeSymTable_t* table, const char* name, bool assignable)
+{    
     bool ok;
     bool global_symbol_added;
     int ix;
@@ -469,7 +403,7 @@ const ApeSymbol_t* ape_symtable_define(ApeSymTable_t* table, const char* name, b
     return symbol;
 }
 
-const ApeSymbol_t* ape_symtable_deffree(ApeSymTable_t* st, const ApeSymbol_t* original)
+ApeSymbol_t* ape_symtable_deffree(ApeSymTable_t* st, ApeSymbol_t* original)
 {
     bool ok;
     ApeSymbol_t* symbol;
@@ -502,7 +436,7 @@ const ApeSymbol_t* ape_symtable_deffree(ApeSymTable_t* st, const ApeSymbol_t* or
     return symbol;
 }
 
-const ApeSymbol_t* ape_symtable_definefuncname(ApeSymTable_t* st, const char* name, bool assignable)
+ApeSymbol_t* ape_symtable_definefuncname(ApeSymTable_t* st, const char* name, bool assignable)
 {
     bool ok;
     ApeSymbol_t* symbol;
@@ -525,7 +459,7 @@ const ApeSymbol_t* ape_symtable_definefuncname(ApeSymTable_t* st, const char* na
     return symbol;
 }
 
-const ApeSymbol_t* ape_symtable_definethis(ApeSymTable_t* st)
+ApeSymbol_t* ape_symtable_definethis(ApeSymTable_t* st)
 {
     bool ok;
     ApeSymbol_t* symbol;
@@ -543,10 +477,10 @@ const ApeSymbol_t* ape_symtable_definethis(ApeSymTable_t* st)
     return symbol;
 }
 
-const ApeSymbol_t* ape_symtable_resolve(ApeSymTable_t* table, const char* name)
+ApeSymbol_t* ape_symtable_resolve(ApeSymTable_t* table, const char* name)
 {
     ApeInt_t i;
-    const ApeSymbol_t* symbol;
+    ApeSymbol_t* symbol;
     ApeBlockScope_t* scope;
     scope = NULL;
     symbol = ape_globalstore_getsymbol(table->globalstore, name);
@@ -587,7 +521,7 @@ const ApeSymbol_t* ape_symtable_resolve(ApeSymTable_t* table, const char* name)
 bool ape_symtable_symbol_is_defined(ApeSymTable_t* table, const char* name)
 {
     ApeBlockScope_t* top_scope;
-    const ApeSymbol_t* symbol;
+    ApeSymbol_t* symbol;
     // todo: rename to something more obvious
     symbol = ape_globalstore_getsymbol(table->globalstore, name);
     if(symbol)
@@ -846,413 +780,6 @@ int ape_make_code(ApeOpByte_t op, ApeSize_t operands_count, uint64_t* operands, 
 }
 #undef APPEND_BYTE
 
-ApeCompScope_t* ape_make_compscope(ApeContext_t* ctx, ApeCompScope_t* outer)
-{
-    ApeCompScope_t* scope;
-    scope = (ApeCompScope_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeCompScope_t));
-    if(!scope)
-    {
-        return NULL;
-    }
-    memset(scope, 0, sizeof(ApeCompScope_t));
-    scope->context = ctx;
-    scope->alloc = &ctx->alloc;
-    scope->outer = outer;
-    scope->bytecode = array_make(ctx, ApeUShort_t);
-    if(!scope->bytecode)
-    {
-        goto err;
-    }
-    scope->srcpositions = array_make(ctx, ApePosition_t);
-    if(!scope->srcpositions)
-    {
-        goto err;
-    }
-    scope->breakipstack = array_make(ctx, int);
-    if(!scope->breakipstack)
-    {
-        goto err;
-    }
-    scope->continueipstack = array_make(ctx, int);
-    if(!scope->continueipstack)
-    {
-        goto err;
-    }
-    return scope;
-err:
-    ape_compscope_destroy(scope);
-    return NULL;
-}
-
-void ape_compscope_destroy(ApeCompScope_t* scope)
-{
-    ape_valarray_destroy(scope->continueipstack);
-    ape_valarray_destroy(scope->breakipstack);
-    ape_valarray_destroy(scope->bytecode);
-    ape_valarray_destroy(scope->srcpositions);
-    ape_allocator_free(scope->alloc, scope);
-}
-
-ApeCompResult_t* ape_compscope_orphanresult(ApeCompScope_t* scope)
-{
-    ApeCompResult_t* res;
-    res = ape_make_compresult(scope->context,
-        (ApeUShort_t*)ape_valarray_data(scope->bytecode),
-        (ApePosition_t*)ape_valarray_data(scope->srcpositions),
-        ape_valarray_count(scope->bytecode)
-    );
-    if(!res)
-    {
-        return NULL;
-    }
-    ape_valarray_orphandata(scope->bytecode);
-    ape_valarray_orphandata(scope->srcpositions);
-    return res;
-}
-
-ApeCompResult_t* ape_make_compresult(ApeContext_t* ctx, ApeUShort_t* bytecode, ApePosition_t* src_positions, int count)
-{
-    ApeCompResult_t* res;
-    res = (ApeCompResult_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeCompResult_t));
-    if(!res)
-    {
-        return NULL;
-    }
-    memset(res, 0, sizeof(ApeCompResult_t));
-    res->context = ctx;
-    res->alloc = &ctx->alloc;
-    res->bytecode = bytecode;
-    res->srcpositions = src_positions;
-    res->count = count;
-    return res;
-}
-
-void ape_compresult_destroy(ApeCompResult_t* res)
-{
-    if(!res)
-    {
-        return;
-    }
-    ape_allocator_free(res->alloc, res->bytecode);
-    ape_allocator_free(res->alloc, res->srcpositions);
-    ape_allocator_free(res->alloc, res);
-}
-
-ApeExpression_t* ape_optimizer_optexpr(ApeExpression_t* expr)
-{
-
-    switch(expr->type)
-    {
-        case APE_EXPR_INFIX:
-            {
-                return ape_optimizer_optinfixexpr(expr);
-            }
-            break;
-        case APE_EXPR_PREFIX:
-            {
-                return ape_optimizer_optprefixexpr(expr);
-            }
-            break;
-        default:
-            {
-            }
-            break;
-    }
-    return NULL;
-}
-
-// INTERNAL
-ApeExpression_t* ape_optimizer_optinfixexpr(ApeExpression_t* expr)
-{
-    return NULL;
-    bool left_is_numeric;
-    bool right_is_numeric;
-    bool left_is_string;
-    bool right_is_string;
-    ApeInt_t leftint;
-    ApeInt_t rightint;
-    char* res_str;
-    const char* leftstr;
-    const char* rightstr;
-    ApeExpression_t* left;
-    ApeExpression_t* left_optimized;
-    ApeExpression_t* right;
-    ApeExpression_t* right_optimized;
-    ApeExpression_t* res;
-    ApeAllocator_t* alloc;
-    ApeFloat_t leftval;
-    ApeFloat_t rightval;
-    left = expr->infix.left;
-    left_optimized = ape_optimizer_optexpr(left);
-    if(left_optimized)
-    {
-        left = left_optimized;
-    }
-    right = expr->infix.right;
-    right_optimized = ape_optimizer_optexpr(right);
-    if(right_optimized)
-    {
-        right = right_optimized;
-    }
-    res = NULL;
-    left_is_numeric = left->type == APE_EXPR_LITERALNUMBER || left->type == APE_EXPR_LITERALBOOL;
-    right_is_numeric = right->type == APE_EXPR_LITERALNUMBER || right->type == APE_EXPR_LITERALBOOL;
-    left_is_string = left->type == APE_EXPR_LITERALSTRING;
-    right_is_string = right->type == APE_EXPR_LITERALSTRING;
-    alloc = expr->alloc;
-    if(left_is_numeric && right_is_numeric)
-    {
-        leftval = left->type == APE_EXPR_LITERALNUMBER ? left->numberliteral : left->boolliteral;
-        rightval = right->type == APE_EXPR_LITERALNUMBER ? right->numberliteral : right->boolliteral;
-        leftint = (ApeInt_t)leftval;
-        rightint = (ApeInt_t)rightval;
-        switch(expr->infix.op)
-        {
-            case APE_OPERATOR_PLUS:
-                {
-                    res = ape_ast_make_numberliteralexpr(expr->context, leftval + rightval);
-                }
-                break;
-            case APE_OPERATOR_MINUS:
-                {
-                    res = ape_ast_make_numberliteralexpr(expr->context, leftval - rightval);
-                }
-                break;
-            case APE_OPERATOR_STAR:
-                {
-                    res = ape_ast_make_numberliteralexpr(expr->context, leftval * rightval);
-                }
-                break;
-            case APE_OPERATOR_SLASH:
-                {
-                    res = ape_ast_make_numberliteralexpr(expr->context, leftval / rightval);
-                }
-                break;
-            case APE_OPERATOR_LESSTHAN:
-                {
-                    res = ape_ast_make_boolliteralexpr(expr->context, leftval < rightval);
-                }
-                break;
-            case APE_OPERATOR_LESSEQUAL:
-                {
-                    res = ape_ast_make_boolliteralexpr(expr->context, leftval <= rightval);
-                }
-                break;
-            case APE_OPERATOR_GREATERTHAN:
-                {
-                    res = ape_ast_make_boolliteralexpr(expr->context, leftval > rightval);
-                }
-                break;
-            case APE_OPERATOR_GREATEREQUAL:
-                {
-                    res = ape_ast_make_boolliteralexpr(expr->context, leftval >= rightval);
-                }
-                break;
-            case APE_OPERATOR_EQUAL:
-                {
-                    res = ape_ast_make_boolliteralexpr(expr->context, APE_DBLEQ(leftval, rightval));
-                }
-                break;
-
-            case APE_OPERATOR_NOTEQUAL:
-                {
-                    res = ape_ast_make_boolliteralexpr(expr->context, !APE_DBLEQ(leftval, rightval));
-                }
-                break;
-            case APE_OPERATOR_MODULUS:
-                {
-                    //res = ape_ast_make_numberliteralexpr(expr->context, fmod(leftval, rightval));
-                    res = ape_ast_make_numberliteralexpr(expr->context, (leftint % rightint));
-                }
-                break;
-            case APE_OPERATOR_BITAND:
-                {
-                    res = ape_ast_make_numberliteralexpr(expr->context, (ApeFloat_t)(leftint & rightint));
-                }
-                break;
-            case APE_OPERATOR_BITOR:
-                {
-                    res = ape_ast_make_numberliteralexpr(expr->context, (ApeFloat_t)(leftint | rightint));
-                }
-                break;
-            case APE_OPERATOR_BITXOR:
-                {
-                    res = ape_ast_make_numberliteralexpr(expr->context, (ApeFloat_t)(leftint ^ rightint));
-                }
-                break;
-            case APE_OPERATOR_LEFTSHIFT:
-                {
-                    res = ape_ast_make_numberliteralexpr(expr->context, (ApeFloat_t)(leftint << rightint));
-                }
-                break;
-            case APE_OPERATOR_RIGHTSHIFT:
-                {
-                    res = ape_ast_make_numberliteralexpr(expr->context, (ApeFloat_t)(leftint >> rightint));
-                }
-                break;
-            default:
-                {
-                }
-                break;
-        }
-    }
-    else if(expr->infix.op == APE_OPERATOR_PLUS && left_is_string && right_is_string)
-    {
-        leftstr = left->stringliteral;
-        rightstr = right->stringliteral;
-        res_str = ape_util_stringfmt(expr->context, "%s%s", leftstr, rightstr);
-        if(res_str)
-        {
-            res = ape_ast_make_stringliteralexpr(expr->context, res_str);
-            if(!res)
-            {
-                ape_allocator_free(alloc, res_str);
-            }
-        }
-    }
-    ape_ast_destroy_expr(left_optimized);
-    ape_ast_destroy_expr(right_optimized);
-    if(res)
-    {
-        res->pos = expr->pos;
-    }
-
-    return res;
-}
-
-ApeExpression_t* ape_optimizer_optprefixexpr(ApeExpression_t* expr)
-{
-    ApeExpression_t* right;
-    ApeExpression_t* right_optimized;
-    ApeExpression_t* res;
-    right = expr->prefix.right;
-    right_optimized = ape_optimizer_optexpr(right);
-    if(right_optimized)
-    {
-        right = right_optimized;
-    }
-    res = NULL;
-    if(expr->prefix.op == APE_OPERATOR_MINUS && right->type == APE_EXPR_LITERALNUMBER)
-    {
-        res = ape_ast_make_numberliteralexpr(expr->context, -right->numberliteral);
-    }
-    else if(expr->prefix.op == APE_OPERATOR_NOT && right->type == APE_EXPR_LITERALBOOL)
-    {
-        res = ape_ast_make_boolliteralexpr(expr->context, !right->boolliteral);
-    }
-    ape_ast_destroy_expr(right_optimized);
-    if(res)
-    {
-        res->pos = expr->pos;
-    }
-    return res;
-}
-
-ApeModule_t* ape_make_module(ApeContext_t* ctx, const char* name)
-{
-    ApeModule_t* module;
-    module = (ApeModule_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeModule_t));
-    if(!module)
-    {
-        return NULL;
-    }
-    memset(module, 0, sizeof(ApeModule_t));
-    module->context = ctx;
-    module->alloc = &ctx->alloc;
-    module->name = ape_util_strdup(ctx, name);
-    if(!module->name)
-    {
-        ape_module_destroy(module);
-        return NULL;
-    }
-    module->symbols = ape_make_ptrarray(ctx);
-    if(!module->symbols)
-    {
-        ape_module_destroy(module);
-        return NULL;
-    }
-    return module;
-}
-
-void* ape_module_destroy(ApeModule_t* module)
-{
-    if(!module)
-    {
-        return NULL;
-    }
-    ape_allocator_free(module->alloc, module->name);
-    ape_ptrarray_destroywithitems(module->symbols, (ApeDataCallback_t)ape_symbol_destroy);
-    ape_allocator_free(module->alloc, module);
-    return NULL;
-}
-
-ApeModule_t* ape_module_copy(ApeModule_t* src)
-{
-    ApeModule_t* copy;
-    copy = (ApeModule_t*)ape_allocator_alloc(src->alloc, sizeof(ApeModule_t));
-    if(!copy)
-    {
-        return NULL;
-    }
-    memset(copy, 0, sizeof(ApeModule_t));
-    copy->alloc = src->alloc;
-    copy->name = ape_util_strdup(src->context, src->name);
-    if(!copy->name)
-    {
-        ape_module_destroy(copy);
-        return NULL;
-    }
-    copy->symbols = ape_ptrarray_copywithitems(src->symbols, (ApeDataCallback_t)ape_symbol_copy, (ApeDataCallback_t)ape_symbol_destroy);
-    if(!copy->symbols)
-    {
-        ape_module_destroy(copy);
-        return NULL;
-    }
-    return copy;
-}
-
-const char* ape_module_getname(const char* path)
-{
-    const char* last_slash_pos;
-    last_slash_pos = strrchr(path, '/');
-    if(last_slash_pos)
-    {
-        return last_slash_pos + 1;
-    }
-    return path;
-}
-
-bool ape_module_addsymbol(ApeModule_t* module, const ApeSymbol_t* symbol)
-{
-    bool ok;
-    ApeWriter_t* name_buf;
-    ApeSymbol_t* module_symbol;
-    name_buf = ape_make_writer(module->context);
-    if(!name_buf)
-    {
-        return false;
-    }
-    ok = ape_writer_appendf(name_buf, "%s::%s", module->name, symbol->name);
-    if(!ok)
-    {
-        ape_writer_destroy(name_buf);
-        return false;
-    }
-    module_symbol = ape_make_symbol(module->context, ape_writer_getdata(name_buf), APE_SYMBOL_MODULEGLOBAL, symbol->index, false);
-    ape_writer_destroy(name_buf);
-    if(!module_symbol)
-    {
-        return false;
-    }
-    ok = ape_ptrarray_add(module->symbols, module_symbol);
-    if(!ok)
-    {
-        ape_symbol_destroy(module_symbol);
-        return false;
-    }
-    return true;
-}
-
 bool ape_frame_init(ApeFrame_t* frame, ApeObject_t function_obj, int bptr)
 {
     ApeScriptFunction_t* function;
@@ -1429,7 +956,7 @@ ApeObject_t ape_vm_getstack(ApeVM_t* vm, int nth_item)
     return vm->stack[ix];
 }
 
-static void ape_vm_pushthisstack(ApeVM_t* vm, ApeObject_t obj)
+void ape_vm_pushthisstack(ApeVM_t* vm, ApeObject_t obj)
 {
 #ifdef APE_DEBUG
     if(vm->this_sp >= APE_CONF_SIZE_VM_THISSTACK)
@@ -1443,7 +970,7 @@ static void ape_vm_pushthisstack(ApeVM_t* vm, ApeObject_t obj)
     vm->this_sp++;
 }
 
-static ApeObject_t ape_vm_popthisstack(ApeVM_t* vm)
+ApeObject_t ape_vm_popthisstack(ApeVM_t* vm)
 {
 #ifdef APE_DEBUG
     if(vm->this_sp == 0)
@@ -1457,7 +984,7 @@ static ApeObject_t ape_vm_popthisstack(ApeVM_t* vm)
     return vm->this_stack[vm->this_sp];
 }
 
-static ApeObject_t ape_vm_getthisstack(ApeVM_t* vm, int nth_item)
+ApeObject_t ape_vm_getthisstack(ApeVM_t* vm, int nth_item)
 {
     int ix = vm->this_sp - 1 - nth_item;
 #ifdef APE_DEBUG
@@ -1908,32 +1435,24 @@ bool ape_vm_getindex(ApeVM_t* vm, ApeObject_t left, ApeObject_t index, ApeObjTyp
     /*
     * todo: object method lookup could be implemented here
     */
-    #if 0
+    #if 1
     {
         int argc;
         ApeObject_t objfn;
-        //ApeObject_t args[10];
         ApeNativeFuncPtr_t afn;
         argc = 0;
         if(indextype == APE_OBJECT_STRING)
         {
             idxname = ape_object_string_getdata(index);
-            fprintf(stderr, "index is a string: name=%s\n", idxname);
+            //fprintf(stderr, "index is a string: name=%s\n", idxname);
             if((afn = builtin_get_object(vm->context, lefttype, idxname)) != NULL)
             {
-                fprintf(stderr, "got a callback: afn=%p\n", afn);
-                //ApeObject_t ape_object_make_nativefuncmemory(ApeContext_t *ctx, const char *name, ApeNativeFuncPtr_t fn, void *data, ApeSize_t dlen
-                //typedef ApeObject_t (*ApeNativeFuncPtr_t)(ApeVM_t*, void*, int, ApeObject_t*);
-                //args[argc] = left;
-                //argc++;
                 //ape_vm_pushstack(vm, afn(vm, NULL, argc, args));
                 objfn = ape_object_make_nativefuncmemory(vm->context, idxname, afn, NULL, 0);
-
-                ape_vm_popstack(vm);
-                //ape_vm_pushstack(vm, ape_object_make_null(vm->context));
-                ape_vm_pushstack(vm, left);                
+                //ape_vm_popstack(vm);
+                //ape_vm_pushstack(vm, left);
+                ape_vm_pushthisstack(vm, left);
                 ape_vm_pushstack(vm, objfn);
-
                 return true;
             }
         }

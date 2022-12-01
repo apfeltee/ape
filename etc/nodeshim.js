@@ -50,6 +50,26 @@ String.split = function(s, a)
     return s.split(a);
 }
 
+String.indexOf = function(a, b)
+{
+    return a.indexOf(b);
+}
+
+String.substr = function(a, ...rest)
+{
+    return a.substring(a, ...rest);
+}
+
+Object.append = function(a, b)
+{
+    a.push(b)
+}
+
+function toint(s)
+{
+    return (new Number(s))+0;
+}
+
 function println(...args)
 {
     console.log(...args);

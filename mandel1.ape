@@ -5,7 +5,7 @@ var top_edge    =  300;
 var bottom_edge = -300;
 var x_step      =    7;
 var y_step      =   15;
-var max_iter    =  5000;
+var max_iter    =  50;
 var y0 = top_edge;
 while(y0 > bottom_edge)
 {
@@ -33,7 +33,7 @@ while(y0 > bottom_edge)
             x = x_x - y_y + x0;
             i = i + 1;
         }
-        print(chr(the_char));
+        print(String.chr(the_char));
         x0 = x0 + x_step;
     }
     println();

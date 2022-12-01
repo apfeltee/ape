@@ -149,7 +149,7 @@ function sha1(s)
     var chars = String.split(s, "");
     for(var i=0; i<len(chars); i++)
     {
-        var och = ord(chars[i]);
+        var och = String.ord(chars[i]);
         //bytes[i] = och;
         append(bytes, och);
     }

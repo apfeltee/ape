@@ -29,7 +29,7 @@ while(cy <= ymax)
             y2 = ((y * y) >> 12);
             iter +=1;
         }
-        print(chr(32 + iter));
+        print(String.chr(32 + iter));
         cx += dx;
     }
     print("\n");

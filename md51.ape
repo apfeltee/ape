@@ -90,7 +90,7 @@ function bw_xor(x, y) {
 }
 
 function md5(input, nbytes, chars, i, bytes, hi, lo, words, nwords, state, a, b, c, d, j, x, digest, ret) {
-    // convert the input into an array of bytes using ord() on each
+    // convert the input into an array of bytes using String.ord() on each
     // character.
     //nbytes = split(input, chars, "");
     chars = String.split(input, "")
@@ -98,7 +98,7 @@ function md5(input, nbytes, chars, i, bytes, hi, lo, words, nwords, state, a, b,
     bytes = [];
     for(i = 0; i <= nbytes; i++)
     {
-        bytes[i] = ord(chars[i]);
+        bytes[i] = String.ord(chars[i]);
     }
     // convert the array of bytes into an array of 32-bits words.
     // NOTE: words is 0-indexed.

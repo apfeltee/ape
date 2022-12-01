@@ -477,82 +477,7 @@ err:
     return ape_object_make_null(vm->context);
 }
 
-static ApeObject_t cfn_chr(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
-{
-    char c;
-    char buf[2];
-    ApeFloat_t val;
-    (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER))
-    {
-        return ape_object_make_null(vm->context);
-    }
-    val = ape_object_value_asnumber(args[0]);
-    c = (char)val;
-    buf[0] = c;
-    buf[1] = '\0';
-    return ape_object_make_stringlen(vm->context, buf, 1);
-}
 
-
-static ApeObject_t cfn_ord(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
-{
-    const char* str;
-    (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING | APE_OBJECT_NULL))
-    {
-        return ape_object_make_null(vm->context);
-    }
-    if(ape_object_value_isnull(args[0]))
-    {
-        return ape_object_make_number(vm->context, 0);
-    }
-    str = ape_object_string_getdata(args[0]);
-    return ape_object_make_number(vm->context, str[0]);
-}
-
-
-static ApeObject_t cfn_substr(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
-{
-    ApeInt_t begin;
-    ApeInt_t end;
-    ApeInt_t len;
-    ApeInt_t nlen;
-    const char* str;
-    (void)data;
-    if(argc < 1)
-    {
-        return ape_object_make_error(vm->context, "too few args to substr()");
-    }
-    if((ape_object_value_type(args[0]) != APE_OBJECT_STRING) || (ape_object_value_type(args[1]) != APE_OBJECT_NUMBER))
-    {
-        return ape_object_make_error(vm->context, "substr() expects string, number [, number]");
-    }
-    str = ape_object_string_getdata(args[0]);
-    len = ape_object_string_getlength(args[0]);
-    begin = ape_object_value_asnumber(args[1]);
-    end = len;
-    if(argc > 2)
-    {
-        if(ape_object_value_type(args[2]) != APE_OBJECT_NUMBER)
-        {
-            return ape_object_make_error(vm->context, "last argument must be number");
-        }
-        end = ape_object_value_asnumber(args[2]);
-    }
-    /* fixme: this is actually incorrect */
-    if((begin >= len))
-    {
-        return ape_object_make_null(vm->context);
-    }
-    if(end >= len)
-    {
-        end = len;
-    }
-    nlen = end - begin;
-    fprintf(stderr, "substr: len=%d, begin=%d, end=%d, nlen=%d\n", (int)len, (int)begin, (int)end, (int)nlen);
-    return ape_object_make_stringlen(vm->context, str+begin, nlen);
-}
 
 static ApeObject_t cfn_range(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
@@ -836,11 +761,15 @@ static ApeObject_t cfn_object_removeat(ApeVM_t* vm, void* data, ApeSize_t argc, 
 static ApeObject_t cfn_error(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     (void)data;
+    const char* msg;
+    msg = "unspecified error";
     if(argc == 1 && ape_object_value_type(args[0]) == APE_OBJECT_STRING)
     {
-        return ape_object_make_error(vm->context, ape_object_string_getdata(args[0]));
+        msg = ape_object_string_getdata(args[0]);
     }
-    return ape_object_make_error(vm->context, "");
+    //return ape_object_make_error(vm->context, msg);
+    ape_vm_adderror(vm, APE_ERROR_RUNTIME, "%s", msg);
+    return ape_object_make_null(vm->context);
 }
 
 static ApeObject_t cfn_crash(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
@@ -1126,130 +1055,6 @@ static ApeObject_t cfn_object_isnativefunction(ApeVM_t* vm, void* data, ApeSize_
     return ape_object_make_bool(vm->context, ape_object_value_type(args[0]) == APE_OBJECT_NATIVEFUNCTION);
 }
 
-static ApeObject_t objfn_string_length(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
-{
-    const char* str;
-    ApeInt_t len;
-    ApeObject_t self;
-    (void)vm;
-    (void)data;
-    (void)argc;
-    (void)args;
-    /* fixme: value is passed incorrectly? */
-    #if 0
-    self = args[0];
-    #else
-    self = vm->stack[0];
-    #endif
-    str = ape_object_string_getdata(self);
-    len = ape_object_string_getlength(self);
-    fprintf(stderr, "objfn_string_length:argc=%d - self=<%.*s>\n", (int)argc, (int)len, str);
-    return ape_object_make_number(vm->context, len);
-}
-
-
-static ApeObject_t cfn_string_split(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
-{
-    char c;
-    const char* inpstr;
-    const char* delimstr;
-    char* itm;
-    ApeSize_t i;
-    ApeSize_t inplen;
-    ApeSize_t delimlen;
-    ApeObject_t arr;
-    ApePtrArray_t* parr;
-    ApeArgCheck_t check;
-    (void)data;
-    delimstr = "";
-    delimlen = 0;
-    ape_args_checkinit(vm, &check, "String.split", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_STRING))
-    {
-        return ape_object_make_null(vm->context);        
-    }
-    inpstr = ape_object_string_getdata(args[0]);
-    if(ape_args_checkoptional(&check, 1, APE_OBJECT_STRING, true))
-    {
-        delimstr = ape_object_string_getdata(args[1]);
-        delimlen = ape_object_string_getlength(args[1]);
-    }
-    arr = ape_object_make_array(vm->context);
-    if(delimlen == 0)
-    {
-        inplen = ape_object_string_getlength(args[0]);
-        for(i=0; i<inplen; i++)
-        {
-            c = inpstr[i];
-            ape_object_array_pushvalue(arr, ape_object_make_stringlen(vm->context, &c, 1));
-        }
-    }
-    else
-    {
-        parr = ape_util_splitstring(vm->context, inpstr, delimstr);
-        for(i=0; i<ape_ptrarray_count(parr); i++)
-        {
-            itm = (char*)ape_ptrarray_get(parr, i);
-            ape_object_array_pushvalue(arr, ape_object_make_string(vm->context, itm));
-            ape_allocator_free(vm->alloc, (void*)itm);
-        }
-        ape_ptrarray_destroy(parr);
-    }
-    return arr;
-}
-
-static ApeObject_t cfn_string_join(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
-{
-    const char* sstr;
-    const char* bstr;
-    ApeSize_t i;
-    ApeSize_t slen;
-    ApeSize_t alen;
-    ApeSize_t blen;
-    ApeObject_t rt;
-    ApeObject_t arritem;
-    ApeObject_t arrobj;
-    ApeObject_t sjoin;
-    ApeWriter_t* wr;
-    ApeArgCheck_t check;
-    (void)data;
-    sstr = "";
-    slen = 0;
-    ape_args_checkinit(vm, &check, "String.join", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_ARRAY))
-    {
-        return ape_object_make_null(vm->context);        
-    }
-    arrobj = args[0];
-    if(ape_args_checkoptional(&check, 1, APE_OBJECT_STRING, true))
-    {
-        sjoin = args[1];
-        if(ape_object_value_type(sjoin) != APE_OBJECT_STRING)
-        {
-            ape_vm_adderror(vm, APE_ERROR_RUNTIME, "String.join expects second argument to be a string");
-            return ape_object_make_null(vm->context);
-        }
-        sstr = ape_object_string_getdata(sjoin);
-        slen = ape_object_string_getlength(sjoin);
-    }
-    alen = ape_object_array_getlength(arrobj);
-    wr = ape_make_writer(vm->context);
-    for(i=0; i<alen; i++)
-    {
-        arritem = ape_object_array_getvalue(arrobj, i);
-        ape_tostring_object(wr, arritem, false);
-        if((i + 1) < alen)
-        {
-            ape_writer_appendn(wr, sstr, slen);
-        }
-    }
-    bstr = ape_writer_getdata(wr);
-    blen = ape_writer_getlength(wr);
-    rt = ape_object_make_stringlen(vm->context, bstr, blen);
-    ape_writer_destroy(wr);
-    return rt;
-}
-
 static ApeObject_t cfn_bitnot(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     ApeInt_t val;
@@ -1264,37 +1069,6 @@ static ApeObject_t cfn_bitnot(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
     return ape_object_make_number(vm->context, ~val);
 }
 
-static ApeObject_t cfn_shiftleft(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
-{
-    ApeInt_t v1;
-    ApeInt_t v2;
-    ApeArgCheck_t check;
-    (void)data;
-    ape_args_checkinit(vm, &check, "shiftleft", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_NUMBER) || !ape_args_checktype(&check, 1, APE_OBJECT_NUMBER))
-    {
-        return ape_object_make_null(vm->context);        
-    }
-    v1 = ape_object_value_asnumber(args[0]);
-    v2 = ape_object_value_asnumber(args[1]);
-    return ape_object_make_number(vm->context, (v1 << v2));
-}
-
-static ApeObject_t cfn_shiftright(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
-{
-    ApeInt_t v1;
-    ApeInt_t v2;
-    ApeArgCheck_t check;
-    (void)data;
-    ape_args_checkinit(vm, &check, "shiftright", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_NUMBER) || !ape_args_checktype(&check, 1, APE_OBJECT_NUMBER))
-    {
-        return ape_object_make_null(vm->context);        
-    }
-    v1 = ape_object_value_asnumber(args[0]);
-    v2 = ape_object_value_asnumber(args[1]);
-    return ape_object_make_number(vm->context, (v1 >> v2));
-}
 
 static ApeObject_t cfn_object_eval(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
@@ -1339,12 +1113,14 @@ static ApeNativeItem_t g_core_globalfuncs[] =
     { "println", cfn_println },
     { "print", cfn_print },
     { "tostring", cfn_tostring },
+
     { "to_num", cfn_toint },
+    { "toint", cfn_toint },
+
+
     { "range", cfn_range },
     { "concat", cfn_concat },
-    { "chr", cfn_chr },
-    { "ord", cfn_ord },
-    { "substr", cfn_substr, },
+
     { "reverse", cfn_reverse },
     { "array", cfn_array },
     { "error", cfn_error },
@@ -1358,8 +1134,6 @@ static ApeNativeItem_t g_core_globalfuncs[] =
     { "eval", cfn_object_eval },
     /* Math */
     { "bitnot", cfn_bitnot },
-    { "shiftleft", cfn_shiftleft },
-    { "shiftright", cfn_shiftright },
     {NULL, NULL},
 };
 
@@ -1383,19 +1157,6 @@ void ape_builtins_setup_namespace(ApeVM_t* vm, const char* nsname, ApeNativeItem
     ape_globalstore_set(vm->globalstore, nsname, map);
 }
 
-void ape_builtins_install_string(ApeVM_t* vm)
-{
-    static ApeNativeItem_t stringfuncs[]=
-    {
-        {"split", cfn_string_split},
-        {"join", cfn_string_join},
-        #if 0
-        {"trim", cfn_string_trim},
-        #endif
-        {NULL, NULL},
-    };
-    ape_builtins_setup_namespace(vm, "String", stringfuncs);    
-}
 
 void ape_builtins_install_vm(ApeVM_t* vm)
 {
@@ -1480,15 +1241,7 @@ ApeNativeFuncPtr_t ape_builtin_find_objectfunc(ApeContext_t* ctx, ApeNativeItem_
     return NULL;
 }
 
-ApeNativeFuncPtr_t ape_builtin_objectfunc_find_string(ApeContext_t* ctx, const char* idxname)
-{
-    static ApeNativeItem_t g_object_stringfuncs[]=
-    {
-        {"length", objfn_string_length},
-        {NULL, NULL},
-    };
-    return ape_builtin_find_objectfunc(ctx, g_object_stringfuncs, idxname);    
-}
+
 
 /*
 * this function is meant as a callback for builtin object methods.

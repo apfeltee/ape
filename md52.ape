@@ -157,7 +157,7 @@ function md5blk(s)
     var md5blks = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     for (i = 0; i < 64; i += 4)
     {
-        md5blks[i >> 2] = (ord(s[i]) + (ord(s[i + 1]) << 8) + (ord(s[i + 2]) << 16) + (ord(s[i + 3]) << 24));
+        md5blks[i >> 2] = (String.ord(s[i]) + (String.ord(s[i + 1]) << 8) + (String.ord(s[i + 2]) << 16) + (String.ord(s[i + 3]) << 24));
     }
     //println("md5blks=", md5blks.join(", "))
     return md5blks;
@@ -174,9 +174,9 @@ function md51(s)
     var i = 0;
     for (i = 64; i <= len(s); i += 64)
     {
-        state = md5cycle(state, md5blk(substr(s, i - 64, i)));
+        state = md5cycle(state, md5blk(s.substr(i - 64, i)));
     }
-    s = substr(s, i - 64);
+    s = s.substr(i - 64);
     //println("substr=", s)
     var tail = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     for (i = 0; i < len(s); i++)
@@ -186,7 +186,7 @@ function md51(s)
         {
             chtail = 0;
         }
-        tail[i >> 2] = chtail | (ord(s[i]) << ((i % 4) << 3));
+        tail[i >> 2] = chtail | (String.ord(s[i]) << ((i % 4) << 3));
     }
     tail[i >> 2] = tail[i >> 2] | (0x80 << ((i % 4) << 3));
     if(i > 55)

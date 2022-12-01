@@ -184,7 +184,7 @@ const char* ape_tostring_opcodename(ApeOpByte_t op)
     return g_definitions[op].name;
 }
 
-static bool ape_tostrign_opcodecoderead(ApeOpcodeDef_t* def, ApeUShort_t* instr, uint64_t outop[2])
+static bool ape_tostring_opcodecoderead(ApeOpcodeDef_t* def, ApeUShort_t* instr, uint64_t outop[2])
 {
     ApeSize_t i;
     int offset = 0;
@@ -603,40 +603,45 @@ bool ape_tostring_compresult(ApeWriter_t* buf, ApeCompResult_t* res)
 
 bool ape_tostring_bytecode(ApeWriter_t* buf, ApeUShort_t* code, ApePosition_t* source_positions, size_t code_size)
 {
+    bool ok;
+    unsigned int pos;
+    uint64_t operands[2];
     ApeSize_t i;
-    unsigned pos = 0;
+    ApeUShort_t op;
+    ApeFloat_t dv;
+    ApeOpcodeDef_t* def;
+    ApePosition_t srcpos;
+    pos = 0;
     while(pos < code_size)
     {
-        ApeUShort_t op = code[pos];
-        ApeOpcodeDef_t* def = ape_tostring_opcodefind(op);
+        op = code[pos];
+        def = ape_tostring_opcodefind(op);
         APE_ASSERT(def);
+        ape_writer_append(buf, "  ");
         if(source_positions)
         {
-            ApePosition_t src_pos = source_positions[pos];
-            ape_writer_appendf(buf, "%d:%-4d\t%04d\t%s", src_pos.line, src_pos.column, pos, def->name);
+            srcpos = source_positions[pos];
+            ape_writer_appendf(buf, "[%s:%d:%d]%-2s\t", srcpos.file->path, srcpos.line, srcpos.column, " ");
         }
-        else
-        {
-            ape_writer_appendf(buf, "%04d %s", pos, def->name);
-        }
+        ape_writer_appendf(buf, "%04d %s", pos, def->name);
         pos++;
-
-        uint64_t operands[2];
-        bool ok = ape_tostrign_opcodecoderead(def, code + pos, operands);
+        ok = ape_tostring_opcodecoderead(def, code + pos, operands);
         if(!ok)
         {
+            fprintf(stderr, "internal error: cannot read opcode at %p\n", code+pos);
             return false;
         }
         for(i = 0; i < def->num_operands; i++)
         {
+            ape_writer_append(buf, " ");
             if(op == APE_OPCODE_MKNUMBER)
             {
-                ApeFloat_t val_double = ape_util_uinttofloat(operands[i]);
-                ape_writer_appendf(buf, " %1.17g", val_double);
+                dv = ape_util_uinttofloat(operands[i]);
+                ape_writer_appendf(buf, "%1.17g", dv);
             }
             else
             {
-                ape_writer_appendf(buf, " @%llu", (long long unsigned int)operands[i]);
+                ape_writer_appendf(buf, "@%llu", (long long unsigned int)operands[i]);
             }
             pos += def->operand_widths[i];
         }

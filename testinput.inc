@@ -1,4 +1,8 @@
 
+// this file is intended to be processed via mksanity.h.
+// it generates sanity.ape. this step is currently needed because ape
+// has (as of now) insufficient mixin capabilities. :((((
+
 const trailing_comma_array = [
     1,
     2,

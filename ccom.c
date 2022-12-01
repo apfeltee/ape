@@ -23,17 +23,10 @@ struct ApeTempU64Array_t
 static const ApePosition_t g_ccpriv_srcposinvalid = { NULL, -1, -1 };
 
 
-static void ape_compiler_setsymtable(ApeCompiler_t* comp, ApeSymTable_t* table);
 static ApeInt_t ape_compiler_emit(ApeCompiler_t* comp, ApeOpByte_t op, ApeSize_t operandscount, uint64_t* operands);
 static ApeCompScope_t* ape_compiler_getcompscope(ApeCompiler_t* comp);
-static bool ape_compiler_pushcompscope(ApeCompiler_t* comp);
-static void ape_compiler_popcompscope(ApeCompiler_t* comp);
-static bool ape_compiler_pushsymtable(ApeCompiler_t* comp, ApeInt_t globaloffset);
-static void ape_compiler_popsymtable(ApeCompiler_t* comp);
 static ApeOpByte_t ape_compiler_getlastopcode(ApeCompiler_t* comp);
-static bool ape_compiler_compilecode(ApeCompiler_t* comp, const char* code);
 static bool ape_compiler_compilestmtlist(ApeCompiler_t* comp, ApePtrArray_t* statements);
-static bool ape_compiler_importmodule(ApeCompiler_t* comp, ApeStatement_t* importstmt);
 static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* stmt);
 static bool ape_compiler_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr);
 static bool ape_compiler_compilecodeblock(ApeCompiler_t* comp, ApeCodeblock_t* block);
@@ -53,9 +46,163 @@ static ApeValArray_t* ape_compiler_getsrcpositions(ApeCompiler_t* comp);
 static ApeValArray_t* ape_compiler_getbytecode(ApeCompiler_t* comp);
 static ApeFileScope_t* ape_compiler_makefilescope(ApeCompiler_t* comp, ApeCompFile_t* file);
 static void ape_compiler_destroyfilescope(ApeFileScope_t* scope);
-static bool ape_compiler_pushfilescope(ApeCompiler_t* comp, const char* filepath);
-static void ape_compiler_popfilescope(ApeCompiler_t* comp);
-static void ape_compiler_setcompscope(ApeCompiler_t* comp, ApeCompScope_t* scope);
+
+
+ApeCompFile_t* ape_make_compfile(ApeContext_t* ctx, const char* path)
+{
+    size_t len;
+    const char* last_slash_pos;
+    ApeCompFile_t* file;
+    file = (ApeCompFile_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeCompFile_t));
+    if(!file)
+    {
+        return NULL;
+    }
+    memset(file, 0, sizeof(ApeCompFile_t));
+    file->context = ctx;
+    file->alloc = &ctx->alloc;
+    last_slash_pos = strrchr(path, '/');
+    if(last_slash_pos)
+    {
+        len = last_slash_pos - path + 1;
+        file->dirpath = ape_util_strndup(ctx, path, len);
+    }
+    else
+    {
+        file->dirpath = ape_util_strdup(ctx, "");
+    }
+    if(!file->dirpath)
+    {
+        goto error;
+    }
+    file->path = ape_util_strdup(ctx, path);
+    if(!file->path)
+    {
+        goto error;
+    }
+    file->lines = ape_make_ptrarray(ctx);
+    if(!file->lines)
+    {
+        goto error;
+    }
+    return file;
+error:
+    ape_compfile_destroy(file);
+    return NULL;
+}
+
+void* ape_compfile_destroy(ApeCompFile_t* file)
+{
+    ApeSize_t i;
+    void* item;
+    if(!file)
+    {
+        return NULL;
+    }
+    for(i = 0; i < ape_ptrarray_count(file->lines); i++)
+    {
+        item = (void*)ape_ptrarray_get(file->lines, i);
+        ape_allocator_free(file->alloc, item);
+    }
+    ape_ptrarray_destroy(file->lines);
+    ape_allocator_free(file->alloc, file->dirpath);
+    ape_allocator_free(file->alloc, file->path);
+    ape_allocator_free(file->alloc, file);
+    return NULL;
+}
+
+ApeCompScope_t* ape_make_compscope(ApeContext_t* ctx, ApeCompScope_t* outer)
+{
+    ApeCompScope_t* scope;
+    scope = (ApeCompScope_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeCompScope_t));
+    if(!scope)
+    {
+        return NULL;
+    }
+    memset(scope, 0, sizeof(ApeCompScope_t));
+    scope->context = ctx;
+    scope->alloc = &ctx->alloc;
+    scope->outer = outer;
+    scope->bytecode = array_make(ctx, ApeUShort_t);
+    if(!scope->bytecode)
+    {
+        goto err;
+    }
+    scope->srcpositions = array_make(ctx, ApePosition_t);
+    if(!scope->srcpositions)
+    {
+        goto err;
+    }
+    scope->breakipstack = array_make(ctx, int);
+    if(!scope->breakipstack)
+    {
+        goto err;
+    }
+    scope->continueipstack = array_make(ctx, int);
+    if(!scope->continueipstack)
+    {
+        goto err;
+    }
+    return scope;
+err:
+    ape_compscope_destroy(scope);
+    return NULL;
+}
+
+void ape_compscope_destroy(ApeCompScope_t* scope)
+{
+    ape_valarray_destroy(scope->continueipstack);
+    ape_valarray_destroy(scope->breakipstack);
+    ape_valarray_destroy(scope->bytecode);
+    ape_valarray_destroy(scope->srcpositions);
+    ape_allocator_free(scope->alloc, scope);
+}
+
+ApeCompResult_t* ape_compscope_orphanresult(ApeCompScope_t* scope)
+{
+    ApeCompResult_t* res;
+    res = ape_make_compresult(scope->context,
+        (ApeUShort_t*)ape_valarray_data(scope->bytecode),
+        (ApePosition_t*)ape_valarray_data(scope->srcpositions),
+        ape_valarray_count(scope->bytecode)
+    );
+    if(!res)
+    {
+        return NULL;
+    }
+    ape_valarray_orphandata(scope->bytecode);
+    ape_valarray_orphandata(scope->srcpositions);
+    return res;
+}
+
+ApeCompResult_t* ape_make_compresult(ApeContext_t* ctx, ApeUShort_t* bytecode, ApePosition_t* src_positions, int count)
+{
+    ApeCompResult_t* res;
+    res = (ApeCompResult_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeCompResult_t));
+    if(!res)
+    {
+        return NULL;
+    }
+    memset(res, 0, sizeof(ApeCompResult_t));
+    res->context = ctx;
+    res->alloc = &ctx->alloc;
+    res->bytecode = bytecode;
+    res->srcpositions = src_positions;
+    res->count = count;
+    return res;
+}
+
+void ape_compresult_destroy(ApeCompResult_t* res)
+{
+    if(!res)
+    {
+        return;
+    }
+    ape_allocator_free(res->alloc, res->bytecode);
+    ape_allocator_free(res->alloc, res->srcpositions);
+    ape_allocator_free(res->alloc, res);
+}
+
 
 ApeSymbol_t* ape_compiler_definesym(ApeCompiler_t* comp, ApePosition_t pos, const char* name, bool assignable, bool canshadow)
 {
@@ -65,14 +212,14 @@ ApeSymbol_t* ape_compiler_definesym(ApeCompiler_t* comp, ApePosition_t pos, cons
     symtable = ape_compiler_getsymboltable(comp);
     if(!canshadow && !ape_symtable_istopglobalscope(symtable))
     {
-        currentsymbol = ape_symtable_resolve(symtable, name);
+        currentsymbol = (ApeSymbol_t*)ape_symtable_resolve(symtable, name);
         if(currentsymbol)
         {
             ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, pos, "symbol '%s' is already defined", name);
             return NULL;
         }
     }
-    symbol = ape_symtable_define(symtable, name, assignable);
+    symbol = (ApeSymbol_t*)ape_symtable_define(symtable, name, assignable);
     if(!symbol)
     {
         ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, pos, "cannot define symbol '%s'", name);
@@ -82,7 +229,7 @@ ApeSymbol_t* ape_compiler_definesym(ApeCompiler_t* comp, ApePosition_t pos, cons
 }
 
 
-ApeCompiler_t* ape_compiler_make(ApeContext_t* ctx, ApeConfig_t* cfg, ApeGCMemory_t* mem, ApeErrorList_t* el, ApePtrArray_t* files, ApeGlobalStore_t* gs)
+ApeCompiler_t* ape_compiler_make(ApeContext_t* ctx, const ApeConfig_t* cfg, ApeGCMemory_t* mem, ApeErrorList_t* el, ApePtrArray_t* files, ApeGlobalStore_t* gs)
 {
     bool ok;
     ApeCompiler_t* comp;
@@ -224,7 +371,7 @@ ApeSymTable_t* ape_compiler_getsymboltable(ApeCompiler_t* comp)
     return filescope->symtable;
 }
 
-static void ape_compiler_setsymtable(ApeCompiler_t* comp, ApeSymTable_t* table)
+void ape_compiler_setsymtable(ApeCompiler_t* comp, ApeSymTable_t* table)
 {
     ApeFileScope_t* filescope;
     filescope = (ApeFileScope_t*)ape_ptrarray_top(comp->filescopes);
@@ -242,7 +389,7 @@ ApeValArray_t* ape_compiler_getconstants(ApeCompiler_t* comp)
 }
 
 // INTERNAL
-bool ape_compiler_init(ApeCompiler_t* comp, ApeContext_t* ctx, ApeConfig_t* cfg, ApeGCMemory_t* mem, ApeErrorList_t* el, ApePtrArray_t* fl, ApeGlobalStore_t* gs)
+bool ape_compiler_init(ApeCompiler_t* comp, ApeContext_t* ctx, const ApeConfig_t* cfg, ApeGCMemory_t* mem, ApeErrorList_t* el, ApePtrArray_t* fl, ApeGlobalStore_t* gs)
 {
     bool ok;
     memset(comp, 0, sizeof(ApeCompiler_t));
@@ -451,7 +598,7 @@ static ApeCompScope_t* ape_compiler_getcompscope(ApeCompiler_t* comp)
     return comp->compilation_scope;
 }
 
-static bool ape_compiler_pushcompscope(ApeCompiler_t* comp)
+bool ape_compiler_pushcompscope(ApeCompiler_t* comp)
 {
     ApeCompScope_t* currentscope;
     ApeCompScope_t* newscope;
@@ -465,7 +612,7 @@ static bool ape_compiler_pushcompscope(ApeCompiler_t* comp)
     return true;
 }
 
-static void ape_compiler_popcompscope(ApeCompiler_t* comp)
+void ape_compiler_popcompscope(ApeCompiler_t* comp)
 {
     ApeCompScope_t* currentscope;
     currentscope = ape_compiler_getcompscope(comp);
@@ -474,7 +621,7 @@ static void ape_compiler_popcompscope(ApeCompiler_t* comp)
     ape_compscope_destroy(currentscope);
 }
 
-static bool ape_compiler_pushsymtable(ApeCompiler_t* comp, ApeInt_t globaloffset)
+bool ape_compiler_pushsymtable(ApeCompiler_t* comp, ApeInt_t globaloffset)
 {
     ApeFileScope_t* filescope;
     ApeSymTable_t* currenttable;
@@ -494,7 +641,7 @@ static bool ape_compiler_pushsymtable(ApeCompiler_t* comp, ApeInt_t globaloffset
     return true;
 }
 
-static void ape_compiler_popsymtable(ApeCompiler_t* comp)
+void ape_compiler_popsymtable(ApeCompiler_t* comp)
 {
     ApeFileScope_t* filescope;
     ApeSymTable_t* currenttable;
@@ -521,7 +668,7 @@ static ApeOpByte_t ape_compiler_getlastopcode(ApeCompiler_t* comp)
     return currentscope->lastopcode;
 }
 
-static bool ape_compiler_compilecode(ApeCompiler_t* comp, const char* code)
+bool ape_compiler_compilecode(ApeCompiler_t* comp, const char* code)
 {
     bool ok;
     ApeFileScope_t* filescope;
@@ -572,169 +719,6 @@ static bool ape_compiler_compilestmtlist(ApeCompiler_t* comp, ApePtrArray_t* sta
     return ok;
 }
 
-static bool ape_compiler_importmodule(ApeCompiler_t* comp, ApeStatement_t* importstmt)
-{
-    // todo: split into smaller functions
-    ApeSize_t i;
-    bool ok;
-    bool result;
-    char* filepath;
-    char* code;
-    char* namecopy;
-    const char* loadedname;
-    const char* modulepath;
-    const char* module_name;
-    const char* filepathnoncanonicalised;
-    ApeFileScope_t* filescope;
-    ApeWriter_t* filepathbuf;
-    ApeSymTable_t* symtable;
-    ApeFileScope_t* fs;
-    ApeModule_t* module;
-    ApeSymTable_t* st;
-    ApeSymbol_t* symbol;
-    result = false;
-    filepath = NULL;
-    code = NULL;
-    filescope = (ApeFileScope_t*)ape_ptrarray_top(comp->filescopes);
-    modulepath = importstmt->import.path;
-    module_name = ape_module_getname(modulepath);
-    for(i = 0; i < ape_ptrarray_count(filescope->loadedmodulenames); i++)
-    {
-        loadedname = (const char*)ape_ptrarray_get(filescope->loadedmodulenames, i);
-        if(ape_util_strequal(loadedname, module_name))
-        {
-            ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, importstmt->pos, "module '%s' was already imported", module_name);
-            result = false;
-            goto end;
-        }
-    }
-    filepathbuf = ape_make_writer(comp->context);
-    if(!filepathbuf)
-    {
-        result = false;
-        goto end;
-    }
-    if(ape_util_isabspath(modulepath))
-    {
-        ape_writer_appendf(filepathbuf, "%s.ape", modulepath);
-    }
-    else
-    {
-        ape_writer_appendf(filepathbuf, "%s%s.ape", filescope->file->dirpath, modulepath);
-    }
-    if(ape_writer_failed(filepathbuf))
-    {
-        ape_writer_destroy(filepathbuf);
-        result = false;
-        goto end;
-    }
-    filepathnoncanonicalised = ape_writer_getdata(filepathbuf);
-    filepath = ape_util_canonicalisepath(comp->context, filepathnoncanonicalised);
-    ape_writer_destroy(filepathbuf);
-    if(!filepath)
-    {
-        result = false;
-        goto end;
-    }
-    symtable = ape_compiler_getsymboltable(comp);
-    if(symtable->outer != NULL || ape_ptrarray_count(symtable->blockscopes) > 1)
-    {
-        ape_errorlist_add(comp->errors, APE_ERROR_COMPILATION, importstmt->pos, "modules can only be imported in global scope");
-        result = false;
-        goto end;
-    }
-    for(i = 0; i < ape_ptrarray_count(comp->filescopes); i++)
-    {
-        fs = (ApeFileScope_t*)ape_ptrarray_get(comp->filescopes, i);
-        if(APE_STREQ(fs->file->path, filepath))
-        {
-            ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, importstmt->pos, "cyclic reference of file '%s'", filepath);
-            result = false;
-            goto end;
-        }
-    }
-    module = (ApeModule_t*)ape_strdict_get(comp->modules, filepath);
-    if(!module)
-    {
-        // todo: create new module function
-        if(!comp->config->fileio.ioreader.fnreadfile)
-        {
-            ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, importstmt->pos,
-                              "cannot import module '%s', file read function not configured", filepath);
-            result = false;
-            goto end;
-        }
-        code = comp->config->fileio.ioreader.fnreadfile(comp->config->fileio.ioreader.context, filepath);
-        if(!code)
-        {
-            ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, importstmt->pos, "reading module file '%s' failed", filepath);
-            result = false;
-            goto end;
-        }
-        module = ape_make_module(comp->context, module_name);
-        if(!module)
-        {
-            result = false;
-            goto end;
-        }
-        ok = ape_compiler_pushfilescope(comp, filepath);
-        if(!ok)
-        {
-            ape_module_destroy(module);
-            result = false;
-            goto end;
-        }
-        ok = ape_compiler_compilecode(comp, code);
-        if(!ok)
-        {
-            ape_module_destroy(module);
-            result = false;
-            goto end;
-        }
-        st = ape_compiler_getsymboltable(comp);
-        for(i = 0; i < ape_symtable_getmoduleglobalsymbolcount(st); i++)
-        {
-            symbol = (ApeSymbol_t*)ape_symtable_getmoduleglobalsymbolat(st, i);
-            ape_module_addsymbol(module, symbol);
-        }
-        ape_compiler_popfilescope(comp);
-        ok = ape_strdict_set(comp->modules, filepath, module);
-        if(!ok)
-        {
-            ape_module_destroy(module);
-            result = false;
-            goto end;
-        }
-    }
-    for(i = 0; i < ape_ptrarray_count(module->symbols); i++)
-    {
-        symbol = (ApeSymbol_t*)ape_ptrarray_get(module->symbols, i);
-        ok = ape_symtable_addmodulesymbol(symtable, symbol);
-        if(!ok)
-        {
-            result = false;
-            goto end;
-        }
-    }
-    namecopy = ape_util_strdup(comp->context, module_name);
-    if(!namecopy)
-    {
-        result = false;
-        goto end;
-    }
-    ok = ape_ptrarray_add(filescope->loadedmodulenames, namecopy);
-    if(!ok)
-    {
-        ape_allocator_free(comp->alloc, namecopy);
-        result = false;
-        goto end;
-    }
-    result = true;
-end:
-    ape_allocator_free(comp->alloc, filepath);
-    ape_allocator_free(comp->alloc, code);
-    return result;
-}
 
 static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* stmt)
 {
@@ -1157,7 +1141,6 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* s
                 ape_symtable_popblockscope(symtable);
             }
             break;
-
         case APE_STMT_FORLOOP:
             {
                 forloop = &stmt->forloop;
@@ -1236,22 +1219,18 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* s
                 {
                     return false;
                 }
-
                 ok = ape_compiler_pushbreakip(comp, jmptoafterbodyip);
                 if(!ok)
                 {
                     return false;
                 }
-
                 ok = ape_compiler_compilecodeblock(comp, forloop->body);
                 if(!ok)
                 {
                     return false;
                 }
-
                 ape_compiler_popbreakip(comp);
                 ape_compiler_popcontip(comp);
-
                 ip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)updateip));
                 if(ip < 0)
                 {
@@ -1262,84 +1241,80 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* s
                 ape_symtable_popblockscope(symtable);
             }
             break;
-
         case APE_STMT_BLOCK:
-        {
-            ok = ape_compiler_compilecodeblock(comp, stmt->block);
-            if(!ok)
             {
-                return false;
+                ok = ape_compiler_compilecodeblock(comp, stmt->block);
+                if(!ok)
+                {
+                    return false;
+                }
             }
             break;
-        }
         case APE_STMT_IMPORT:
-        {
-            ok = ape_compiler_importmodule(comp, stmt);
-            if(!ok)
             {
-                return false;
+                ok = ape_compiler_importmodule(comp, stmt);
+                if(!ok)
+                {
+                    return false;
+                }
             }
             break;
-        }
         case APE_STMT_RECOVER:
-        {
-            recover = &stmt->recover;
-
-            if(ape_symtable_ismoduleglobalscope(symtable))
             {
-                ape_errorlist_add(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "recover statement cannot be defined in global scope");
-                return false;
+                recover = &stmt->recover;
+                if(ape_symtable_ismoduleglobalscope(symtable))
+                {
+                    ape_errorlist_add(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "recover statement cannot be defined in global scope");
+                    return false;
+                }
+                if(!ape_symtable_istopblockscope(symtable))
+                {
+                    ape_errorlist_add(comp->errors, APE_ERROR_COMPILATION, stmt->pos,
+                                     "recover statement cannot be defined within other statements");
+                    return false;
+                }
+                recoverip = ape_compiler_emit(comp, APE_OPCODE_SETRECOVER, 1, make_u64_array((uint64_t)0xbeef));
+                if(recoverip < 0)
+                {
+                    return false;
+                }
+                jumptoafterrecoverip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)0xbeef));
+                if(jumptoafterrecoverip < 0)
+                {
+                    return false;
+                }
+                afterjumptorecoverip = ape_compiler_getip(comp);
+                ape_compiler_moduint16operand(comp, recoverip + 1, afterjumptorecoverip);
+                ok = ape_symtable_pushblockscope(symtable);
+                if(!ok)
+                {
+                    return false;
+                }
+                errorsymbol = ape_compiler_definesym(comp, recover->errorident->pos, recover->errorident->value, false, false);
+                if(!errorsymbol)
+                {
+                    return false;
+                }
+                ok = ape_compiler_writesym(comp, errorsymbol, true);
+                if(!ok)
+                {
+                    return false;
+                }
+                ok = ape_compiler_compilecodeblock(comp, recover->body);
+                if(!ok)
+                {
+                    return false;
+                }
+                if(!ape_compiler_lastopcodeis(comp, APE_OPCODE_RETURNNOTHING) && !ape_compiler_lastopcodeis(comp, APE_OPCODE_RETURNVALUE))
+                {
+                    ape_errorlist_add(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "recover body must end with a return statement");
+                    return false;
+                }
+                ape_symtable_popblockscope(symtable);
+                afterrecoverip = ape_compiler_getip(comp);
+                ape_compiler_moduint16operand(comp, jumptoafterrecoverip + 1, afterrecoverip);
             }
-
-            if(!ape_symtable_istopblockscope(symtable))
-            {
-                ape_errorlist_add(comp->errors, APE_ERROR_COMPILATION, stmt->pos,
-                                 "recover statement cannot be defined within other statements");
-                return false;
-            }
-            recoverip = ape_compiler_emit(comp, APE_OPCODE_SETRECOVER, 1, make_u64_array((uint64_t)0xbeef));
-            if(recoverip < 0)
-            {
-                return false;
-            }
-            jumptoafterrecoverip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((uint64_t)0xbeef));
-            if(jumptoafterrecoverip < 0)
-            {
-                return false;
-            }
-
-            afterjumptorecoverip = ape_compiler_getip(comp);
-            ape_compiler_moduint16operand(comp, recoverip + 1, afterjumptorecoverip);
-            ok = ape_symtable_pushblockscope(symtable);
-            if(!ok)
-            {
-                return false;
-            }
-            errorsymbol = ape_compiler_definesym(comp, recover->errorident->pos, recover->errorident->value, false, false);
-            if(!errorsymbol)
-            {
-                return false;
-            }
-            ok = ape_compiler_writesym(comp, errorsymbol, true);
-            if(!ok)
-            {
-                return false;
-            }
-            ok = ape_compiler_compilecodeblock(comp, recover->body);
-            if(!ok)
-            {
-                return false;
-            }
-            if(!ape_compiler_lastopcodeis(comp, APE_OPCODE_RETURNNOTHING) && !ape_compiler_lastopcodeis(comp, APE_OPCODE_RETURNVALUE))
-            {
-                ape_errorlist_add(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "recover body must end with a return statement");
-                return false;
-            }
-            ape_symtable_popblockscope(symtable);
-            afterrecoverip = ape_compiler_getip(comp);
-            ape_compiler_moduint16operand(comp, jumptoafterrecoverip + 1, afterrecoverip);
             break;
-        }
         default:
             {
                 APE_ASSERT(false);
@@ -2294,7 +2269,7 @@ static void ape_compiler_destroyfilescope(ApeFileScope_t* scope)
     ape_allocator_free(scope->alloc, scope);
 }
 
-static bool ape_compiler_pushfilescope(ApeCompiler_t* comp, const char* filepath)
+bool ape_compiler_pushfilescope(ApeCompiler_t* comp, const char* filepath)
 {
     bool ok;
     ApeBlockScope_t* prevsttopscope;
@@ -2345,7 +2320,7 @@ static bool ape_compiler_pushfilescope(ApeCompiler_t* comp, const char* filepath
     return true;
 }
 
-static void ape_compiler_popfilescope(ApeCompiler_t* comp)
+void ape_compiler_popfilescope(ApeCompiler_t* comp)
 {
     ApeSymTable_t* currentst;
     ApeBlockScope_t* currentsttopscope;
@@ -2376,7 +2351,7 @@ static void ape_compiler_popfilescope(ApeCompiler_t* comp)
     }
 }
 
-static void ape_compiler_setcompscope(ApeCompiler_t* comp, ApeCompScope_t* scope)
+void ape_compiler_setcompscope(ApeCompiler_t* comp, ApeCompScope_t* scope)
 {
     comp->compilation_scope = scope;
 }
