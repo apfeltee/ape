@@ -44,8 +44,8 @@ bool ape_valdict_init(ApeValDict_t* dict, ApeSize_t ksz, ApeSize_t vsz, ApeSize_
     dict->_keys_equals = NULL;
     dict->_hash_key = NULL;
     dict->cells = (unsigned int*)ape_allocator_alloc(dict->alloc, dict->cellcap * sizeof(*dict->cells));
-    dict->keys = ape_allocator_alloc(dict->alloc, dict->itemcap * ksz);
-    dict->values = ape_allocator_alloc(dict->alloc, dict->itemcap * vsz);
+    dict->keys = (void**)ape_allocator_alloc(dict->alloc, dict->itemcap * ksz);
+    dict->values = (void**)ape_allocator_alloc(dict->alloc, dict->itemcap * vsz);
     dict->cellindices = (unsigned int*)ape_allocator_alloc(dict->alloc, dict->itemcap * sizeof(*dict->cellindices));
     dict->hashes = (long unsigned int*)ape_allocator_alloc(dict->alloc, dict->itemcap * sizeof(*dict->hashes));
     if(dict->cells == NULL || dict->keys == NULL || dict->values == NULL || dict->cellindices == NULL || dict->hashes == NULL)
@@ -363,7 +363,7 @@ ApeValDict_t* ape_valdict_copywithitems(ApeValDict_t* dict)
     {
         return NULL;
     }
-    dict_copy = valdict_make(dict->context, dict->keysize, dict->valsize);
+    dict_copy = ape_make_valdict(dict->context, dict->keysize, dict->valsize);
     ape_valdict_setcopyfunc(dict_copy, (ApeDataCallback_t)dict->fnvalcopy);
     ape_valdict_setdeletefunc(dict_copy, (ApeDataCallback_t)dict->fnvaldestroy);
     if(!dict_copy)

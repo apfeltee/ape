@@ -2,31 +2,6 @@
 #include <inttypes.h>
 #include "ape.h"
 
-ApePseudoClass_t* ape_make_pseudoclass(ApeContext_t* ctx, ApeStrDict_t* dictref, const char* classname)
-{
-    ApePseudoClass_t* psc;
-    psc = (ApePseudoClass_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApePseudoClass_t));
-    memset(psc, 0, sizeof(ApePseudoClass_t));
-    psc->context = ctx;
-    psc->classname = classname;
-    psc->fndictref = dictref;
-    return psc;
-}
-
-void* ape_pseudoclass_destroy(ApePseudoClass_t* psc)
-{
-    ApeContext_t* ctx;
-    ctx = psc->context;
-    ape_allocator_free(&ctx->alloc, psc);
-    psc = NULL;
-    return NULL;
-}
-
-bool ape_pseudoclass_setmethod(ApePseudoClass_t* psc, const char* name, ApeObjMemberItem_t* itm)
-{
-    return ape_strdict_set(psc->fndictref, name, itm);
-}
-
 ApeObject_t ape_object_make_number(ApeContext_t* ctx, ApeFloat_t val)
 {
     ApeObjData_t* data;
@@ -719,7 +694,7 @@ ApeObject_t ape_object_value_copydeep(ApeContext_t* ctx, ApeObject_t obj)
 {
     ApeObject_t res;
     ApeValDict_t* copies;
-    copies = valdict_make(ctx, ApeObject_t, ApeObject_t);
+    copies = ape_make_valdict(ctx, ApeObject_t, ApeObject_t);
     if(!copies)
     {
         return ape_object_make_null(ctx);

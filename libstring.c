@@ -449,7 +449,7 @@ void ape_builtins_install_string(ApeVM_t* vm)
         {NULL, false, NULL},
     };
     ape_builtins_setup_namespace(vm, classname, staticfuncs);
-    psc = ape_context_make_pseudoclass(vm->context, vm->context->objstringfuncs, classname);
+    psc = ape_context_make_pseudoclass(vm->context, vm->context->objstringfuncs, APE_OBJECT_STRING, classname);
     for(i=0; memberfuncs[i].name != NULL; i++)
     {
         ape_pseudoclass_setmethod(psc, memberfuncs[i].name, &memberfuncs[i]);

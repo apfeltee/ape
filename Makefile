@@ -22,7 +22,7 @@ protofile = prot.inc
 
 # janky mess
 havecproto = 1
-ifeq (, $(shell which cproto))
+ifeq (, $(shell which cprotod))
 havecproto = 0
 endif
 

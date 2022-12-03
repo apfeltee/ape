@@ -82,7 +82,7 @@ ApeGCMemory_t* ape_make_gcmem(ApeContext_t* ctx)
     {
         goto error;
     }
-    mem->objects_not_gced = array_make(ctx, ApeObject_t);
+    mem->objects_not_gced = ape_make_valarray(ctx, ApeObject_t);
     if(!mem->objects_not_gced)
     {
         goto error;

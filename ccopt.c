@@ -3,6 +3,7 @@
 
 ApeExpression_t* ape_optimizer_optexpr(ApeExpression_t* expr)
 {
+    return NULL;
     switch(expr->type)
     {
         case APE_EXPR_INFIX:

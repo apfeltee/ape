@@ -111,6 +111,8 @@ THE SOFTWARE.
 #define APE_STRNEQ(a, b, n) (strncmp((a), (b), (n)) == 0)
 #define APE_ARRAY_LEN(array) ((int)(sizeof(array) / sizeof(array[0])))
 
+//#define APE_DEBUG
+
 #if 1
 #define APE_DBLEQ(a, b) \
     (fabs((a) - (b)) < DBL_EPSILON)
@@ -167,10 +169,10 @@ THE SOFTWARE.
     make_fn_entry_data(ctx, map, name, fnc, NULL, 0)
 
 
-#define valdict_make(ctx, key_type, val_type) \
+#define ape_make_valdict(ctx, key_type, val_type) \
     ape_make_valdict_actual(ctx, sizeof(key_type), sizeof(val_type))
 
-#define array_make(allocator, type) \
+#define ape_make_valarray(allocator, type) \
     ape_make_valarray_actual(allocator, sizeof(type))
 
 /**/
@@ -213,7 +215,7 @@ THE SOFTWARE.
     (ape_object_value_istype(o, APE_OBJECT_NUMBER) || ape_object_value_istype(o, APE_OBJECT_BOOL))
 
 #define ape_object_value_isnull(o) \
-    ape_object_value_istype(o, APE_OBJECT_NULL)
+    (((o).type == APE_OBJECT_NONE) || ape_object_value_istype(o, APE_OBJECT_NULL))
 
 #define ape_object_value_isstring(o) \
     ape_object_value_istype(o, APE_OBJECT_STRING)
@@ -626,6 +628,11 @@ struct ApeNativeItem_t
     ApeNativeFuncPtr_t fn;
 };
 
+/*
+* a class that isn't.
+* this merely keeps a pointer (very important!) to a StrDict, that contain the actual fields.
+* don't ever initialize fndictref directly, as it would never get freed.
+*/
 struct ApePseudoClass_t
 {
     ApeContext_t* context;
@@ -1283,6 +1290,7 @@ struct ApeContext_t
     ApeGCMemory_t* mem;
     ApePtrArray_t* files;
     ApePtrArray_t* pseudoclasses;
+    ApeStrDict_t* classmapping;
     ApeGlobalStore_t* globalstore;
     ApeCompiler_t* compiler;
     ApeVM_t* vm;

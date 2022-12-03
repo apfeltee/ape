@@ -38,18 +38,18 @@ void ape_args_checkinit(ApeVM_t* vm, ApeArgCheck_t* check, const char* name, Ape
     check->args = args;
 }
 
-void ape_args_raisetyperror(ApeArgCheck_t* check, ApeSize_t ix, ApeObjType_t typ)
+void ape_args_raisetyperror(ApeArgCheck_t* check, ApeSize_t ix, int typ)
 {
     char* extypestr;
     const char* typestr;
     typestr = ape_object_value_typename(ape_object_value_type(check->args[ix]));
-    extypestr = ape_object_value_typeunionname(check->vm->context, typ);
+    extypestr = ape_object_value_typeunionname(check->vm->context, (ApeObjType_t)typ);
     ape_vm_adderror(check->vm, APE_ERROR_RUNTIME,
         "invalid arguments: function '%s' expects argument #%d to be a %s, but got %s instead", check->name, ix, extypestr, typestr);
     ape_allocator_free(check->vm->alloc, extypestr);
 }
 
-bool ape_args_checkoptional(ApeArgCheck_t* check, ApeSize_t ix, ApeObjType_t typ, bool raisetyperror)
+bool ape_args_checkoptional(ApeArgCheck_t* check, ApeSize_t ix, int typ, bool raisetyperror)
 {
     check->counterror = false;
     if((check->argc == 0) || (check->argc <= ix))
@@ -68,7 +68,7 @@ bool ape_args_checkoptional(ApeArgCheck_t* check, ApeSize_t ix, ApeObjType_t typ
     return true;
 }
 
-bool ape_args_checktype(ApeArgCheck_t* check, ApeSize_t ix, ApeObjType_t typ)
+bool ape_args_checktype(ApeArgCheck_t* check, ApeSize_t ix, int typ)
 {
     ApeSize_t ixval;
     if(!ape_args_checkoptional(check, ix, typ, false))
@@ -1234,28 +1234,3 @@ const char* ape_builtins_getname(ApeSize_t ix)
     return g_core_globalfuncs[ix].name;
 }
 
-ApeObjMemberItem_t* ape_builtin_find_objectfunc(ApeContext_t* ctx, ApeStrDict_t* dict, const char* idxname, unsigned long idxhash)
-{
-    ApeObjMemberItem_t* p;
-    ApeInt_t i;
-    (void)ctx;
-    p = (ApeObjMemberItem_t*)ape_strdict_getbyhash(dict, idxname, idxhash);
-    if(p != NULL)
-    {
-        return p;
-    }
-    return NULL;
-}
-
-ApeObjMemberItem_t* builtin_get_object(ApeContext_t* ctx, ApeObjType_t objt, const char* idxname, unsigned long idxhash)
-{
-    if(objt == APE_OBJECT_STRING)
-    {
-        return ape_builtin_find_objectfunc(ctx, ctx->objstringfuncs, idxname, idxhash);
-    }
-    else if(objt == APE_OBJECT_ARRAY)
-    {
-        return ape_builtin_find_objectfunc(ctx, ctx->objarrayfuncs, idxname, idxhash);
-    }
-    return NULL;
-}

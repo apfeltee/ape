@@ -24,6 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+#include <signal.h>
 #include "ape.h"
 
 static const ApePosition_t g_vmpriv_srcposinvalid = { NULL, -1, -1 };
@@ -149,7 +150,7 @@ ApeGlobalStore_t* ape_make_globalstore(ApeContext_t* ctx, ApeGCMemory_t* mem)
     {
         goto err;
     }
-    store->objects = array_make(ctx, ApeObject_t);
+    store->objects = ape_make_valarray(ctx, ApeObject_t);
     if(!store->objects)
     {
         goto err;
@@ -1056,7 +1057,7 @@ ApeObject_t ape_vm_popthisstack(ApeVM_t* vm)
     if(vm->this_sp == 0)
     {
         ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->currentframe), "this stack underflow");
-        APE_ASSERT(false);
+        //APE_ASSERT(false);
         return ape_object_make_null(vm->context);
     }
 #endif
@@ -1066,7 +1067,12 @@ ApeObject_t ape_vm_popthisstack(ApeVM_t* vm)
 
 ApeObject_t ape_vm_getthisstack(ApeVM_t* vm, int nth_item)
 {
-    int ix = vm->this_sp - 1 - nth_item;
+    int ix;
+    ix = vm->this_sp - 1 - nth_item;
+    if(ix < 0)
+    {
+        ix = nth_item;
+    }
 #ifdef APE_DEBUG
     if(ix < 0 || ix >= APE_CONF_SIZE_VM_THISSTACK)
     {
@@ -2155,13 +2161,20 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
             case APE_OPCODE_GETTHIS:
                 {
                     objval = ape_vm_getthisstack(vm, 0);
+                    //objval = ape_vm_popthisstack(vm);
                     ape_vm_pushstack(vm, objval);
                 }
                 break;
             case APE_OPCODE_GETINDEX:
                 {
+                    //raise(SIGINT);
                     index = ape_vm_popstack(vm);
                     left = ape_vm_popstack(vm);
+                    /*if(ape_object_value_isnull(left))
+                    {
+                        left = ape_vm_popthisstack(vm);
+                    }
+                    */
                     lefttype = ape_object_value_type(left);
                     indextype = ape_object_value_type(index);
                     ok = ape_vm_getindex(vm, left, index, lefttype, indextype);

@@ -37,6 +37,7 @@ ApeContext_t* ape_make_contextex(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t f
         goto err;
     }
     ctx->pseudoclasses = ape_make_ptrarray(ctx);
+    ctx->classmapping = ape_make_strdict(ctx, NULL, NULL);
     ctx->globalstore = ape_make_globalstore(ctx, ctx->mem);
     if(!ctx->globalstore)
     {
@@ -83,6 +84,7 @@ void ape_context_deinit(ApeContext_t* ctx)
     ape_compiler_destroy(ctx->compiler);
     ape_globalstore_destroy(ctx->globalstore);
     ape_gcmem_destroy(ctx->mem);
+    ape_strdict_destroy(ctx->classmapping);
     ape_ptrarray_destroywithitems(ctx->pseudoclasses, (ApeDataCallback_t)ape_pseudoclass_destroy);
     ape_ptrarray_destroywithitems(ctx->files, (ApeDataCallback_t)ape_compfile_destroy);
     ape_errorlist_destroy(&ctx->errors);
@@ -91,15 +93,6 @@ void ape_context_deinit(ApeContext_t* ctx)
 void ape_context_freeallocated(ApeContext_t* ctx, void* ptr)
 {
     ape_allocator_free(&ctx->alloc, ptr);
-}
-
-/** TODO: ctx->pseudoclasses should perhaps be a StrDict, for better lookup? */
-ApePseudoClass_t* ape_context_make_pseudoclass(ApeContext_t* ctx, ApeStrDict_t* dictref, const char* classname)
-{
-    ApePseudoClass_t* psc;
-    psc = ape_make_pseudoclass(ctx, dictref, classname);
-    ape_ptrarray_push(ctx->pseudoclasses, psc);
-    return psc;
 }
 
 bool ape_context_settimeout(ApeContext_t* ctx, ApeFloat_t max_execution_time_ms)

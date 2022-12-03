@@ -591,7 +591,7 @@ void ape_builtins_install_array(ApeVM_t* vm)
         #endif
         {NULL, false, NULL},
     };
-    psc = ape_context_make_pseudoclass(vm->context, vm->context->objarrayfuncs, classname);
+    psc = ape_context_make_pseudoclass(vm->context, vm->context->objarrayfuncs, APE_OBJECT_ARRAY, classname);
     for(i=0; memberfuncs[i].name != NULL; i++)
     {
         //ape_strdict_set(vm->context->objarrayfuncs, classname, memberfuncs[i].name, &memberfuncs[i]);

@@ -123,22 +123,22 @@ ApeCompScope_t* ape_make_compscope(ApeContext_t* ctx, ApeCompScope_t* outer)
     scope->context = ctx;
     scope->alloc = &ctx->alloc;
     scope->outer = outer;
-    scope->bytecode = array_make(ctx, ApeUShort_t);
+    scope->bytecode = ape_make_valarray(ctx, ApeUShort_t);
     if(!scope->bytecode)
     {
         goto err;
     }
-    scope->srcpositions = array_make(ctx, ApePosition_t);
+    scope->srcpositions = ape_make_valarray(ctx, ApePosition_t);
     if(!scope->srcpositions)
     {
         goto err;
     }
-    scope->breakipstack = array_make(ctx, int);
+    scope->breakipstack = ape_make_valarray(ctx, int);
     if(!scope->breakipstack)
     {
         goto err;
     }
-    scope->continueipstack = array_make(ctx, int);
+    scope->continueipstack = ape_make_valarray(ctx, int);
     if(!scope->continueipstack)
     {
         goto err;
@@ -439,12 +439,12 @@ bool ape_compiler_init(ApeCompiler_t* comp, ApeContext_t* ctx, const ApeConfig_t
     {
         goto err;
     }
-    comp->constants = array_make(ctx, ApeObject_t);
+    comp->constants = ape_make_valarray(ctx, ApeObject_t);
     if(!comp->constants)
     {
         goto err;
     }
-    comp->srcpositionsstack = array_make(ctx, ApePosition_t);
+    comp->srcpositionsstack = ape_make_valarray(ctx, ApePosition_t);
     if(!comp->srcpositionsstack)
     {
         goto err;
@@ -975,7 +975,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* s
         case APE_STMT_IF:
             {
                 ifstmt = &stmt->ifstatement;
-                jumptoendips = array_make(comp->context, ApeInt_t);
+                jumptoendips = ape_make_valarray(comp->context, ApeInt_t);
                 if(!jumptoendips)
                 {
                     goto statementiferror;

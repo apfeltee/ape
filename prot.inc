@@ -98,9 +98,6 @@ bool ape_vm_getindex(ApeVM_t *vm, ApeObject_t left, ApeObject_t index, ApeObjTyp
 bool ape_vm_math(ApeVM_t *vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValue_t opcode);
 bool ape_vm_executefunction(ApeVM_t *vm, ApeObject_t function, ApeValArray_t *constants);
 /* libobject.c */
-ApePseudoClass_t *ape_make_pseudoclass(ApeContext_t *ctx, ApeStrDict_t *dictref, const char *classname);
-void *ape_pseudoclass_destroy(ApePseudoClass_t *psc);
-bool ape_pseudoclass_setmethod(ApePseudoClass_t *psc, const char *name, ApeObjMemberItem_t *itm);
 ApeObject_t ape_object_make_number(ApeContext_t *ctx, ApeFloat_t val);
 ApeObject_t ape_object_make_bool(ApeContext_t *ctx, bool val);
 ApeObject_t ape_object_make_null(ApeContext_t *ctx);
@@ -150,7 +147,6 @@ ApeContext_t *ape_make_contextex(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t f
 void ape_context_destroy(ApeContext_t *ctx);
 void ape_context_deinit(ApeContext_t *ctx);
 void ape_context_freeallocated(ApeContext_t *ctx, void *ptr);
-ApePseudoClass_t *ape_context_make_pseudoclass(ApeContext_t *ctx, ApeStrDict_t *dictref, const char *classname);
 bool ape_context_settimeout(ApeContext_t *ctx, ApeFloat_t max_execution_time_ms);
 void ape_context_setstdoutwrite(ApeContext_t *ctx, ApeIOStdoutWriteFunc_t stdout_write, void *context);
 void ape_context_setfilewrite(ApeContext_t *ctx, ApeIOWriteFunc_t file_write, void *context);
@@ -225,6 +221,16 @@ bool casecmplen(const char *s1, size_t l1, const char *s2, size_t l2);
 bool casecmp(const char *s1, const char *s2);
 bool icontains(const char **strlist, const char *findme);
 int main(int argc, char *argv[]);
+/* libpseudo.c */
+ApePseudoClass_t *ape_make_pseudoclass(ApeContext_t *ctx, ApeStrDict_t *dictref, const char *classname);
+void *ape_pseudoclass_destroy(ApePseudoClass_t *psc);
+bool ape_pseudoclass_setmethod(ApePseudoClass_t *psc, const char *name, ApeObjMemberItem_t *itm);
+ApeObjMemberItem_t *ape_pseudoclass_getmethodbyhash(ApePseudoClass_t *psc, const char *name, unsigned long hash);
+ApeObjMemberItem_t *ape_pseudoclass_getmethodbyname(ApePseudoClass_t *psc, const char *name);
+ApePseudoClass_t *ape_context_make_pseudoclass(ApeContext_t *ctx, ApeStrDict_t *dictref, ApeObjType_t typ, const char *classname);
+ApePseudoClass_t *ape_context_findpseudoclassbytype(ApeContext_t *ctx, ApeObjType_t typ);
+ApeObjMemberItem_t *ape_builtin_find_objectfunc(ApeContext_t *ctx, ApeStrDict_t *dict, const char *idxname, unsigned long idxhash);
+ApeObjMemberItem_t *builtin_get_object(ApeContext_t *ctx, ApeObjType_t objt, const char *idxname, unsigned long idxhash);
 /* ccparse.c */
 ApeExpression_t *ape_ast_make_identexpr(ApeContext_t *ctx, ApeIdent_t *ident);
 ApeExpression_t *ape_ast_make_numberliteralexpr(ApeContext_t *ctx, ApeFloat_t val);
@@ -468,9 +474,9 @@ const char *ape_tostring_tokentype(ApeTokenType_t type);
 /* builtins.c */
 ApeObjType_t *ape_args_make_typarray(int first, ...);
 void ape_args_checkinit(ApeVM_t *vm, ApeArgCheck_t *check, const char *name, ApeSize_t argc, ApeObject_t *args);
-void ape_args_raisetyperror(ApeArgCheck_t *check, ApeSize_t ix, ApeObjType_t typ);
-bool ape_args_checkoptional(ApeArgCheck_t *check, ApeSize_t ix, ApeObjType_t typ, bool raisetyperror);
-bool ape_args_checktype(ApeArgCheck_t *check, ApeSize_t ix, ApeObjType_t typ);
+void ape_args_raisetyperror(ApeArgCheck_t *check, ApeSize_t ix, int typ);
+bool ape_args_checkoptional(ApeArgCheck_t *check, ApeSize_t ix, int typ, bool raisetyperror);
+bool ape_args_checktype(ApeArgCheck_t *check, ApeSize_t ix, int typ);
 bool ape_args_check(ApeVM_t *vm, bool generate_error, ApeSize_t argc, ApeObject_t *args, ApeSize_t expected_argc, const ApeObjType_t *expected_types);
 void ape_builtins_setup_namespace(ApeVM_t *vm, const char *nsname, ApeNativeItem_t *fnarray);
 void ape_builtins_install_vm(ApeVM_t *vm);
@@ -479,5 +485,3 @@ void ape_builtins_install(ApeVM_t *vm);
 ApeSize_t ape_builtins_count(void);
 ApeNativeFuncPtr_t ape_builtins_getfunc(ApeSize_t ix);
 const char *ape_builtins_getname(ApeSize_t ix);
-ApeObjMemberItem_t *ape_builtin_find_objectfunc(ApeContext_t *ctx, ApeStrDict_t *dict, const char *idxname, unsigned long idxhash);
-ApeObjMemberItem_t *builtin_get_object(ApeContext_t *ctx, ApeObjType_t objt, const char *idxname, unsigned long idxhash);
