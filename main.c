@@ -47,6 +47,7 @@ struct Options_t
     const char* debugmode;
     bool printast;
     bool printbytecode;
+    bool alsorun;
     int n_paths;
     const char** paths;
     const char* codeline;
@@ -161,7 +162,7 @@ static void do_repl(ApeContext_t* ctx)
     char* line;
     char* object_str;
     ApeObject_t res;
-    ape_context_setreplmode(ctx, true);
+    ctx->config.replmode = true;
     ape_context_settimeout(ctx, 100.0);
     while(true)
     {
@@ -209,6 +210,7 @@ static bool parse_options(Options_t* opts, Flag_t* flags, int fcnt)
     opts->package = NULL;
     opts->filename = NULL;
     opts->debugmode = NULL;
+    opts->alsorun = false;
     opts->printast = false;
     opts->printbytecode = false;
     for(i=0; i<fcnt; i++)
@@ -219,6 +221,11 @@ static bool parse_options(Options_t* opts, Flag_t* flags, int fcnt)
                 {
                     show_usage();
                     return false;
+                }
+                break;
+            case 'x':
+                {
+                    opts->alsorun = true;
                 }
                 break;
             case 'e':
@@ -342,6 +349,7 @@ int main(int argc, char* argv[])
     }
     else
     {
+        ctx->config.runafterdump = opts.alsorun;
         ape_context_setnativefunction(ctx, "exit", exit_repl, &replexit);
         if(opts.printast)
         {

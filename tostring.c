@@ -1,4 +1,5 @@
 
+#include <inttypes.h>
 #include "ape.h"
 
 static const char* g_type_names[] = {
@@ -110,7 +111,7 @@ const char* ape_tostring_exprtype(ApeExprType_t type)
 
 
 
-static bool ape_tostring_opcodecoderead(ApeOpcodeDef_t* def, ApeUShort_t* instr, uint64_t outop[2])
+static bool ape_tostring_opcodecoderead(ApeOpcodeDef_t* def, ApeUShort_t* instr, ApeOpByte_t outop[2])
 {
     ApeSize_t i;
     int offset = 0;
@@ -126,7 +127,7 @@ static bool ape_tostring_opcodecoderead(ApeOpcodeDef_t* def, ApeUShort_t* instr,
             }
             case 2:
             {
-                uint64_t operand = 0;
+                ApeOpByte_t operand = 0;
                 operand = operand | (instr[offset] << 8);
                 operand = operand | (instr[offset + 1]);
                 outop[i] = operand;
@@ -134,7 +135,7 @@ static bool ape_tostring_opcodecoderead(ApeOpcodeDef_t* def, ApeUShort_t* instr,
             }
             case 4:
             {
-                uint64_t operand = 0;
+                ApeOpByte_t operand = 0;
                 operand = operand | (instr[offset + 0] << 24);
                 operand = operand | (instr[offset + 1] << 16);
                 operand = operand | (instr[offset + 2] << 8);
@@ -144,15 +145,15 @@ static bool ape_tostring_opcodecoderead(ApeOpcodeDef_t* def, ApeUShort_t* instr,
             }
             case 8:
             {
-                uint64_t operand = 0;
-                operand = operand | ((uint64_t)instr[offset + 0] << 56);
-                operand = operand | ((uint64_t)instr[offset + 1] << 48);
-                operand = operand | ((uint64_t)instr[offset + 2] << 40);
-                operand = operand | ((uint64_t)instr[offset + 3] << 32);
-                operand = operand | ((uint64_t)instr[offset + 4] << 24);
-                operand = operand | ((uint64_t)instr[offset + 5] << 16);
-                operand = operand | ((uint64_t)instr[offset + 6] << 8);
-                operand = operand | ((uint64_t)instr[offset + 7]);
+                ApeOpByte_t operand = 0;
+                operand = operand | ((ApeOpByte_t)instr[offset + 0] << 56);
+                operand = operand | ((ApeOpByte_t)instr[offset + 1] << 48);
+                operand = operand | ((ApeOpByte_t)instr[offset + 2] << 40);
+                operand = operand | ((ApeOpByte_t)instr[offset + 3] << 32);
+                operand = operand | ((ApeOpByte_t)instr[offset + 4] << 24);
+                operand = operand | ((ApeOpByte_t)instr[offset + 5] << 16);
+                operand = operand | ((ApeOpByte_t)instr[offset + 6] << 8);
+                operand = operand | ((ApeOpByte_t)instr[offset + 7]);
                 outop[i] = operand;
                 break;
             }
@@ -336,6 +337,7 @@ bool ape_tostring_statement(ApeWriter_t* buf, ApeStatement_t* stmt)
 bool ape_tostring_expression(ApeWriter_t* buf, ApeExpression_t* expr)
 {
     ApeSize_t i;
+    ApeFloat_t fltnum;
     ApeExpression_t* arrexpr;
     ApeMapLiteral_t* mapexpr;
     ApeExpression_t* keyexpr;
@@ -353,7 +355,17 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeExpression_t* expr)
             break;
         case APE_EXPR_LITERALNUMBER:
             {
-                ape_writer_appendf(buf, "%1.17g", expr->numberliteral);
+                fltnum = expr->numberliteral;
+                //ape_writer_appendf(buf, "%1.17g", fltnum);
+                if(fltnum == ((ApeInt_t)fltnum))
+                {
+                    //ape_writer_appendf(buf, "%" PRId64, (ApeInt_t)fltnum);
+                    ape_writer_appendf(buf, "%" PRIi64, (ApeInt_t)fltnum);
+                }
+                else
+                {
+                    ape_writer_appendf(buf, "%g", fltnum);
+                }
             }
             break;
         case APE_EXPR_LITERALBOOL:
@@ -531,10 +543,10 @@ bool ape_tostring_bytecode(ApeWriter_t* buf, ApeUShort_t* code, ApePosition_t* s
 {
     bool ok;
     unsigned int pos;
-    uint64_t operands[2];
+    ApeOpByte_t operands[2];
     ApeSize_t i;
     ApeUShort_t op;
-    ApeFloat_t dv;
+    double dv;
     ApeOpcodeDef_t* def;
     ApePosition_t srcpos;
     pos = 0;
@@ -562,8 +574,18 @@ bool ape_tostring_bytecode(ApeWriter_t* buf, ApeUShort_t* code, ApePosition_t* s
             ape_writer_append(buf, " ");
             if(op == APE_OPCODE_MKNUMBER)
             {
-                dv = ape_util_uinttofloat(operands[i]);
-                ape_writer_appendf(buf, "%1.17g", dv);
+                //dv = ape_util_uinttofloat(operands[i]);
+                dv = (ApeFloat_t)operands[i];
+                //ape_writer_appendf(buf, "%1.17g", dv);
+                if(dv == ((ApeInt_t)dv))
+                {
+                    //ape_writer_appendf(buf, "%" PRId64, (ApeInt_t)fltnum);
+                    ape_writer_appendf(buf, "int<%" PRIi64 ">", (ApeInt_t)dv);
+                }
+                else
+                {
+                    ape_writer_appendf(buf, "flt<%f>", dv);
+                }
             }
             else
             {

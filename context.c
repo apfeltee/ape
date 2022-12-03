@@ -36,6 +36,7 @@ ApeContext_t* ape_make_contextex(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t f
     {
         goto err;
     }
+    ctx->pseudoclasses = ape_make_ptrarray(ctx);
     ctx->globalstore = ape_make_globalstore(ctx, ctx->mem);
     if(!ctx->globalstore)
     {
@@ -52,6 +53,9 @@ ApeContext_t* ape_make_contextex(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t f
         goto err;
     }
     ctx->vm->context = ctx;
+    ctx->objstringfuncs = ape_make_strdict(ctx, NULL, NULL);
+    ctx->objarrayfuncs = ape_make_strdict(ctx, NULL, NULL);
+
     ape_builtins_install(ctx->vm);
     return ctx;
 err:
@@ -71,14 +75,31 @@ void ape_context_destroy(ApeContext_t* ctx)
     ape_allocator_free(&alloc, ctx);
 }
 
+void ape_context_deinit(ApeContext_t* ctx)
+{
+    ape_strdict_destroy(ctx->objstringfuncs);
+    ape_strdict_destroy(ctx->objarrayfuncs);
+    ape_vm_destroy(ctx->vm);
+    ape_compiler_destroy(ctx->compiler);
+    ape_globalstore_destroy(ctx->globalstore);
+    ape_gcmem_destroy(ctx->mem);
+    ape_ptrarray_destroywithitems(ctx->pseudoclasses, (ApeDataCallback_t)ape_pseudoclass_destroy);
+    ape_ptrarray_destroywithitems(ctx->files, (ApeDataCallback_t)ape_compfile_destroy);
+    ape_errorlist_destroy(&ctx->errors);
+}
+
 void ape_context_freeallocated(ApeContext_t* ctx, void* ptr)
 {
     ape_allocator_free(&ctx->alloc, ptr);
 }
 
-void ape_context_setreplmode(ApeContext_t* ctx, bool enabled)
+/** TODO: ctx->pseudoclasses should perhaps be a StrDict, for better lookup? */
+ApePseudoClass_t* ape_context_make_pseudoclass(ApeContext_t* ctx, ApeStrDict_t* dictref, const char* classname)
 {
-    ctx->config.replmode = enabled;
+    ApePseudoClass_t* psc;
+    psc = ape_make_pseudoclass(ctx, dictref, classname);
+    ape_ptrarray_push(ctx->pseudoclasses, psc);
+    return psc;
 }
 
 bool ape_context_settimeout(ApeContext_t* ctx, ApeFloat_t max_execution_time_ms)
@@ -157,6 +178,11 @@ ApeObject_t ape_context_executesource(ApeContext_t* ctx, const char* code, bool 
     if(ctx->config.dumpbytecode)
     {
         ape_context_dumpbytecode(ctx, cres);
+        if(!ctx->config.runafterdump)
+        {
+            ape_compresult_destroy(cres);
+            return ape_object_make_null(ctx);
+        }
     }
     ok = ape_vm_run(ctx->vm, cres, ape_compiler_getconstants(ctx->compiler));
     if(!ok || ape_errorlist_count(&ctx->errors) > 0)
@@ -191,6 +217,11 @@ ApeObject_t ape_context_executefile(ApeContext_t* ctx, const char* path)
     if(ctx->config.dumpbytecode)
     {
         ape_context_dumpbytecode(ctx, cres);
+        if(!ctx->config.runafterdump)
+        {
+            ape_compresult_destroy(cres);
+            return ape_object_make_null(ctx);
+        }
     }
     ok = ape_vm_run(ctx->vm, cres, ape_compiler_getconstants(ctx->compiler));
     if(!ok || ape_errorlist_count(&ctx->errors) > 0)
@@ -286,16 +317,6 @@ char* ape_context_errortostring(ApeContext_t* ctx, ApeError_t* err)
     return ape_writer_getstringanddestroy(buf);
 }
 
-void ape_context_deinit(ApeContext_t* ctx)
-{
-    ape_vm_destroy(ctx->vm);
-    ape_compiler_destroy(ctx->compiler);
-    ape_globalstore_destroy(ctx->globalstore);
-    ape_gcmem_destroy(ctx->mem);
-    ape_ptrarray_destroywithitems(ctx->files, (ApeDataCallback_t)ape_compfile_destroy);
-    ape_errorlist_destroy(&ctx->errors);
-}
-
 static ApeObject_t ape_context_wrapnativefunc(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     ApeObject_t objres;
@@ -338,10 +359,11 @@ void ape_context_resetstate(ApeContext_t* ctx)
 void ape_context_setdefaultconfig(ApeContext_t* ctx)
 {
     memset(&ctx->config, 0, sizeof(ApeConfig_t));
+    ctx->config.runafterdump = false;
     ctx->config.dumpbytecode = false;
     ctx->config.dumpast = false;
     ctx->config.dumpstack = false;
-    ape_context_setreplmode(ctx, false);
+    ctx->config.replmode = false;
     ape_context_settimeout(ctx, -1);
     ape_context_setfileread(ctx, ape_util_default_readfile, ctx);
     ape_context_setfilewrite(ctx, ape_util_default_writefile, ctx);

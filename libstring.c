@@ -412,7 +412,10 @@ static ApeObject_t cfn_string_join(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
 
 void ape_builtins_install_string(ApeVM_t* vm)
 {
-    static ApeNativeItem_t stringfuncs[]=
+    ApeSize_t i;
+    ApePseudoClass_t* psc;
+    static const char classname[] = "String";
+    static ApeNativeItem_t staticfuncs[]=
     {
         {"join", cfn_string_join},
         { "chr", cfn_string_chr },
@@ -422,18 +425,33 @@ void ape_builtins_install_string(ApeVM_t* vm)
         #endif
         {NULL, NULL},
     };
-    ape_builtins_setup_namespace(vm, "String", stringfuncs);    
-}
 
-bool ape_builtin_objectfunc_find_string(ApeContext_t* ctx, const char* idxname, ApeObjMemberItem_t* dest)
-{
-    static ApeObjMemberItem_t funcs[]=
+    static ApeObjMemberItem_t memberfuncs[]=
     {
         {"length", false, objfn_string_length},
         {"split", true, objfn_string_split},
         {"index", true, objfn_string_indexof},
         {"substr", true, objfn_string_substr},
+
+        /* TODO: implement me! */
+        #if 0
+        //{"", true, objfn_string_},
+        {"upper", true, objfn_string_toupper},
+        {"lower", true, objfn_string_tolower},
+        {"toupper", true, objfn_string_toupper},
+        {"tolower", true, objfn_string_tolower},
+        {"strip", true, objfn_string_stripall},
+        {"rstrip", true, objfn_string_stripright},
+        {"lstrip", true, objfn_string_stripleft},
+        {"match", true, objfn_string_matchrx},
+        {"contains", true, objfn_string_contains},
+        #endif
         {NULL, false, NULL},
     };
-    return ape_builtin_find_objectfunc(ctx, funcs, idxname, dest);
+    ape_builtins_setup_namespace(vm, classname, staticfuncs);
+    psc = ape_context_make_pseudoclass(vm->context, vm->context->objstringfuncs, classname);
+    for(i=0; memberfuncs[i].name != NULL; i++)
+    {
+        ape_pseudoclass_setmethod(psc, memberfuncs[i].name, &memberfuncs[i]);
+    }
 }

@@ -2,6 +2,31 @@
 #include <inttypes.h>
 #include "ape.h"
 
+ApePseudoClass_t* ape_make_pseudoclass(ApeContext_t* ctx, ApeStrDict_t* dictref, const char* classname)
+{
+    ApePseudoClass_t* psc;
+    psc = (ApePseudoClass_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApePseudoClass_t));
+    memset(psc, 0, sizeof(ApePseudoClass_t));
+    psc->context = ctx;
+    psc->classname = classname;
+    psc->fndictref = dictref;
+    return psc;
+}
+
+void* ape_pseudoclass_destroy(ApePseudoClass_t* psc)
+{
+    ApeContext_t* ctx;
+    ctx = psc->context;
+    ape_allocator_free(&ctx->alloc, psc);
+    psc = NULL;
+    return NULL;
+}
+
+bool ape_pseudoclass_setmethod(ApePseudoClass_t* psc, const char* name, ApeObjMemberItem_t* itm)
+{
+    return ape_strdict_set(psc->fndictref, name, itm);
+}
+
 ApeObject_t ape_object_make_number(ApeContext_t* ctx, ApeFloat_t val)
 {
     ApeObjData_t* data;
@@ -10,7 +35,6 @@ ApeObject_t ape_object_make_number(ApeContext_t* ctx, ApeFloat_t val)
     {
         data = ape_gcmem_allocobjdata(ctx->mem, APE_OBJECT_NUMBER);
     }
-
     if(!data)
     {
         fprintf(stderr, "ape_object_make_number: failed to get data?\n");
@@ -459,7 +483,6 @@ ApeObject_t ape_object_getkvpairat(ApeContext_t* ctx, ApeObject_t object, int ix
     return res;
 }
 
-
 // INTERNAL
 ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj, ApeValDict_t * copies)
 {
@@ -483,7 +506,7 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
     ApeObject_t copy;
     ApeObject_t* copy_ptr;
     ApeObjType_t type;
-    copy_ptr = (ApeObject_t*)ape_valdict_get(copies, &obj);
+    copy_ptr = (ApeObject_t*)ape_valdict_getbykey(copies, &obj);
     if(copy_ptr)
     {
         return *copy_ptr;

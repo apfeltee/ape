@@ -1112,6 +1112,13 @@ static ApeNativeItem_t g_core_globalfuncs[] =
 {
     { "println", cfn_println },
     { "print", cfn_print },
+    /*
+    * tostring and to(_num|int) *should* be in Object, but because
+    * the compiler wraps template strings in tostring(), and because
+    * getting Object.tostring would result in slightly more computation,
+    * they remain as global functions.
+    * at least for now, anyway.
+    */
     { "tostring", cfn_tostring },
 
     { "to_num", cfn_toint },
@@ -1157,16 +1164,15 @@ void ape_builtins_setup_namespace(ApeVM_t* vm, const char* nsname, ApeNativeItem
     ape_globalstore_set(vm->globalstore, nsname, map);
 }
 
-
 void ape_builtins_install_vm(ApeVM_t* vm)
 {
-    static ApeNativeItem_t vmfuncs[]=
+    static ApeNativeItem_t staticfuncs[]=
     {
         {"sweep", cfn_vm_gcsweep},
         {"collect", cfn_vm_gccollect},
         {NULL, NULL},
     };
-    ape_builtins_setup_namespace(vm, "VM", vmfuncs);    
+    ape_builtins_setup_namespace(vm, "VM", staticfuncs);    
 }
 
 void ape_builtins_install_object(ApeVM_t* vm)
@@ -1174,7 +1180,7 @@ void ape_builtins_install_object(ApeVM_t* vm)
     /*
     Object.copy instead of clone?
     */
-    static ApeNativeItem_t objectfuncs[]=
+    static ApeNativeItem_t staticfuncs[]=
     {
         {"isstring", cfn_object_isstring},
         {"isarray", cfn_object_isarray },
@@ -1199,7 +1205,7 @@ void ape_builtins_install_object(ApeVM_t* vm)
         { "deepcopy", cfn_object_deepcopy },
         {NULL, NULL},
     };
-    ape_builtins_setup_namespace(vm, "Object", objectfuncs);
+    ape_builtins_setup_namespace(vm, "Object", staticfuncs);
 }
 
 /* TODO: this is an attempt to get rid of (most) global functions. */
@@ -1208,6 +1214,7 @@ void ape_builtins_install(ApeVM_t* vm)
     ape_builtins_install_object(vm);
     ape_builtins_install_io(vm);
     ape_builtins_install_string(vm);
+    ape_builtins_install_array(vm);
     ape_builtins_install_math(vm);
     ape_builtins_install_vm(vm);
 }
@@ -1227,42 +1234,28 @@ const char* ape_builtins_getname(ApeSize_t ix)
     return g_core_globalfuncs[ix].name;
 }
 
-bool ape_builtin_find_objectfunc(ApeContext_t* ctx, ApeObjMemberItem_t* nf, const char* idxname, ApeObjMemberItem_t* dest)
+ApeObjMemberItem_t* ape_builtin_find_objectfunc(ApeContext_t* ctx, ApeStrDict_t* dict, const char* idxname, unsigned long idxhash)
 {
+    ApeObjMemberItem_t* p;
     ApeInt_t i;
     (void)ctx;
-    for(i=0; nf[i].name != NULL; i++)
+    p = (ApeObjMemberItem_t*)ape_strdict_getbyhash(dict, idxname, idxhash);
+    if(p != NULL)
     {
-        if(APE_STREQ(nf[i].name, idxname))
-        {
-            *dest = nf[i];
-            return true;
-        }
+        return p;
     }
-    return false;
+    return NULL;
 }
 
-
-
-/*
-* this function is meant as a callback for builtin object methods.
-*
-*  ** IT IS CURRENTLY NOT USED **
-*
-* since the compiler compiles dot notation (foo.bar) and bracket-notation (foo["bar"]) into
-* the same instructions, there is currently no clear way of how and where to best insert
-* lookups to these functions.
-*/
-
-bool builtin_get_object(ApeContext_t* ctx, ApeObjType_t objt, const char* idxname, ApeObjMemberItem_t* dest)
+ApeObjMemberItem_t* builtin_get_object(ApeContext_t* ctx, ApeObjType_t objt, const char* idxname, unsigned long idxhash)
 {
     if(objt == APE_OBJECT_STRING)
     {
-        return ape_builtin_objectfunc_find_string(ctx, idxname, dest);
+        return ape_builtin_find_objectfunc(ctx, ctx->objstringfuncs, idxname, idxhash);
     }
     else if(objt == APE_OBJECT_ARRAY)
     {
-        return ape_builtin_objectfunc_find_array(ctx, idxname, dest);
+        return ape_builtin_find_objectfunc(ctx, ctx->objarrayfuncs, idxname, idxhash);
     }
-    return false;
+    return NULL;
 }

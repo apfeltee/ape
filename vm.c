@@ -190,7 +190,7 @@ void ape_globalstore_destroy(ApeGlobalStore_t* store)
 
 ApeSymbol_t* ape_globalstore_getsymbol(ApeGlobalStore_t* store, const char* name)
 {
-    return (ApeSymbol_t*)ape_strdict_get(store->symbols, name);
+    return (ApeSymbol_t*)ape_strdict_getbyname(store->symbols, name);
 }
 
 bool ape_globalstore_set(ApeGlobalStore_t* store, const char* name, ApeObject_t object)
@@ -571,7 +571,7 @@ ApeSymbol_t* ape_symtable_resolve(ApeSymTable_t* table, const char* name)
     for(i = (ApeInt_t)ape_ptrarray_count(table->blockscopes) - 1; i >= 0; i--)
     {
         scope = (ApeBlockScope_t*)ape_ptrarray_get(table->blockscopes, i);
-        symbol = (ApeSymbol_t*)ape_strdict_get(scope->store, name);
+        symbol = (ApeSymbol_t*)ape_strdict_getbyname(scope->store, name);
         if(symbol)
         {
             break;
@@ -609,7 +609,7 @@ bool ape_symtable_symbol_is_defined(ApeSymTable_t* table, const char* name)
         return true;
     }
     top_scope = (ApeBlockScope_t*)ape_ptrarray_top(table->blockscopes);
-    symbol = (ApeSymbol_t*)ape_strdict_get(top_scope->store, name);
+    symbol = (ApeSymbol_t*)ape_strdict_getbyname(top_scope->store, name);
     if(symbol)
     {
         return true;
@@ -744,7 +744,7 @@ static bool ape_vm_setsymbol(ApeSymTable_t* table, ApeSymbol_t* symbol)
     ApeBlockScope_t* top_scope;
     ApeSymbol_t* existing;
     top_scope = (ApeBlockScope_t*)ape_ptrarray_top(table->blockscopes);
-    existing= (ApeSymbol_t*)ape_strdict_get(top_scope->store, symbol->name);
+    existing= (ApeSymbol_t*)ape_strdict_getbyname(top_scope->store, symbol->name);
     if(existing)
     {
         ape_symbol_destroy(existing);
@@ -788,7 +788,7 @@ static int ape_vm_countnumdefs(ApeSymTable_t* table)
         }                                        \
     } while(0)
 
-int ape_make_code(ApeOpByte_t op, ApeSize_t operands_count, uint64_t* operands, ApeValArray_t* res)
+int ape_make_code(ApeOpByte_t op, ApeSize_t operands_count, ApeOpByte_t* operands, ApeValArray_t* res)
 {
     ApeSize_t i;
     int width;
@@ -886,21 +886,21 @@ ApeOpcodeValue_t ape_frame_readopcode(ApeFrame_t* frame)
     return (ApeOpcodeValue_t)ape_frame_readuint8(frame);
 }
 
-uint64_t ape_frame_readuint64(ApeFrame_t* frame)
+ApeOpByte_t ape_frame_readuint64(ApeFrame_t* frame)
 {
-    uint64_t res;
+    ApeOpByte_t res;
     const ApeUShort_t* data;
     data = frame->bytecode + frame->ip;
     frame->ip += 8;
     res = 0;
-    res |= (uint64_t)data[7];
-    res |= (uint64_t)data[6] << 8;
-    res |= (uint64_t)data[5] << 16;
-    res |= (uint64_t)data[4] << 24;
-    res |= (uint64_t)data[3] << 32;
-    res |= (uint64_t)data[2] << 40;
-    res |= (uint64_t)data[1] << 48;
-    res |= (uint64_t)data[0] << 56;
+    res |= (ApeOpByte_t)data[7];
+    res |= (ApeOpByte_t)data[6] << 8;
+    res |= (ApeOpByte_t)data[5] << 16;
+    res |= (ApeOpByte_t)data[4] << 24;
+    res |= (ApeOpByte_t)data[3] << 32;
+    res |= (ApeOpByte_t)data[2] << 40;
+    res |= (ApeOpByte_t)data[1] << 48;
+    res |= (ApeOpByte_t)data[0] << 56;
     return res;
 }
 
@@ -1503,10 +1503,12 @@ bool ape_vm_appendstring(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOb
 bool ape_vm_getindex(ApeVM_t* vm, ApeObject_t left, ApeObject_t index, ApeObjType_t lefttype, ApeObjType_t indextype)
 {
     bool canindex;
+    unsigned long nhash;
     const char* str;
     const char* idxname;
     const char* indextypename;
     const char* lefttypename;
+    ApeSize_t idxlen;
     ApeInt_t ix;
     ApeInt_t leftlen;
     ApeObject_t objres;
@@ -1517,31 +1519,35 @@ bool ape_vm_getindex(ApeVM_t* vm, ApeObject_t left, ApeObject_t index, ApeObjTyp
     */
     #if 1
     {
-        int argc;
         ApeObject_t objfn;
         ApeObject_t objval;
-        ApeObjMemberItem_t afn;
-        argc = 0;
+        ApeObjMemberItem_t* afn;
         if(indextype == APE_OBJECT_STRING)
         {
             idxname = ape_object_string_getdata(index);
-            //fprintf(stderr, "index is a string: name=%s\n", idxname);
-            if(builtin_get_object(vm->context, lefttype, idxname, &afn))
+            idxlen = ape_object_string_getlength(index);
+            nhash = ape_util_hashstring(idxname, idxlen);
+            if((afn = builtin_get_object(vm->context, lefttype, idxname, nhash)) != NULL)
             {
                 objval = ape_object_make_null(vm->context);
-                if(afn.isfunction)
+                if(afn->isfunction)
                 {
-                    objfn = ape_object_make_nativefuncmemory(vm->context, idxname, afn.fn, NULL, 0);
-                    //ape_vm_pushstack(vm, afn(vm, NULL, argc, args));
-                    //ape_vm_popstack(vm);
-                    //ape_vm_pushstack(vm, left);
+                    /*
+                    * "normal" functions are pushed as generic, run-of-the-mill functions, except
+                    * that "this" is also pushed.
+                    */
+                    objfn = ape_object_make_nativefuncmemory(vm->context, idxname, afn->fn, NULL, 0);
                     ape_vm_pushthisstack(vm, left);
                     objval = objfn;
                 }
                 else
                 {
+                    /*
+                    * "non" functions (pseudo functions) like "length" receive no arguments whatsover,
+                    * only "this" is pushed.
+                    */
                     ape_vm_pushthisstack(vm, left);
-                    objval = afn.fn(vm, NULL, 0, NULL);
+                    objval = afn->fn(vm, NULL, 0, NULL);
                 }
                 ape_vm_pushstack(vm, objval);
                 return true;

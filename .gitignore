@@ -29,7 +29,8 @@ CMakeFiles*/*
 cmakefiles*
 CMakeFiles*/*
 misc/*
-
+deps
+deps/*
 # generated files from rt inspection
 *.log
 drmemory*

@@ -553,7 +553,6 @@ static ApeObject_t objfn_array_push(ApeVM_t* vm, void* data, ApeSize_t argc, Ape
 
 static ApeObject_t objfn_array_pop(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
-    size_t i;
     ApeObject_t self;
     ApeObject_t rt;
     (void)vm;
@@ -568,15 +567,35 @@ static ApeObject_t objfn_array_pop(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
     return ape_object_make_null(vm->context);
 }
 
-bool ape_builtin_objectfunc_find_array(ApeContext_t* ctx, const char* idxname, ApeObjMemberItem_t* dest)
+void ape_builtins_install_array(ApeVM_t* vm)
 {
-    static ApeObjMemberItem_t funcs[]=
+    ApeSize_t i;
+    ApePseudoClass_t* psc;
+    static const char classname[] = "Array";
+    static ApeObjMemberItem_t memberfuncs[]=
     {
         {"length", false, objfn_array_length},
         {"push", true, objfn_array_push},
         {"append", true, objfn_array_push},
         {"pop", true, objfn_array_pop},
+        /* TODO: implement me! */
+        #if 0
+        //{"", true, objfn_array_},
+        {"map", true, objfn_array_map},
+        {"sort", true, objfn_array_sort},
+        {"grep", true, objfn_array_grep},
+
+        // pseudo funcs
+        {"first", false, objfn_array_first},
+        {"last", false, objfn_array_first},
+        #endif
         {NULL, false, NULL},
     };
-    return ape_builtin_find_objectfunc(ctx, funcs, idxname, dest);
+    psc = ape_context_make_pseudoclass(vm->context, vm->context->objarrayfuncs, classname);
+    for(i=0; memberfuncs[i].name != NULL; i++)
+    {
+        //ape_strdict_set(vm->context->objarrayfuncs, classname, memberfuncs[i].name, &memberfuncs[i]);
+        ape_pseudoclass_setmethod(psc, memberfuncs[i].name, &memberfuncs[i]);
+    }
 }
+

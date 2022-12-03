@@ -107,13 +107,6 @@ THE SOFTWARE.
 #define APE_CONF_SIZE_ERRORS_MAXCOUNT (16)
 #define APE_CONF_SIZE_ERROR_MAXMSGLENGTH (128)
 
-
-#define valdict_make(ctx, key_type, val_type) \
-    ape_make_valdict_actual(ctx, sizeof(key_type), sizeof(val_type))
-
-#define array_make(allocator, type) \
-    ape_make_valarray_actual(allocator, sizeof(type))
-
 #define APE_STREQ(a, b) (strcmp((a), (b)) == 0)
 #define APE_STRNEQ(a, b, n) (strncmp((a), (b), (n)) == 0)
 #define APE_ARRAY_LEN(array) ((int)(sizeof(array) / sizeof(array[0])))
@@ -172,6 +165,13 @@ THE SOFTWARE.
 
 #define make_fn_entry(ctx, map, name, fnc) \
     make_fn_entry_data(ctx, map, name, fnc, NULL, 0)
+
+
+#define valdict_make(ctx, key_type, val_type) \
+    ape_make_valdict_actual(ctx, sizeof(key_type), sizeof(val_type))
+
+#define array_make(allocator, type) \
+    ape_make_valarray_actual(allocator, sizeof(type))
 
 /**/
 #define ape_object_value_allocated_data(obj) \
@@ -503,7 +503,7 @@ enum ApePrecedence_t
     PRECEDENCE_HIGHEST
 };
 
-typedef uint8_t ApeOpByte_t;
+typedef uint64_t ApeOpByte_t;
 typedef double ApeFloat_t;
 typedef int64_t ApeInt_t;
 typedef uint64_t ApeUInt_t;
@@ -584,6 +584,7 @@ typedef struct /**/ApeCompiler_t ApeCompiler_t;
 typedef struct /**/ApeNativeFuncWrapper_t ApeNativeFuncWrapper_t;
 typedef struct /**/ApeNativeItem_t ApeNativeItem_t;
 typedef struct /**/ApeObjMemberItem_t ApeObjMemberItem_t;
+typedef struct /**/ApePseudoClass_t ApePseudoClass_t;
 typedef struct /**/ApeArgCheck_t ApeArgCheck_t;
 
 
@@ -623,6 +624,13 @@ struct ApeNativeItem_t
 {
     const char* name;
     ApeNativeFuncPtr_t fn;
+};
+
+struct ApePseudoClass_t
+{
+    ApeContext_t* context;
+    const char* classname;
+    ApeStrDict_t* fndictref;
 };
 
 struct ApeObjMemberItem_t
@@ -760,6 +768,7 @@ struct ApeConfig_t
     bool replmode;
     double max_execution_time_ms;
     bool max_execution_time_set;
+    bool runafterdump;
     bool dumpast;
     bool dumpbytecode;
     bool dumpstack;
@@ -1136,8 +1145,8 @@ struct ApeValDict_t
     ApeSize_t valsize;
     unsigned int* cells;
     unsigned long* hashes;
-    void* keys;
-    void* values;
+    void** keys;
+    void** values;
     unsigned int* cellindices;
     ApeSize_t count;
     ApeSize_t itemcap;
@@ -1262,7 +1271,6 @@ struct ApeCompiler_t
     ApeStrDict_t* stringconstantspositions;
 };
 
-
 struct ApeProgram_t
 {
     ApeContext_t* context;
@@ -1274,12 +1282,16 @@ struct ApeContext_t
     ApeAllocator_t alloc;
     ApeGCMemory_t* mem;
     ApePtrArray_t* files;
+    ApePtrArray_t* pseudoclasses;
     ApeGlobalStore_t* globalstore;
     ApeCompiler_t* compiler;
     ApeVM_t* vm;
     ApeErrorList_t errors;
     ApeConfig_t config;
     ApeAllocator_t custom_allocator;
+    ApeStrDict_t* objstringfuncs;
+    ApeStrDict_t* objarrayfuncs;
+
 };
 
 
