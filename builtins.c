@@ -1108,6 +1108,37 @@ static ApeObject_t cfn_vm_gccollect(ApeVM_t* vm, void* data, ApeSize_t argc, Ape
     return ape_object_make_null(vm->context);
 }
 
+static ApeObject_t cfn_vm_stack(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+{
+    ApeSize_t i;
+    ApeInt_t idx;
+    ApeObject_t arr;
+    (void)data;
+    (void)argc;
+    (void)args;
+    if(argc > 0)
+    {
+        if(ape_object_value_type(args[0]) != APE_OBJECT_NUMBER)
+        {
+            ape_vm_adderror(vm, APE_ERROR_RUNTIME, "stack() optional argument must be a number");
+            return ape_object_make_null(vm->context);
+        }
+        idx = ape_object_value_asnumber(args[0]);
+        if(idx > (ApeInt_t)(vm->sp + 1))
+        {
+            ape_vm_adderror(vm, APE_ERROR_RUNTIME, "stack() optional argument out of bounds (idx=%d sp=%d)", idx, vm->sp);
+            return ape_object_make_null(vm->context);
+        }
+        return vm->stack[idx];
+    }
+    arr = ape_object_make_array(vm->context);
+    for(i=0; i<(ApeSize_t)(vm->sp + 1); i++)
+    {
+        ape_object_array_pushvalue(arr, vm->stack[i]);
+    }
+    return arr;
+}
+
 static ApeNativeItem_t g_core_globalfuncs[] =
 {
     { "println", cfn_println },
@@ -1170,6 +1201,7 @@ void ape_builtins_install_vm(ApeVM_t* vm)
     {
         {"sweep", cfn_vm_gcsweep},
         {"collect", cfn_vm_gccollect},
+        {"stack", cfn_vm_stack},
         {NULL, NULL},
     };
     ape_builtins_setup_namespace(vm, "VM", staticfuncs);    

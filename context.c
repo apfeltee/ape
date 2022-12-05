@@ -25,6 +25,7 @@ ApeContext_t* ape_make_contextex(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t f
         ctx->custom_allocator = custom_alloc;
     }
     ape_context_setdefaultconfig(ctx);
+    ctx->debugwriter = ape_make_writerio(ctx, stderr, false, true);
     ape_errorlist_initerrors(&ctx->errors);
     ctx->mem = ape_make_gcmem(ctx);
     if(!ctx->mem)
@@ -78,6 +79,7 @@ void ape_context_destroy(ApeContext_t* ctx)
 
 void ape_context_deinit(ApeContext_t* ctx)
 {
+    ape_writer_destroy(ctx->debugwriter);
     ape_strdict_destroy(ctx->objstringfuncs);
     ape_strdict_destroy(ctx->objarrayfuncs);
     ape_vm_destroy(ctx->vm);
@@ -93,6 +95,13 @@ void ape_context_deinit(ApeContext_t* ctx)
 void ape_context_freeallocated(ApeContext_t* ctx, void* ptr)
 {
     ape_allocator_free(&ctx->alloc, ptr);
+}
+
+void ape_context_debugvalue(ApeContext_t* ctx, const char* name, ApeObject_t val)
+{
+    ape_writer_appendf(ctx->debugwriter, "[DEBUG] %s = ", name);
+    ape_tostring_object(ctx->debugwriter, val, true);
+    ape_writer_append(ctx->debugwriter, "\n");
 }
 
 bool ape_context_settimeout(ApeContext_t* ctx, ApeFloat_t max_execution_time_ms)
@@ -254,16 +263,7 @@ ApeError_t* ape_context_geterror(ApeContext_t* ctx, int index)
     return ape_errorlist_getat(&ctx->errors, index);
 }
 
-bool ape_context_setnativefunction(ApeContext_t* ctx, const char* name, ApeWrappedNativeFunc_t fn, void* data)
-{
-    ApeObject_t obj;
-    obj = ape_context_makenamednative(ctx, name, fn, data);
-    if(ape_object_value_isnull(obj))
-    {
-        return false;
-    }
-    return ape_context_setglobal(ctx, name, obj);
-}
+
 
 bool ape_context_setglobal(ApeContext_t* ctx, const char* name, ApeObject_t obj)
 {
@@ -341,6 +341,17 @@ ApeObject_t ape_context_makenamednative(ApeContext_t* ctx, const char* name, Ape
         return ape_object_make_null(ctx);
     }
     return wrobj;
+}
+
+bool ape_context_setnativefunction(ApeContext_t* ctx, const char* name, ApeWrappedNativeFunc_t fn, void* data)
+{
+    ApeObject_t obj;
+    obj = ape_context_makenamednative(ctx, name, fn, data);
+    if(ape_object_value_isnull(obj))
+    {
+        return false;
+    }
+    return ape_context_setglobal(ctx, name, obj);
 }
 
 void ape_context_resetstate(ApeContext_t* ctx)

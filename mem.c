@@ -379,7 +379,7 @@ void ape_gcmem_markobject(ApeObject_t obj)
         case APE_OBJECT_SCRIPTFUNCTION:
             {
                 function = ape_object_value_asfunction(obj);
-                for(i = 0; i < function->free_vals_count; i++)
+                for(i = 0; i < function->numfreevals; i++)
                 {
                     free_val = ape_object_function_getfreeval(obj, i);
                     ape_gcmem_markobject(free_val);

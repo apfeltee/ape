@@ -649,16 +649,16 @@ struct ApeObjMemberItem_t
 
 struct ApeScriptFunction_t
 {
-    ApeObject_t* free_vals_allocated;
+    ApeObject_t* freevals;
     union
     {
         char* name;
         const char* const_name;
     };
-    ApeCompResult_t* comp_result;
-    ApeSize_t num_locals;
-    ApeSize_t num_args;
-    ApeSize_t free_vals_count;
+    ApeCompResult_t* compiledcode;
+    ApeSize_t numlocals;
+    ApeSize_t numargs;
+    ApeSize_t numfreevals;
     bool owns_data;
 };
 
@@ -1050,7 +1050,7 @@ struct ApeSymbol_t
     ApeAllocator_t* alloc;
     ApeSymbolType_t type;
     char* name;
-    ApeInt_t index;
+    ApeSize_t index;
     bool assignable;
 };
 
@@ -1287,17 +1287,48 @@ struct ApeProgram_t
 struct ApeContext_t
 {
     ApeAllocator_t alloc;
+
+    /* a writer instance that writes to stderr. use with ape_context_debug* */
+    ApeWriter_t* debugwriter;
+
+    /* object memory */
     ApeGCMemory_t* mem;
+
+    /* files being compiled, whether as main script, or include(), import(), etc */
     ApePtrArray_t* files;
+
+    /* array that stores pointers to pseudoclasses */
     ApePtrArray_t* pseudoclasses;
+
+    /* contains the typemapping of pseudoclasses where key is the typename */
     ApeStrDict_t* classmapping;
+
+    /* globally defined object */
     ApeGlobalStore_t* globalstore;
+
+    /* the main compiler instance - may spawn additional compiler instances */
     ApeCompiler_t* compiler;
+
+    /* the main VM instance - may spawn additional VM instances */
     ApeVM_t* vm;
+
+    /* the current list of errors (if any) */
     ApeErrorList_t errors;
+
+    /* the runtime configuration */
     ApeConfig_t config;
+
+    /* allocator that abstract malloc/free - TODO: not used right now, because it's broken */
     ApeAllocator_t custom_allocator;
+
+    /**
+    * stored member function mapping. string->funcpointer
+    */
+
+    /* string member functions */
     ApeStrDict_t* objstringfuncs;
+
+    /* array member functions */
     ApeStrDict_t* objarrayfuncs;
 
 };

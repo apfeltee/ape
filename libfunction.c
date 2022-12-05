@@ -21,19 +21,19 @@ ApeObject_t ape_object_make_function(ApeContext_t* ctx, const char* name, ApeCom
     {
         data->valscriptfunc.const_name = name ? name : "anonymous";
     }
-    data->valscriptfunc.comp_result = cres;
+    data->valscriptfunc.compiledcode = cres;
     data->valscriptfunc.owns_data = wdata;
-    data->valscriptfunc.num_locals = nloc;
-    data->valscriptfunc.num_args = nargs;
+    data->valscriptfunc.numlocals = nloc;
+    data->valscriptfunc.numargs = nargs;
     if(((ApeInt_t)fvcount) >= 0)
     {
-        data->valscriptfunc.free_vals_allocated = (ApeObject_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeObject_t) * fvcount);
-        if(!data->valscriptfunc.free_vals_allocated)
+        data->valscriptfunc.freevals = (ApeObject_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeObject_t) * fvcount);
+        if(!data->valscriptfunc.freevals)
         {
             return ape_object_make_null(ctx);
         }
     }
-    data->valscriptfunc.free_vals_count = fvcount;
+    data->valscriptfunc.numfreevals = fvcount;
     return object_make_from_data(ctx, APE_OBJECT_SCRIPTFUNCTION, data);
 }
 
@@ -93,12 +93,12 @@ ApeObject_t ape_object_function_getfreeval(ApeObject_t obj, ApeInt_t ix)
         return ape_object_make_null(data->context);
     }
     fun = &data->valscriptfunc;
-    APE_ASSERT((ix >= 0) && (ix < (ApeInt_t)fun->free_vals_count));
-    if((ix < 0) || (ix >= (ApeInt_t)fun->free_vals_count))
+    APE_ASSERT((ix >= 0) && (ix < (ApeInt_t)fun->numfreevals));
+    if((ix < 0) || (ix >= (ApeInt_t)fun->numfreevals))
     {
         return ape_object_make_null(data->context);
     }
-    return fun->free_vals_allocated[ix];
+    return fun->freevals[ix];
 
 }
 
@@ -114,12 +114,12 @@ void ape_object_function_setfreeval(ApeObject_t obj, ApeInt_t ix, ApeObject_t va
         return;
     }
     fun = &data->valscriptfunc;
-    APE_ASSERT((ix >= 0) && (ix < (ApeInt_t)fun->free_vals_count));
-    if((ix < 0) || (ix >= (ApeInt_t)fun->free_vals_count))
+    APE_ASSERT((ix >= 0) && (ix < (ApeInt_t)fun->numfreevals));
+    if((ix < 0) || (ix >= (ApeInt_t)fun->numfreevals))
     {
         return;
     }
-    fun->free_vals_allocated[ix] = val;
+    fun->freevals[ix] = val;
 }
 
 

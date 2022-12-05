@@ -325,6 +325,54 @@ static ApeObject_t objfn_string_indexof(ApeVM_t* vm, void* data, ApeSize_t argc,
     return ape_object_make_number(vm->context, -1);
 }
 
+
+static ApeObject_t objfn_string_charat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+{
+    char ch;
+    const char* inpstr;
+    ApeSize_t idx;
+    ApeSize_t inplen;
+    ApeObject_t self;
+    ApeArgCheck_t check;
+    (void)data;
+    (void)inplen;
+    ape_args_checkinit(vm, &check, "charAt", argc, args);
+    if(!ape_args_checktype(&check, 0, APE_OBJECT_NUMBER))
+    {
+        return ape_object_make_null(vm->context);
+    }
+    idx = ape_object_value_asnumber(args[0]);
+    self = ape_vm_popthisstack(vm);
+    inpstr = ape_object_string_getdata(self);
+    inplen = ape_object_string_getlength(self);
+    ch = inpstr[idx];
+    return ape_object_make_stringlen(vm->context, &ch, 1);
+}
+
+
+static ApeObject_t objfn_string_byteat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+{
+    char ch;
+    const char* inpstr;
+    ApeSize_t idx;
+    ApeSize_t inplen;
+    ApeObject_t self;
+    ApeArgCheck_t check;
+    (void)data;
+    (void)inplen;
+    ape_args_checkinit(vm, &check, "charAt", argc, args);
+    if(!ape_args_checktype(&check, 0, APE_OBJECT_NUMBER))
+    {
+        return ape_object_make_null(vm->context);
+    }
+    idx = ape_object_value_asnumber(args[0]);
+    self = ape_vm_popthisstack(vm);
+    inpstr = ape_object_string_getdata(self);
+    inplen = ape_object_string_getlength(self);
+    ch = inpstr[idx];
+    return ape_object_make_number(vm->context, ch);
+}
+
 static ApeObject_t cfn_string_chr(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     char c;
@@ -432,6 +480,11 @@ void ape_builtins_install_string(ApeVM_t* vm)
         {"split", true, objfn_string_split},
         {"index", true, objfn_string_indexof},
         {"substr", true, objfn_string_substr},
+
+        // js-isms
+        {"charAt", true, objfn_string_charat},
+        {"charCodeAt", true, objfn_string_byteat},
+        
 
         /* TODO: implement me! */
         #if 0

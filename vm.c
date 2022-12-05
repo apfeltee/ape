@@ -30,11 +30,11 @@ THE SOFTWARE.
 static const ApePosition_t g_vmpriv_srcposinvalid = { NULL, -1, -1 };
 
 
-static bool ape_vm_setsymbol(ApeSymTable_t *table, ApeSymbol_t *symbol);
-static int ape_vm_nextsymbolindex(ApeSymTable_t *table);
-static int ape_vm_countnumdefs(ApeSymTable_t *table);
-static void ape_vm_setstackpointer(ApeVM_t *vm, int new_sp);
-static bool ape_vm_tryoverloadoperator(ApeVM_t *vm, ApeObject_t left, ApeObject_t right, ApeOpByte_t op, bool *out_overload_found);
+bool ape_vm_setsymbol(ApeSymTable_t *table, ApeSymbol_t *symbol);
+int ape_vm_nextsymbolindex(ApeSymTable_t *table);
+int ape_vm_countnumdefs(ApeSymTable_t *table);
+void ape_vm_setstackpointer(ApeVM_t *vm, int new_sp);
+bool ape_vm_tryoverloadoperator(ApeVM_t *vm, ApeObject_t left, ApeObject_t right, ApeOpByte_t op, bool *out_overload_found);
 
 /*
 * todo: these MUST reflect the order of ApeOpcodeValue_t.
@@ -196,7 +196,7 @@ ApeSymbol_t* ape_globalstore_getsymbol(ApeGlobalStore_t* store, const char* name
 
 bool ape_globalstore_set(ApeGlobalStore_t* store, const char* name, ApeObject_t object)
 {
-    int ix;
+    ApeInt_t ix;
     bool ok;
     ApeSymbol_t* symbol;
     const ApeSymbol_t* existing_symbol;
@@ -251,7 +251,7 @@ ApeSize_t ape_globalstore_getobjectcount(ApeGlobalStore_t* store)
     return ape_valarray_count(store->objects);
 }
 
-ApeSymbol_t* ape_make_symbol(ApeContext_t* ctx, const char* name, ApeSymbolType_t type, int index, bool assignable)
+ApeSymbol_t* ape_make_symbol(ApeContext_t* ctx, const char* name, ApeSymbolType_t type, ApeSize_t index, bool assignable)
 {
     ApeSymbol_t* symbol;
     symbol = (ApeSymbol_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeSymbol_t));
@@ -740,7 +740,7 @@ ApeBlockScope_t* ape_blockscope_copy(ApeBlockScope_t* scope)
     return copy;
 }
 
-static bool ape_vm_setsymbol(ApeSymTable_t* table, ApeSymbol_t* symbol)
+bool ape_vm_setsymbol(ApeSymTable_t* table, ApeSymbol_t* symbol)
 {
     ApeBlockScope_t* top_scope;
     ApeSymbol_t* existing;
@@ -753,7 +753,7 @@ static bool ape_vm_setsymbol(ApeSymTable_t* table, ApeSymbol_t* symbol)
     return ape_strdict_set(top_scope->store, symbol->name, symbol);
 }
 
-static int ape_vm_nextsymbolindex(ApeSymTable_t* table)
+int ape_vm_nextsymbolindex(ApeSymTable_t* table)
 {
     int ix;
     ApeBlockScope_t* top_scope;
@@ -762,7 +762,7 @@ static int ape_vm_nextsymbolindex(ApeSymTable_t* table)
     return ix;
 }
 
-static int ape_vm_countnumdefs(ApeSymTable_t* table)
+int ape_vm_countnumdefs(ApeSymTable_t* table)
 {
     ApeInt_t i;
     int count;
@@ -873,9 +873,9 @@ bool ape_frame_init(ApeFrame_t* frame, ApeObject_t function_obj, int bptr)
     frame->ip = 0;
     frame->basepointer = bptr;
     frame->srcip = 0;
-    frame->bytecode = function->comp_result->bytecode;
-    frame->srcpositions = function->comp_result->srcpositions;
-    frame->bcsize = function->comp_result->count;
+    frame->bytecode = function->compiledcode->bytecode;
+    frame->srcpositions = function->compiledcode->srcpositions;
+    frame->bcsize = function->compiledcode->count;
     frame->recoverip = -1;
     frame->isrecovering = false;
     return true;
@@ -968,7 +968,7 @@ ApeObject_t ape_vm_getglobal(ApeVM_t* vm, ApeSize_t ix)
 }
 
 // INTERNAL
-static void ape_vm_setstackpointer(ApeVM_t* vm, int new_sp)
+void ape_vm_setstackpointer(ApeVM_t* vm, int new_sp)
 {
     if(new_sp > vm->sp)
     {// to avoid gcing freed objects
@@ -992,8 +992,8 @@ void ape_vm_pushstack(ApeVM_t* vm, ApeObject_t obj)
     {
         ApeFrame_t* frame = vm->currentframe;
         ApeScriptFunction_t* current_function = ape_object_value_asfunction(frame->function);
-        int num_locals = current_function->num_locals;
-        APE_ASSERT(vm->sp >= (frame->basepointer + num_locals));
+        int nl = current_function->numlocals;
+        APE_ASSERT(vm->sp >= (frame->basepointer + nl));
     }
 #endif
     vm->stack[vm->sp] = obj;
@@ -1013,8 +1013,8 @@ ApeObject_t ape_vm_popstack(ApeVM_t* vm)
     {
         ApeFrame_t* frame = vm->currentframe;
         ApeScriptFunction_t* current_function = ape_object_value_asfunction(frame->function);
-        int num_locals = current_function->num_locals;
-        APE_ASSERT((vm->sp - 1) >= (frame->basepointer + num_locals));
+        int nl = current_function->numlocals;
+        APE_ASSERT((vm->sp - 1) >= (frame->basepointer + nl));
     }
 #endif
     vm->sp--;
@@ -1086,6 +1086,7 @@ ApeObject_t ape_vm_getthisstack(ApeVM_t* vm, int nth_item)
 
 bool ape_vm_pushframe(ApeVM_t* vm, ApeFrame_t frame)
 {
+    ApeScriptFunction_t* fn;
     if(vm->frames_count >= APE_CONF_SIZE_MAXFRAMES)
     {
         APE_ASSERT(false);
@@ -1094,8 +1095,8 @@ bool ape_vm_pushframe(ApeVM_t* vm, ApeFrame_t frame)
     vm->frames[vm->frames_count] = frame;
     vm->currentframe = &vm->frames[vm->frames_count];
     vm->frames_count++;
-    ApeScriptFunction_t* frame_function = ape_object_value_asfunction(frame.function);
-    ape_vm_setstackpointer(vm, frame.basepointer + frame_function->num_locals);
+    fn = ape_object_value_asfunction(frame.function);
+    ape_vm_setstackpointer(vm, frame.basepointer + fn->numlocals);
     return true;
 }
 
@@ -1161,52 +1162,81 @@ void ape_vm_dumpstack(ApeVM_t* vm)
     ape_writer_destroy(wr);
 }
 
-bool ape_vm_callobject(ApeVM_t* vm, ApeObject_t callee, ApeInt_t num_args)
+bool ape_vm_callobjectargs(ApeVM_t* vm, ApeObject_t callee, ApeInt_t nargs, ApeObject_t* args)
 {
     bool ok;
+    ApeInt_t ofs;
+    ApeInt_t actualargs;
     ApeObjType_t calleetype;
-    ApeScriptFunction_t* calleefunc;
-    ApeFrame_t calleeframe;
+    ApeScriptFunction_t* scriptcallee;
+    ApeFrame_t framecallee;
+    ApeObject_t* fwdargs;
     ApeObject_t* stackpos;
     ApeObject_t objres;
     const char* calleetypename;
     calleetype = ape_object_value_type(callee);
     if(calleetype == APE_OBJECT_SCRIPTFUNCTION)
     {
-        calleefunc = ape_object_value_asfunction(callee);
-        if(num_args != (ApeInt_t)calleefunc->num_args)
+        scriptcallee = ape_object_value_asfunction(callee);
+        if(nargs != -1)
         {
-            ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->currentframe),
-                              "invalid number of arguments to \"%s\", expected %d, got %d",
-                              ape_object_function_getname(callee), calleefunc->num_args, num_args);
-            return false;
+            if(nargs != (ApeInt_t)scriptcallee->numargs)
+            {
+                ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->currentframe),
+                                  "invalid number of arguments to \"%s\", expected %d, got %d",
+                                  ape_object_function_getname(callee), scriptcallee->numargs, nargs);
+                return false;
+            }
         }
-        ok = ape_frame_init(&calleeframe, callee, vm->sp - num_args);
+        ofs = nargs;
+        if(nargs == -1)
+        {
+            ofs = 0;
+        }
+        ok = ape_frame_init(&framecallee, callee, vm->sp - ofs);
         if(!ok)
         {
-            ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, g_vmpriv_srcposinvalid, "frame init failed in ape_vm_callobject");
+            ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, g_vmpriv_srcposinvalid, "frame init failed in ape_vm_callobjectargs");
             return false;
         }
-        ok = ape_vm_pushframe(vm, calleeframe);
+        ok = ape_vm_pushframe(vm, framecallee);
         if(!ok)
         {
-            ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, g_vmpriv_srcposinvalid, "pushing frame failed in ape_vm_callobject");
+            ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, g_vmpriv_srcposinvalid, "pushing frame failed in ape_vm_callobjectargs");
             return false;
         }
     }
     else if(calleetype == APE_OBJECT_NATIVEFUNCTION)
     {
-        stackpos = vm->stack + vm->sp - num_args;
+        ofs = nargs;
+        if(nargs == -1)
+        {
+            ofs = 0;
+        }
+        stackpos = vm->stack + vm->sp - ofs;
+        if(args == NULL)
+        {
+            fwdargs = stackpos;
+        }
+        else
+        {
+            fwdargs = args;
+        }
         if(vm->context->config.dumpstack)
         {
             ape_vm_dumpstack(vm);
         }
-        objres = ape_vm_callnativefunction(vm, callee, ape_frame_srcposition(vm->currentframe), num_args, stackpos);
+        actualargs = nargs;
+        if(nargs == -1)
+        {
+            actualargs = vm->sp - ofs;
+        }
+        objres = ape_vm_callnativefunction(vm, callee, ape_frame_srcposition(vm->currentframe), actualargs, fwdargs);
         if(ape_vm_haserrors(vm))
         {
             return false;
         }
-        ape_vm_setstackpointer(vm, vm->sp - num_args - 1);
+        ape_vm_setstackpointer(vm, vm->sp - ofs - 1);
         ape_vm_pushstack(vm, objres);
     }
     else
@@ -1216,6 +1246,11 @@ bool ape_vm_callobject(ApeVM_t* vm, ApeObject_t callee, ApeInt_t num_args)
         return false;
     }
     return true;
+}
+
+bool ape_vm_callobjectstack(ApeVM_t* vm, ApeObject_t callee, ApeInt_t nargs)
+{
+    return ape_vm_callobjectargs(vm, callee, nargs, NULL);
 }
 
 ApeObject_t ape_vm_callnativefunction(ApeVM_t* vm, ApeObject_t callee, ApePosition_t src_pos, int argc, ApeObject_t* args)
@@ -1278,7 +1313,7 @@ bool ape_vm_checkassign(ApeVM_t* vm, ApeObject_t oldval, ApeObject_t newval)
     return true;
 }
 
-static bool ape_vm_tryoverloadoperator(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpByte_t op, bool* out_overload_found)
+bool ape_vm_tryoverloadoperator(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpByte_t op, bool* out_overload_found)
 {
     int num_operands;
     ApeObject_t key;
@@ -1323,7 +1358,7 @@ static bool ape_vm_tryoverloadoperator(ApeVM_t* vm, ApeObject_t left, ApeObject_
     {
         ape_vm_pushstack(vm, right);
     }
-    return ape_vm_callobject(vm, callee, num_operands);
+    return ape_vm_callobjectstack(vm, callee, num_operands);
 }
 
 
@@ -1378,6 +1413,10 @@ ApeVM_t* ape_vm_make(ApeContext_t* ctx, const ApeConfig_t* config, ApeGCMemory_t
     SET_OPERATOR_OVERLOAD_KEY(APE_OPCODE_MINUS, "__operator_minus__");
     SET_OPERATOR_OVERLOAD_KEY(APE_OPCODE_NOT, "__operator_bang__");
     SET_OPERATOR_OVERLOAD_KEY(APE_OPCODE_COMPAREPLAIN, "__cmp__");
+    SET_OPERATOR_OVERLOAD_KEY(APE_OPCODE_GETINDEX, "__getindex__");
+    SET_OPERATOR_OVERLOAD_KEY(APE_OPCODE_SETINDEX, "__setindex__");
+    SET_OPERATOR_OVERLOAD_KEY(APE_OPCODE_CALL, "__call__");
+
     return vm;
 err:
     ape_vm_destroy(vm);
@@ -1613,6 +1652,43 @@ bool ape_vm_getindex(ApeVM_t* vm, ApeObject_t left, ApeObject_t index, ApeObjTyp
     return true;
 }
 
+int jsval_numbertointeger(double n)
+{
+    if(n == 0)
+        return 0;
+    if(isnan(n))
+        return 0;
+    n = (n < 0) ? -floor(-n) : floor(n);
+    if(n < INT_MIN)
+        return INT_MIN;
+    if(n > INT_MAX)
+        return INT_MAX;
+    return (int)n;
+}
+
+int jsval_numbertoint32(double n)
+{
+    double two32 = 4294967296.0;
+    double two31 = 2147483648.0;
+
+    if(!isfinite(n) || n == 0)
+        return 0;
+
+    n = fmod(n, two32);
+    n = n >= 0 ? floor(n) : ceil(n) + two32;
+    if(n >= two31)
+        return n - two32;
+    else
+        return n;
+}
+
+
+unsigned int jsval_numbertouint32(double n)
+{
+    return (unsigned int)jsval_numbertoint32(n);
+}
+
+
 bool ape_vm_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValue_t opcode)
 {
     bool ok;
@@ -1620,7 +1696,7 @@ bool ape_vm_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValu
     const char* lefttypename;
     const char* righttypename;
     const char* opcode_name;
-    ApeInt_t bigres;
+    ApeFloat_t bigres;
     ApeFloat_t leftval;
     ApeFloat_t rightval;
     ApeInt_t leftint;
@@ -1642,8 +1718,10 @@ bool ape_vm_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValu
     {
         rightval = ape_object_value_asnumber(right);
         leftval = ape_object_value_asnumber(left);
-        leftint = (ApeInt_t)leftval;
-        rightint = (ApeInt_t)rightval;
+        //leftint = (ApeInt_t)leftval;
+        leftint = jsval_numbertoint32(leftval);
+        //rightint = (ApeInt_t)rightval;
+        rightint = jsval_numbertoint32(rightval);
         bigres = 0;
         switch(opcode)
         {
@@ -1688,14 +1766,44 @@ bool ape_vm_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValu
                     bigres = (ApeFloat_t)(leftint & rightint);
                 }
                 break;
+/*
+            case OP_SHL:
+                vileft = js_toint32(jst, -2);
+                vuright = js_touint32(jst, -1);
+                js_pop(jst, 2);
+                js_pushnumber(jst, vileft << (vuright & 0x1F));
+                break;
+
+*/
             case APE_OPCODE_LEFTSHIFT:
                 {
+                    #if 0
                     bigres = (ApeInt_t)(leftint << rightint);
+                    #else
+                    int uleft = jsval_numbertoint32(leftval);
+                    unsigned int uright = jsval_numbertouint32(rightval);
+                    bigres = (uleft << (uright & 0x1F));
+                    #endif
                 }
                 break;
+/*
+            case OP_SHR:
+                vileft = js_toint32(jst, -2);
+                vuright = js_touint32(jst, -1);
+                js_pop(jst, 2);
+                js_pushnumber(jst, vileft >> (vuright & 0x1F));
+                break;
+
+*/
             case APE_OPCODE_RIGHTSHIFT:
                 {
+                    #if 0
                     bigres = (ApeInt_t)(leftint >> rightint);
+                    #else
+                    int uleft = jsval_numbertoint32(leftval);
+                    unsigned int uright = jsval_numbertouint32(rightval);
+                    bigres = (uleft >> (uright & 0x1F));
+                    #endif
                 }
                 break;
             default:
@@ -1781,7 +1889,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
     unsigned time_check_interval;
 
     ApeUShort_t free_ix;
-    ApeUShort_t num_args;
+    ApeUShort_t nargs;
     ApeUShort_t num_free;
     ApeFloat_t comparison_res;
 
@@ -1833,7 +1941,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
     #endif
     function_function = ape_object_value_asfunction(function);// naming is hard
     ok = false;
-    ok = ape_frame_init(&new_frame, function, vm->sp - function_function->num_args);
+    ok = ape_frame_init(&new_frame, function, vm->sp - function_function->numargs);
     if(!ok)
     {
         return false;
@@ -2232,9 +2340,9 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
             }
             case APE_OPCODE_CALL:
                 {
-                    num_args = ape_frame_readuint8(vm->currentframe);
-                    callee = ape_vm_getstack(vm, num_args);
-                    ok = ape_vm_callobject(vm, callee, num_args);
+                    nargs = ape_frame_readuint8(vm->currentframe);
+                    callee = ape_vm_getstack(vm, nargs);
+                    ok = ape_vm_callobjectstack(vm, callee, nargs);
                     if(!ok)
                     {
                         goto err;
@@ -2322,8 +2430,8 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                         goto err;
                     }
                     constfunction = ape_object_value_asfunction(*constant);
-                    function_obj = ape_object_make_function(vm->context, ape_object_function_getname(*constant), constfunction->comp_result,
-                                           false, constfunction->num_locals, constfunction->num_args, num_free);
+                    function_obj = ape_object_make_function(vm->context, ape_object_function_getname(*constant), constfunction->compiledcode,
+                                           false, constfunction->numlocals, constfunction->numargs, num_free);
                     if(ape_object_value_isnull(function_obj))
                     {
                         goto err;

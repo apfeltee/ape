@@ -97,6 +97,104 @@ bool ape_object_value_ishashable(ApeObject_t obj)
 
 }
 
+void ape_tostring_quotechar(ApeWriter_t* buf, int ch)
+{
+    switch(ch)
+    {
+        case '\'':
+            {
+                ape_writer_append(buf, "\\\'");
+            }
+            break;
+        case '\"':
+            {
+                ape_writer_append(buf, "\\\"");
+            }
+            break;
+        case '\\':
+            {
+                ape_writer_append(buf, "\\\\");
+            }
+            break;
+        case '\b':
+            {
+                ape_writer_append(buf, "\\b");
+            }
+            break;
+        case '\f':
+            {
+                ape_writer_append(buf, "\\f");
+            }
+            break;
+        case '\n':
+            {
+                ape_writer_append(buf, "\\n");
+            }
+            break;
+        case '\r':
+            {
+                ape_writer_append(buf, "\\r");
+            }
+            break;
+        case '\t':
+            {
+                ape_writer_append(buf, "\\t");
+            }
+            break;
+        default:
+            {
+                /*
+                static const char* const hexchars = "0123456789ABCDEF";
+                os << '\\';
+                if(ch <= 255)
+                {
+                    os << 'x';
+                    os << hexchars[(ch >> 4) & 0xf];
+                    os << hexchars[ch & 0xf];
+                }
+                else
+                {
+                    os << 'u';
+                    os << hexchars[(ch >> 12) & 0xf];
+                    os << hexchars[(ch >> 8) & 0xf];
+                    os << hexchars[(ch >> 4) & 0xf];
+                    os << hexchars[ch & 0xf];
+                }
+                */
+                ape_writer_appendf(buf, "\\x%02x", (unsigned char)ch);
+            }
+            break;
+    }
+}
+
+void ape_tostring_quotestring(ApeWriter_t* buf, const char* str, ApeSize_t len, bool withquotes)
+{
+    int bch;
+    char ch;
+    ApeSize_t i;
+    if(withquotes)
+    {
+        ape_writer_append(buf, "\"");
+    }
+    for(i=0; i<len; i++)
+    {
+        bch = str[i];
+        if((bch < 32) || (bch > 127) || (bch == '\"') || (bch == '\\'))
+        {
+            ape_tostring_quotechar(buf, bch);
+        }
+        else
+        {
+            ch = bch;
+            ape_writer_appendn(buf, &ch, 1);
+        }
+    }
+    if(withquotes)
+    {
+        ape_writer_append(buf, "\"");
+    }
+}
+
 void ape_tostring_object(ApeWriter_t* buf, ApeObject_t obj, bool quote_str)
 {
     const char* sdata;
@@ -151,7 +249,7 @@ void ape_tostring_object(ApeWriter_t* buf, ApeObject_t obj, bool quote_str)
                 slen = ape_object_string_getlength(obj);
                 if(quote_str)
                 {
-                    ape_writer_appendf(buf, "\"%s\"", sdata);
+                    ape_tostring_quotestring(buf, sdata, slen, true);
                 }
                 else
                 {
@@ -168,7 +266,7 @@ void ape_tostring_object(ApeWriter_t* buf, ApeObject_t obj, bool quote_str)
             {
                 compfunc = ape_object_value_asfunction(obj);
                 ape_writer_appendf(buf, "CompiledFunction: %s\n", ape_object_function_getname(obj));
-                ape_tostring_bytecode(buf, compfunc->comp_result->bytecode, compfunc->comp_result->srcpositions, compfunc->comp_result->count);
+                ape_tostring_bytecode(buf, compfunc->compiledcode->bytecode, compfunc->compiledcode->srcpositions, compfunc->compiledcode->count);
             }
             break;
         case APE_OBJECT_ARRAY:
@@ -293,9 +391,9 @@ void ape_object_data_deinit(ApeObjData_t* data)
                 if(data->valscriptfunc.owns_data)
                 {
                     ape_allocator_free(data->mem->alloc, data->valscriptfunc.name);
-                    ape_compresult_destroy(data->valscriptfunc.comp_result);
+                    ape_compresult_destroy(data->valscriptfunc.compiledcode);
                 }
-                ape_allocator_free(data->mem->alloc, data->valscriptfunc.free_vals_allocated);
+                ape_allocator_free(data->mem->alloc, data->valscriptfunc.freevals);
             }
             break;
         case APE_OBJECT_ARRAY:
@@ -519,28 +617,28 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
                 bytecode_copy = NULL;
                 src_positions_copy = NULL;
                 comp_res_copy = NULL;
-                bytecode_copy = (ApeUShort_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeUShort_t) * function->comp_result->count);
+                bytecode_copy = (ApeUShort_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeUShort_t) * function->compiledcode->count);
                 if(!bytecode_copy)
                 {
                     return ape_object_make_null(ctx);
                 }
-                memcpy(bytecode_copy, function->comp_result->bytecode, sizeof(ApeUShort_t) * function->comp_result->count);
-                src_positions_copy = (ApePosition_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApePosition_t) * function->comp_result->count);
+                memcpy(bytecode_copy, function->compiledcode->bytecode, sizeof(ApeUShort_t) * function->compiledcode->count);
+                src_positions_copy = (ApePosition_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApePosition_t) * function->compiledcode->count);
                 if(!src_positions_copy)
                 {
                     ape_allocator_free(&ctx->alloc, bytecode_copy);
                     return ape_object_make_null(ctx);
                 }
-                memcpy(src_positions_copy, function->comp_result->srcpositions, sizeof(ApePosition_t) * function->comp_result->count);
+                memcpy(src_positions_copy, function->compiledcode->srcpositions, sizeof(ApePosition_t) * function->compiledcode->count);
                 // todo: add compilation result copy function
-                comp_res_copy = ape_make_compresult(ctx, bytecode_copy, src_positions_copy, function->comp_result->count);
+                comp_res_copy = ape_make_compresult(ctx, bytecode_copy, src_positions_copy, function->compiledcode->count);
                 if(!comp_res_copy)
                 {
                     ape_allocator_free(&ctx->alloc, src_positions_copy);
                     ape_allocator_free(&ctx->alloc, bytecode_copy);
                     return ape_object_make_null(ctx);
                 }
-                copy = ape_object_make_function(ctx, ape_object_function_getname(obj), comp_res_copy, true, function->num_locals, function->num_args, 0);
+                copy = ape_object_make_function(ctx, ape_object_function_getname(obj), comp_res_copy, true, function->numlocals, function->numargs, 0);
                 if(ape_object_value_isnull(copy))
                 {
                     ape_compresult_destroy(comp_res_copy);
@@ -552,13 +650,13 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
                     return ape_object_make_null(ctx);
                 }
                 function_copy = ape_object_value_asfunction(copy);
-                function_copy->free_vals_allocated = (ApeObject_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeObject_t) * function->free_vals_count);
-                if(!function_copy->free_vals_allocated)
+                function_copy->freevals = (ApeObject_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeObject_t) * function->numfreevals);
+                if(!function_copy->freevals)
                 {
                     return ape_object_make_null(ctx);
                 }
-                function_copy->free_vals_count = function->free_vals_count;
-                for(i = 0; i < function->free_vals_count; i++)
+                function_copy->numfreevals = function->numfreevals;
+                for(i = 0; i < function->numfreevals; i++)
                 {
                     free_val = ape_object_function_getfreeval(obj, i);
                     free_val_copy = ape_object_value_internalcopydeep(ctx, free_val, copies);
