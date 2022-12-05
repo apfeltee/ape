@@ -54,7 +54,7 @@ JSON.parseValue = function(state)
     {
         return JSON.parseString(state, "\"");
     }
-    else if (String.indexOf(state.nfirstchars, c) != -1)
+    else if (state.nfirstchars.indexOf(c) != -1)
     {
         return JSON.parseNumber(state);
     }
@@ -93,11 +93,11 @@ JSON.parseNumber = function (state)
 {
     var startIndex = state.m_index;
     var c = 0;
-    while(String.indexOf(state.nchars, state.m_source[state.m_index]) != -1)
+    while(state.nchars.indexOf(state.m_source[state.m_index]) != -1)
     {
         state.m_index++;
     }
-    var str = String.substr(state.m_source, startIndex, state.m_index);
+    var str = state.m_source.substr(startIndex, state.m_index);
     println(`parseNumber: str=${str}`);
     return toint(str);
 };
@@ -242,6 +242,6 @@ JSON.parse = function(str)
 };
 
 src = "[1, 2, 3, {\"name\": \"john doe\", \"flags\": [4, 5, 6]}]";
-src = "[1, 2, 3, 4]"
+//src = "[1, 2, 3, 4]"
 println("------------")
 println(JSON.parse(src));

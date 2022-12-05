@@ -599,6 +599,7 @@ void ape_builtins_install_string(ApeVM_t* vm)
         // js-isms
         {"charAt", true, objfn_string_charat},
         {"charCodeAt", true, objfn_string_byteat},
+        {"indexOf", true, objfn_string_indexof},
 
         // utilities
         {"format", true, objfn_string_format},
