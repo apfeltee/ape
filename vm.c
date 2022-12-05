@@ -1527,9 +1527,9 @@ bool ape_vm_appendstring(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOb
         */
         allbuf = ape_make_writer(vm->context);
         tostrbuf = ape_make_writer(vm->context);
-        ape_writer_appendn(allbuf, ape_object_string_getdata(left), ape_object_string_getlength(left));
+        ape_writer_appendlen(allbuf, ape_object_string_getdata(left), ape_object_string_getlength(left));
         ape_tostring_object(tostrbuf, right, false);
-        ape_writer_appendn(allbuf, ape_writer_getdata(tostrbuf), ape_writer_getlength(tostrbuf));
+        ape_writer_appendlen(allbuf, ape_writer_getdata(tostrbuf), ape_writer_getlength(tostrbuf));
         buflen = ape_writer_getlength(allbuf);
         objres = ape_object_make_stringcapacity(vm->context, buflen);
         ok = ape_object_string_append(objres, ape_writer_getdata(allbuf), buflen);

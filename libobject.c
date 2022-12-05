@@ -186,7 +186,7 @@ void ape_tostring_quotestring(ApeWriter_t* buf, const char* str, ApeSize_t len, 
         else
         {
             ch = bch;
-            ape_writer_appendn(buf, &ch, 1);
+            ape_writer_appendlen(buf, &ch, 1);
         }
     }
     if(withquotes)
@@ -253,7 +253,7 @@ void ape_tostring_object(ApeWriter_t* buf, ApeObject_t obj, bool quote_str)
                 }
                 else
                 {
-                    ape_writer_appendn(buf, sdata, slen);
+                    ape_writer_appendlen(buf, sdata, slen);
                 }
             }
             break;
@@ -494,7 +494,21 @@ char* ape_object_value_serialize(ApeContext_t* ctx, ApeObject_t object, ApeSize_
     return string;
 }
 
-bool ape_object_value_setexternaldata(ApeObject_t object, void* ext_data)
+bool ape_object_extern_setdestroyfunc(ApeObject_t object, ApeDataCallback_t destroy_fn)
+{
+    ApeExternalData_t* data;
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_EXTERNAL);
+    data = ape_object_value_asexternal(object);
+    if(!data)
+    {
+        return false;
+    }
+    data->data_destroy_fn = destroy_fn;
+    return true;
+}
+
+
+bool ape_object_extern_setdata(ApeObject_t object, void* ext_data)
 {
     ApeExternalData_t* data;
     APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_EXTERNAL);
@@ -507,7 +521,7 @@ bool ape_object_value_setexternaldata(ApeObject_t object, void* ext_data)
     return true;
 }
 
-bool ape_object_value_setexternalcopy(ApeObject_t object, ApeDataCallback_t copy_fn)
+bool ape_object_extern_setcopyfunc(ApeObject_t object, ApeDataCallback_t copy_fn)
 {
     ApeExternalData_t* data;
     APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_EXTERNAL);
@@ -906,9 +920,9 @@ ApeObject_t ape_object_value_copyflat(ApeContext_t* ctx, ApeObject_t obj)
                 {
                     data_copy = external->data;
                 }
-                ape_object_value_setexternaldata(copy, data_copy);
-                ape_object_value_setexternaldestroy(copy, external->data_destroy_fn);
-                ape_object_value_setexternalcopy(copy, external->data_copy_fn);
+                ape_object_extern_setdata(copy, data_copy);
+                ape_object_extern_setdestroyfunc(copy, external->data_destroy_fn);
+                ape_object_extern_setcopyfunc(copy, external->data_copy_fn);
             }
             break;
     }
@@ -1017,15 +1031,4 @@ bool ape_object_value_equals(ApeObject_t a, ApeObject_t b)
     return APE_DBLEQ(res, 0);
 }
 
-bool ape_object_value_setexternaldestroy(ApeObject_t object, ApeDataCallback_t destroy_fn)
-{
-    ApeExternalData_t* data;
-    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_EXTERNAL);
-    data = ape_object_value_asexternal(object);
-    if(!data)
-    {
-        return false;
-    }
-    data->data_destroy_fn = destroy_fn;
-    return true;
-}
+

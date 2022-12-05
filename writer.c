@@ -95,7 +95,7 @@ void ape_writer_destroy(ApeWriter_t* buf)
 
 }
 
-bool ape_writer_appendn(ApeWriter_t* buf, const char* str, ApeSize_t str_len)
+bool ape_writer_appendlen(ApeWriter_t* buf, const char* str, ApeSize_t str_len)
 {
     bool ok;
     ApeSize_t required_capacity;
@@ -134,7 +134,7 @@ bool ape_writer_appendn(ApeWriter_t* buf, const char* str, ApeSize_t str_len)
 
 bool ape_writer_append(ApeWriter_t* buf, const char* str)
 {
-    return ape_writer_appendn(buf, str, strlen(str));
+    return ape_writer_appendlen(buf, str, strlen(str));
 }
 
 bool ape_writer_appendf(ApeWriter_t* buf, const char* fmt, ...)
@@ -182,7 +182,7 @@ bool ape_writer_appendf(ApeWriter_t* buf, const char* fmt, ...)
     va_start(args, fmt);
     written = vsnprintf(tbuf, required_capacity, fmt, args);
     va_end(args);
-    ok = ape_writer_appendn(buf, tbuf, written);
+    ok = ape_writer_appendlen(buf, tbuf, written);
     ape_allocator_free(buf->alloc, tbuf);
     return ok;
 }
@@ -194,6 +194,11 @@ const char* ape_writer_getdata(const ApeWriter_t* buf)
         return NULL;
     }
     return buf->datastring;
+}
+
+const char* ape_writer_getstring(const ApeWriter_t* buf)
+{
+    return ape_writer_getdata(buf);
 }
 
 ApeSize_t ape_writer_getlength(const ApeWriter_t* buf)

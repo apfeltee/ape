@@ -1715,7 +1715,7 @@ static bool ape_compiler_compileexpression(ApeCompiler_t* comp, ApeExpression_t*
                 }
                 else
                 {
-                    obj = ape_object_make_string(comp->context, expr->stringliteral);
+                    obj = ape_object_make_stringlen(comp->context, expr->stringliteral, expr->stringlitlength);
                     if(ape_object_value_isnull(obj))
                     {
                         goto error;

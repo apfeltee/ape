@@ -6,7 +6,7 @@ static const ApePosition_t g_prspriv_srcposinvalid = { NULL, -1, -1 };
 static ApePrecedence_t ape_parser_getprecedence(ApeTokenType_t tk);
 static ApeOperator_t ape_parser_tokentooperator(ApeTokenType_t tk);
 static char ape_parser_escapechar(const char c);
-static char *ape_ast_processandcopystring(ApeAllocator_t *alloc, const char *input, size_t len);
+static char *ape_ast_processandcopystring(ApeAllocator_t *alloc, const char *input, size_t len, ApeSize_t* destlen);
 static ApeExpression_t *ape_ast_wrapexprinfunccall(ApeContext_t *ctx, ApeExpression_t *expr, const char *functionname);
 
 static ApeIdent_t* ape_ast_make_ident(ApeContext_t* ctx, ApeToken_t tok)
@@ -80,7 +80,7 @@ ApeExpression_t* ape_ast_make_boolliteralexpr(ApeContext_t* ctx, bool val)
     return res;
 }
 
-ApeExpression_t* ape_ast_make_stringliteralexpr(ApeContext_t* ctx, char* value)
+ApeExpression_t* ape_ast_make_stringliteralexpr(ApeContext_t* ctx, const char* value, ApeSize_t len)
 {
     ApeExpression_t* res = ape_ast_make_expression(ctx, APE_EXPR_LITERALSTRING);
     if(!res)
@@ -88,6 +88,7 @@ ApeExpression_t* ape_ast_make_stringliteralexpr(ApeContext_t* ctx, char* value)
         return NULL;
     }
     res->stringliteral = value;
+    res->stringlitlength = len;
     return res;
 }
 
@@ -364,12 +365,12 @@ ApeExpression_t* ape_ast_copy_expr(ApeExpression_t* expr)
         }
         case APE_EXPR_LITERALSTRING:
         {
-            char* stringcopy = ape_util_strdup(expr->context, expr->stringliteral);
+            char* stringcopy = ape_util_strndup(expr->context, expr->stringliteral, expr->stringlitlength);
             if(!stringcopy)
             {
                 return NULL;
             }
-            res = ape_ast_make_stringliteralexpr(expr->context, stringcopy);
+            res = ape_ast_make_stringliteralexpr(expr->context, stringcopy, expr->stringlitlength);
             if(!res)
             {
                 ape_allocator_free(expr->alloc, stringcopy);
@@ -1665,13 +1666,14 @@ ApeStatement_t* ape_parser_parseblockstmt(ApeParser_t* p)
 ApeStatement_t* ape_parser_parseincludestmt(ApeParser_t* p)
 {
     char* processedname;
+    ApeSize_t len;
     ApeStatement_t* res;
     ape_lexer_nexttoken(&p->lexer);
     if(!ape_lexer_expectcurrent(&p->lexer, TOKEN_VALSTRING))
     {
         return NULL;
     }
-    processedname = ape_ast_processandcopystring(p->alloc, p->lexer.curtoken.literal, p->lexer.curtoken.len);
+    processedname = ape_ast_processandcopystring(p->alloc, p->lexer.curtoken.literal, p->lexer.curtoken.len, &len);
     if(!processedname)
     {
         ape_errorlist_add(p->errors, APE_ERROR_PARSING, p->lexer.curtoken.pos, "error when parsing module name");
@@ -2065,15 +2067,16 @@ ApeExpression_t* ape_parser_parseliteralbool(ApeParser_t* p)
 ApeExpression_t* ape_parser_parseliteralstring(ApeParser_t* p)
 {
     char* processedliteral;
+    ApeSize_t len;
     ApeExpression_t* res;
-    processedliteral = ape_ast_processandcopystring(p->alloc, p->lexer.curtoken.literal, p->lexer.curtoken.len);
+    processedliteral = ape_ast_processandcopystring(p->alloc, p->lexer.curtoken.literal, p->lexer.curtoken.len, &len);
     if(!processedliteral)
     {
         ape_errorlist_add(p->errors, APE_ERROR_PARSING, p->lexer.curtoken.pos, "error while parsing string literal");
         return NULL;
     }
     ape_lexer_nexttoken(&p->lexer);
-    res = ape_ast_make_stringliteralexpr(p->context, processedliteral);
+    res = ape_ast_make_stringliteralexpr(p->context, processedliteral, len);
     if(!res)
     {
         ape_allocator_free(p->alloc, processedliteral);
@@ -2085,6 +2088,7 @@ ApeExpression_t* ape_parser_parseliteralstring(ApeParser_t* p)
 ApeExpression_t* ape_parser_parseliteraltplstring(ApeParser_t* p)
 {
     char* processedliteral;
+    ApeSize_t len;
     ApeExpression_t* leftstringexpr;
     ApeExpression_t* templateexpr;
     ApeExpression_t* tostrcallexpr;
@@ -2099,7 +2103,7 @@ ApeExpression_t* ape_parser_parseliteraltplstring(ApeParser_t* p)
     leftaddexpr = NULL;
     rightexpr = NULL;
     rightaddexpr = NULL;
-    processedliteral = ape_ast_processandcopystring(p->alloc, p->lexer.curtoken.literal, p->lexer.curtoken.len);
+    processedliteral = ape_ast_processandcopystring(p->alloc, p->lexer.curtoken.literal, p->lexer.curtoken.len, &len);
     if(!processedliteral)
     {
         ape_errorlist_add(p->errors, APE_ERROR_PARSING, p->lexer.curtoken.pos, "error while parsing string literal");
@@ -2115,7 +2119,7 @@ ApeExpression_t* ape_parser_parseliteraltplstring(ApeParser_t* p)
 
     pos = p->lexer.curtoken.pos;
 
-    leftstringexpr = ape_ast_make_stringliteralexpr(p->context, processedliteral);
+    leftstringexpr = ape_ast_make_stringliteralexpr(p->context, processedliteral, len);
     if(!leftstringexpr)
     {
         goto err;
@@ -2224,7 +2228,7 @@ ApeExpression_t* ape_parser_parseliteralmap(ApeParser_t* p)
         if(ape_lexer_currenttokenis(&p->lexer, TOKEN_VALIDENT))
         {
             str = ape_lexer_tokendupliteral(p->context, &p->lexer.curtoken);
-            key = ape_ast_make_stringliteralexpr(p->context, str);
+            key = ape_ast_make_stringliteralexpr(p->context, str, strlen(str));
             if(!key)
             {
                 ape_allocator_free(p->alloc, str);
@@ -2800,7 +2804,7 @@ ApeExpression_t* ape_parser_parsedotexpr(ApeParser_t* p, ApeExpression_t* left)
         return NULL;
     }
     str = ape_lexer_tokendupliteral(p->context, &p->lexer.curtoken);
-    index = ape_ast_make_stringliteralexpr(p->context, str);
+    index = ape_ast_make_stringliteralexpr(p->context, str, strlen(str));
     if(!index)
     {
         ape_allocator_free(p->alloc, str);
@@ -3000,7 +3004,7 @@ static char ape_parser_escapechar(const char c)
     return c;
 }
 
-static char* ape_ast_processandcopystring(ApeAllocator_t* alloc, const char* input, size_t len)
+static char* ape_ast_processandcopystring(ApeAllocator_t* alloc, const char* input, size_t len, ApeSize_t* destlen)
 {
     size_t ini;
     size_t outi;
@@ -3031,6 +3035,7 @@ static char* ape_ast_processandcopystring(ApeAllocator_t* alloc, const char* inp
         ini++;
     }
     output[outi] = '\0';
+    *destlen = outi;
     return output;
 error:
     ape_allocator_free(alloc, output);

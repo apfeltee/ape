@@ -722,7 +722,7 @@ static ApeObject_t objfn_array_join(ApeVM_t* vm, void* data, ApeSize_t argc, Ape
         ape_tostring_object(wr, arritem, false);
         if((i + 1) < alen)
         {
-            ape_writer_appendn(wr, sstr, slen);
+            ape_writer_appendlen(wr, sstr, slen);
         }
     }
     bstr = ape_writer_getdata(wr);

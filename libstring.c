@@ -373,6 +373,121 @@ static ApeObject_t objfn_string_byteat(ApeVM_t* vm, void* data, ApeSize_t argc, 
     return ape_object_make_number(vm->context, ch);
 }
 
+ApeObject_t ape_builtins_stringformat(ApeContext_t* ctx, const char* fmt, ApeSize_t fmtlen, ApeSize_t argc, ApeObject_t* args)
+{
+    char cch;
+    char pch;
+    char nch;
+    char chval;
+    ApeSize_t i;
+    ApeSize_t idx;
+    ApeObject_t srt;
+    ApeArgCheck_t check;
+    ApeWriter_t* buf;
+    idx = 0;
+    cch = -1;
+    pch = -1;
+    nch = -1;
+    buf = ape_make_writercapacity(ctx, fmtlen + 10);
+    ape_args_checkinit(ctx->vm, &check, "format-string", argc, args);
+    for(i=0; i<fmtlen; i++)
+    {
+        pch = cch;
+        cch = fmt[i];
+        if((i + 1) < fmtlen)
+        {
+            nch = fmt[i + 1];
+        }
+        if((cch == '%') && (nch != -1))
+        {
+            switch(nch)
+            {
+                case '%':
+                    {
+                        i++;
+                        ape_writer_appendlen(buf, &nch, 1);
+                    }
+                    break;
+                case 'd':
+                case 'g':
+                case 'i':
+                    {
+                        i++;
+                        if(!ape_args_checktype(&check, idx, APE_OBJECT_NUMBER))
+                        {
+                            return ape_object_make_null(ctx);
+                        }
+                        ape_tostring_object(buf, args[idx], false);
+                        idx++;
+                    }
+                    break;
+                case 'c':
+                    {
+                        i++;
+                        if(!ape_args_checktype(&check, idx, APE_OBJECT_NUMBER))
+                        {
+                            return ape_object_make_null(ctx);
+                        }
+                        chval = ape_object_value_asnumber(args[idx]);
+                        ape_writer_appendlen(buf, &chval, 1);
+                        idx++;
+                    }
+                    break;
+                case 's':
+                    {
+                        i++;
+                        if(!ape_args_checktype(&check, idx, APE_OBJECT_ANY))
+                        {
+                            return ape_object_make_null(ctx);
+                        }
+                        ape_tostring_object(buf, args[idx], false);
+                        idx++;
+                    }
+                    break;
+                case 'p':
+                case 'q':
+                case 'o':
+                    {
+                        i++;
+                        if(!ape_args_checktype(&check, idx, APE_OBJECT_ANY))
+                        {
+                            return ape_object_make_null(ctx);
+                        }
+                        ape_tostring_object(buf, args[idx], true);
+                        idx++;
+                    }
+                    break;
+                default:
+                    {
+                        ape_vm_adderror(ctx->vm, APE_ERROR_RUNTIME, "invalid format flag '%%c'", nch);
+                    }
+                    break;
+            }
+        }
+        else
+        {
+            ape_writer_appendlen(buf, &cch, 1);
+        }
+    }
+    srt = ape_object_make_stringlen(ctx, ape_writer_getdata(buf), ape_writer_getlength(buf));
+    ape_writer_destroy(buf);
+    return srt;
+
+}
+
+static ApeObject_t objfn_string_format(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+{
+    char ch;
+    const char* inpstr;
+    ApeSize_t inplen;
+    ApeObject_t self;
+    (void)data;
+    self = ape_vm_popthisstack(vm);
+    inpstr = ape_object_string_getdata(self);
+    inplen = ape_object_string_getlength(self);
+    return ape_builtins_stringformat(vm->context, inpstr, inplen, argc, args);
+}
+
 static ApeObject_t cfn_string_chr(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     char c;
@@ -448,7 +563,7 @@ static ApeObject_t cfn_string_join(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
         ape_tostring_object(wr, arritem, false);
         if((i + 1) < alen)
         {
-            ape_writer_appendn(wr, sstr, slen);
+            ape_writer_appendlen(wr, sstr, slen);
         }
     }
     bstr = ape_writer_getdata(wr);
@@ -484,7 +599,9 @@ void ape_builtins_install_string(ApeVM_t* vm)
         // js-isms
         {"charAt", true, objfn_string_charat},
         {"charCodeAt", true, objfn_string_byteat},
-        
+
+        // utilities
+        {"format", true, objfn_string_format},
 
         /* TODO: implement me! */
         #if 0

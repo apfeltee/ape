@@ -945,6 +945,7 @@ struct ApeExpression_t
     ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeExprType_t type;
+    ApeSize_t stringlitlength;
     union
     {
         ApeIdent_t* ident;

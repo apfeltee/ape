@@ -41,6 +41,7 @@ ApeExpression_t* ape_optimizer_optinfixexpr(ApeExpression_t* expr)
     ApeExpression_t* rightopt;
     ApeExpression_t* res;
     ApeAllocator_t* alloc;
+    ApeWriter_t* buf;
     ApeFloat_t leftval;
     ApeFloat_t rightval;
     leftexpr = expr->infix.left;
@@ -161,6 +162,7 @@ ApeExpression_t* ape_optimizer_optinfixexpr(ApeExpression_t* expr)
     {
         leftstr = leftexpr->stringliteral;
         rightstr = rightexpr->stringliteral;
+        /*
         res_str = ape_util_stringfmt(expr->context, "%s%s", leftstr, rightstr);
         if(res_str)
         {
@@ -170,6 +172,13 @@ ApeExpression_t* ape_optimizer_optinfixexpr(ApeExpression_t* expr)
                 ape_allocator_free(alloc, res_str);
             }
         }
+        */
+        buf = ape_make_writercapacity(expr->context, leftexpr->stringlitlength + rightexpr->stringlitlength + 1);
+        ape_writer_appendlen(buf, leftstr, leftexpr->stringlitlength);
+        ape_writer_appendlen(buf, rightstr, rightexpr->stringlitlength);
+        res_str = ape_writer_getdata(buf);
+        res = ape_ast_make_stringliteralexpr(expr->context, res_str, ape_writer_getlength(buf));
+        ape_writer_destroy(buf);
     }
     ape_ast_destroy_expr(leftopt);
     ape_ast_destroy_expr(rightopt);
