@@ -379,24 +379,20 @@ enum ApeExprType_t
     APE_EXPR_ASSIGN,
     APE_EXPR_LOGICAL,
     APE_EXPR_TERNARY,
+    APE_EXPR_DEFINE,
+    APE_EXPR_IF,
+    APE_EXPR_RETURNVALUE,
+    APE_EXPR_EXPRESSION,
+    APE_EXPR_WHILELOOP,
+    APE_EXPR_BREAK,
+    APE_EXPR_CONTINUE,
+    APE_EXPR_FOREACH,
+    APE_EXPR_FORLOOP,
+    APE_EXPR_BLOCK,
+    APE_EXPR_INCLUDE,
+    APE_EXPR_RECOVER,
 };
 
-enum ApeStmtType_t
-{
-    APE_STMT_NONE,
-    APE_STMT_DEFINE,
-    APE_STMT_IF,
-    APE_STMT_RETURNVALUE,
-    APE_STMT_EXPRESSION,
-    APE_STMT_WHILELOOP,
-    APE_STMT_BREAK,
-    APE_STMT_CONTINUE,
-    APE_STMT_FOREACH,
-    APE_STMT_FORLOOP,
-    APE_STMT_BLOCK,
-    APE_STMT_INCLUDE,
-    APE_STMT_RECOVER,
-};
 
 enum ApeSymbolType_t
 {
@@ -514,7 +510,6 @@ typedef uint8_t ApeUShort_t;
 typedef size_t ApeSize_t;
 
 typedef enum /**/ApeTokenType_t ApeTokenType_t;
-typedef enum /**/ApeStmtType_t ApeStmtType_t;
 typedef enum /**/ApeOperator_t ApeOperator_t;
 typedef enum /**/ApeSymbolType_t ApeSymbolType_t;
 typedef enum /**/ApeExprType_t ApeExprType_t;
@@ -554,7 +549,6 @@ typedef struct /**/ApeForeachStmt_t ApeForeachStmt_t;
 typedef struct /**/ApeForLoopStmt_t ApeForLoopStmt_t;
 typedef struct /**/ApeIncludeStmt_t ApeIncludeStmt_t;
 typedef struct /**/ApeRecoverStmt_t ApeRecoverStmt_t;
-typedef struct /**/ApeStatement_t ApeStatement_t;
 typedef struct /**/ApeParser_t ApeParser_t;
 typedef struct /**/ApeObject_t ApeObject_t;
 typedef struct /**/ApeScriptFunction_t ApeScriptFunction_t;
@@ -864,11 +858,6 @@ struct ApeCodeblock_t
     ApePtrArray_t* statements;
 };
 
-struct ApeMapLiteral_t
-{
-    ApePtrArray_t* keys;
-    ApePtrArray_t* values;
-};
 
 
 struct ApePrefixExpr_t
@@ -940,32 +929,6 @@ struct ApeIdent_t
     ApePosition_t pos;
 };
 
-struct ApeExpression_t
-{
-    ApeContext_t* context;
-    ApeAllocator_t* alloc;
-    ApeExprType_t type;
-    ApeSize_t stringlitlength;
-    union
-    {
-        ApeIdent_t* ident;
-        ApeFloat_t numberliteral;
-        bool boolliteral;
-        char* stringliteral;
-        ApePtrArray_t* array;
-        ApeMapLiteral_t map;
-        ApePrefixExpr_t prefix;
-        ApeInfixExpr_t infix;
-        ApeFnLiteral_t fnliteral;
-        ApeCallExpr_t callexpr;
-        ApeIndexExpr_t indexexpr;
-        ApeAssignExpr_t assign;
-        ApeLogicalExpr_t logical;
-        ApeTernaryExpr_t ternary;
-    };
-    ApePosition_t pos;
-};
-
 struct ApeDefineStmt_t
 {
     ApeIdent_t* name;
@@ -994,7 +957,7 @@ struct ApeForeachStmt_t
 
 struct ApeForLoopStmt_t
 {
-    ApeStatement_t* init;
+    ApeExpression_t* init;
     ApeExpression_t* test;
     ApeExpression_t* update;
     ApeCodeblock_t* body;
@@ -1012,13 +975,36 @@ struct ApeRecoverStmt_t
     ApeCodeblock_t* body;
 };
 
-struct ApeStatement_t
+struct ApeMapLiteral_t
+{
+    ApePtrArray_t* keys;
+    ApePtrArray_t* values;
+};
+
+
+struct ApeExpression_t
 {
     ApeContext_t* context;
     ApeAllocator_t* alloc;
-    ApeStmtType_t type;
+    ApeExprType_t type;
+    bool stringwasallocd;
+    ApeSize_t stringlitlength;
     union
     {
+        ApeIdent_t* ident;
+        ApeFloat_t numberliteral;
+        bool boolliteral;
+        char* stringliteral;
+        ApePtrArray_t* array;
+        ApeMapLiteral_t map;
+        ApePrefixExpr_t prefix;
+        ApeInfixExpr_t infix;
+        ApeFnLiteral_t fnliteral;
+        ApeCallExpr_t callexpr;
+        ApeIndexExpr_t indexexpr;
+        ApeAssignExpr_t assign;
+        ApeLogicalExpr_t logical;
+        ApeTernaryExpr_t ternary;
         ApeDefineStmt_t define;
         ApeIfStmt_t ifstatement;
         ApeExpression_t* returnvalue;

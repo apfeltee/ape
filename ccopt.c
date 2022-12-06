@@ -32,7 +32,8 @@ ApeExpression_t* ape_optimizer_optinfixexpr(ApeExpression_t* expr)
     bool rightisstr;
     ApeInt_t leftint;
     ApeInt_t rightint;
-    char* res_str;
+    ApeSize_t rtlen;
+    char* rtstr;
     const char* leftstr;
     const char* rightstr;
     ApeExpression_t* leftexpr;
@@ -44,6 +45,7 @@ ApeExpression_t* ape_optimizer_optinfixexpr(ApeExpression_t* expr)
     ApeWriter_t* buf;
     ApeFloat_t leftval;
     ApeFloat_t rightval;
+    (void)alloc;
     leftexpr = expr->infix.left;
     leftopt = ape_optimizer_optexpr(leftexpr);
     if(leftopt)
@@ -162,22 +164,12 @@ ApeExpression_t* ape_optimizer_optinfixexpr(ApeExpression_t* expr)
     {
         leftstr = leftexpr->stringliteral;
         rightstr = rightexpr->stringliteral;
-        /*
-        res_str = ape_util_stringfmt(expr->context, "%s%s", leftstr, rightstr);
-        if(res_str)
-        {
-            res = ape_ast_make_stringliteralexpr(expr->context, res_str);
-            if(!res)
-            {
-                ape_allocator_free(alloc, res_str);
-            }
-        }
-        */
         buf = ape_make_writercapacity(expr->context, leftexpr->stringlitlength + rightexpr->stringlitlength + 1);
         ape_writer_appendlen(buf, leftstr, leftexpr->stringlitlength);
         ape_writer_appendlen(buf, rightstr, rightexpr->stringlitlength);
-        res_str = ape_writer_getdata(buf);
-        res = ape_ast_make_stringliteralexpr(expr->context, res_str, ape_writer_getlength(buf));
+        rtlen = ape_writer_getlength(buf);
+        rtstr = ape_util_strndup(expr->context, ape_writer_getdata(buf), rtlen);
+        res = ape_ast_make_stringliteralexpr(expr->context, rtstr, rtlen, true);
         ape_writer_destroy(buf);
     }
     ape_ast_destroy_expr(leftopt);

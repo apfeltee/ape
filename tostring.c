@@ -20,7 +20,6 @@ static const char* g_type_names[] = {
 };
 
 
-
 const char* ape_tostring_operator(ApeOperator_t op)
 {
     switch(op)
@@ -103,13 +102,36 @@ const char* ape_tostring_exprtype(ApeExprType_t type)
             return "logical";
         case APE_EXPR_TERNARY:
             return "ternary";
+        case APE_EXPR_DEFINE:
+            return "define";
+        case APE_EXPR_IF:
+            return "if";
+        case APE_EXPR_RETURNVALUE:
+            return "returnvalue";
+        case APE_EXPR_EXPRESSION:
+            return "expression";
+        case APE_EXPR_WHILELOOP:
+            return "whileloop";
+        case APE_EXPR_BREAK:
+            return "break";
+        case APE_EXPR_CONTINUE:
+            return "continue";
+        case APE_EXPR_FOREACH:
+            return "foreach";
+        case APE_EXPR_FORLOOP:
+            return "forloop";
+        case APE_EXPR_BLOCK:
+            return "block";
+        case APE_EXPR_INCLUDE:
+            return "include";
+        case APE_EXPR_RECOVER:
+            return "recover";
+
         default:
             break;
     }
     return "unknown";
 }
-
-
 
 static bool ape_tostring_opcodecoderead(ApeOpcodeDef_t* def, ApeUShort_t* instr, ApeOpByte_t outop[2])
 {
@@ -168,168 +190,20 @@ static bool ape_tostring_opcodecoderead(ApeOpcodeDef_t* def, ApeUShort_t* instr,
     return true;
 }
 
-bool ape_tostring_stmtlist(ApeWriter_t* buf, ApePtrArray_t* statements)
+bool ape_tostring_exprlist(ApeWriter_t* buf, ApePtrArray_t* statements)
 {
     ApeSize_t i;
     ApeSize_t count;
-    ApeStatement_t* stmt;
+    ApeExpression_t* stmt;
     count = ape_ptrarray_count(statements);
     for(i = 0; i < count; i++)
     {
-        stmt = (ApeStatement_t*)ape_ptrarray_get(statements, i);
-        ape_tostring_statement(buf, stmt);
+        stmt = (ApeExpression_t*)ape_ptrarray_get(statements, i);
+        ape_tostring_expression(buf, stmt);
         if(i < (count - 1))
         {
             ape_writer_append(buf, "\n");
         }
-    }
-    return true;
-}
-
-bool ape_tostring_statement(ApeWriter_t* buf, ApeStatement_t* stmt)
-{
-    ApeSize_t i;
-    ApeDefineStmt_t* defstmt;
-    ApeIfCase_t* ifcase;
-    ApeIfCase_t* elifcase;
-    switch(stmt->type)
-    {
-        case APE_STMT_DEFINE:
-            {
-                defstmt = &stmt->define;
-                if(stmt->define.assignable)
-                {
-                    ape_writer_append(buf, "var ");
-                }
-                else
-                {
-                    ape_writer_append(buf, "const ");
-                }
-                ape_writer_append(buf, defstmt->name->value);
-                ape_writer_append(buf, " = ");
-                if(defstmt->value)
-                {
-                    ape_tostring_expression(buf, defstmt->value);
-                }
-            }
-            break;
-        case APE_STMT_IF:
-            {
-                ifcase = (ApeIfCase_t*)ape_ptrarray_get(stmt->ifstatement.cases, 0);
-                ape_writer_append(buf, "if (");
-                ape_tostring_expression(buf, ifcase->test);
-                ape_writer_append(buf, ") ");
-                ape_tostring_codeblock(buf, ifcase->consequence);
-                for(i = 1; i < ape_ptrarray_count(stmt->ifstatement.cases); i++)
-                {
-                    elifcase = (ApeIfCase_t*)ape_ptrarray_get(stmt->ifstatement.cases, i);
-                    ape_writer_append(buf, " elif (");
-                    ape_tostring_expression(buf, elifcase->test);
-                    ape_writer_append(buf, ") ");
-                    ape_tostring_codeblock(buf, elifcase->consequence);
-                }
-                if(stmt->ifstatement.alternative)
-                {
-                    ape_writer_append(buf, " else ");
-                    ape_tostring_codeblock(buf, stmt->ifstatement.alternative);
-                }
-            }
-            break;
-        case APE_STMT_RETURNVALUE:
-            {
-                ape_writer_append(buf, "return ");
-                if(stmt->returnvalue)
-                {
-                    ape_tostring_expression(buf, stmt->returnvalue);
-                }
-            }
-            break;
-        case APE_STMT_EXPRESSION:
-            {
-                if(stmt->expression)
-                {
-                    ape_tostring_expression(buf, stmt->expression);
-                }
-            }
-            break;
-        case APE_STMT_WHILELOOP:
-            {
-                ape_writer_append(buf, "while (");
-                ape_tostring_expression(buf, stmt->whileloop.test);
-                ape_writer_append(buf, ")");
-                ape_tostring_codeblock(buf, stmt->whileloop.body);
-            }
-            break;
-        case APE_STMT_FORLOOP:
-            {
-                ape_writer_append(buf, "for (");
-                if(stmt->forloop.init)
-                {
-                    ape_tostring_statement(buf, stmt->forloop.init);
-                    ape_writer_append(buf, " ");
-                }
-                else
-                {
-                    ape_writer_append(buf, ";");
-                }
-                if(stmt->forloop.test)
-                {
-                    ape_tostring_expression(buf, stmt->forloop.test);
-                    ape_writer_append(buf, "; ");
-                }
-                else
-                {
-                    ape_writer_append(buf, ";");
-                }
-                if(stmt->forloop.update)
-                {
-                    ape_tostring_expression(buf, stmt->forloop.test);
-                }
-                ape_writer_append(buf, ")");
-                ape_tostring_codeblock(buf, stmt->forloop.body);
-            }
-            break;
-        case APE_STMT_FOREACH:
-            {
-                ape_writer_append(buf, "for (");
-                ape_writer_appendf(buf, "%s", stmt->foreach.iterator->value);
-                ape_writer_append(buf, " in ");
-                ape_tostring_expression(buf, stmt->foreach.source);
-                ape_writer_append(buf, ")");
-                ape_tostring_codeblock(buf, stmt->foreach.body);
-            }
-            break;
-        case APE_STMT_BLOCK:
-            {
-                ape_tostring_codeblock(buf, stmt->block);
-            }
-            break;
-        case APE_STMT_BREAK:
-            {
-                ape_writer_append(buf, "break");
-            }
-            break;
-        case APE_STMT_CONTINUE:
-            {
-                ape_writer_append(buf, "continue");
-            }
-            break;
-        case APE_STMT_INCLUDE:
-            {
-                ape_writer_appendf(buf, "include \"%s\"", stmt->stmtinclude.path);
-            }
-            break;
-        case APE_STMT_NONE:
-            {
-                ape_writer_append(buf, "statement_none");
-            }
-            break;
-        case APE_STMT_RECOVER:
-            {
-                ape_writer_appendf(buf, "recover (%s)", stmt->recover.errorident->value);
-                ape_tostring_codeblock(buf, stmt->recover.body);
-            }
-            break;
     }
     return true;
 }
@@ -346,6 +220,9 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeExpression_t* expr)
     ApeIdent_t* paramexpr;
     ApeExpression_t* argexpr;
     ApeCallExpr_t* callexpr;
+    ApeDefineStmt_t* defstmt;
+    ApeIfCase_t* ifcase;
+    ApeIfCase_t* elifcase;
     switch(expr->type)
     {
         case APE_EXPR_IDENT:
@@ -505,6 +382,137 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeExpression_t* expr)
                 ape_tostring_expression(buf, expr->ternary.iffalse);
             }
             break;
+        case APE_EXPR_DEFINE:
+            {
+                defstmt = &expr->define;
+                if(expr->define.assignable)
+                {
+                    ape_writer_append(buf, "var ");
+                }
+                else
+                {
+                    ape_writer_append(buf, "const ");
+                }
+                ape_writer_append(buf, defstmt->name->value);
+                ape_writer_append(buf, " = ");
+                if(defstmt->value)
+                {
+                    ape_tostring_expression(buf, defstmt->value);
+                }
+            }
+            break;
+        case APE_EXPR_IF:
+            {
+                ifcase = (ApeIfCase_t*)ape_ptrarray_get(expr->ifstatement.cases, 0);
+                ape_writer_append(buf, "if (");
+                ape_tostring_expression(buf, ifcase->test);
+                ape_writer_append(buf, ") ");
+                ape_tostring_codeblock(buf, ifcase->consequence);
+                for(i = 1; i < ape_ptrarray_count(expr->ifstatement.cases); i++)
+                {
+                    elifcase = (ApeIfCase_t*)ape_ptrarray_get(expr->ifstatement.cases, i);
+                    ape_writer_append(buf, " elif (");
+                    ape_tostring_expression(buf, elifcase->test);
+                    ape_writer_append(buf, ") ");
+                    ape_tostring_codeblock(buf, elifcase->consequence);
+                }
+                if(expr->ifstatement.alternative)
+                {
+                    ape_writer_append(buf, " else ");
+                    ape_tostring_codeblock(buf, expr->ifstatement.alternative);
+                }
+            }
+            break;
+        case APE_EXPR_RETURNVALUE:
+            {
+                ape_writer_append(buf, "return ");
+                if(expr->returnvalue)
+                {
+                    ape_tostring_expression(buf, expr->returnvalue);
+                }
+            }
+            break;
+        case APE_EXPR_EXPRESSION:
+            {
+                if(expr->expression)
+                {
+                    ape_tostring_expression(buf, expr->expression);
+                }
+            }
+            break;
+        case APE_EXPR_WHILELOOP:
+            {
+                ape_writer_append(buf, "while (");
+                ape_tostring_expression(buf, expr->whileloop.test);
+                ape_writer_append(buf, ")");
+                ape_tostring_codeblock(buf, expr->whileloop.body);
+            }
+            break;
+        case APE_EXPR_FORLOOP:
+            {
+                ape_writer_append(buf, "for (");
+                if(expr->forloop.init)
+                {
+                    ape_tostring_expression(buf, expr->forloop.init);
+                    ape_writer_append(buf, " ");
+                }
+                else
+                {
+                    ape_writer_append(buf, ";");
+                }
+                if(expr->forloop.test)
+                {
+                    ape_tostring_expression(buf, expr->forloop.test);
+                    ape_writer_append(buf, "; ");
+                }
+                else
+                {
+                    ape_writer_append(buf, ";");
+                }
+                if(expr->forloop.update)
+                {
+                    ape_tostring_expression(buf, expr->forloop.test);
+                }
+                ape_writer_append(buf, ")");
+                ape_tostring_codeblock(buf, expr->forloop.body);
+            }
+            break;
+        case APE_EXPR_FOREACH:
+            {
+                ape_writer_append(buf, "for (");
+                ape_writer_appendf(buf, "%s", expr->foreach.iterator->value);
+                ape_writer_append(buf, " in ");
+                ape_tostring_expression(buf, expr->foreach.source);
+                ape_writer_append(buf, ")");
+                ape_tostring_codeblock(buf, expr->foreach.body);
+            }
+            break;
+        case APE_EXPR_BLOCK:
+            {
+                ape_tostring_codeblock(buf, expr->block);
+            }
+            break;
+        case APE_EXPR_BREAK:
+            {
+                ape_writer_append(buf, "break");
+            }
+            break;
+        case APE_EXPR_CONTINUE:
+            {
+                ape_writer_append(buf, "continue");
+            }
+            break;
+        case APE_EXPR_INCLUDE:
+            {
+                ape_writer_appendf(buf, "include \"%s\"", expr->stmtinclude.path);
+            }
+            break;
+        case APE_EXPR_RECOVER:
+            {
+                ape_writer_appendf(buf, "recover (%s)", expr->recover.errorident->value);
+                ape_tostring_codeblock(buf, expr->recover.body);
+            }
+            break;
         case APE_EXPR_NONE:
             {
                 ape_writer_append(buf, "expression_none");
@@ -518,12 +526,12 @@ bool ape_tostring_codeblock(ApeWriter_t* buf, ApeCodeblock_t* stmt)
 {
     bool ok;
     ApeSize_t i;
-    ApeStatement_t* istmt;
+    ApeExpression_t* istmt;
     ape_writer_append(buf, "{ ");
     for(i = 0; i < ape_ptrarray_count(stmt->statements); i++)
     {
-        istmt = (ApeStatement_t*)ape_ptrarray_get(stmt->statements, i);
-        ok = ape_tostring_statement(buf, istmt);
+        istmt = (ApeExpression_t*)ape_ptrarray_get(stmt->statements, i);
+        ok = ape_tostring_expression(buf, istmt);
         ape_writer_append(buf, "\n");
         if(!ok)
         {

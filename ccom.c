@@ -2,7 +2,7 @@
 #if defined(__cplusplus)
     #include <vector>
 #endif
-#include "ape.h"
+#include "inline.h"
 
 typedef struct ApeTempU64Array_t ApeTempU64Array_t;
 
@@ -27,7 +27,7 @@ static ApeInt_t ape_compiler_emit(ApeCompiler_t* comp, ApeOpByte_t op, ApeSize_t
 static ApeCompScope_t* ape_compiler_getcompscope(ApeCompiler_t* comp);
 static ApeOpByte_t ape_compiler_getlastopcode(ApeCompiler_t* comp);
 static bool ape_compiler_compilestmtlist(ApeCompiler_t* comp, ApePtrArray_t* statements);
-static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* stmt);
+static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeExpression_t* stmt);
 static bool ape_compiler_compileexpression(ApeCompiler_t* comp, ApeExpression_t* expr);
 static bool ape_compiler_compilecodeblock(ApeCompiler_t* comp, ApeCodeblock_t* block);
 static ApeInt_t ape_compiler_addconstant(ApeCompiler_t* comp, ApeObject_t obj);
@@ -279,12 +279,12 @@ bool ape_compiler_compilecode(ApeCompiler_t* comp, const char* code)
         if(!comp->context->config.runafterdump)
         {
             filescope = NULL;
-            ape_ptrarray_destroywithitems(statements, (ApeDataCallback_t)ape_ast_destroy_stmt);
+            ape_ptrarray_destroywithitems(statements, (ApeDataCallback_t)ape_ast_destroy_expr);
             return false;
         }
     }
     ok = ape_compiler_compilestmtlist(comp, statements);
-    ape_ptrarray_destroywithitems(statements, (ApeDataCallback_t)ape_ast_destroy_stmt);
+    ape_ptrarray_destroywithitems(statements, (ApeDataCallback_t)ape_ast_destroy_expr);
     return ok;
 }
 
@@ -708,11 +708,11 @@ static bool ape_compiler_compilestmtlist(ApeCompiler_t* comp, ApePtrArray_t* sta
 {
     ApeSize_t i;
     bool ok;
-    ApeStatement_t* stmt;
+    ApeExpression_t* stmt;
     ok = true;
     for(i = 0; i < ape_ptrarray_count(statements); i++)
     {
-        stmt = (ApeStatement_t*)ape_ptrarray_get(statements, i);
+        stmt = (ApeExpression_t*)ape_ptrarray_get(statements, i);
         ok = ape_compiler_compilestatement(comp, stmt);
         if(!ok)
         {
@@ -723,7 +723,7 @@ static bool ape_compiler_compilestmtlist(ApeCompiler_t* comp, ApePtrArray_t* sta
 }
 
 
-bool ape_compiler_includemodule(ApeCompiler_t* comp, ApeStatement_t* includestmt)
+bool ape_compiler_includemodule(ApeCompiler_t* comp, ApeExpression_t* includestmt)
 {
     // todo: split into smaller functions
     ApeSize_t i;
@@ -888,7 +888,7 @@ end:
 }
 
 
-static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* stmt)
+static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeExpression_t* stmt)
 {
     bool ok;
     ApeInt_t afteraltip;
@@ -938,7 +938,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* s
     symtable = ape_compiler_getsymboltable(comp);
     switch(stmt->type)
     {
-        case APE_STMT_EXPRESSION:
+        case APE_EXPR_EXPRESSION:
             {
                 ok = ape_compiler_compileexpression(comp, stmt->expression);
                 if(!ok)
@@ -952,7 +952,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* s
                 }
             }
             break;
-        case APE_STMT_DEFINE:
+        case APE_EXPR_DEFINE:
             {
                 ok = ape_compiler_compileexpression(comp, stmt->define.value);
                 if(!ok)
@@ -972,7 +972,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* s
             }
             break;
 
-        case APE_STMT_IF:
+        case APE_EXPR_IF:
             {
                 ifstmt = &stmt->ifstatement;
                 jumptoendips = ape_make_valarray(comp->context, ApeInt_t);
@@ -1028,7 +1028,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* s
                 return false;
             }
             break;
-        case APE_STMT_RETURNVALUE:
+        case APE_EXPR_RETURNVALUE:
             {
                 if(compscope->outer == NULL)
                 {
@@ -1055,7 +1055,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* s
                 }
             }
             break;
-        case APE_STMT_WHILELOOP:
+        case APE_EXPR_WHILELOOP:
             {
                 whileloop = &stmt->whileloop;
                 beforetestip = ape_compiler_getip(comp);
@@ -1101,7 +1101,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* s
                 ape_compiler_moduint16operand(comp, jumptoafterbodyip + 1, afterbodyip);
             }
             break;
-        case APE_STMT_BREAK:
+        case APE_EXPR_BREAK:
             {
                 breakip = ape_compiler_getbreakip(comp);
                 if(breakip < 0)
@@ -1116,7 +1116,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* s
                 }
             }
             break;
-        case APE_STMT_CONTINUE:
+        case APE_EXPR_CONTINUE:
             {
                 continueip = ape_compiler_getcontip(comp);
                 if(continueip < 0)
@@ -1131,7 +1131,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* s
                 }
             }
             break;
-        case APE_STMT_FOREACH:
+        case APE_EXPR_FOREACH:
             {
                 foreach = &stmt->foreach;
                 ok = ape_symtable_pushblockscope(symtable);
@@ -1309,7 +1309,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* s
                 ape_symtable_popblockscope(symtable);
             }
             break;
-        case APE_STMT_FORLOOP:
+        case APE_EXPR_FORLOOP:
             {
                 forloop = &stmt->forloop;
                 ok = ape_symtable_pushblockscope(symtable);
@@ -1409,7 +1409,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* s
                 ape_symtable_popblockscope(symtable);
             }
             break;
-        case APE_STMT_BLOCK:
+        case APE_EXPR_BLOCK:
             {
                 ok = ape_compiler_compilecodeblock(comp, stmt->block);
                 if(!ok)
@@ -1418,7 +1418,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* s
                 }
             }
             break;
-        case APE_STMT_INCLUDE:
+        case APE_EXPR_INCLUDE:
             {
                 ok = ape_compiler_includemodule(comp, stmt);
                 if(!ok)
@@ -1427,7 +1427,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeStatement_t* s
                 }
             }
             break;
-        case APE_STMT_RECOVER:
+        case APE_EXPR_RECOVER:
             {
                 recover = &stmt->recover;
                 if(ape_symtable_ismoduleglobalscope(symtable))
@@ -2173,7 +2173,7 @@ static bool ape_compiler_compilecodeblock(ApeCompiler_t* comp, ApeCodeblock_t* b
     ApeInt_t ip;
     ApeSize_t i;
     ApeSymTable_t* symtable;
-    ApeStatement_t* stmt;
+    ApeExpression_t* stmt;
     symtable = ape_compiler_getsymboltable(comp);
     if(!symtable)
     {
@@ -2199,7 +2199,7 @@ static bool ape_compiler_compilecodeblock(ApeCompiler_t* comp, ApeCodeblock_t* b
     }
     for(i = 0; i < ape_ptrarray_count(block->statements); i++)
     {
-        stmt = (ApeStatement_t*)ape_ptrarray_get(block->statements, i);
+        stmt = (ApeExpression_t*)ape_ptrarray_get(block->statements, i);
         ok = ape_compiler_compilestatement(comp, stmt);
         if(!ok)
         {

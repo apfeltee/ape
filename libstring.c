@@ -581,8 +581,12 @@ void ape_builtins_install_string(ApeVM_t* vm)
     static ApeNativeItem_t staticfuncs[]=
     {
         {"join", cfn_string_join},
-        { "chr", cfn_string_chr },
-        { "ord", cfn_string_ord },
+        {"chr", cfn_string_chr},
+        {"ord", cfn_string_ord},
+
+        // js-isms
+        {"fromCharCode", cfn_string_chr},
+
         #if 0
         {"trim", cfn_string_trim},
         #endif

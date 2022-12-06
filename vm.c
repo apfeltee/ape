@@ -25,7 +25,7 @@ THE SOFTWARE.
 */
 
 #include <signal.h>
-#include "ape.h"
+#include "inline.h"
 
 static const ApePosition_t g_vmpriv_srcposinvalid = { NULL, -1, -1 };
 
@@ -1652,43 +1652,6 @@ bool ape_vm_getindex(ApeVM_t* vm, ApeObject_t left, ApeObject_t index, ApeObjTyp
     return true;
 }
 
-int jsval_numbertointeger(double n)
-{
-    if(n == 0)
-        return 0;
-    if(isnan(n))
-        return 0;
-    n = (n < 0) ? -floor(-n) : floor(n);
-    if(n < INT_MIN)
-        return INT_MIN;
-    if(n > INT_MAX)
-        return INT_MAX;
-    return (int)n;
-}
-
-int jsval_numbertoint32(double n)
-{
-    double two32 = 4294967296.0;
-    double two31 = 2147483648.0;
-
-    if(!isfinite(n) || n == 0)
-        return 0;
-
-    n = fmod(n, two32);
-    n = n >= 0 ? floor(n) : ceil(n) + two32;
-    if(n >= two31)
-        return n - two32;
-    else
-        return n;
-}
-
-
-unsigned int jsval_numbertouint32(double n)
-{
-    return (unsigned int)jsval_numbertoint32(n);
-}
-
-
 bool ape_vm_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValue_t opcode)
 {
     bool ok;
@@ -1718,10 +1681,8 @@ bool ape_vm_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValu
     {
         rightval = ape_object_value_asnumber(right);
         leftval = ape_object_value_asnumber(left);
-        //leftint = (ApeInt_t)leftval;
-        leftint = jsval_numbertoint32(leftval);
-        //rightint = (ApeInt_t)rightval;
-        rightint = jsval_numbertoint32(rightval);
+        leftint = ape_util_numbertoint32(leftval);
+        rightint = ape_util_numbertoint32(rightval);
         bigres = 0;
         switch(opcode)
         {
@@ -1766,44 +1727,18 @@ bool ape_vm_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValu
                     bigres = (ApeFloat_t)(leftint & rightint);
                 }
                 break;
-/*
-            case OP_SHL:
-                vileft = js_toint32(jst, -2);
-                vuright = js_touint32(jst, -1);
-                js_pop(jst, 2);
-                js_pushnumber(jst, vileft << (vuright & 0x1F));
-                break;
-
-*/
             case APE_OPCODE_LEFTSHIFT:
                 {
-                    #if 0
-                    bigres = (ApeInt_t)(leftint << rightint);
-                    #else
-                    int uleft = jsval_numbertoint32(leftval);
-                    unsigned int uright = jsval_numbertouint32(rightval);
+                    int uleft = ape_util_numbertoint32(leftval);
+                    unsigned int uright = ape_util_numbertouint32(rightval);
                     bigres = (uleft << (uright & 0x1F));
-                    #endif
                 }
                 break;
-/*
-            case OP_SHR:
-                vileft = js_toint32(jst, -2);
-                vuright = js_touint32(jst, -1);
-                js_pop(jst, 2);
-                js_pushnumber(jst, vileft >> (vuright & 0x1F));
-                break;
-
-*/
             case APE_OPCODE_RIGHTSHIFT:
                 {
-                    #if 0
-                    bigres = (ApeInt_t)(leftint >> rightint);
-                    #else
-                    int uleft = jsval_numbertoint32(leftval);
-                    unsigned int uright = jsval_numbertouint32(rightval);
+                    int uleft = ape_util_numbertoint32(leftval);
+                    unsigned int uright = ape_util_numbertouint32(rightval);
                     bigres = (uleft >> (uright & 0x1F));
-                    #endif
                 }
                 break;
             default:

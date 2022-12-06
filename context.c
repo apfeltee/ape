@@ -148,7 +148,7 @@ void ape_context_dumpast(ApeContext_t* ctx, ApePtrArray_t* statements)
     ApeWriter_t* strbuf;
     strbuf = ape_make_writerio(ctx, stderr, false, true);
     fprintf(stderr, "parsed AST:\n");
-    ape_tostring_stmtlist(strbuf, statements);
+    ape_tostring_exprlist(strbuf, statements);
     fprintf(stderr, "\n");
     ape_writer_destroy(strbuf);
 }
