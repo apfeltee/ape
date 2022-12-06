@@ -1,7 +1,6 @@
 
 #include "ape.h"
 
-// Public
 ApeValDict_t* ape_make_valdict_actual(ApeContext_t* ctx, ApeSize_t ksz, ApeSize_t vsz)
 {
     return ape_make_valdictcapacity(ctx, APE_CONF_DICT_INITIAL_SIZE, ksz, vsz);
@@ -245,7 +244,9 @@ ApeSize_t ape_valdict_getcellindex(const ApeValDict_t* dict, const void* key, un
     unsigned long checkhash;
     void* keycheck;
     *out_found = false;
-    //fprintf(stderr, "ape_valdict_getcellindex: dict=%p, dict->cellcap=%d\n", dict, dict->cellcap);
+    #if 0
+    fprintf(stderr, "ape_valdict_getcellindex: dict=%p, dict->cellcap=%d\n", dict, dict->cellcap);
+    #endif
     ofs = 0;
     if(dict->cellcap > 1)
     {
@@ -256,7 +257,9 @@ ApeSize_t ape_valdict_getcellindex(const ApeValDict_t* dict, const void* key, un
     {
         cell = APE_CONF_INVALID_VALDICT_IX;
         ix = (cell_ix + i) & ofs;
-        //fprintf(stderr, "(cell_ix=%d + i=%d) & ofs=%d == %d\n", cell_ix, i, ofs, ix);
+        #if 0
+        fprintf(stderr, "(cell_ix=%d + i=%d) & ofs=%d == %d\n", cell_ix, i, ofs, ix);
+        #endif
         cell = dict->cells[ix];
         if(cell == APE_CONF_INVALID_VALDICT_IX)
         {
@@ -391,7 +394,6 @@ ApeValDict_t* ape_valdict_copywithitems(ApeValDict_t* dict)
     return dict_copy;
 }
 
-// Public
 ApeStrDict_t* ape_make_strdict(ApeContext_t* ctx, ApeDataCallback_t copy_fn, ApeDataCallback_t destroy_fn)
 {
     bool ok;

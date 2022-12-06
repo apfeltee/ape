@@ -66,7 +66,7 @@ ApePseudoClass_t* ape_context_findpseudoclassbytype(ApeContext_t* ctx, ApeObjTyp
     void* raw;
     const char* stag;
     ApePseudoClass_t* psc;
-    //if(typ == APE_OBJECT_)
+    /* if(typ == APE_OBJECT_) */
     stag = ape_object_value_typename(typ);
     raw = ape_strdict_getbyname(ctx->classmapping, stag);
     if(raw == NULL)
@@ -80,7 +80,6 @@ ApePseudoClass_t* ape_context_findpseudoclassbytype(ApeContext_t* ctx, ApeObjTyp
 ApeObjMemberItem_t* ape_builtin_find_objectfunc(ApeContext_t* ctx, ApeStrDict_t* dict, const char* idxname, unsigned long idxhash)
 {
     ApeObjMemberItem_t* p;
-    ApeInt_t i;
     (void)ctx;
     p = (ApeObjMemberItem_t*)ape_strdict_getbyhash(dict, idxname, idxhash);
     if(p != NULL)
@@ -94,7 +93,7 @@ ApeObjMemberItem_t* builtin_get_object(ApeContext_t* ctx, ApeObjType_t objt, con
 {
     ApePseudoClass_t* psc;
     ApeObjMemberItem_t* aom;
-    // todo: currently maps are explicitly not supported.
+    /* todo: currently maps are explicitly not supported. */
     if(objt == APE_OBJECT_MAP)
     {
         return NULL;

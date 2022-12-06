@@ -1,6 +1,5 @@
 
-#include "ape.h"
-
+#include "inline.h"
 
 ApeTraceback_t* ape_make_traceback(ApeContext_t* ctx)
 {

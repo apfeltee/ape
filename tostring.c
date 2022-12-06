@@ -233,16 +233,22 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeExpression_t* expr)
         case APE_EXPR_LITERALNUMBER:
             {
                 fltnum = expr->numberliteral;
-                //ape_writer_appendf(buf, "%1.17g", fltnum);
+                #if 0
+                ape_writer_appendf(buf, "%1.17g", fltnum);
+                #else
                 if(fltnum == ((ApeInt_t)fltnum))
                 {
-                    //ape_writer_appendf(buf, "%" PRId64, (ApeInt_t)fltnum);
+                    #if 0
+                    ape_writer_appendf(buf, "%" PRId64, (ApeInt_t)fltnum);
+                    #else
                     ape_writer_appendf(buf, "%" PRIi64, (ApeInt_t)fltnum);
+                    #endif
                 }
                 else
                 {
                     ape_writer_appendf(buf, "%g", fltnum);
                 }
+                #endif
             }
             break;
         case APE_EXPR_LITERALBOOL:
@@ -582,18 +588,27 @@ bool ape_tostring_bytecode(ApeWriter_t* buf, ApeUShort_t* code, ApePosition_t* s
             ape_writer_append(buf, " ");
             if(op == APE_OPCODE_MKNUMBER)
             {
-                //dv = ape_util_uinttofloat(operands[i]);
+                #if 0
+                dv = ape_util_uinttofloat(operands[i]);
+                #else
                 dv = (ApeFloat_t)operands[i];
-                //ape_writer_appendf(buf, "%1.17g", dv);
+                #endif
+                #if 0
+                ape_writer_appendf(buf, "%1.17g", dv);
+                #else
                 if(dv == ((ApeInt_t)dv))
                 {
-                    //ape_writer_appendf(buf, "%" PRId64, (ApeInt_t)fltnum);
+                    #if 0
+                    ape_writer_appendf(buf, "%" PRId64, (ApeInt_t)fltnum);
+                    #else
                     ape_writer_appendf(buf, "int<%" PRIi64 ">", (ApeInt_t)dv);
+                    #endif
                 }
                 else
                 {
                     ape_writer_appendf(buf, "flt<%f>", dv);
                 }
+                #endif
             }
             else
             {

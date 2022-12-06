@@ -268,8 +268,6 @@ ApeExpression_t *ape_ast_make_continuestmt(ApeContext_t *ctx);
 ApeExpression_t *ape_ast_make_blockstmt(ApeContext_t *ctx, ApeCodeblock_t *block);
 ApeExpression_t *ape_ast_make_includestmt(ApeContext_t *ctx, char *path);
 ApeExpression_t *ape_ast_make_recoverstmt(ApeContext_t *ctx, ApeIdent_t *errorident, ApeCodeblock_t *body);
-void *ape_ast_destroy_stmt(ApeExpression_t *stmt);
-ApeExpression_t *ape_ast_copy_stmt(const ApeExpression_t *stmt);
 ApeCodeblock_t *ape_ast_make_code_block(ApeAllocator_t *alloc, ApePtrArray_t *statements);
 void *ape_ast_destroy_codeblock(ApeCodeblock_t *block);
 ApeCodeblock_t *ape_ast_copy_codeblock(ApeCodeblock_t *block);
@@ -278,7 +276,6 @@ ApeIfCase_t *ape_ast_make_if_case(ApeAllocator_t *alloc, ApeExpression_t *test, 
 void *ape_ast_destroy_ifcase(ApeIfCase_t *cond);
 ApeIfCase_t *ape_ast_copy_ifcase(ApeIfCase_t *ifcase);
 ApeExpression_t *ape_ast_make_expression(ApeContext_t *ctx, ApeExprType_t type);
-ApeExpression_t *ape_ast_make_statement(ApeContext_t *ctx, ApeExprType_t type);
 ApeParser_t *ape_ast_make_parser(ApeContext_t *ctx, const ApeConfig_t *config, ApeErrorList_t *errors);
 void ape_parser_destroy(ApeParser_t *parser);
 ApePtrArray_t *ape_parser_parseall(ApeParser_t *parser, const char *input, ApeCompFile_t *file);
@@ -473,7 +470,7 @@ bool ape_writer_grow(ApeWriter_t *buf, ApeSize_t new_capacity);
 /* tostring.c */
 const char *ape_tostring_operator(ApeOperator_t op);
 const char *ape_tostring_exprtype(ApeExprType_t type);
-bool ape_tostring_stmtlist(ApeWriter_t *buf, ApePtrArray_t *statements);
+bool ape_tostring_exprlist(ApeWriter_t *buf, ApePtrArray_t *statements);
 bool ape_tostring_expression(ApeWriter_t *buf, ApeExpression_t *expr);
 bool ape_tostring_codeblock(ApeWriter_t *buf, ApeCodeblock_t *stmt);
 bool ape_tostring_compresult(ApeWriter_t *buf, ApeCompResult_t *res);

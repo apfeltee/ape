@@ -4,8 +4,27 @@
 * this file contains code that is intended to be inlined.
 * it is *not* required in production code; only ape.h is.
 */
+#define _ISOC99_SOURCE
+#define _POSIX_C_SOURCE 200112L
 
+#include <signal.h>
+#include <math.h>
 #include "ape.h"
+
+#if defined(__GNUC__)
+    #if !defined(isfinite)
+        #define isfinite(v) (__builtin_isfinite(v))
+    #endif
+#endif
+
+#if !defined(va_copy)
+    #if defined(__GNUC__)
+        #define va_copy(d,s) __builtin_va_copy(d,s)
+    #else
+        /* https://stackoverflow.com/questions/558223/va-copy-porting-to-visual-c */
+        #define va_copy(d,s) ((d) = (s))
+    #endif
+#endif
 
 static APE_INLINE int ape_util_doubletoint(double n)
 {
@@ -59,7 +78,7 @@ static APE_INLINE unsigned int ape_util_numbertouint32(double n)
     return (unsigned int)ape_util_numbertoint32(n);
 }
 
-// fixme
+/* fixme */
 static APE_INLINE ApeUInt_t ape_util_floattouint(ApeFloat_t val)
 {
     return val;

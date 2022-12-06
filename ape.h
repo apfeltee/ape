@@ -83,7 +83,11 @@ THE SOFTWARE.
 #endif
 
 #if defined(APE_CCENV_ANSIMODE)
-    #define APE_INLINE
+    #if defined(__GNUC__)
+        #define APE_INLINE __inline__ __attribute__ ((__gnu_inline__))
+    #else
+        #define APE_INLINE
+    #endif
 #else
     #define APE_INLINE inline
 #endif
@@ -111,7 +115,7 @@ THE SOFTWARE.
 #define APE_STRNEQ(a, b, n) (strncmp((a), (b), (n)) == 0)
 #define APE_ARRAY_LEN(array) ((int)(sizeof(array) / sizeof(array[0])))
 
-//#define APE_DEBUG
+#define APE_DEBUG 0
 
 #if 1
 #define APE_DBLEQ(a, b) \
@@ -126,7 +130,7 @@ THE SOFTWARE.
 
 #define APE_ASSERT(x) assert((x))
 
-#ifdef APE_DEBUG
+#if defined(APE_DEBUG) && (APE_DEBUG == 1)
     #define APE_FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
     #define APE_LOG(...) ape_log(APE_FILENAME, __LINE__, __VA_ARGS__)
 #else
@@ -335,7 +339,6 @@ enum ApeTokenType_t
     TOKEN_TYPE_MAX
 };
 
-
 enum ApeOperator_t
 {
     APE_OPERATOR_NONE,
@@ -392,7 +395,6 @@ enum ApeExprType_t
     APE_EXPR_INCLUDE,
     APE_EXPR_RECOVER,
 };
-
 
 enum ApeSymbolType_t
 {

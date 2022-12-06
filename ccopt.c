@@ -125,8 +125,11 @@ ApeExpression_t* ape_optimizer_optinfixexpr(ApeExpression_t* expr)
                 break;
             case APE_OPERATOR_MODULUS:
                 {
-                    //res = ape_ast_make_numberliteralexpr(expr->context, fmod(leftval, rightval));
+                    #if 0
+                    res = ape_ast_make_numberliteralexpr(expr->context, fmod(leftval, rightval));
+                    #else
                     res = ape_ast_make_numberliteralexpr(expr->context, (leftint % rightint));
+                    #endif
                 }
                 break;
             case APE_OPERATOR_BITAND:

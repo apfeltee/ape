@@ -12,8 +12,6 @@
 
 #include "ape.h"
 
-// endtypes
-
 enum
 {
     MAX_RESTARGS = 1024,

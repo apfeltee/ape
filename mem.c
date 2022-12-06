@@ -160,8 +160,10 @@ ApeObjData_t* ape_gcmem_allocobjdata(ApeGCMemory_t* mem, ApeObjType_t type)
     }
     memset(data, 0, sizeof(ApeObjData_t));
     APE_ASSERT(ape_ptrarray_count(mem->objects_back) >= ape_ptrarray_count(mem->objects));
+    /*
     // we want to make sure that appending to objects_back never fails in sweep
     // so this only reserves space there.
+    */
     ok = ape_ptrarray_add(mem->objects_back, data);
     if(!ok)
     {
@@ -185,7 +187,7 @@ bool ape_gcmem_canputinpool(ApeGCMemory_t* mem, ApeObjData_t* data)
     ApeObject_t obj;
     ApeObjPool_t* pool;
     obj = object_make_from_data(mem->context, data->type, data);
-    // this is to ensure that large objects won't be kept in pool indefinitely
+    /* this is to ensure that large objects won't be kept in pool indefinitely */
     switch(data->type)
     {
         case APE_OBJECT_ARRAY:
@@ -225,7 +227,6 @@ bool ape_gcmem_canputinpool(ApeGCMemory_t* mem, ApeObjData_t* data)
     return true;
 }
 
-// INTERNAL
 ApeObjPool_t* ape_gcmem_getpoolfor(ApeGCMemory_t* mem, ApeObjType_t type)
 {
     switch(type)
@@ -266,8 +267,10 @@ ApeObjData_t* ape_gcmem_getfrompool(ApeGCMemory_t* mem, ApeObjType_t type)
     }
     data = pool->datapool[pool->count - 1];
     APE_ASSERT(ape_ptrarray_count(mem->objects_back) >= ape_ptrarray_count(mem->objects));
+    /*
     // we want to make sure that appending to objects_back never fails in sweep
     // so this only reserves space there.
+    */
     ok = ape_ptrarray_add(mem->objects_back, data);
     if(!ok)
     {
@@ -416,7 +419,7 @@ void ape_gcmem_sweep(ApeGCMemory_t* mem)
         data = (ApeObjData_t*)ape_ptrarray_get(mem->objects, i);
         if(data->gcmark)
         {
-            // this should never fail because objects_back's size should be equal to objects
+            /* this should never fail because objects_back's size should be equal to objects */
             ok = ape_ptrarray_add(mem->objects_back, data);
             (void)ok;
             APE_ASSERT(ok);

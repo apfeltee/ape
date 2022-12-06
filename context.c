@@ -1,7 +1,6 @@
 
 #include "ape.h"
 
-//implcontext
 ApeContext_t* ape_make_context()
 {
     return ape_make_contextex(NULL, NULL, NULL);
@@ -18,11 +17,14 @@ ApeContext_t* ape_make_contextex(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t f
         return NULL;
     }
     memset(ctx, 0, sizeof(ApeContext_t));
-    // NB. this currently does not work. need to figure this out eventually.
+    /* NB. this currently does not work. need to figure this out eventually. */
     {
-        //ctx->alloc = ape_make_allocator(ape_mem_defaultmalloc, ape_mem_defaultfree, ctx);
+        #if 0
+        ctx->alloc = ape_make_allocator(ape_mem_defaultmalloc, ape_mem_defaultfree, ctx);
+        #else
         ctx->alloc = ape_make_allocator(NULL, NULL, ctx);
         ctx->custom_allocator = custom_alloc;
+        #endif
     }
     ape_context_setdefaultconfig(ctx);
     ctx->debugwriter = ape_make_writerio(ctx, stderr, false, true);
@@ -191,7 +193,6 @@ ApeObject_t ape_context_executesource(ApeContext_t* ctx, const char* code, bool 
     {
         goto err;
     }
-    //APE_ASSERT(ctx->vm->sp == 0);
     objres = ape_vm_getlastpopped(ctx->vm);
     if(ape_object_value_type(objres) == APE_OBJECT_NONE)
     {
@@ -263,8 +264,6 @@ ApeError_t* ape_context_geterror(ApeContext_t* ctx, int index)
     return ape_errorlist_getat(&ctx->errors, index);
 }
 
-
-
 bool ape_context_setglobal(ApeContext_t* ctx, const char* name, ApeObject_t obj)
 {
     return ape_globalstore_set(ctx->globalstore, name, obj);
@@ -272,31 +271,39 @@ bool ape_context_setglobal(ApeContext_t* ctx, const char* name, ApeObject_t obj)
 
 char* ape_context_errortostring(ApeContext_t* ctx, ApeError_t* err)
 {
-    const char* type_str = ape_error_gettypestring(err);
-    const char* filename = ape_error_getfile(err);
-    const char* line = ape_error_getsource(err);
-    int line_num = ape_error_getline(err);
-    int col_num = ape_error_getcolumn(err);
-    ApeWriter_t* buf = ape_make_writer(ctx);
+    int j;
+    int lineno;
+    int colno;
+    const char* typstr;
+    const char* filename;
+    const char* linesrc;
+    ApeWriter_t* buf;
+    ApeTraceback_t* traceback;
+    typstr = ape_error_gettypestring(err);
+    filename = ape_error_getfile(err);
+    linesrc = ape_error_getsource(err);
+    lineno = ape_error_getline(err);
+    colno = ape_error_getcolumn(err);
+    buf = ape_make_writer(ctx);
     if(!buf)
     {
         return NULL;
     }
-    if(line)
+    if(linesrc)
     {
-        ape_writer_append(buf, line);
+        ape_writer_append(buf, linesrc);
         ape_writer_append(buf, "\n");
-        if(col_num >= 0)
+        if(colno >= 0)
         {
-            for(int j = 0; j < (col_num - 1); j++)
+            for(j = 0; j < (colno - 1); j++)
             {
                 ape_writer_append(buf, " ");
             }
             ape_writer_append(buf, "^\n");
         }
     }
-    ape_writer_appendf(buf, "%s ERROR in \"%s\" on %d:%d: %s\n", type_str, filename, line_num, col_num, ape_error_getmessage(err));
-    ApeTraceback_t* traceback = ape_error_gettraceback(err);
+    ape_writer_appendf(buf, "%s ERROR in \"%s\" on %d:%d: %s\n", typstr, filename, lineno, colno, ape_error_getmessage(err));
+    traceback = ape_error_gettraceback(err);
     if(traceback)
     {
         ape_writer_appendf(buf, "traceback:\n");
@@ -317,7 +324,6 @@ static ApeObject_t ape_context_wrapnativefunc(ApeVM_t* vm, void* data, ApeSize_t
     (void)vm;
     wrapper = (ApeNativeFuncWrapper_t*)data;
     wrapper->context = vm->context;
-    //APE_ASSERT(vm == wrapper->context->vm);
     objres = wrapper->wrappedfnptr(wrapper->context, wrapper->data, argc, (ApeObject_t*)args);
     if(ape_context_haserrors(wrapper->context))
     {

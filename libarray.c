@@ -241,11 +241,6 @@ void ape_valarray_orphandata(ApeValArray_t* arr)
     ape_valarray_initcapacity(arr, arr->context, 0, arr->elemsize);
 }
 
-
-//-----------------------------------------------------------------------------
-// Pointer Array
-//-----------------------------------------------------------------------------
-
 ApePtrArray_t* ape_make_ptrarray(ApeContext_t* ctx)
 {
     return ape_make_ptrarraycapacity(ctx, 0);
@@ -280,7 +275,7 @@ void ape_ptrarray_destroy(ApePtrArray_t* arr)
     ape_allocator_free(arr->alloc, arr);
 }
 
-// todo: destroy and copy in make fn
+/* todo: destroy and copy in make fn */
 void ape_ptrarray_destroywithitems(ApePtrArray_t* arr, ApeDataCallback_t destroy_fn)
 {
     if(arr == NULL)
@@ -476,8 +471,6 @@ bool ape_object_array_pushvalue(ApeObject_t object, ApeObject_t val)
     return ape_valarray_add(array, &val);
 }
 
-//bool ape_valarray_pop(ApeValArray_t *arr, void *out_value);
-
 bool ape_object_array_popvalue(ApeObject_t object, ApeObject_t* dest)
 {
 
@@ -660,10 +653,14 @@ static ApeObject_t objfn_array_map(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
     {
         val = ape_object_array_getvalue(self, i);
         ape_context_debugvalue(vm->context, "array->val", val);
-        //ape_vm_pushstack(vm, fn);
-        //ape_vm_pushstack(vm, val);
+        #if 0
+        ape_vm_pushstack(vm, fn);
+        ape_vm_pushstack(vm, val);
+        if(!ape_vm_callobjectstack(vm, fn, 1))
+        #else
         fwdargs[0] = ape_object_value_copyflat(vm->context, val);
         if(!ape_vm_callobjectargs(vm, fn, 1, fwdargs))
+        #endif
         {
             fprintf(stderr, "failed to call function\n");
             return ape_object_make_null(vm->context);
@@ -747,13 +744,13 @@ void ape_builtins_install_array(ApeVM_t* vm)
         {"map", true, objfn_array_map},
         {"join", true, objfn_array_join},
 
-        // pseudo funcs
+        /* pseudo funcs */
         {"first", false, objfn_array_first},
         {"last", false, objfn_array_last},
 
         /* TODO: implement me! */
         #if 0
-        //{"", true, objfn_array_},
+        /* {"", true, objfn_array_}, */
         {"map", true, objfn_array_map},
         {"sort", true, objfn_array_sort},
         {"grep", true, objfn_array_grep},
@@ -764,7 +761,6 @@ void ape_builtins_install_array(ApeVM_t* vm)
     psc = ape_context_make_pseudoclass(vm->context, vm->context->objarrayfuncs, APE_OBJECT_ARRAY, classname);
     for(i=0; memberfuncs[i].name != NULL; i++)
     {
-        //ape_strdict_set(vm->context->objarrayfuncs, classname, memberfuncs[i].name, &memberfuncs[i]);
         ape_pseudoclass_setmethod(psc, memberfuncs[i].name, &memberfuncs[i]);
     }
 }

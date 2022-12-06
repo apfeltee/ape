@@ -767,7 +767,7 @@ static ApeObject_t cfn_error(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     {
         msg = ape_object_string_getdata(args[0]);
     }
-    //return ape_object_make_error(vm->context, msg);
+    /*return ape_object_make_error(vm->context, msg);*/
     ape_vm_adderror(vm, APE_ERROR_RUNTIME, "%s", msg);
     return ape_object_make_null(vm->context);
 }

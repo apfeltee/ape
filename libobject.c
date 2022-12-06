@@ -226,8 +226,11 @@ void ape_tostring_object(ApeWriter_t* buf, ApeObject_t obj, bool quote_str)
                 #if 1
                 if(fltnum == ((ApeInt_t)fltnum))
                 {
-                    //ape_writer_appendf(buf, "%" PRId64, (ApeInt_t)fltnum);
+                    #if 0
+                    ape_writer_appendf(buf, "%" PRId64, (ApeInt_t)fltnum);
+                    #else
                     ape_writer_appendf(buf, "%" PRIi64, (ApeInt_t)fltnum);
+                    #endif
                 }
                 else
                 {
@@ -570,7 +573,6 @@ ApeObject_t ape_object_getkvpairat(ApeContext_t* ctx, ApeObject_t object, int ix
     return res;
 }
 
-// INTERNAL
 ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj, ApeValDict_t * copies)
 {
     ApeSize_t i;
@@ -644,7 +646,7 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
                     return ape_object_make_null(ctx);
                 }
                 memcpy(src_positions_copy, function->compiledcode->srcpositions, sizeof(ApePosition_t) * function->compiledcode->count);
-                // todo: add compilation result copy function
+                /* todo: add compilation result copy function */
                 comp_res_copy = ape_make_compresult(ctx, bytecode_copy, src_positions_copy, function->compiledcode->count);
                 if(!comp_res_copy)
                 {

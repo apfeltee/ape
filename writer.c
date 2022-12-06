@@ -112,7 +112,7 @@ bool ape_writer_appendlen(ApeWriter_t* buf, const char* str, ApeSize_t str_len)
         (buf->iowriter)(buf->context, buf->iohandle, str, str_len);
         if(buf->iomustflush)
         {
-            // todo: this should also be a function pointer. just in case.
+            /* todo: this should also be a function pointer. just in case. */
             fflush((FILE*)buf->iohandle);
         }
         return true;

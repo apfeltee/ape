@@ -208,7 +208,6 @@ static ApeObject_t cfn_file_stat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObj
             map = ape_object_make_map(vm->context);
         }
         for_field_string("name", path);
-        //ape_object_array_pushstring(ary, dent->d_name);
         for_field_string("name", path);
         for_field_string("path", path);
         for_field_number("dev", st.st_dev);
@@ -275,7 +274,6 @@ static ApeObject_t cfn_dir_readdir(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
         isfile = (dent->d_type == DT_REG);
         isdir = (dent->d_type == DT_DIR);
         subm = ape_object_make_map(vm->context);
-        //ape_object_array_pushstring(ary, dent->d_name);
         ape_object_map_setnamedstring(subm, "name", dent->d_name);
         ape_object_map_setnamednumber(subm, "ino", dent->d_ino);
         ape_object_map_setnamednumber(subm, "type", dent->d_type);
@@ -303,7 +301,6 @@ void ape_builtins_install_io(ApeVM_t* vm)
 
     static ApeNativeItem_t g_core_dirfuncs[]=
     {
-        // filesystem
         #if !defined(CORE_NODIRENT)
         {"read", cfn_dir_readdir},
         #endif

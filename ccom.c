@@ -270,7 +270,7 @@ bool ape_compiler_compilecode(ApeCompiler_t* comp, const char* code)
     statements = ape_parser_parseall(filescope->parser, code, filescope->file);
     if(!statements)
     {
-        // errors are added by parser
+        /* errors are added by parser */
         return false;
     }
     if(comp->context->config.dumpast)
@@ -314,7 +314,8 @@ ApeCompResult_t* ape_compiler_compilesource(ApeCompiler_t* comp, const char* cod
     {
         goto err;
     }
-    compscope = ape_compiler_getcompscope(comp);// might've changed
+    /* might've changed */
+    compscope = ape_compiler_getcompscope(comp);
     APE_ASSERT(compscope->outer == NULL);
     compscope = ape_compiler_getcompscope(comp);
     res = ape_compscope_orphanresult(compscope);
@@ -341,7 +342,7 @@ ApeCompResult_t* ape_compiler_compilefile(ApeCompiler_t* comp, const char* path)
     code = NULL;
     file = NULL;
     res = NULL;
-    // todo: read code function
+    /* todo: read code function */
     if(!comp->config->fileio.ioreader.fnreadfile)
     {
         ape_errorlist_add(comp->errors, APE_ERROR_COMPILATION, g_ccpriv_srcposinvalid, "file read function not configured");
@@ -370,7 +371,7 @@ ApeCompResult_t* ape_compiler_compilefile(ApeCompiler_t* comp, const char* path)
     {
         goto err;
     }
-    // todo: push file scope instead?
+    /* todo: push file scope instead? */
     prevfile = filescope->file;
     filescope->file = file;
     res = ape_compiler_compilesource(comp, code);
@@ -422,7 +423,6 @@ ApeValArray_t* ape_compiler_getconstants(ApeCompiler_t* comp)
     return comp->constants;
 }
 
-// INTERNAL
 bool ape_compiler_init(ApeCompiler_t* comp, ApeContext_t* ctx, const ApeConfig_t* cfg, ApeGCMemory_t* mem, ApeErrorList_t* el, ApePtrArray_t* fl, ApeGlobalStore_t* gs)
 {
     bool ok;
@@ -725,7 +725,7 @@ static bool ape_compiler_compilestmtlist(ApeCompiler_t* comp, ApePtrArray_t* sta
 
 bool ape_compiler_includemodule(ApeCompiler_t* comp, ApeExpression_t* includestmt)
 {
-    // todo: split into smaller functions
+    /* todo: split into smaller functions */
     ApeSize_t i;
     bool ok;
     bool result;
@@ -807,7 +807,7 @@ bool ape_compiler_includemodule(ApeCompiler_t* comp, ApeExpression_t* includestm
     module = (ApeModule_t*)ape_strdict_getbyname(comp->modules, filepath);
     if(!module)
     {
-        // todo: create new module function
+        /* todo: create new module function */
         if(!comp->config->fileio.ioreader.fnreadfile)
         {
             ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, includestmt->pos,
@@ -994,7 +994,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeExpression_t* 
                     {
                         goto statementiferror;
                     }
-                    // don't ape_compiler_emit jump for the last statement
+                    /* don't emit jump for the last statement */
                     if(i < (ape_ptrarray_count(ifstmt->cases) - 1) || ifstmt->alternative)
                     {
                         jumptoendip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte_t)(0xbeef)));
@@ -1139,7 +1139,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeExpression_t* 
                 {
                     return false;
                 }
-                // Init
+                /* init */
                 indexsymbol = ape_compiler_definesym(comp, stmt->pos, "@i", false, true);
                 if(!indexsymbol)
                 {
@@ -1184,7 +1184,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeExpression_t* 
                         return false;
                     }
                 }
-                // Update
+                /* update */
                 jumptoafterupdateip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte_t)0xbeef));
                 if(jumptoafterupdateip < 0)
                 {
@@ -1213,7 +1213,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeExpression_t* 
                 }
                 afterupdateip = ape_compiler_getip(comp);
                 ape_compiler_moduint16operand(comp, jumptoafterupdateip + 1, afterupdateip);
-                // Test
+                /* test */
                 ok = ape_valarray_push(comp->srcpositionsstack, &foreach->source->pos);
                 if(!ok)
                 {
@@ -1281,7 +1281,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeExpression_t* 
                 {
                     return false;
                 }
-                // Body
+                /* body */
                 ok = ape_compiler_pushcontip(comp, updateip);
                 if(!ok)
                 {
@@ -1317,7 +1317,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeExpression_t* 
                 {
                     return false;
                 }
-                // Init
+                /* init */
                 jumptoafterupdateip = 0;
                 ok = false;
                 if(forloop->init)
@@ -1333,7 +1333,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeExpression_t* 
                         return false;
                     }
                 }
-                // Update
+                /* update */
                 updateip = ape_compiler_getip(comp);
                 if(forloop->update)
                 {
@@ -1353,7 +1353,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeExpression_t* 
                     afterupdateip = ape_compiler_getip(comp);
                     ape_compiler_moduint16operand(comp, jumptoafterupdateip + 1, afterupdateip);
                 }
-                // Test
+                /* test */
                 if(forloop->test)
                 {
                     ok = ape_compiler_compileexpression(comp, forloop->test);
@@ -1381,7 +1381,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeExpression_t* 
                 {
                     return false;
                 }
-                // Body
+                /* body */
                 ok = ape_compiler_pushcontip(comp, updateip);
                 if(!ok)
                 {
@@ -1934,7 +1934,8 @@ static bool ape_compiler_compileexpression(ApeCompiler_t* comp, ApeExpression_t*
                     }
                 }
                 freesymbols = symtable->freesymbols;
-                symtable->freesymbols = NULL;// because it gets destroyed with compiler_pop_compilation_scope()
+                /* because it gets destroyed with compiler_pop_compilation_scope() */
+                symtable->freesymbols = NULL;
                 numlocals = symtable->maxnumdefinitions;
                 compres = ape_compscope_orphanresult(compscope);
                 if(!compres)
@@ -2038,9 +2039,11 @@ static bool ape_compiler_compileexpression(ApeCompiler_t* comp, ApeExpression_t*
                     symbol = ape_symtable_resolve(symtable, ident->value);
                     if(!symbol)
                     {
-                        //ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos, "symbol '%s' could not be resolved", ident->value);
-                        //goto error;
-                        //ape_symtable_define(ApeSymTable_t* table, const char* name, bool assignable)
+                        /*
+                        ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos, "symbol '%s' could not be resolved", ident->value);
+                        goto error;
+                        ape_symtable_define(ApeSymTable_t* table, const char* name, bool assignable)
+                        */
                         symbol = ape_symtable_define(symtable, ident->value, true);
                     }
                     if(!symbol->assignable)

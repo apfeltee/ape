@@ -57,8 +57,11 @@ ApeObject_t ape_object_make_nativefuncmemory(ApeContext_t* ctx, const char* name
     obj->valnatfunc.nativefnptr = fn;
     if(data)
     {
-        //memcpy(obj->valnatfunc.data, data, dlen);
+        #if 0
+        memcpy(obj->valnatfunc.data, data, dlen);
+        #else
         obj->valnatfunc.dataptr = data;
+        #endif
     }
     obj->valnatfunc.datalen = dlen;
     return object_make_from_data(ctx, APE_OBJECT_NATIVEFUNCTION, obj);

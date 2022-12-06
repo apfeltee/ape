@@ -572,7 +572,6 @@ bool ape_lexer_expectcurrent(ApeLexer_t* lex, ApeTokenType_t type)
     return true;
 }
 
-// INTERNAL
 static bool ape_lexer_readchar(ApeLexer_t* lex)
 {
     bool ok;

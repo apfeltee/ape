@@ -84,8 +84,10 @@ bool ape_object_string_reservecapacity(ApeObjData_t* data, ApeSize_t capacity)
     {
         if(string->is_allocated)
         {
-            APE_ASSERT(false);// should never happen
-            ape_allocator_free(data->mem->alloc, string->value_allocated);// just in case
+            /* should never happen */
+            APE_ASSERT(false);
+            /* just in case */
+            ape_allocator_free(data->mem->alloc, string->value_allocated);
         }
         string->capacity = APE_CONF_SIZE_STRING_BUFSIZE - 1;
         string->is_allocated = false;
@@ -384,6 +386,7 @@ ApeObject_t ape_builtins_stringformat(ApeContext_t* ctx, const char* fmt, ApeSiz
     ApeObject_t srt;
     ApeArgCheck_t check;
     ApeWriter_t* buf;
+    (void)pch;
     idx = 0;
     cch = -1;
     pch = -1;
@@ -477,7 +480,6 @@ ApeObject_t ape_builtins_stringformat(ApeContext_t* ctx, const char* fmt, ApeSiz
 
 static ApeObject_t objfn_string_format(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
-    char ch;
     const char* inpstr;
     ApeSize_t inplen;
     ApeObject_t self;
@@ -584,7 +586,7 @@ void ape_builtins_install_string(ApeVM_t* vm)
         {"chr", cfn_string_chr},
         {"ord", cfn_string_ord},
 
-        // js-isms
+        /* js-isms */
         {"fromCharCode", cfn_string_chr},
 
         #if 0
@@ -600,17 +602,17 @@ void ape_builtins_install_string(ApeVM_t* vm)
         {"index", true, objfn_string_indexof},
         {"substr", true, objfn_string_substr},
 
-        // js-isms
+        /* js-isms */
         {"charAt", true, objfn_string_charat},
         {"charCodeAt", true, objfn_string_byteat},
         {"indexOf", true, objfn_string_indexof},
 
-        // utilities
+        /* utilities */
         {"format", true, objfn_string_format},
 
         /* TODO: implement me! */
         #if 0
-        //{"", true, objfn_string_},
+        /* {"", true, objfn_string_}, */
         {"upper", true, objfn_string_toupper},
         {"lower", true, objfn_string_tolower},
         {"toupper", true, objfn_string_toupper},
