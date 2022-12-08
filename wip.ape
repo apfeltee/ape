@@ -1,0 +1,24 @@
+
+// variadic function syntax
+// like javascript:
+function foo(a, b, ...rest)
+{
+}
+
+// like ruby/python
+function quux(foo, b, *rest)
+{
+}
+
+// typing a la python. probably not very realistic, tbh.
+function bar(a: String, b: Number)
+{
+}
+
+// classes
+class Foo
+{
+    
+    // el constructor
+    function __new__()
+}

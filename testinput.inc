@@ -9,8 +9,8 @@ const trailing_comma_array = [
     3,
 ]
 
-println("len(trailing_comma_array)=", len(trailing_comma_array) == 3);
-check(len(trailing_comma_array), 3)
+println("Object.length(trailing_comma_array)=", Object.length(trailing_comma_array));
+check(Object.length(trailing_comma_array), 3)
 
 const trailing_comma_dict = {
     a: 1,
@@ -18,7 +18,7 @@ const trailing_comma_dict = {
     c: 3,
 }
 
-check(len(trailing_comma_dict), 3)
+check(Object.length(trailing_comma_dict), 3)
 
 // tests a case where sp is incremented over already freed objects
 // and gc tries to mark them
@@ -120,7 +120,7 @@ function block_test() {
 check(block_test(), 1)
 
 const big_array = array(1000)
-check(len(big_array), 1000)
+check(Object.length(big_array), 1000)
 
 function return_no_semicolon() { return }
 
@@ -323,8 +323,8 @@ check("a" + "b", "ab")
     for (var i = 0; i < n; i++) {
         str += "x"
     }
-    println("str = ", len(str))
-    //check(len(str), n)
+    println("str = ", Object.length(str))
+    //check(Object.length(str), n)
     for (var i = 0; i < n; i++) {
         assert(str[i] == "x")
     }

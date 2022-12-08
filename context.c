@@ -1,5 +1,5 @@
 
-#include "ape.h"
+#include "inline.h"
 
 ApeContext_t* ape_make_context()
 {
@@ -28,6 +28,7 @@ ApeContext_t* ape_make_contextex(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t f
     }
     ape_context_setdefaultconfig(ctx);
     ctx->debugwriter = ape_make_writerio(ctx, stderr, false, true);
+    ctx->stdoutwriter = ape_make_writerio(ctx, stdout, false, true);
     ape_errorlist_initerrors(&ctx->errors);
     ctx->mem = ape_make_gcmem(ctx);
     if(!ctx->mem)
@@ -51,7 +52,7 @@ ApeContext_t* ape_make_contextex(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t f
     {
         goto err;
     }
-    ctx->vm = ape_vm_make(ctx, &ctx->config, ctx->mem, &ctx->errors, ctx->globalstore);
+    ctx->vm = ape_make_vm(ctx, &ctx->config, ctx->mem, &ctx->errors, ctx->globalstore);
     if(!ctx->vm)
     {
         goto err;
@@ -82,6 +83,7 @@ void ape_context_destroy(ApeContext_t* ctx)
 void ape_context_deinit(ApeContext_t* ctx)
 {
     ape_writer_destroy(ctx->debugwriter);
+    ape_writer_destroy(ctx->stdoutwriter);
     ape_strdict_destroy(ctx->objstringfuncs);
     ape_strdict_destroy(ctx->objarrayfuncs);
     ape_vm_destroy(ctx->vm);
@@ -148,7 +150,7 @@ void ape_context_setfileread(ApeContext_t* ctx, ApeIOReadFunc_t file_read, void*
 void ape_context_dumpast(ApeContext_t* ctx, ApePtrArray_t* statements)
 {
     ApeWriter_t* strbuf;
-    strbuf = ape_make_writerio(ctx, stderr, false, true);
+    strbuf = ape_make_writerio(ctx, stdout, false, true);
     fprintf(stderr, "parsed AST:\n");
     ape_tostring_exprlist(strbuf, statements);
     fprintf(stderr, "\n");
@@ -158,7 +160,7 @@ void ape_context_dumpast(ApeContext_t* ctx, ApePtrArray_t* statements)
 void ape_context_dumpbytecode(ApeContext_t* ctx, ApeCompResult_t* cres)
 {
     ApeWriter_t* strbuf;
-    strbuf = ape_make_writerio(ctx, stderr, false, true);
+    strbuf = ape_make_writerio(ctx, stdout, false, true);
     fprintf(stderr, "bytecode:\n");
     ape_tostring_compresult(strbuf, cres);
     fprintf(stderr, "\n");
@@ -231,7 +233,7 @@ ApeObject_t ape_context_executefile(ApeContext_t* ctx, const char* path)
     {
         goto err;
     }
-    APE_ASSERT(ctx->vm->sp == 0);
+    //APE_ASSERT(ctx->vm->stackptr == 0);
     objres = ape_vm_getlastpopped(ctx->vm);
     if(ape_object_value_type(objres) == APE_OBJECT_NONE)
     {

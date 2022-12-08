@@ -1,6 +1,6 @@
 
 #include <stdarg.h>
-#include "ape.h"
+#include "inline.h"
 
 ApeObjType_t* ape_args_make_typarray(int first, ...)
 {
@@ -1124,17 +1124,17 @@ static ApeObject_t cfn_vm_stack(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObje
             return ape_object_make_null(vm->context);
         }
         idx = ape_object_value_asnumber(args[0]);
-        if(idx > (ApeInt_t)(vm->sp + 1))
+        if(idx > (ApeInt_t)(vm->stackptr + 1))
         {
-            ape_vm_adderror(vm, APE_ERROR_RUNTIME, "stack() optional argument out of bounds (idx=%d sp=%d)", idx, vm->sp);
+            ape_vm_adderror(vm, APE_ERROR_RUNTIME, "stack() optional argument out of bounds (idx=%d stackptr=%d)", idx, vm->stackptr);
             return ape_object_make_null(vm->context);
         }
-        return vm->stack[idx];
+        return vm->stackobjects[idx];
     }
     arr = ape_object_make_array(vm->context);
-    for(i=0; i<(ApeSize_t)(vm->sp + 1); i++)
+    for(i=0; i<(ApeSize_t)(vm->stackptr + 1); i++)
     {
-        ape_object_array_pushvalue(arr, vm->stack[i]);
+        ape_object_array_pushvalue(arr, vm->stackobjects[i]);
     }
     return arr;
 }
@@ -1167,8 +1167,7 @@ static ApeNativeItem_t g_core_globalfuncs[] =
     { "random_seed", cfn_random_seed },
     { "random", cfn_random },
     { "slice", cfn_object_slice },
-    { "len", cfn_object_length },
-    { "length", cfn_object_length },
+
     { "eval", cfn_object_eval },
     /* Math */
     { "bitnot", cfn_bitnot },
@@ -1224,7 +1223,7 @@ void ape_builtins_install_object(ApeVM_t* vm)
         {"isexternal", cfn_object_isexternal },
         {"iserror", cfn_object_iserror },
         {"isnativefunction", cfn_object_isnativefunction },
-        { "len", cfn_object_length },
+        { "length", cfn_object_length },
         { "first", cfn_object_first },
         { "last", cfn_object_last },
         { "rest", cfn_object_rest },

@@ -1,5 +1,5 @@
 
-#include "ape.h"
+#include "inline.h"
 
 ApeObject_t ape_object_make_function(ApeContext_t* ctx, const char* name, ApeCompResult_t* cres, bool wdata, ApeInt_t nloc, ApeInt_t nargs, ApeSize_t fvcount)
 {

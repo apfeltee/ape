@@ -1,5 +1,5 @@
 
-#include "ape.h"
+#include "inline.h"
 
 static bool ape_lexer_readchar(ApeLexer_t* lex);
 static char ape_lexer_peekchar(ApeLexer_t* lex);
@@ -78,7 +78,6 @@ char* ape_lexer_tokendupliteral(ApeContext_t* ctx, const ApeToken_t* tok)
 bool ape_lexer_init(ApeLexer_t* lex, ApeContext_t* ctx, ApeErrorList_t* errs, const char* input, ApeCompFile_t* file)
 {
     lex->context = ctx;
-    lex->alloc = &ctx->alloc;
     lex->errors = errs;
     lex->input = input;
     lex->inputlen = (int)strlen(input);
@@ -759,7 +758,7 @@ static bool ape_lexer_addline(ApeLexer_t* lex, int offset)
     if(!ok)
     {
         lex->failed = true;
-        ape_allocator_free(lex->alloc, line);
+        ape_allocator_free(&lex->context->alloc, line);
         return false;
     }
     return true;

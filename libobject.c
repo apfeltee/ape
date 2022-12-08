@@ -1,6 +1,6 @@
 
 #include <inttypes.h>
-#include "ape.h"
+#include "inline.h"
 
 ApeObject_t ape_object_make_number(ApeContext_t* ctx, ApeFloat_t val)
 {

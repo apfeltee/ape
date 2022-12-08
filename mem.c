@@ -1,5 +1,5 @@
 
-#include "ape.h"
+#include "inline.h"
 
 static const ApePosition_t g_mempriv_srcposinvalid = { NULL, -1, -1 };
 
@@ -23,16 +23,24 @@ void ape_mem_defaultfree(void* opaqptr, void* objptr)
     ape_allocator_free(&ctx->custom_allocator, objptr);
 }
 
-void* ape_allocator_alloc(ApeAllocator_t* alloc, size_t size)
+//        ape_allocator_alloc_debug(alc, #sz, __FUNCTION__, __FILE__, __LINE__, sz)
+
+void* ape_allocator_alloc_debug(ApeAllocator_t* alloc, const char* str, const char* func, const char* file, int line, size_t size)
+{
+    fprintf(stderr, "%d bytes allocd in %s:%d:%s: %s\n", size, file, line, func, str);
+    return ape_allocator_alloc_real(alloc, size);
+}
+
+void* ape_allocator_alloc_real(ApeAllocator_t* alloc, size_t size)
 {
     (void)alloc;
     return malloc(size);
     /*
-    if(!alloc || !alloc->malloc)
+    if(!alloc || !alloc->fnmalloc)
     {
-        return malloc(size);
+        return fnmalloc(size);
     }
-    return alloc->malloc(alloc->ctx, size);
+    return alloc->fnmalloc(alloc->ctx, size);
     */
 }
 
@@ -41,20 +49,20 @@ void ape_allocator_free(ApeAllocator_t* alloc, void* ptr)
     (void)alloc;
     free(ptr);
     /*
-    if(!alloc || !alloc->free)
+    if(!alloc || !alloc->fnfree)
     {
-        free(ptr);
+        fnfree(ptr);
         return;
     }
-    alloc->free(alloc->ctx, ptr);
+    alloc->fnfree(alloc->ctx, ptr);
     */
 }
 
 ApeAllocator_t ape_make_allocator(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t free_fn, void* ctx)
 {
     ApeAllocator_t alloc;
-    alloc.malloc = malloc_fn;
-    alloc.free = free_fn;
+    alloc.fnmalloc = malloc_fn;
+    alloc.fnfree = free_fn;
     alloc.ctx = ctx;
     return alloc;
 }
@@ -303,9 +311,12 @@ void ape_gcmem_markobjlist(ApeObject_t* objects, ApeSize_t count)
     for(i = 0; i < count; i++)
     {
         obj = objects[i];
-        if(obj.handle)
+        if(obj.type != APE_OBJECT_NONE)
         {
-            ape_gcmem_markobject(obj);
+            if(obj.handle)
+            {
+                ape_gcmem_markobject(obj);
+            }
         }
     }
 }

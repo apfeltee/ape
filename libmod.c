@@ -1,5 +1,5 @@
 
-#include "ape.h"
+#include "inline.h"
 
 ApeModule_t* ape_make_module(ApeContext_t* ctx, const char* name)
 {
@@ -11,7 +11,6 @@ ApeModule_t* ape_make_module(ApeContext_t* ctx, const char* name)
     }
     memset(module, 0, sizeof(ApeModule_t));
     module->context = ctx;
-    module->alloc = &ctx->alloc;
     module->name = ape_util_strdup(ctx, name);
     if(!module->name)
     {
@@ -33,22 +32,22 @@ void* ape_module_destroy(ApeModule_t* module)
     {
         return NULL;
     }
-    ape_allocator_free(module->alloc, module->name);
+    ape_allocator_free(&module->context->alloc, module->name);
     ape_ptrarray_destroywithitems(module->symbols, (ApeDataCallback_t)ape_symbol_destroy);
-    ape_allocator_free(module->alloc, module);
+    ape_allocator_free(&module->context->alloc, module);
     return NULL;
 }
 
 ApeModule_t* ape_module_copy(ApeModule_t* src)
 {
     ApeModule_t* copy;
-    copy = (ApeModule_t*)ape_allocator_alloc(src->alloc, sizeof(ApeModule_t));
+    copy = (ApeModule_t*)ape_allocator_alloc(&src->context->alloc, sizeof(ApeModule_t));
     if(!copy)
     {
         return NULL;
     }
     memset(copy, 0, sizeof(ApeModule_t));
-    copy->alloc = src->alloc;
+    copy->context = src->context;
     copy->name = ape_util_strdup(src->context, src->name);
     if(!copy->name)
     {

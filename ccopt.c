@@ -1,5 +1,5 @@
 
-#include "ape.h"
+#include "inline.h"
 
 ApeExpression_t* ape_optimizer_optexpr(ApeExpression_t* expr)
 {
@@ -41,18 +41,16 @@ ApeExpression_t* ape_optimizer_optinfixexpr(ApeExpression_t* expr)
     ApeExpression_t* rightexpr;
     ApeExpression_t* rightopt;
     ApeExpression_t* res;
-    ApeAllocator_t* alloc;
     ApeWriter_t* buf;
     ApeFloat_t leftval;
     ApeFloat_t rightval;
-    (void)alloc;
-    leftexpr = expr->infix.left;
+    leftexpr = expr->exinfix.left;
     leftopt = ape_optimizer_optexpr(leftexpr);
     if(leftopt)
     {
         leftexpr = leftopt;
     }
-    rightexpr = expr->infix.right;
+    rightexpr = expr->exinfix.right;
     rightopt = ape_optimizer_optexpr(rightexpr);
     if(rightopt)
     {
@@ -63,98 +61,97 @@ ApeExpression_t* ape_optimizer_optinfixexpr(ApeExpression_t* expr)
     rightisnum = rightexpr->type == APE_EXPR_LITERALNUMBER || rightexpr->type == APE_EXPR_LITERALBOOL;
     leftisstr = leftexpr->type == APE_EXPR_LITERALSTRING;
     rightisstr = rightexpr->type == APE_EXPR_LITERALSTRING;
-    alloc = expr->alloc;
     if(leftisnum && rightisnum)
     {
-        leftval = leftexpr->type == APE_EXPR_LITERALNUMBER ? leftexpr->numberliteral : leftexpr->boolliteral;
-        rightval = rightexpr->type == APE_EXPR_LITERALNUMBER ? rightexpr->numberliteral : rightexpr->boolliteral;
+        leftval = leftexpr->type == APE_EXPR_LITERALNUMBER ? leftexpr->exliteralnumber : leftexpr->exliteralbool;
+        rightval = rightexpr->type == APE_EXPR_LITERALNUMBER ? rightexpr->exliteralnumber : rightexpr->exliteralbool;
         leftint = (ApeInt_t)leftval;
         rightint = (ApeInt_t)rightval;
-        switch(expr->infix.op)
+        switch(expr->exinfix.op)
         {
             case APE_OPERATOR_PLUS:
                 {
-                    res = ape_ast_make_numberliteralexpr(expr->context, leftval + rightval);
+                    res = ape_ast_make_literalnumberexpr(expr->context, leftval + rightval);
                 }
                 break;
             case APE_OPERATOR_MINUS:
                 {
-                    res = ape_ast_make_numberliteralexpr(expr->context, leftval - rightval);
+                    res = ape_ast_make_literalnumberexpr(expr->context, leftval - rightval);
                 }
                 break;
             case APE_OPERATOR_STAR:
                 {
-                    res = ape_ast_make_numberliteralexpr(expr->context, leftval * rightval);
+                    res = ape_ast_make_literalnumberexpr(expr->context, leftval * rightval);
                 }
                 break;
             case APE_OPERATOR_SLASH:
                 {
-                    res = ape_ast_make_numberliteralexpr(expr->context, leftval / rightval);
+                    res = ape_ast_make_literalnumberexpr(expr->context, leftval / rightval);
                 }
                 break;
             case APE_OPERATOR_LESSTHAN:
                 {
-                    res = ape_ast_make_boolliteralexpr(expr->context, leftval < rightval);
+                    res = ape_ast_make_literalboolexpr(expr->context, leftval < rightval);
                 }
                 break;
             case APE_OPERATOR_LESSEQUAL:
                 {
-                    res = ape_ast_make_boolliteralexpr(expr->context, leftval <= rightval);
+                    res = ape_ast_make_literalboolexpr(expr->context, leftval <= rightval);
                 }
                 break;
             case APE_OPERATOR_GREATERTHAN:
                 {
-                    res = ape_ast_make_boolliteralexpr(expr->context, leftval > rightval);
+                    res = ape_ast_make_literalboolexpr(expr->context, leftval > rightval);
                 }
                 break;
             case APE_OPERATOR_GREATEREQUAL:
                 {
-                    res = ape_ast_make_boolliteralexpr(expr->context, leftval >= rightval);
+                    res = ape_ast_make_literalboolexpr(expr->context, leftval >= rightval);
                 }
                 break;
             case APE_OPERATOR_EQUAL:
                 {
-                    res = ape_ast_make_boolliteralexpr(expr->context, APE_DBLEQ(leftval, rightval));
+                    res = ape_ast_make_literalboolexpr(expr->context, APE_DBLEQ(leftval, rightval));
                 }
                 break;
 
             case APE_OPERATOR_NOTEQUAL:
                 {
-                    res = ape_ast_make_boolliteralexpr(expr->context, !APE_DBLEQ(leftval, rightval));
+                    res = ape_ast_make_literalboolexpr(expr->context, !APE_DBLEQ(leftval, rightval));
                 }
                 break;
             case APE_OPERATOR_MODULUS:
                 {
                     #if 0
-                    res = ape_ast_make_numberliteralexpr(expr->context, fmod(leftval, rightval));
+                    res = ape_ast_make_literalnumberexpr(expr->context, fmod(leftval, rightval));
                     #else
-                    res = ape_ast_make_numberliteralexpr(expr->context, (leftint % rightint));
+                    res = ape_ast_make_literalnumberexpr(expr->context, (leftint % rightint));
                     #endif
                 }
                 break;
             case APE_OPERATOR_BITAND:
                 {
-                    res = ape_ast_make_numberliteralexpr(expr->context, (ApeFloat_t)(leftint & rightint));
+                    res = ape_ast_make_literalnumberexpr(expr->context, (ApeFloat_t)(leftint & rightint));
                 }
                 break;
             case APE_OPERATOR_BITOR:
                 {
-                    res = ape_ast_make_numberliteralexpr(expr->context, (ApeFloat_t)(leftint | rightint));
+                    res = ape_ast_make_literalnumberexpr(expr->context, (ApeFloat_t)(leftint | rightint));
                 }
                 break;
             case APE_OPERATOR_BITXOR:
                 {
-                    res = ape_ast_make_numberliteralexpr(expr->context, (ApeFloat_t)(leftint ^ rightint));
+                    res = ape_ast_make_literalnumberexpr(expr->context, (ApeFloat_t)(leftint ^ rightint));
                 }
                 break;
             case APE_OPERATOR_LEFTSHIFT:
                 {
-                    res = ape_ast_make_numberliteralexpr(expr->context, (ApeFloat_t)(leftint << rightint));
+                    res = ape_ast_make_literalnumberexpr(expr->context, (ApeFloat_t)(leftint << rightint));
                 }
                 break;
             case APE_OPERATOR_RIGHTSHIFT:
                 {
-                    res = ape_ast_make_numberliteralexpr(expr->context, (ApeFloat_t)(leftint >> rightint));
+                    res = ape_ast_make_literalnumberexpr(expr->context, (ApeFloat_t)(leftint >> rightint));
                 }
                 break;
             default:
@@ -163,16 +160,16 @@ ApeExpression_t* ape_optimizer_optinfixexpr(ApeExpression_t* expr)
                 break;
         }
     }
-    else if(expr->infix.op == APE_OPERATOR_PLUS && leftisstr && rightisstr)
+    else if(expr->exinfix.op == APE_OPERATOR_PLUS && leftisstr && rightisstr)
     {
-        leftstr = leftexpr->stringliteral;
-        rightstr = rightexpr->stringliteral;
+        leftstr = leftexpr->exliteralstring;
+        rightstr = rightexpr->exliteralstring;
         buf = ape_make_writercapacity(expr->context, leftexpr->stringlitlength + rightexpr->stringlitlength + 1);
         ape_writer_appendlen(buf, leftstr, leftexpr->stringlitlength);
         ape_writer_appendlen(buf, rightstr, rightexpr->stringlitlength);
         rtlen = ape_writer_getlength(buf);
         rtstr = ape_util_strndup(expr->context, ape_writer_getdata(buf), rtlen);
-        res = ape_ast_make_stringliteralexpr(expr->context, rtstr, rtlen, true);
+        res = ape_ast_make_literalstringexpr(expr->context, rtstr, rtlen, true);
         ape_writer_destroy(buf);
     }
     ape_ast_destroy_expr(leftopt);
@@ -189,20 +186,20 @@ ApeExpression_t* ape_optimizer_optprefixexpr(ApeExpression_t* expr)
     ApeExpression_t* rightexpr;
     ApeExpression_t* rightopt;
     ApeExpression_t* res;
-    rightexpr = expr->prefix.right;
+    rightexpr = expr->exprefix.right;
     rightopt = ape_optimizer_optexpr(rightexpr);
     if(rightopt)
     {
         rightexpr = rightopt;
     }
     res = NULL;
-    if(expr->prefix.op == APE_OPERATOR_MINUS && rightexpr->type == APE_EXPR_LITERALNUMBER)
+    if(expr->exprefix.op == APE_OPERATOR_MINUS && rightexpr->type == APE_EXPR_LITERALNUMBER)
     {
-        res = ape_ast_make_numberliteralexpr(expr->context, -rightexpr->numberliteral);
+        res = ape_ast_make_literalnumberexpr(expr->context, -rightexpr->exliteralnumber);
     }
-    else if(expr->prefix.op == APE_OPERATOR_NOT && rightexpr->type == APE_EXPR_LITERALBOOL)
+    else if(expr->exprefix.op == APE_OPERATOR_NOT && rightexpr->type == APE_EXPR_LITERALBOOL)
     {
-        res = ape_ast_make_boolliteralexpr(expr->context, !rightexpr->boolliteral);
+        res = ape_ast_make_literalboolexpr(expr->context, !rightexpr->exliteralbool);
     }
     ape_ast_destroy_expr(rightopt);
     if(res)

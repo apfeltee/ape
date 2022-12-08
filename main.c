@@ -197,8 +197,19 @@ static void show_usage()
         "              'all', '*': everything\n"
         "              'ast': print ast\n"
         "              'bc': print bytecode\n"
+        "  -t          print type sizes (for debugging)\n"
         "\n"
     );
+}
+
+void print_types()
+{
+    #define typsz(t) \
+        { \
+            printf("  %-10d %d %s\n", (int)(sizeof(t)), (int)(sizeof(t*)), #t); \
+        }
+    #include "ptypes.inc"
+    #undef typsz
 }
 
 static bool parse_options(Options_t* opts, Flag_t* flags, int fcnt)
@@ -218,6 +229,12 @@ static bool parse_options(Options_t* opts, Flag_t* flags, int fcnt)
             case 'h':
                 {
                     show_usage();
+                    return false;
+                }
+                break;
+            case 't':
+                {
+                    print_types();
                     return false;
                 }
                 break;

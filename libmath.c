@@ -1,6 +1,6 @@
 
 #include <math.h>
-#include "ape.h"
+#include "inline.h"
 
 static ApeObject_t cfn_sqrt(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {

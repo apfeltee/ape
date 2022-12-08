@@ -1,5 +1,5 @@
 
-#include "ape.h"
+#include "inline.h"
 
 ApeValDict_t* ape_make_valdict_actual(ApeContext_t* ctx, ApeSize_t ksz, ApeSize_t vsz)
 {
@@ -29,7 +29,6 @@ ApeValDict_t* ape_make_valdictcapacity(ApeContext_t* ctx, ApeSize_t min_capacity
 bool ape_valdict_init(ApeValDict_t* dict, ApeSize_t ksz, ApeSize_t vsz, ApeSize_t initial_capacity)
 {
     ApeSize_t i;
-    dict->alloc = &dict->context->alloc;
     dict->keysize = ksz;
     dict->valsize = vsz;
     dict->cells = NULL;
@@ -40,13 +39,13 @@ bool ape_valdict_init(ApeValDict_t* dict, ApeSize_t ksz, ApeSize_t vsz, ApeSize_
     dict->count = 0;
     dict->cellcap = initial_capacity;
     dict->itemcap = (ApeSize_t)(initial_capacity * 0.7f);
-    dict->_keys_equals = NULL;
-    dict->_hash_key = NULL;
-    dict->cells = (unsigned int*)ape_allocator_alloc(dict->alloc, dict->cellcap * sizeof(*dict->cells));
-    dict->keys = (void**)ape_allocator_alloc(dict->alloc, dict->itemcap * ksz);
-    dict->values = (void**)ape_allocator_alloc(dict->alloc, dict->itemcap * vsz);
-    dict->cellindices = (unsigned int*)ape_allocator_alloc(dict->alloc, dict->itemcap * sizeof(*dict->cellindices));
-    dict->hashes = (long unsigned int*)ape_allocator_alloc(dict->alloc, dict->itemcap * sizeof(*dict->hashes));
+    dict->fnequalkeys = NULL;
+    dict->fnhashkey = NULL;
+    dict->cells = (unsigned int*)ape_allocator_alloc(&dict->context->alloc, dict->cellcap * sizeof(*dict->cells));
+    dict->keys = (void**)ape_allocator_alloc(&dict->context->alloc, dict->itemcap * ksz);
+    dict->values = (void**)ape_allocator_alloc(&dict->context->alloc, dict->itemcap * vsz);
+    dict->cellindices = (unsigned int*)ape_allocator_alloc(&dict->context->alloc, dict->itemcap * sizeof(*dict->cellindices));
+    dict->hashes = (long unsigned int*)ape_allocator_alloc(&dict->context->alloc, dict->itemcap * sizeof(*dict->hashes));
     if(dict->cells == NULL || dict->keys == NULL || dict->values == NULL || dict->cellindices == NULL || dict->hashes == NULL)
     {
         goto error;
@@ -57,11 +56,11 @@ bool ape_valdict_init(ApeValDict_t* dict, ApeSize_t ksz, ApeSize_t vsz, ApeSize_
     }
     return true;
 error:
-    ape_allocator_free(dict->alloc, dict->cells);
-    ape_allocator_free(dict->alloc, dict->keys);
-    ape_allocator_free(dict->alloc, dict->values);
-    ape_allocator_free(dict->alloc, dict->cellindices);
-    ape_allocator_free(dict->alloc, dict->hashes);
+    ape_allocator_free(&dict->context->alloc, dict->cells);
+    ape_allocator_free(&dict->context->alloc, dict->keys);
+    ape_allocator_free(&dict->context->alloc, dict->values);
+    ape_allocator_free(&dict->context->alloc, dict->cellindices);
+    ape_allocator_free(&dict->context->alloc, dict->hashes);
     return false;
 }
 
@@ -72,11 +71,11 @@ void ape_valdict_deinit(ApeValDict_t* dict)
     dict->count = 0;
     dict->itemcap = 0;
     dict->cellcap = 0;
-    ape_allocator_free(dict->alloc, dict->cells);
-    ape_allocator_free(dict->alloc, dict->keys);
-    ape_allocator_free(dict->alloc, dict->values);
-    ape_allocator_free(dict->alloc, dict->cellindices);
-    ape_allocator_free(dict->alloc, dict->hashes);
+    ape_allocator_free(&dict->context->alloc, dict->cells);
+    ape_allocator_free(&dict->context->alloc, dict->keys);
+    ape_allocator_free(&dict->context->alloc, dict->values);
+    ape_allocator_free(&dict->context->alloc, dict->cellindices);
+    ape_allocator_free(&dict->context->alloc, dict->hashes);
     dict->cells = NULL;
     dict->keys = NULL;
     dict->values = NULL;
@@ -86,14 +85,14 @@ void ape_valdict_deinit(ApeValDict_t* dict)
 
 void ape_valdict_destroy(ApeValDict_t* dict)
 {
-    ApeAllocator_t* alloc;
+    ApeContext_t* ctx;
     if(!dict)
     {
         return;
     }
-    alloc = dict->alloc;
+    ctx = dict->context;
     ape_valdict_deinit(dict);
-    ape_allocator_free(alloc, dict);
+    ape_allocator_free(&ctx->alloc, dict);
 }
 
 void ape_valdict_destroywithitems(ApeValDict_t* dict)
@@ -118,12 +117,12 @@ void ape_valdict_destroywithitems(ApeValDict_t* dict)
 
 void ape_valdict_sethashfunction(ApeValDict_t* dict, ApeDataHashFunc_t hash_fn)
 {
-    dict->_hash_key = hash_fn;
+    dict->fnhashkey = hash_fn;
 }
 
 void ape_valdict_setequalsfunction(ApeValDict_t* dict, ApeDataEqualsFunc_t equals_fn)
 {
-    dict->_keys_equals = equals_fn;
+    dict->fnequalkeys = equals_fn;
 }
 
 bool ape_valdict_set(ApeValDict_t* dict, void* key, void* value)
@@ -295,8 +294,8 @@ bool ape_valdict_growandrehash(ApeValDict_t* dict)
     {
         return false;
     }
-    new_dict._keys_equals = dict->_keys_equals;
-    new_dict._hash_key = dict->_hash_key;
+    new_dict.fnequalkeys = dict->fnequalkeys;
+    new_dict.fnhashkey = dict->fnhashkey;
     for(i = 0; i < dict->count; i++)
     {
         key = (char*)ape_valdict_getkeyat(dict, i);
@@ -327,18 +326,18 @@ bool ape_valdict_setkeyat(ApeValDict_t* dict, ApeSize_t ix, void* key)
 
 bool ape_valdict_keysareequal(const ApeValDict_t* dict, const void* a, const void* b)
 {
-    if(dict->_keys_equals)
+    if(dict->fnequalkeys)
     {
-        return dict->_keys_equals(a, b);
+        return dict->fnequalkeys(a, b);
     }
     return memcmp(a, b, dict->keysize) == 0;
 }
 
 unsigned long ape_valdict_hashkey(const ApeValDict_t* dict, const void* key)
 {
-    if(dict->_hash_key)
+    if(dict->fnhashkey)
     {
-        return dict->_hash_key(key);
+        return dict->fnhashkey(key);
     }
     return ape_util_hashstring(key, dict->keysize);
 }
@@ -417,7 +416,6 @@ bool ape_strdict_init(ApeStrDict_t* dict, ApeContext_t* ctx, ApeSize_t initial_c
 {
     ApeSize_t i;
     dict->context = ctx;
-    dict->alloc = &ctx->alloc;
     dict->cells = NULL;
     dict->keys = NULL;
     dict->values = NULL;
@@ -443,11 +441,11 @@ bool ape_strdict_init(ApeStrDict_t* dict, ApeContext_t* ctx, ApeSize_t initial_c
     }
     return true;
 error:
-    ape_allocator_free(dict->alloc, dict->cells);
-    ape_allocator_free(dict->alloc, dict->keys);
-    ape_allocator_free(dict->alloc, dict->values);
-    ape_allocator_free(dict->alloc, dict->cellindices);
-    ape_allocator_free(dict->alloc, dict->hashes);
+    ape_allocator_free(&dict->context->alloc, dict->cells);
+    ape_allocator_free(&dict->context->alloc, dict->keys);
+    ape_allocator_free(&dict->context->alloc, dict->values);
+    ape_allocator_free(&dict->context->alloc, dict->cellindices);
+    ape_allocator_free(&dict->context->alloc, dict->hashes);
     return false;
 }
 
@@ -458,17 +456,17 @@ void ape_strdict_deinit(ApeStrDict_t* dict, bool free_keys)
     {
         for(i = 0; i < dict->count; i++)
         {
-            ape_allocator_free(dict->alloc, dict->keys[i]);
+            ape_allocator_free(&dict->context->alloc, dict->keys[i]);
         }
     }
     dict->count = 0;
     dict->itemcap = 0;
     dict->cellcap = 0;
-    ape_allocator_free(dict->alloc, dict->cells);
-    ape_allocator_free(dict->alloc, dict->keys);
-    ape_allocator_free(dict->alloc, dict->values);
-    ape_allocator_free(dict->alloc, dict->cellindices);
-    ape_allocator_free(dict->alloc, dict->hashes);
+    ape_allocator_free(&dict->context->alloc, dict->cells);
+    ape_allocator_free(&dict->context->alloc, dict->keys);
+    ape_allocator_free(&dict->context->alloc, dict->values);
+    ape_allocator_free(&dict->context->alloc, dict->cellindices);
+    ape_allocator_free(&dict->context->alloc, dict->hashes);
     dict->cells = NULL;
     dict->keys = NULL;
     dict->values = NULL;
@@ -478,14 +476,14 @@ void ape_strdict_deinit(ApeStrDict_t* dict, bool free_keys)
 
 void ape_strdict_destroy(ApeStrDict_t* dict)
 {
-    ApeAllocator_t* alloc;
+    ApeContext_t* ctx;
     if(!dict)
     {
         return;
     }
-    alloc = dict->alloc;
+    ctx = dict->context;
     ape_strdict_deinit(dict, true);
-    ape_allocator_free(alloc, dict);
+    ape_allocator_free(&ctx->alloc, dict);
 }
 
 void ape_strdict_destroywithitems(ApeStrDict_t* dict)

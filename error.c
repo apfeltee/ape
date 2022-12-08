@@ -11,7 +11,6 @@ ApeTraceback_t* ape_make_traceback(ApeContext_t* ctx)
     }
     memset(traceback, 0, sizeof(ApeTraceback_t));
     traceback->context = ctx;
-    traceback->alloc = &ctx->alloc;
     traceback->items = ape_make_valarray(ctx, ApeTracebackItem_t);
     if(!traceback->items)
     {
@@ -32,10 +31,10 @@ void ape_traceback_destroy(ApeTraceback_t* traceback)
     for(i = 0; i < ape_valarray_count(traceback->items); i++)
     {
         item = (ApeTracebackItem_t*)ape_valarray_get(traceback->items, i);
-        ape_allocator_free(traceback->alloc, item->function_name);
+        ape_allocator_free(&traceback->context->alloc, item->function_name);
     }
     ape_valarray_destroy(traceback->items);
-    ape_allocator_free(traceback->alloc, traceback);
+    ape_allocator_free(&traceback->context->alloc, traceback);
 }
 
 bool ape_traceback_append(ApeTraceback_t* traceback, const char* function_name, ApePosition_t pos)
@@ -51,7 +50,7 @@ bool ape_traceback_append(ApeTraceback_t* traceback, const char* function_name, 
     ok = ape_valarray_add(traceback->items, &item);
     if(!ok)
     {
-        ape_allocator_free(traceback->alloc, item.function_name);
+        ape_allocator_free(&traceback->context->alloc, item.function_name);
         return false;
     }
     return true;
@@ -62,9 +61,9 @@ bool ape_traceback_appendfromvm(ApeTraceback_t* traceback, ApeVM_t* vm)
     ApeInt_t i;
     bool ok;
     ApeFrame_t* frame;
-    for(i = vm->frames_count - 1; i >= 0; i--)
+    for(i = vm->countframes - 1; i >= 0; i--)
     {
-        frame = &vm->frames[i];
+        frame = &vm->frameobjects[i];
         ok = ape_traceback_append(traceback, ape_object_function_getname(frame->function), ape_frame_srcposition(frame));
         if(!ok)
         {

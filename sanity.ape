@@ -5,14 +5,14 @@ const trailing_comma_array = [
     2,
     3,
 ]
-println("len(trailing_comma_array)=", len(trailing_comma_array) == 3);
-_check_result = (len(trailing_comma_array) == 3); println(`checking (${"len(trailing_comma_array)"} ${"=="} ${3}) = ${_check_result}`); assert(_check_result);
+println("Object.length(trailing_comma_array)=", Object.length(trailing_comma_array));
+_check_result = (Object.length(trailing_comma_array) == 3); println(`checking (${"Object.length(trailing_comma_array)"} ${"=="} ${3}) = ${_check_result}`); assert(_check_result);
 const trailing_comma_dict = {
     a: 1,
     b: 2,
     c: 3,
 }
-_check_result = (len(trailing_comma_dict) == 3); println(`checking (${"len(trailing_comma_dict)"} ${"=="} ${3}) = ${_check_result}`); assert(_check_result);
+_check_result = (Object.length(trailing_comma_dict) == 3); println(`checking (${"Object.length(trailing_comma_dict)"} ${"=="} ${3}) = ${_check_result}`); assert(_check_result);
 function test_gc_fail(a, b, c) { const x = []; const y = []; const z = []; }
 test_gc_fail(1, 2, 3)
 test_gc_fail(1, 2, 3)
@@ -84,7 +84,7 @@ function block_test() {
 }
 _check_result = (block_test() == 1); println(`checking (${"block_test()"} ${"=="} ${1}) = ${_check_result}`); assert(_check_result);
 const big_array = array(1000)
-_check_result = (len(big_array) == 1000); println(`checking (${"len(big_array)"} ${"=="} ${1000}) = ${_check_result}`); assert(_check_result);
+_check_result = (Object.length(big_array) == 1000); println(`checking (${"Object.length(big_array)"} ${"=="} ${1000}) = ${_check_result}`); assert(_check_result);
 function return_no_semicolon() { return }
 function vec2(x, y) {
     return {
@@ -251,7 +251,7 @@ _check_result = ("a" + "b" == "ab"); println(`checking (${"\"a\" + \"b\""} ${"==
     for (var i = 0; i < n; i++) {
         str += "x"
     }
-    println("str = ", len(str))
+    println("str = ", Object.length(str))
     for (var i = 0; i < n; i++) {
         assert(str[i] == "x")
     }

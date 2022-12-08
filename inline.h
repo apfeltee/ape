@@ -26,6 +26,15 @@
     #endif
 #endif
 
+//#if defined(APE_DEBUG)
+#if 0
+    #define ape_allocator_alloc(alc, sz) \
+        ape_allocator_alloc_debug(alc, #sz, __FUNCTION__, __FILE__, __LINE__, sz)
+#else
+    #define ape_allocator_alloc(alc, sz) \
+        ape_allocator_alloc_real(alc, sz)
+#endif
+
 static APE_INLINE int ape_util_doubletoint(double n)
 {
     if(n == 0)
@@ -101,6 +110,91 @@ static APE_INLINE ApeFloat_t ape_util_uinttofloat(ApeUInt_t val)
     return temp.fltcast_double;
 }
 
+static APE_INLINE ApeSize_t ape_valarray_count(const ApeValArray_t* arr)
+{
+    if(!arr)
+    {
+        return 0;
+    }
+    return arr->count;
+}
 
+static APE_INLINE ApeSize_t ape_ptrarray_count(const ApePtrArray_t* arr)
+{
+    if(!arr)
+    {
+        return 0;
+    }
+    return ape_valarray_count(&arr->arr);
+}
 
+static APE_INLINE bool ape_valarray_set(ApeValArray_t* arr, ApeSize_t ix, void* value)
+{
+    ApeSize_t offset;
+    if(ix >= arr->count)
+    {
+        APE_ASSERT(false);
+        return false;
+    }
+    offset = ix * arr->elemsize;
+    memmove(arr->arraydata + offset, value, arr->elemsize);
+    return true;
+}
 
+static APE_INLINE void* ape_valarray_get(ApeValArray_t* arr, ApeSize_t ix)
+{
+    ApeSize_t offset;
+    if(ix >= arr->count)
+    {
+        APE_ASSERT(false);
+        return NULL;
+    }
+    offset = ix * arr->elemsize;
+    return arr->arraydata + offset;
+}
+
+static APE_INLINE bool ape_valarray_pop(ApeValArray_t* arr, void* out_value)
+{
+    void* res;
+    if(arr->count <= 0)
+    {
+        return false;
+    }
+    if(out_value)
+    {
+        res = (void*)ape_valarray_get(arr, arr->count - 1);
+        memcpy(out_value, res, arr->elemsize);
+    }
+    ape_valarray_removeat(arr, arr->count - 1);
+    return true;
+}
+
+static APE_INLINE void* ape_valarray_top(ApeValArray_t* arr)
+{
+    if(arr->count <= 0)
+    {
+        return NULL;
+    }
+    return (void*)ape_valarray_get(arr, arr->count - 1);
+}
+
+static APE_INLINE void* ape_ptrarray_pop(ApePtrArray_t* arr)
+{
+    ApeSize_t ix;
+    void* res;
+    ix = ape_ptrarray_count(arr) - 1;
+    res = ape_ptrarray_get(arr, ix);
+    ape_ptrarray_removeat(arr, ix);
+    return res;
+}
+
+static APE_INLINE void* ape_ptrarray_top(ApePtrArray_t* arr)
+{
+    ApeSize_t count;
+    count = ape_ptrarray_count(arr);
+    if(count == 0)
+    {
+        return NULL;
+    }
+    return ape_ptrarray_get(arr, count - 1);
+}

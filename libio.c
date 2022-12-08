@@ -7,7 +7,7 @@
 #else
     #define CORE_NODIRENT
 #endif
-#include "ape.h"
+#include "inline.h"
 
 #if !defined(S_IFMT)
     #define S_IFMT  00170000

@@ -4,7 +4,7 @@
 #if defined(__linux__)
     #include <sys/time.h>
 #endif
-#include "ape.h"
+#include "inline.h"
 
 char* ape_util_stringfmt(ApeContext_t* ctx, const char* format, ...)
 {

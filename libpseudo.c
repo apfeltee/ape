@@ -1,5 +1,5 @@
 
-#include "ape.h"
+#include "inline.h"
 
 ApePseudoClass_t* ape_make_pseudoclass(ApeContext_t* ctx, ApeStrDict_t* dictref, const char* classname)
 {
