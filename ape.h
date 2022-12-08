@@ -98,6 +98,8 @@ THE SOFTWARE.
     #endif
 #endif
 
+#define APE_USE_ALIST 1
+
 #define APE_CONF_INVALID_VALDICT_IX UINT_MAX
 #define APE_CONF_INVALID_STRDICT_IX UINT_MAX
 #define APE_CONF_DICT_INITIAL_SIZE (2)
@@ -112,16 +114,18 @@ THE SOFTWARE.
 #define APE_CONF_SIZE_MAXFRAMES (512 / 4)
 #define APE_CONF_SIZE_VM_THISSTACK (512 / 4)
 
-/* decreasing this incurs higher memory use */
-#define APE_CONF_SIZE_GCMEM_POOLSIZE (512 * 4)
-#define APE_CONF_SIZE_GCMEM_POOLCOUNT ((3) + 1)
-#define APE_CONF_CONST_GCMEM_SWEEPINTERVAL (128 / 1)
-
 #define APE_CONF_SIZE_NATFN_MAXDATALEN (16 * 2)
 #define APE_CONF_SIZE_STRING_BUFSIZE (4)
 
 #define APE_CONF_SIZE_ERRORS_MAXCOUNT (16)
 #define APE_CONF_SIZE_ERROR_MAXMSGLENGTH (80)
+
+
+/* decreasing these incurs higher memory use */
+#define APE_CONF_SIZE_GCMEM_POOLSIZE (512 * 4)
+#define APE_CONF_SIZE_GCMEM_POOLCOUNT ((3) + 1)
+#define APE_CONF_CONST_GCMEM_SWEEPINTERVAL (128 / 1)
+
 
 #define APE_STREQ(a, b) (strcmp((a), (b)) == 0)
 #define APE_STRNEQ(a, b, n) (strncmp((a), (b), (n)) == 0)
@@ -580,6 +584,8 @@ typedef struct /**/ ApeNativeItem_t        ApeNativeItem_t;
 typedef struct /**/ ApeObjMemberItem_t     ApeObjMemberItem_t;
 typedef struct /**/ ApePseudoClass_t       ApePseudoClass_t;
 typedef struct /**/ ApeArgCheck_t          ApeArgCheck_t;
+typedef struct /**/ ApePlainList_t ApePlainList_t;
+typedef struct /**/ ApePlainNode_t ApePlainNode_t;
 
 
 typedef ApeObject_t (*ApeWrappedNativeFunc_t)(ApeContext_t*, void*, ApeSize_t, ApeObject_t*);
@@ -602,6 +608,22 @@ typedef void* (*ApeDataCallback_t)(void*);
 
 typedef ApeExpression_t* (*ApeRightAssocParseFNCallback_t)(ApeParser_t* p);
 typedef ApeExpression_t* (*ApeLeftAssocParseFNCallback_t)(ApeParser_t* p, ApeExpression_t* expr);
+
+struct ApePlainNode_t
+{
+    void* p;
+    ApePlainNode_t* prev;
+    ApePlainNode_t* next;
+};
+
+struct ApePlainList_t
+{
+    ApePlainNode_t* head;
+    ApePlainNode_t* tail;
+    ApePlainNode_t* current;
+    int idx;
+    size_t size;
+};
 
 struct ApeArgCheck_t
 {
@@ -1058,8 +1080,14 @@ struct ApeGCMemory_t
     ApeContext_t*   context;
     ApeAllocator_t* alloc;
     ApeSize_t       allocations_since_sweep;
-    ApePtrArray_t*  objects;
-    ApePtrArray_t*  objects_back;
+    #if defined(APE_USE_ALIST) && (APE_USE_ALIST == 1)
+        ApeObjData_t** frontobjects;
+        ApeObjData_t** backobjects;
+    #else
+        ApePtrArray_t*  frontobjects;
+        ApePtrArray_t*  backobjects;
+    #endif
+
     ApeValArray_t*  objects_not_gced;
     ApeObjPool_t    data_only_pool;
     ApeObjPool_t    pools[APE_CONF_SIZE_GCMEM_POOLCOUNT];

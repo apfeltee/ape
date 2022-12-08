@@ -35,6 +35,66 @@
         ape_allocator_alloc_real(alc, sz)
 #endif
 
+#include "dnarray.h"
+
+#if defined(APE_USE_ALIST) && (APE_USE_ALIST == 1)
+    /*
+    #define memlist_make(ctx, self) \
+        alist_new()
+
+    #define memlist_destroy(list) \
+        alist_destroy(list)
+
+    #define memlist_at(list, ix) \
+        alist_at(list, ix)
+
+    #define memlist_count(list) \
+        ((list)->size)
+
+    #define memlist_append(list, item) \
+        alist_append(list, item)
+
+    #define memlist_clear(list) \
+        alist_clear(list)
+    */
+    #define memlist_make(ctx, self) \
+        da_init(self, 2)
+
+    #define memlist_destroy(list) \
+        da_free(list)
+
+    #define memlist_at(list, ix) \
+        ((list)[ix])
+
+    #define memlist_count(list) \
+        da_count(list)
+
+    #define memlist_append(list, item) \
+        da_push(list, item)
+
+    #define memlist_clear(list) \
+        da_clear(list)
+
+#else
+    #define memlist_make(ctx, self) \
+        ape_make_ptrarray(ctx)
+
+    #define memlist_destroy(list) \
+        ape_ptrarray_destroy(list)
+
+    #define memlist_at(list, ix) \
+        ape_ptrarray_get(list, ix)
+
+    #define memlist_count(list) \
+        ape_ptrarray_count(list)
+
+    #define memlist_append(list, item) \
+        ape_ptrarray_push(list, item)
+
+    #define memlist_clear(list) \
+        ape_ptrarray_clear(list)
+#endif
+
 static APE_INLINE int ape_util_doubletoint(double n)
 {
     if(n == 0)

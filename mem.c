@@ -80,13 +80,15 @@ ApeGCMemory_t* ape_make_gcmem(ApeContext_t* ctx)
     memset(mem, 0, sizeof(ApeGCMemory_t));
     mem->context = ctx;
     mem->alloc = &ctx->alloc;
-    mem->objects = ape_make_ptrarray(ctx);
-    if(!mem->objects)
+    //mem->frontobjects = ape_make_ptrarray(ctx);
+    mem->frontobjects = memlist_make(ctx, mem->frontobjects);
+    if(!mem->frontobjects)
     {
         goto error;
     }
-    mem->objects_back = ape_make_ptrarray(ctx);
-    if(!mem->objects_back)
+    //mem->backobjects = ape_make_ptrarray(ctx);
+    mem->backobjects = memlist_make(ctx, mem->backobjects);
+    if(!mem->backobjects)
     {
         goto error;
     }
@@ -121,14 +123,14 @@ void ape_gcmem_destroy(ApeGCMemory_t* mem)
         return;
     }
     ape_valarray_destroy(mem->objects_not_gced);
-    ape_ptrarray_destroy(mem->objects_back);
-    for(i = 0; i < ape_ptrarray_count(mem->objects); i++)
+    memlist_destroy(mem->backobjects);
+    for(i = 0; i < memlist_count(mem->frontobjects); i++)
     {
-        obj = (ApeObjData_t*)ape_ptrarray_get(mem->objects, i);
+        obj = (ApeObjData_t*)memlist_at(mem->frontobjects, i);
         ape_object_data_deinit(obj);
         ape_allocator_free(mem->alloc, obj);
     }
-    ape_ptrarray_destroy(mem->objects);
+    memlist_destroy(mem->frontobjects);
     for(i = 0; i < APE_CONF_SIZE_GCMEM_POOLCOUNT; i++)
     {
         pool = &mem->pools[i];
@@ -167,23 +169,13 @@ ApeObjData_t* ape_gcmem_allocobjdata(ApeGCMemory_t* mem, ApeObjType_t type)
         }
     }
     memset(data, 0, sizeof(ApeObjData_t));
-    APE_ASSERT(ape_ptrarray_count(mem->objects_back) >= ape_ptrarray_count(mem->objects));
+    APE_ASSERT(memlist_count(mem->backobjects) >= memlist_count(mem->frontobjects));
     /*
-    // we want to make sure that appending to objects_back never fails in sweep
+    // we want to make sure that appending to backobjects never fails in sweep
     // so this only reserves space there.
     */
-    ok = ape_ptrarray_add(mem->objects_back, data);
-    if(!ok)
-    {
-        ape_allocator_free(mem->alloc, data);
-        return NULL;
-    }
-    ok = ape_ptrarray_add(mem->objects, data);
-    if(!ok)
-    {
-        ape_allocator_free(mem->alloc, data);
-        return NULL;
-    }
+    memlist_append(mem->backobjects, data);
+    memlist_append(mem->frontobjects, data);
     data->mem = mem;
     data->type = type;
     return data;
@@ -274,21 +266,13 @@ ApeObjData_t* ape_gcmem_getfrompool(ApeGCMemory_t* mem, ApeObjType_t type)
         return NULL;
     }
     data = pool->datapool[pool->count - 1];
-    APE_ASSERT(ape_ptrarray_count(mem->objects_back) >= ape_ptrarray_count(mem->objects));
+    APE_ASSERT(memlist_count(mem->backobjects) >= memlist_count(mem->frontobjects));
     /*
-    // we want to make sure that appending to objects_back never fails in sweep
+    // we want to make sure that appending to backobjects never fails in sweep
     // so this only reserves space there.
     */
-    ok = ape_ptrarray_add(mem->objects_back, data);
-    if(!ok)
-    {
-        return NULL;
-    }
-    ok = ape_ptrarray_add(mem->objects, data);
-    if(!ok)
-    {
-        return NULL;
-    }
+    memlist_append(mem->backobjects, data);
+    memlist_append(mem->frontobjects, data);
     pool->count--;
     return data;
 }
@@ -297,9 +281,9 @@ void ape_gcmem_unmarkall(ApeGCMemory_t* mem)
 {
     ApeSize_t i;
     ApeObjData_t* data;
-    for(i = 0; i < ape_ptrarray_count(mem->objects); i++)
+    for(i = 0; i < memlist_count(mem->frontobjects); i++)
     {
-        data = (ApeObjData_t*)ape_ptrarray_get(mem->objects, i);
+        data = (ApeObjData_t*)memlist_at(mem->frontobjects, i);
         data->gcmark = false;
     }
 }
@@ -421,19 +405,22 @@ void ape_gcmem_sweep(ApeGCMemory_t* mem)
     bool ok;
     ApeObjData_t* data;
     ApeObjPool_t* pool;
-    ApePtrArray_t* objs_temp;
+    #if defined(APE_USE_ALIST) && (APE_USE_ALIST == 1)
+        ApeObjData_t**
+    #else
+        ApePtrArray_t*
+    #endif
+    objs_temp;
     ape_gcmem_markobjlist((ApeObject_t*)ape_valarray_data(mem->objects_not_gced), ape_valarray_count(mem->objects_not_gced));
-    APE_ASSERT(ape_ptrarray_count(mem->objects_back) >= ape_ptrarray_count(mem->objects));
-    ape_ptrarray_clear(mem->objects_back);
-    for(i = 0; i < ape_ptrarray_count(mem->objects); i++)
+    APE_ASSERT(memlist_count(mem->backobjects) >= memlist_count(mem->frontobjects));
+    memlist_clear(mem->backobjects);
+    for(i = 0; i < memlist_count(mem->frontobjects); i++)
     {
-        data = (ApeObjData_t*)ape_ptrarray_get(mem->objects, i);
+        data = (ApeObjData_t*)memlist_at(mem->frontobjects, i);
         if(data->gcmark)
         {
-            /* this should never fail because objects_back's size should be equal to objects */
-            ok = ape_ptrarray_add(mem->objects_back, data);
-            (void)ok;
-            APE_ASSERT(ok);
+            /* this should never fail because backobjects's size should be equal to objects */
+            memlist_append(mem->backobjects, data);
         }
         else
         {
@@ -458,9 +445,9 @@ void ape_gcmem_sweep(ApeGCMemory_t* mem)
             }
         }
     }
-    objs_temp = mem->objects;
-    mem->objects = mem->objects_back;
-    mem->objects_back = objs_temp;
+    objs_temp = mem->frontobjects;
+    mem->frontobjects = mem->backobjects;
+    mem->backobjects = objs_temp;
     mem->allocations_since_sweep = 0;
 }
 
