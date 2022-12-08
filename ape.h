@@ -91,11 +91,7 @@ THE SOFTWARE.
         #define APE_INLINE
     #endif
 #else
-    #if defined(__GNUC__)
-        #define APE_INLINE __inline__ __attribute__((__gnu_inline__))
-    #else
-        #define APE_INLINE inline
-    #endif
+    #define APE_INLINE inline
 #endif
 
 #define APE_USE_ALIST 1
@@ -207,7 +203,7 @@ THE SOFTWARE.
 
 /**/
 #define ape_object_value_type(obj) \
-    (((obj).handle == NULL) ? APE_OBJECT_NULL : ((obj).handle->type))
+    (((obj).handle == NULL) ? APE_OBJECT_NULL : ((ApeObjType_t)((obj).handle->type)))
 
 #define ape_object_value_istype(o, t) \
     (ape_object_value_type(o) == (t))
@@ -1327,11 +1323,11 @@ struct ApeContext_t
     ApeStrDict_t* objarrayfuncs;
 };
 
-
+/*
 #ifdef __cplusplus
 APE_EXTERNC_BEGIN
 #endif
-
+*/
 
 static APE_INLINE ApeObject_t object_make_from_data(ApeContext_t* ctx, ApeObjType_t type, ApeObjData_t* data)
 {
@@ -1345,6 +1341,8 @@ static APE_INLINE ApeObject_t object_make_from_data(ApeContext_t* ctx, ApeObjTyp
 
 #include "prot.inc"
 
+/*
 #ifdef __cplusplus
 APE_EXTERNC_END
 #endif
+*/

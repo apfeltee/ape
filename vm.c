@@ -982,7 +982,7 @@ ApeObject_t ape_vm_getglobal(ApeVM_t* vm, ApeSize_t ix)
     }
     return *(ApeObject_t*)ape_valarray_get(vm->globalobjects, ix);
     #endif
-    rt = ape_valdict_getbykey(vm->globalobjects, &ix);
+    rt = (ApeObject_t*)ape_valdict_getbykey(vm->globalobjects, &ix);
     if(rt == NULL)
     {
         return ape_object_make_null(vm->context);
@@ -1153,7 +1153,7 @@ void ape_vm_collectgarbage(ApeVM_t* vm, ApeValArray_t* constants, bool alsostack
     {
         ape_gcmem_markobjlist((ApeObject_t*)ape_valarray_data(constants), ape_valarray_count(constants));
     }
-    ape_gcmem_markobjlist(vm->globalobjects->values, vm->globalobjects->count);
+    ape_gcmem_markobjlist((ApeObject_t*)(vm->globalobjects->values), vm->globalobjects->count);
     for(i = 0; i < vm->countframes; i++)
     {
         frame = &vm->frameobjects[i];

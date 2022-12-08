@@ -186,7 +186,7 @@ bool ape_gcmem_canputinpool(ApeGCMemory_t* mem, ApeObjData_t* data)
 {
     ApeObject_t obj;
     ApeObjPool_t* pool;
-    obj = object_make_from_data(mem->context, data->type, data);
+    obj = object_make_from_data(mem->context, (ApeObjType_t)data->type, data);
     /* this is to ensure that large objects won't be kept in pool indefinitely */
     switch(data->type)
     {
@@ -219,7 +219,7 @@ bool ape_gcmem_canputinpool(ApeGCMemory_t* mem, ApeObjData_t* data)
             }
             break;
     }
-    pool = ape_gcmem_getpoolfor(mem, data->type);
+    pool = ape_gcmem_getpoolfor(mem, (ApeObjType_t)data->type);
     if(!pool || pool->count >= APE_CONF_SIZE_GCMEM_POOLSIZE)
     {
         return false;
@@ -426,7 +426,7 @@ void ape_gcmem_sweep(ApeGCMemory_t* mem)
         {
             if(ape_gcmem_canputinpool(mem, data))
             {
-                pool = ape_gcmem_getpoolfor(mem, data->type);
+                pool = ape_gcmem_getpoolfor(mem, (ApeObjType_t)data->type);
                 pool->datapool[pool->count] = data;
                 pool->count++;
             }
