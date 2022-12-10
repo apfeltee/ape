@@ -48,7 +48,7 @@
 #if defined(APE_USE_ALIST) && (APE_USE_ALIST != 0)
     #if (APE_USE_ALIST == 1)
         #define memlist_make(ctx, self, sztyp) \
-            da_init(self, 2)
+            da_make(self, 2, sztyp)
 
         #define memlist_destroy(list) \
             da_free(list)
@@ -227,3 +227,51 @@ static APE_INLINE ApeFloat_t ape_util_uinttofloat(ApeUInt_t val)
     return temp.fltcast_double;
 }
 
+static APE_INLINE void* ape_valdict_getkeyat(const ApeValDict_t* dict, ApeSize_t ix)
+{
+    if(ix >= dict->count)
+    {
+        return NULL;
+    }
+    return ((char*)dict->keys) + (dict->keysize * ix);
+}
+
+static APE_INLINE void* ape_valdict_getvalueat(const ApeValDict_t* dict, ApeSize_t ix)
+{
+    if(ix >= dict->count)
+    {
+        return NULL;
+    }
+    return (char*)dict->values + (dict->valsize * ix);
+}
+
+static APE_INLINE bool ape_valdict_setvalueat(const ApeValDict_t* dict, ApeSize_t ix, const void* value)
+{
+    ApeSize_t offset;
+    if(ix >= dict->count)
+    {
+        return false;
+    }
+    offset = ix * dict->valsize;
+    memcpy((char*)dict->values + offset, value, dict->valsize);
+    return true;
+}
+
+static APE_INLINE ApeSize_t ape_valdict_count(const ApeValDict_t* dict)
+{
+    if(!dict)
+    {
+        return 0;
+    }
+    return dict->count;
+}
+
+static APE_INLINE void ape_valdict_clear(ApeValDict_t* dict)
+{
+    ApeSize_t i;
+    dict->count = 0;
+    for(i = 0; i < dict->cellcap; i++)
+    {
+        dict->cells[i] = APE_CONF_INVALID_VALDICT_IX;
+    }
+}

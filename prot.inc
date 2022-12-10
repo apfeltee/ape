@@ -233,11 +233,6 @@ void ape_valdict_setequalsfunction(ApeValDict_t *dict, ApeDataEqualsFunc_t equal
 bool ape_valdict_set(ApeValDict_t *dict, void *key, void *value);
 void *ape_valdict_getbyhash(const ApeValDict_t *dict, const void *key, unsigned long hash);
 void *ape_valdict_getbykey(const ApeValDict_t *dict, const void *key);
-void *ape_valdict_getkeyat(const ApeValDict_t *dict, ApeSize_t ix);
-void *ape_valdict_getvalueat(const ApeValDict_t *dict, ApeSize_t ix);
-bool ape_valdict_setvalueat(const ApeValDict_t *dict, ApeSize_t ix, const void *value);
-ApeSize_t ape_valdict_count(const ApeValDict_t *dict);
-void ape_valdict_clear(ApeValDict_t *dict);
 ApeSize_t ape_valdict_getcellindex(const ApeValDict_t *dict, const void *key, unsigned long hash, bool *out_found);
 bool ape_valdict_growandrehash(ApeValDict_t *dict);
 bool ape_valdict_setkeyat(ApeValDict_t *dict, ApeSize_t ix, void *key);

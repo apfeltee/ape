@@ -231,7 +231,7 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeExpression_t* expr)
     ApeDefineStmt_t* defstmt;
     ApeIfCase_t* ifcase;
     ApeIfCase_t* elifcase;
-    switch(expr->type)
+    switch(expr->extype)
     {
         case APE_EXPR_IDENT:
             {

@@ -4,7 +4,7 @@
 ApeExpression_t* ape_optimizer_optexpr(ApeExpression_t* expr)
 {
     return NULL;
-    switch(expr->type)
+    switch(expr->extype)
     {
         case APE_EXPR_INFIX:
             {
@@ -57,14 +57,14 @@ ApeExpression_t* ape_optimizer_optinfixexpr(ApeExpression_t* expr)
         rightexpr = rightopt;
     }
     res = NULL;
-    leftisnum = leftexpr->type == APE_EXPR_LITERALNUMBER || leftexpr->type == APE_EXPR_LITERALBOOL;
-    rightisnum = rightexpr->type == APE_EXPR_LITERALNUMBER || rightexpr->type == APE_EXPR_LITERALBOOL;
-    leftisstr = leftexpr->type == APE_EXPR_LITERALSTRING;
-    rightisstr = rightexpr->type == APE_EXPR_LITERALSTRING;
+    leftisnum = leftexpr->extype == APE_EXPR_LITERALNUMBER || leftexpr->extype == APE_EXPR_LITERALBOOL;
+    rightisnum = rightexpr->extype == APE_EXPR_LITERALNUMBER || rightexpr->extype == APE_EXPR_LITERALBOOL;
+    leftisstr = leftexpr->extype == APE_EXPR_LITERALSTRING;
+    rightisstr = rightexpr->extype == APE_EXPR_LITERALSTRING;
     if(leftisnum && rightisnum)
     {
-        leftval = leftexpr->type == APE_EXPR_LITERALNUMBER ? leftexpr->exliteralnumber : leftexpr->exliteralbool;
-        rightval = rightexpr->type == APE_EXPR_LITERALNUMBER ? rightexpr->exliteralnumber : rightexpr->exliteralbool;
+        leftval = leftexpr->extype == APE_EXPR_LITERALNUMBER ? leftexpr->exliteralnumber : leftexpr->exliteralbool;
+        rightval = rightexpr->extype == APE_EXPR_LITERALNUMBER ? rightexpr->exliteralnumber : rightexpr->exliteralbool;
         leftint = (ApeInt_t)leftval;
         rightint = (ApeInt_t)rightval;
         switch(expr->exinfix.op)
@@ -193,11 +193,11 @@ ApeExpression_t* ape_optimizer_optprefixexpr(ApeExpression_t* expr)
         rightexpr = rightopt;
     }
     res = NULL;
-    if(expr->exprefix.op == APE_OPERATOR_MINUS && rightexpr->type == APE_EXPR_LITERALNUMBER)
+    if(expr->exprefix.op == APE_OPERATOR_MINUS && rightexpr->extype == APE_EXPR_LITERALNUMBER)
     {
         res = ape_ast_make_literalnumberexpr(expr->context, -rightexpr->exliteralnumber);
     }
-    else if(expr->exprefix.op == APE_OPERATOR_NOT && rightexpr->type == APE_EXPR_LITERALBOOL)
+    else if(expr->exprefix.op == APE_OPERATOR_NOT && rightexpr->extype == APE_EXPR_LITERALBOOL)
     {
         res = ape_ast_make_literalboolexpr(expr->context, !rightexpr->exliteralbool);
     }

@@ -934,7 +934,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeExpression_t* 
     }
     compscope = ape_compiler_getcompscope(comp);
     symtable = ape_compiler_getsymboltable(comp);
-    switch(stmt->type)
+    switch(stmt->extype)
     {
         case APE_EXPR_EXPRESSION:
             {
@@ -1153,7 +1153,7 @@ static bool ape_compiler_compilestatement(ApeCompiler_t* comp, ApeExpression_t* 
                     return false;
                 }
                 sourcesymbol = NULL;
-                if(foreach->source->type == APE_EXPR_IDENT)
+                if(foreach->source->extype == APE_EXPR_IDENT)
                 {
                     sourcesymbol = ape_symtable_resolve(symtable, foreach->source->exident->value);
                     if(!sourcesymbol)
@@ -1549,7 +1549,7 @@ static bool ape_compiler_compileexpression(ApeCompiler_t* comp, ApeExpression_t*
     compscope = ape_compiler_getcompscope(comp);
     symtable = ape_compiler_getsymboltable(comp);
     res = false;
-    switch(expr->type)
+    switch(expr->extype)
     {
         case APE_EXPR_INFIX:
             {
@@ -2002,7 +2002,7 @@ static bool ape_compiler_compileexpression(ApeCompiler_t* comp, ApeExpression_t*
         case APE_EXPR_ASSIGN:
             {
                 assign = &expr->exassign;
-                if(assign->dest->type != APE_EXPR_IDENT && assign->dest->type != APE_EXPR_INDEX)
+                if(assign->dest->extype != APE_EXPR_IDENT && assign->dest->extype != APE_EXPR_INDEX)
                 {
                     ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos, "expression is not assignable");
                     goto error;
@@ -2030,7 +2030,7 @@ static bool ape_compiler_compileexpression(ApeCompiler_t* comp, ApeExpression_t*
                 {
                     goto error;
                 }
-                if(assign->dest->type == APE_EXPR_IDENT)
+                if(assign->dest->extype == APE_EXPR_IDENT)
                 {
                     ident = assign->dest->exident;
                     symbol = ape_symtable_resolve(symtable, ident->value);
@@ -2055,7 +2055,7 @@ static bool ape_compiler_compileexpression(ApeCompiler_t* comp, ApeExpression_t*
                         goto error;
                     }
                 }
-                else if(assign->dest->type == APE_EXPR_INDEX)
+                else if(assign->dest->extype == APE_EXPR_INDEX)
                 {
                     index = &assign->dest->exindex;
                     ok = ape_compiler_compileexpression(comp, index->left);
@@ -2253,27 +2253,27 @@ static bool ape_compiler_readsym(ApeCompiler_t* comp, ApeSymbol_t* symbol)
 {
     ApeInt_t ip;
     ip = -1;
-    if(symbol->type == APE_SYMBOL_MODULEGLOBAL)
+    if(symbol->symtype == APE_SYMBOL_MODULEGLOBAL)
     {
         ip = ape_compiler_emit(comp, APE_OPCODE_GETMODULEGLOBAL, 1, make_u64_array((ApeOpByte_t)(symbol->index)));
     }
-    else if(symbol->type == APE_SYMBOL_CONTEXTGLOBAL)
+    else if(symbol->symtype == APE_SYMBOL_CONTEXTGLOBAL)
     {
         ip = ape_compiler_emit(comp, APE_OPCODE_GETCONTEXTGLOBAL, 1, make_u64_array((ApeOpByte_t)(symbol->index)));
     }
-    else if(symbol->type == APE_SYMBOL_LOCAL)
+    else if(symbol->symtype == APE_SYMBOL_LOCAL)
     {
         ip = ape_compiler_emit(comp, APE_OPCODE_GETLOCAL, 1, make_u64_array((ApeOpByte_t)(symbol->index)));
     }
-    else if(symbol->type == APE_SYMBOL_FREE)
+    else if(symbol->symtype == APE_SYMBOL_FREE)
     {
         ip = ape_compiler_emit(comp, APE_OPCODE_GETFREE, 1, make_u64_array((ApeOpByte_t)(symbol->index)));
     }
-    else if(symbol->type == APE_SYMBOL_FUNCTION)
+    else if(symbol->symtype == APE_SYMBOL_FUNCTION)
     {
         ip = ape_compiler_emit(comp, APE_OPCODE_CURRENTFUNCTION, 0, NULL);
     }
-    else if(symbol->type == APE_SYMBOL_THIS)
+    else if(symbol->symtype == APE_SYMBOL_THIS)
     {
         ip = ape_compiler_emit(comp, APE_OPCODE_GETTHIS, 0, NULL);
     }
@@ -2284,7 +2284,7 @@ static bool ape_compiler_writesym(ApeCompiler_t* comp, ApeSymbol_t* symbol, bool
 {
     ApeInt_t ip;
     ip = -1;
-    if(symbol->type == APE_SYMBOL_MODULEGLOBAL)
+    if(symbol->symtype == APE_SYMBOL_MODULEGLOBAL)
     {
         if(define)
         {
@@ -2295,7 +2295,7 @@ static bool ape_compiler_writesym(ApeCompiler_t* comp, ApeSymbol_t* symbol, bool
             ip = ape_compiler_emit(comp, APE_OPCODE_SETMODULEGLOBAL, 1, make_u64_array((ApeOpByte_t)(symbol->index)));
         }
     }
-    else if(symbol->type == APE_SYMBOL_LOCAL)
+    else if(symbol->symtype == APE_SYMBOL_LOCAL)
     {
         if(define)
         {
@@ -2306,7 +2306,7 @@ static bool ape_compiler_writesym(ApeCompiler_t* comp, ApeSymbol_t* symbol, bool
             ip = ape_compiler_emit(comp, APE_OPCODE_SETLOCAL, 1, make_u64_array((ApeOpByte_t)(symbol->index)));
         }
     }
-    else if(symbol->type == APE_SYMBOL_FREE)
+    else if(symbol->symtype == APE_SYMBOL_FREE)
     {
         ip = ape_compiler_emit(comp, APE_OPCODE_SETFREE, 1, make_u64_array((ApeOpByte_t)(symbol->index)));
     }

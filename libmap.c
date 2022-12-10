@@ -108,7 +108,6 @@ void ape_valdict_destroywithitems(ApeValDict_t* dict)
         vp = (void**)(dict->values);
         for(i = 0; i < dict->count; i++)
         {
-            
             dict->fnvaldestroy(vp[i]);
         }
     }
@@ -183,54 +182,6 @@ void* ape_valdict_getbykey(const ApeValDict_t* dict, const void* key)
     return ape_valdict_getbyhash(dict, key, hash);
 }
 
-void* ape_valdict_getkeyat(const ApeValDict_t* dict, ApeSize_t ix)
-{
-    if(ix >= dict->count)
-    {
-        return NULL;
-    }
-    return ((char*)dict->keys) + (dict->keysize * ix);
-}
-
-void* ape_valdict_getvalueat(const ApeValDict_t* dict, ApeSize_t ix)
-{
-    if(ix >= dict->count)
-    {
-        return NULL;
-    }
-    return (char*)dict->values + (dict->valsize * ix);
-}
-
-bool ape_valdict_setvalueat(const ApeValDict_t* dict, ApeSize_t ix, const void* value)
-{
-    ApeSize_t offset;
-    if(ix >= dict->count)
-    {
-        return false;
-    }
-    offset = ix * dict->valsize;
-    memcpy((char*)dict->values + offset, value, dict->valsize);
-    return true;
-}
-
-ApeSize_t ape_valdict_count(const ApeValDict_t* dict)
-{
-    if(!dict)
-    {
-        return 0;
-    }
-    return dict->count;
-}
-
-void ape_valdict_clear(ApeValDict_t* dict)
-{
-    ApeSize_t i;
-    dict->count = 0;
-    for(i = 0; i < dict->cellcap; i++)
-    {
-        dict->cells[i] = APE_CONF_INVALID_VALDICT_IX;
-    }
-}
 
 ApeSize_t ape_valdict_getcellindex(const ApeValDict_t* dict, const void* key, unsigned long hash, bool* out_found)
 {

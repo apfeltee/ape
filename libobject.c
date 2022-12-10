@@ -2,54 +2,45 @@
 #include <inttypes.h>
 #include "inline.h"
 
+
+static APE_INLINE ApeObjData_t* ape_object_make_primitive(ApeContext_t* ctx, ApeObjType_t type)
+{
+    ApeObjData_t* data;
+    data = ape_gcmem_getfrompool(ctx->mem, type);
+    if(!data)
+    {
+        data = ape_gcmem_allocobjdata(ctx->mem, type);
+    }
+    if(!data)
+    {
+        fprintf(stderr, "ape_object_make_primitive: failed to get data?\n");
+        return NULL;
+    }
+    data->datatype = type;
+    return data;
+}
+
 ApeObject_t ape_object_make_number(ApeContext_t* ctx, ApeFloat_t val)
 {
     ApeObjData_t* data;
-    data = ape_gcmem_getfrompool(ctx->mem, APE_OBJECT_NUMBER);
-    if(!data)
-    {
-        data = ape_gcmem_allocobjdata(ctx->mem, APE_OBJECT_NUMBER);
-    }
-    if(!data)
-    {
-        fprintf(stderr, "ape_object_make_number: failed to get data?\n");
-        return ape_object_make_null(ctx);
-    }
+    data = ape_object_make_primitive(ctx, APE_OBJECT_NUMBER);
     data->valnum = val;
-    return object_make_from_data(ctx, APE_OBJECT_NUMBER, data);
+    return object_make_from_data(ctx, data->datatype, data);
 }
 
 ApeObject_t ape_object_make_bool(ApeContext_t* ctx, bool val)
 {
     ApeObjData_t* data;
-    data = ape_gcmem_getfrompool(ctx->mem, APE_OBJECT_BOOL);
-    if(!data)
-    {
-        data = ape_gcmem_allocobjdata(ctx->mem, APE_OBJECT_BOOL);
-    }
-    if(!data)
-    {
-        fprintf(stderr, "ape_object_make_bool: failed to get data?\n");
-        return ape_object_make_null(ctx);
-    }
+    data = ape_object_make_primitive(ctx, APE_OBJECT_BOOL);
     data->valbool = val;
-    return object_make_from_data(ctx, APE_OBJECT_BOOL, data);
+    return object_make_from_data(ctx, data->datatype, data);
 }
 
 ApeObject_t ape_object_make_null(ApeContext_t* ctx)
 {
     ApeObjData_t* data;
-    data = ape_gcmem_getfrompool(ctx->mem, APE_OBJECT_NULL);
-    if(!data)
-    {
-        data = ape_gcmem_allocobjdata(ctx->mem, APE_OBJECT_NULL);
-    }
-    if(!data)
-    {
-        fprintf(stderr, "internal error: failed to alloc object data for null");
-        abort();
-    }
-    return object_make_from_data(ctx, APE_OBJECT_NULL, data);
+    data = ape_object_make_primitive(ctx, APE_OBJECT_NULL);
+    return object_make_from_data(ctx, data->datatype, data);
 }
 
 ApeObject_t ape_object_make_external(ApeContext_t* ctx, void* ptr)
@@ -386,7 +377,7 @@ const char* ape_object_value_typename(const ApeObjType_t type)
 
 void ape_object_data_deinit(ApeObjData_t* data)
 {
-    switch(data->type)
+    switch(data->datatype)
     {
         case APE_OBJECT_FREED:
             {
@@ -446,7 +437,7 @@ void ape_object_data_deinit(ApeObjData_t* data)
             }
             break;
     }
-    data->type = APE_OBJECT_FREED;
+    data->datatype = APE_OBJECT_FREED;
 }
 
 #define CHECK_TYPE(t)                                    \
@@ -586,7 +577,7 @@ ApeObject_t ape_object_getkvpairat(ApeContext_t* ctx, ApeObject_t object, int ix
     return res;
 }
 
-ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj, ApeValDict_t * copies)
+ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj, ApeValDict_t* copies)
 {
     ApeSize_t i;
     ApeSize_t len;
@@ -608,13 +599,18 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
     ApeObject_t copy;
     ApeObject_t* copy_ptr;
     ApeObjType_t type;
-    copy_ptr = (ApeObject_t*)ape_valdict_getbykey(copies, &obj);
-    if(copy_ptr)
+    if(copies != NULL)
     {
-        return *copy_ptr;
+        copy_ptr = (ApeObject_t*)ape_valdict_getbykey(copies, &obj);
+        if(copy_ptr)
+        {
+            //ape_context_debugvalue(ctx, "internalcopydeep:copy_ptr", *copy_ptr);
+            return *copy_ptr;
+        }
     }
     copy = ape_object_make_null(ctx);
     type = ape_object_value_type(obj);
+    //ape_context_debugvalue(ctx, "internalcopydeep:obj", obj);
     switch(type)
     {
         case APE_OBJECT_FREED:
@@ -630,7 +626,9 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
         case APE_OBJECT_NULL:
         case APE_OBJECT_NATIVEFUNCTION:
             {
-                copy = obj;
+                copy.handle = obj.handle;
+                copy.type = type;
+                copy.handle->datatype = type;
             }
             break;
         case APE_OBJECT_STRING:
@@ -774,48 +772,6 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
     return copy;
 }
 
-bool ape_object_value_wrapequals(const ApeObject_t* a_ptr, const ApeObject_t* b_ptr)
-{
-    ApeObject_t a = *a_ptr;
-    ApeObject_t b = *b_ptr;
-    return ape_object_value_equals(a, b);
-}
-
-unsigned long ape_object_value_hash(ApeObject_t* obj_ptr)
-{
-    bool bval;
-    ApeFloat_t val;
-    ApeObject_t obj;
-    ApeObjType_t type;
-    obj = *obj_ptr;
-    type = ape_object_value_type(obj);
-    switch(type)
-    {
-        case APE_OBJECT_NUMBER:
-            {
-                val = ape_object_value_asnumber(obj);
-                return ape_util_hashfloat(val);
-            }
-            break;
-        case APE_OBJECT_BOOL:
-            {
-                bval = ape_object_value_asbool(obj);
-                return bval;
-            }
-            break;
-        case APE_OBJECT_STRING:
-            {
-                return ape_object_string_gethash(obj);
-            }
-            break;
-        default:
-            {
-            }
-            break;
-    }
-    return 0;
-}
-
 
 ApeObject_t ape_object_value_copydeep(ApeContext_t* ctx, ApeObject_t obj)
 {
@@ -846,6 +802,7 @@ ApeObject_t ape_object_value_copyflat(ApeContext_t* ctx, ApeObject_t obj)
     ApeExternalData_t* external;
     copy = ape_object_make_null(ctx);
     type = ape_object_value_type(obj);
+    //ape_context_debugvalue(ctx, "copyflat:obj", obj);
     switch(type)
     {
         case APE_OBJECT_ANY:
@@ -942,6 +899,49 @@ ApeObject_t ape_object_value_copyflat(ApeContext_t* ctx, ApeObject_t obj)
             break;
     }
     return copy;
+}
+
+
+bool ape_object_value_wrapequals(const ApeObject_t* a_ptr, const ApeObject_t* b_ptr)
+{
+    ApeObject_t a = *a_ptr;
+    ApeObject_t b = *b_ptr;
+    return ape_object_value_equals(a, b);
+}
+
+unsigned long ape_object_value_hash(ApeObject_t* obj_ptr)
+{
+    bool bval;
+    ApeFloat_t val;
+    ApeObject_t obj;
+    ApeObjType_t type;
+    obj = *obj_ptr;
+    type = ape_object_value_type(obj);
+    switch(type)
+    {
+        case APE_OBJECT_NUMBER:
+            {
+                val = ape_object_value_asnumber(obj);
+                return ape_util_hashfloat(val);
+            }
+            break;
+        case APE_OBJECT_BOOL:
+            {
+                bval = ape_object_value_asbool(obj);
+                return bval;
+            }
+            break;
+        case APE_OBJECT_STRING:
+            {
+                return ape_object_string_gethash(obj);
+            }
+            break;
+        default:
+            {
+            }
+            break;
+    }
+    return 0;
 }
 
 ApeFloat_t ape_object_value_asnumerica(ApeObject_t obj, ApeObjType_t t)

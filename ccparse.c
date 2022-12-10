@@ -161,7 +161,7 @@ ApeExpression_t* ape_ast_make_expression(ApeContext_t* ctx, ApeExprType_t type)
         return NULL;
     }
     res->context = ctx;
-    res->type = type;
+    res->extype = type;
     res->pos = g_prspriv_srcposinvalid;
     return res;
 }
@@ -642,9 +642,9 @@ ApeExpression_t* ape_ast_copy_expr(ApeExpression_t* expr)
     {
         return NULL;
     }
-    fprintf(stderr, "copying expr (%s)\n", ape_tostring_exprtype(expr->type));
+    //fprintf(stderr, "copying expr (%s)\n", ape_tostring_exprtype(expr->extype));
     res = NULL;
-    switch(expr->type)
+    switch(expr->extype)
     {
         case APE_EXPR_NONE:
             {
@@ -1129,7 +1129,7 @@ void* ape_ast_destroy_expr(ApeExpression_t* expr)
     {
         return NULL;
     }
-    switch(expr->type)
+    switch(expr->extype)
     {
         case APE_EXPR_NONE:
             {
@@ -1323,7 +1323,7 @@ ApeExpression_t* ape_parser_parsestmt(ApeParser_t* p)
     ApeExpression_t* res;
     pos = p->lexer.curtoken.pos;
     res = NULL;
-    switch(p->lexer.curtoken.type)
+    switch(p->lexer.curtoken.toktype)
     {
         case TOKEN_KWVAR:
         case TOKEN_KWCONST:
@@ -1438,7 +1438,7 @@ ApeExpression_t* ape_parser_parsedefinestmt(ApeParser_t* p)
     {
         goto err;
     }
-    if(value->type == APE_EXPR_LITERALFUNCTION)
+    if(value->extype == APE_EXPR_LITERALFUNCTION)
     {
         value->exliteralfunc.name = ape_util_strdup(p->context, nameident->value);
         if(!value->exliteralfunc.name)
@@ -1606,7 +1606,7 @@ ApeExpression_t* ape_parser_parseexprstmt(ApeParser_t* p)
     #if 0
     if(expr && (!p->config->replmode || p->depth > 0))
     {
-        if(expr->type != APE_EXPR_ASSIGN && expr->type != APE_EXPR_CALL)
+        if(expr->extype != APE_EXPR_ASSIGN && expr->extype != APE_EXPR_CALL)
         {
             ape_errorlist_addformat(p->errors, APE_ERROR_PARSING, expr->pos, "only assignments and function calls can be expression statements");
             ape_ast_destroy_expr(expr);
@@ -1844,7 +1844,7 @@ ApeExpression_t* ape_parser_parseclassicforstmt(ApeParser_t* p)
         {
             goto err;
         }
-        if(init->type != APE_EXPR_DEFINE && init->type != APE_EXPR_EXPRESSION)
+        if(init->extype != APE_EXPR_DEFINE && init->extype != APE_EXPR_EXPRESSION)
         {
             ape_errorlist_addformat(p->errors, APE_ERROR_PARSING, init->pos, "for loop's init clause should be a define statement or an expression");
             goto err;
@@ -2007,12 +2007,12 @@ ApeExpression_t* ape_parser_parseexpr(ApeParser_t* p, ApePrecedence_t prec)
     ApeExpression_t* leftexpr;
     ApeExpression_t* newleftexpr;
     pos = p->lexer.curtoken.pos;
-    if(p->lexer.curtoken.type == TOKEN_INVALID)
+    if(p->lexer.curtoken.toktype == TOKEN_INVALID)
     {
         ape_errorlist_add(p->errors, APE_ERROR_PARSING, p->lexer.curtoken.pos, "illegal token");
         return NULL;
     }
-    prighta = rightassocparsefns[p->lexer.curtoken.type];
+    prighta = rightassocparsefns[p->lexer.curtoken.toktype];
     if(!prighta)
     {
         #if 1
@@ -2030,9 +2030,9 @@ ApeExpression_t* ape_parser_parseexpr(ApeParser_t* p, ApePrecedence_t prec)
         return NULL;
     }
     leftexpr->pos = pos;
-    while(!ape_lexer_currenttokenis(&p->lexer, TOKEN_OPSEMICOLON) && prec < ape_parser_getprecedence(p->lexer.curtoken.type))
+    while(!ape_lexer_currenttokenis(&p->lexer, TOKEN_OPSEMICOLON) && prec < ape_parser_getprecedence(p->lexer.curtoken.toktype))
     {
-        plefta = leftassocparsefns[p->lexer.curtoken.type];
+        plefta = leftassocparsefns[p->lexer.curtoken.toktype];
         if(!plefta)
         {
             return leftexpr;
@@ -2093,7 +2093,7 @@ ApeExpression_t* ape_parser_parseliteralnumber(ApeParser_t* p)
 ApeExpression_t* ape_parser_parseliteralbool(ApeParser_t* p)
 {
     ApeExpression_t* res;
-    res = ape_ast_make_literalboolexpr(p->context, p->lexer.curtoken.type == TOKEN_KWTRUE);
+    res = ape_ast_make_literalboolexpr(p->context, p->lexer.curtoken.toktype == TOKEN_KWTRUE);
     ape_lexer_nexttoken(&p->lexer);
     return res;
 }
@@ -2274,7 +2274,7 @@ ApeExpression_t* ape_parser_parseliteralmap(ApeParser_t* p)
             {
                 goto err;
             }
-            switch(key->type)
+            switch(key->extype)
             {
                 case APE_EXPR_LITERALSTRING:
                 case APE_EXPR_LITERALNUMBER:
@@ -2341,7 +2341,7 @@ ApeExpression_t* ape_parser_parseprefixexpr(ApeParser_t* p)
     ApeOperator_t op;
     ApeExpression_t* right;
     ApeExpression_t* res;
-    op = ape_parser_tokentooperator(p->lexer.curtoken.type);
+    op = ape_parser_tokentooperator(p->lexer.curtoken.toktype);
     ape_lexer_nexttoken(&p->lexer);
     right = ape_parser_parseexpr(p, PRECEDENCE_PREFIX);
     if(!right)
@@ -2363,8 +2363,8 @@ ApeExpression_t* ape_parser_parseinfixexpr(ApeParser_t* p, ApeExpression_t* left
     ApePrecedence_t prec;
     ApeExpression_t* right;
     ApeExpression_t* res;
-    op = ape_parser_tokentooperator(p->lexer.curtoken.type);
-    prec = ape_parser_getprecedence(p->lexer.curtoken.type);
+    op = ape_parser_tokentooperator(p->lexer.curtoken.toktype);
+    prec = ape_parser_getprecedence(p->lexer.curtoken.toktype);
     ape_lexer_nexttoken(&p->lexer);
     right = ape_parser_parseexpr(p, prec);
     if(!right)
@@ -2603,7 +2603,7 @@ ApeExpression_t* ape_parser_parseassignexpr(ApeParser_t* p, ApeExpression_t* lef
     ApeExpression_t* newsource;
     ApeExpression_t* res;
     source = NULL;
-    assigntype = p->lexer.curtoken.type;
+    assigntype = p->lexer.curtoken.toktype;
     ape_lexer_nexttoken(&p->lexer);
     source = ape_parser_parseexpr(p, PRECEDENCE_LOWEST);
     if(!source)
@@ -2667,8 +2667,8 @@ ApeExpression_t* ape_parser_parselogicalexpr(ApeParser_t* p, ApeExpression_t* le
     ApePrecedence_t prec;
     ApeExpression_t* right;
     ApeExpression_t* res;
-    op = ape_parser_tokentooperator(p->lexer.curtoken.type);
-    prec = ape_parser_getprecedence(p->lexer.curtoken.type);
+    op = ape_parser_tokentooperator(p->lexer.curtoken.toktype);
+    prec = ape_parser_getprecedence(p->lexer.curtoken.toktype);
     ape_lexer_nexttoken(&p->lexer);
     right = ape_parser_parseexpr(p, prec);
     if(!right)
@@ -2729,7 +2729,7 @@ ApeExpression_t* ape_parser_parseincdecprefixexpr(ApeParser_t* p)
     ApeExpression_t* operation;
     ApeExpression_t* res;
     source = NULL;
-    operationtype = p->lexer.curtoken.type;
+    operationtype = p->lexer.curtoken.toktype;
     pos = p->lexer.curtoken.pos;
     ape_lexer_nexttoken(&p->lexer);
     op = ape_parser_tokentooperator(operationtype);
@@ -2785,7 +2785,7 @@ ApeExpression_t* ape_parser_parseincdecpostfixexpr(ApeParser_t* p, ApeExpression
     ApeExpression_t* operation;
     ApeExpression_t* res;
     source = NULL;
-    operationtype = p->lexer.curtoken.type;
+    operationtype = p->lexer.curtoken.toktype;
     pos = p->lexer.curtoken.pos;
     ape_lexer_nexttoken(&p->lexer);
     op = ape_parser_tokentooperator(operationtype);

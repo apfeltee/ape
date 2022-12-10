@@ -50,8 +50,34 @@ static APE_INLINE unsigned char** da_grow_internal(unsigned char** arr, intptr_t
         _da_else(0) \
     )
 
-#define da_init(arr, n) \
+#define da_make(arr, n, sztyp) \
     (__typeof__(arr))  da_grow_internal((unsigned char**)arr, n, sizeof(*arr))
+
+#define da_init(arr, n, sztyp) \
+    da_init(arr, n, sztyp)
+
+#define da_destroy(arr) \
+    ( \
+        _da_if(arr) \
+        _da_then( \
+            free(((intptr_t*)(arr)) - 2), (arr) = NULL, 0 \
+        ) \
+        _da_else(0) \
+    )
+
+#define da_free(arr) \
+    da_destroy(arr)
+
+#define da_clear(arr) \
+    (\
+        _da_if(da_count(arr) > 0) \
+        _da_then( \
+            memset((arr), 0, sizeof(*(arr)) * da_count_internal(arr)), \
+            da_count_internal(arr) = 0, \
+            0 \
+        ) \
+        _da_else(0) \
+    )
 
 #define da_count(arr) \
     ( \
@@ -68,6 +94,9 @@ static APE_INLINE unsigned char** da_grow_internal(unsigned char** arr, intptr_t
         _da_then(da_capacity_internal(arr)) \
         _da_else(0) \
     )
+
+#define da_get(arr, idx) \
+    (arr)[(idx)]
 
 #define da_last(arr) \
     ( \
@@ -114,26 +143,6 @@ static APE_INLINE unsigned char** da_grow_internal(unsigned char** arr, intptr_t
             ), \
             da_count_internal(arr) -= JK_DYNARRAY_MIN((n), \
             da_count_internal(arr)), 0 \
-        ) \
-        _da_else(0) \
-    )
-
-#define da_free(arr) \
-    ( \
-        _da_if(arr) \
-        _da_then( \
-            free(((intptr_t*)(arr)) - 2), (arr) = NULL, 0 \
-        ) \
-        _da_else(0) \
-    )
-
-#define da_clear(arr) \
-    (\
-        _da_if(da_count(arr) > 0) \
-        _da_then( \
-            memset((arr), 0, sizeof(*(arr)) * da_count_internal(arr)), \
-            da_count_internal(arr) = 0, \
-            0 \
         ) \
         _da_else(0) \
     )

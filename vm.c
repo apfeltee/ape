@@ -265,7 +265,7 @@ ApeSymbol_t* ape_make_symbol(ApeContext_t* ctx, const char* name, ApeSymbolType_
         ape_allocator_free(&ctx->alloc, symbol);
         return NULL;
     }
-    symbol->type = type;
+    symbol->symtype = type;
     symbol->index = index;
     symbol->assignable = assignable;
     return symbol;
@@ -284,7 +284,7 @@ void* ape_symbol_destroy(ApeSymbol_t* symbol)
 
 ApeSymbol_t* ape_symbol_copy(ApeSymbol_t* symbol)
 {
-    return ape_make_symbol(symbol->context, symbol->name, symbol->type, symbol->index, symbol->assignable);
+    return ape_make_symbol(symbol->context, symbol->name, symbol->symtype, symbol->index, symbol->assignable);
 }
 
 ApeSymTable_t* ape_make_symtable(ApeContext_t* ctx, ApeSymTable_t* outer, ApeGlobalStore_t* global_store, int mgo)
@@ -385,7 +385,7 @@ err:
 bool ape_symtable_addmodulesymbol(ApeSymTable_t* st, ApeSymbol_t* symbol)
 {
     bool ok;
-    if(symbol->type != APE_SYMBOL_MODULEGLOBAL)
+    if(symbol->symtype != APE_SYMBOL_MODULEGLOBAL)
     {
         APE_ASSERT(false);
         return false;
@@ -488,7 +488,7 @@ ApeSymbol_t* ape_symtable_deffree(ApeSymTable_t* st, ApeSymbol_t* original)
     bool ok;
     ApeSymbol_t* symbol;
     ApeSymbol_t* copy;
-    copy = ape_make_symbol(st->context, original->name, original->type, original->index, original->assignable);
+    copy = ape_make_symbol(st->context, original->name, original->symtype, original->index, original->assignable);
     if(!copy)
     {
         return NULL;
@@ -578,7 +578,7 @@ ApeSymbol_t* ape_symtable_resolve(ApeSymTable_t* table, const char* name)
             break;
         }
     }
-    if(symbol && symbol->type == APE_SYMBOL_THIS)
+    if(symbol && symbol->symtype == APE_SYMBOL_THIS)
     {
         symbol = ape_symtable_deffree(table, symbol);
     }
@@ -590,7 +590,7 @@ ApeSymbol_t* ape_symtable_resolve(ApeSymTable_t* table, const char* name)
         {
             return NULL;
         }
-        if(symbol->type == APE_SYMBOL_MODULEGLOBAL || symbol->type == APE_SYMBOL_CONTEXTGLOBAL)
+        if(symbol->symtype == APE_SYMBOL_MODULEGLOBAL || symbol->symtype == APE_SYMBOL_CONTEXTGLOBAL)
         {
             return symbol;
         }
@@ -946,19 +946,6 @@ bool ape_vm_setglobal(ApeVM_t* vm, ApeSize_t ix, ApeObject_t val)
         ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->currentframe), "global write out of range");
         return false;
     }
-    //fprintf(stderr, "set global ix=%d...\n", ix);
-    #if 0
-    if(ix >= ape_valarray_count(vm->globalobjects))
-    {
-        nullval = ape_object_make_null(vm->context);
-        //while((vm->globalobjects->count + 1) < ix)
-        while((ix + 1) > vm->globalobjects->count)
-        {
-            //fprintf(stderr, "set global: pushing null to offset ix=%d\n", ix);
-            ape_valarray_push(vm->globalobjects, &nullval);
-        }
-    }
-    #endif
     ape_valdict_set(vm->globalobjects, &ix, &val);
     return true;
 }
@@ -966,22 +953,6 @@ bool ape_vm_setglobal(ApeVM_t* vm, ApeSize_t ix, ApeObject_t val)
 ApeObject_t ape_vm_getglobal(ApeVM_t* vm, ApeSize_t ix)
 {
     ApeObject_t* rt;
-    #if 0
-    if(ix >= APE_CONF_SIZE_VM_MAXGLOBALS)
-    {
-        APE_ASSERT(false);
-        ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->currentframe), "global read out of range");
-        return ape_object_make_null(vm->context);
-    }
-    #endif
-    //fprintf(stderr, "get global ix=%d...\n", ix);
-    #if 0
-    if(ix >= ape_valarray_count(vm->globalobjects))
-    {
-        return ape_object_make_null(vm->context);
-    }
-    return *(ApeObject_t*)ape_valarray_get(vm->globalobjects, ix);
-    #endif
     rt = (ApeObject_t*)ape_valdict_getbykey(vm->globalobjects, &ix);
     if(rt == NULL)
     {
@@ -994,26 +965,23 @@ void ape_vm_setstackpointer(ApeVM_t* vm, int new_sp)
 {
     int count;
     size_t bytescount;
-    ApeSize_t* obegin;
+    ApeSize_t i;
     ApeSize_t idx;
     idx = vm->stackptr;
-    /*
-    obegin = (ApeObject_t*)ape_valdict_getbykey(vm->stackobjects, &idx);
-    if(obegin)
-    {
-        idx = *obegin;
-    }
-    */
     /* to avoid gcing freed objects */
     if(new_sp > idx)
     {
         count = new_sp - idx;
         bytescount = count * sizeof(ApeObject_t);
+        /*
+        * TODO:FIXME: this is probably where the APE_OBJECT_NUMBER might come from.
+        * but it's not really obvious, tbh.
+        */
+        /*
         //memset(vm->stackobjects + vm->stackptr, 0, bytescount);
         //ape_valdict_clear(vm->stackobjects);
         //memset(vm->stackobjects->values + vm->stackptr, 0, bytescount);
-        
-        ApeSize_t i;
+        */
         for(i=vm->stackptr; i<bytescount; i++)
         {
             ApeObject_t nullval = ape_object_make_null(vm->context);
@@ -1042,7 +1010,6 @@ void ape_vm_pushstack(ApeVM_t* vm, ApeObject_t obj)
     }
 #endif
     idx = vm->stackptr;
-    //vm->stackobjects[idx] = obj;
     ape_valdict_set(vm->stackobjects, &idx, &obj);
     vm->stackptr++;
 }
@@ -1069,18 +1036,20 @@ ApeObject_t ape_vm_popstack(ApeVM_t* vm)
 #endif
     vm->stackptr--;
     idx = vm->stackptr-0;
-    #if 0
-    fprintf(stderr, "ape_vm_popstack: stackptr=%d idx=%d stackcontents=[[[\n", vm->stackptr, idx);
-    ape_vm_dumpstack(vm);
-    fprintf(stderr, "\n]]]\n");
-    #endif
-    //objres = vm->stackobjects[idx];
     ptr = (ApeObject_t*)ape_valdict_getbykey(vm->stackobjects, &idx);
     if(ptr == NULL)
     {
         return ape_object_make_null(vm->context);
     }
     objres = *ptr;
+    /*
+    * TODO:FIXME: somewhere along the line, objres.handle->datatype is either not set, or set incorrectly.
+    * this right here works, but it shouldn't be necessary.
+    * specifically, objres.handle->datatype gets ***sometimes*** set to APE_OBJECT_NONE, and
+    * so far i've only observed this when objres.type==APE_OBJECT_NUMBER.
+    * very strange, very weird, very heisenbug-ish.
+    */
+    objres.handle->datatype = objres.type;
     vm->lastpopped = objres;
     return objres;
 }
@@ -1098,9 +1067,6 @@ ApeObject_t ape_vm_getstack(ApeVM_t* vm, int nth_item)
         return ape_object_make_null(vm->context);
     }
 #endif
-    //fprintf(stderr, "ape_vm_getstack: nth_item=%d ix=%d\n", nth_item, ix);
-    //return vm->stackobjects[ix];
-    //ape_vm_dumpstack(vm);
     p = (ApeObject_t*)ape_valdict_getbykey(vm->stackobjects, &ix);
     if(p == NULL)
     {
@@ -1334,36 +1300,8 @@ bool ape_vm_callobjectargs(ApeVM_t* vm, ApeObject_t callee, ApeInt_t nargs, ApeO
             ofs = 0;
         }
         idx = vm->stackptr;
-        /*
-        obegin = (ApeSize_t*)ape_valdict_getbykey(vm->stackobjects, &idx);
-        if(obegin != NULL)
-        {
-            idx = (*obegin) + 1;
-        }
-        */
         stackvals = ((ApeObject_t*)(vm->stackobjects->values));
-        // return (char*)dict->values + (dict->valsize * ix);
-        #if 1
         stackpos = stackvals + idx - ofs;
-        // stackpos = (stackvals + vm->stackobjects->valsize) + ((idx - ofs) );
-        #else
-        {
-            //stackpos = calloc((sizeof(ApeObject_t) * nargs) + 1);
-            //memset(stackpos, 0, nargs+1);
-            size_t i;
-            size_t pi;
-            ApeObject_t tempdata[nargs + 1];
-            for(i=0, pi=((idx - ofs) + 0); pi<nargs; i++, pi++)
-            {
-                ApeObject_t p = stackvals[pi];
-                tempdata[i] = p;
-            }
-            stackpos = tempdata;
-        }
-        #endif
-        //raise(SIGTRAP);
-
-
         if(args == NULL)
         {
             fwdargs = stackpos;
@@ -1416,6 +1354,9 @@ bool ape_vm_checkassign(ApeVM_t* vm, ApeObject_t oldval, ApeObject_t newval)
     }
     if(oldtype != newtype)
     {
+        /*
+        * this is redundant, and frankly, unnecessary.
+        */
         /*
         ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->currentframe), "trying to assign variable of type %s to %s",
                           ape_object_value_typename(newtype), ape_object_value_typename(oldtype));
@@ -1526,7 +1467,7 @@ ApeVM_t* ape_make_vm(ApeContext_t* ctx, const ApeConfig_t* config, ApeGCMemory_t
     SET_OPERATOR_OVERLOAD_KEY(APE_OPCODE_MINUS, "__operator_minus__");
     SET_OPERATOR_OVERLOAD_KEY(APE_OPCODE_NOT, "__operator_bang__");
     SET_OPERATOR_OVERLOAD_KEY(APE_OPCODE_COMPAREPLAIN, "__cmp__");
-    #if 0
+    #if 1
     SET_OPERATOR_OVERLOAD_KEY(APE_OPCODE_GETINDEX, "__getindex__");
     SET_OPERATOR_OVERLOAD_KEY(APE_OPCODE_SETINDEX, "__setindex__");
     SET_OPERATOR_OVERLOAD_KEY(APE_OPCODE_CALL, "__call__");
@@ -1948,19 +1889,17 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
     ApeUShort_t nargs;
     ApeUShort_t num_free;
     ApeSize_t idx;
+    ApeSize_t tmpi;
+    ApeSize_t kvstart;
     ApeSize_t* obegin;
     ApeFloat_t comparison_res;
-
-
     ApeFloat_t maxexecms;
-
     ApeFloat_t valdouble;
     ApeObjType_t constant_type;
     ApeObjType_t indextype;
     ApeObjType_t keytype;
     ApeObjType_t lefttype;
     ApeObjType_t operand_type;
-
     ApeObjType_t type;
     ApeObject_t array_obj;
     ApeObject_t callee;
@@ -2274,13 +2213,6 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                         goto err;
                     }
                     idx = vm->stackptr;
-                    #if 0
-                    obegin = (ApeSize_t*)ape_valdict_getbykey(vm->stackobjects, &idx);
-                    if(obegin != NULL)
-                    {
-                        idx = *obegin;
-                    }
-                    #endif
                     items = ((ApeObject_t*)(vm->stackobjects->values)) + idx - count;
                     for(i = 0; i < count; i++)
                     {
@@ -2311,48 +2243,34 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                     kvp_count = ape_frame_readuint16(vm->currentframe);
                     items_count = kvp_count * 2;
                     map_obj = ape_vm_popthisstack(vm);
-                    //stackkeys = ((ApeSize_t*)(vm->stackobjects->keys));
                     stackvals = ((ApeObject_t*)(vm->stackobjects->values));
                     idx = vm->stackptr;
-                    #if 0
-                    obegin = (ApeSize_t*)ape_valdict_getbykey(vm->stackobjects, &idx);
-                    if(obegin != NULL)
-                    {
-                        idx = *obegin;
-                    }
-                    #endif
-
-                    #if 0
                     /*
-                    kv_pairs = stackvals + idx - items_count;
-                    for(i = 0; i < items_count; i += 2)
-                    {
-                        key = kv_pairs[i];
-                        if(!ape_object_value_ishashable(key))
-                        {
-                            keytype = ape_object_value_type(key);
-                            keytypename = ape_object_value_typename(keytype);
-                            ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->currentframe),
-                                              "key of type %s is not hashable", keytypename);
-                            goto err;
-                        }
-                        objval = kv_pairs[i + 1];
-                        ok = ape_object_map_setvalue(map_obj, key, objval);
-                        if(!ok)
-                        {
-                            goto err;
-                        }
-                    }
+                    * previously, extracting key->value pairs was as straight-forward
+                    * as stackobjects[N] for the key and stackobjects[N+1] for the value.
+                    * with stackobjects being a dict, their locations (indices) are
+                    * the keys in stackobjects, and kvstart is the offset in which
+                    * the active opcode operates in.
+                    * thus, simplified:
+                    *   key = stackobjects[(((stackposition - length(items)) + index) + 0)]
+                    *   val = stackobjects[(((stackposition - length(items)) + index) + 1)]
+                    *
+                    * this also means that lookups aren't *quite* linear anymore.
+                    * in terms of performance, the difference is negligible.
                     */
-                    #else
-                    ApeSize_t tmpi;
-                    ApeSize_t kvstart = (idx - items_count);
+                    kvstart = (idx - items_count);
                     kv_pairs = stackvals + kvstart;
                     for(i = 0; i < items_count; i += 2)
                     {
-                        //key = kv_pairs[i];
                         tmpi = kvstart+i;
                         key = *(ApeObject_t*)ape_valdict_getbykey(vm->stackobjects, &tmpi);
+                        /*
+                        * NB. this only goes for literals.
+                        * maps can have anything as a key, i.e.:
+                        *   foo = {}
+                        *   foo[function(){}] = "bar"
+                        * would be perfectly valid.
+                        */
                         if(!ape_object_value_ishashable(key))
                         {
                             keytype = ape_object_value_type(key);
@@ -2361,7 +2279,6 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                                               "key of type %s is not hashable", keytypename);
                             goto err;
                         }
-                        //objval = kv_pairs[i + 1];
                         tmpi = kvstart+i+1;
                         objval = *(ApeObject_t*)ape_valdict_getbykey(vm->stackobjects, &tmpi);
                         ok = ape_object_map_setvalue(map_obj, key, objval);
@@ -2370,7 +2287,6 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                             goto err;
                         }
                     }
-                    #endif
                     ape_vm_setstackpointer(vm, vm->stackptr - items_count);
                     ape_vm_pushstack(vm, map_obj);
                 }
@@ -2388,11 +2304,6 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                 {
                     index = ape_vm_popstack(vm);
                     left = ape_vm_popstack(vm);
-                    /*if(ape_object_value_isnull(left))
-                    {
-                        left = ape_vm_popthisstack(vm);
-                    }
-                    */
                     lefttype = ape_object_value_type(left);
                     indextype = ape_object_value_type(index);
                     ok = ape_vm_getindex(vm, left, index, lefttype, indextype);
@@ -2452,7 +2363,6 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                 {
                     nargs = ape_frame_readuint8(vm->currentframe);
                     callee = ape_vm_getstack(vm, nargs);
-                    //fprintf(stderr, "OPCODE_CALL: nargs=%d\n", nargs);
                     ok = ape_vm_callobjectstack(vm, callee, nargs);
                     if(!ok)
                     {
@@ -2487,7 +2397,6 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                     pos = ape_frame_readuint8(vm->currentframe);
                     popped = ape_vm_popstack(vm);
                     idx = vm->currentframe->basepointer + pos; 
-                    //vm->stackobjects[idx] = popped;
                     ape_valdict_set(vm->stackobjects, &idx, &popped);
                 }
                 break;
@@ -2496,14 +2405,12 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                     pos = ape_frame_readuint8(vm->currentframe);
                     new_value = ape_vm_popstack(vm);
                     idx = vm->currentframe->basepointer + pos;
-                    //old_value = vm->stackobjects[idx];
                     old_value = *(ApeObject_t*)ape_valdict_getbykey(vm->stackobjects, &idx);
                     if(!ape_vm_checkassign(vm, old_value, new_value))
                     {
                         goto err;
                     }
                     idx = vm->currentframe->basepointer + pos;
-                    //vm->stackobjects[idx] = new_value;
                     ape_valdict_set(vm->stackobjects, &idx, &new_value);
                 }
                 break;
@@ -2511,7 +2418,6 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                 {
                     pos = ape_frame_readuint8(vm->currentframe);
                     idx = vm->currentframe->basepointer + pos;
-                    //objval = vm->stackobjects[idx];
                     objval = *(ApeObject_t*)ape_valdict_getbykey(vm->stackobjects, &idx);
                     ape_vm_pushstack(vm, objval);
                 }
@@ -2558,19 +2464,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                     }
                     for(i = 0; i < num_free; i++)
                     {
-                        #if 0
-                        idx = vm->stackptr;
-                        obegin = (ApeSize_t*)ape_valdict_getbykey(vm->stackobjects, &idx);
-                        if(obegin != NULL)
-                        {
-                            idx = *obegin;
-                        }
-                        idx = idx - num_free + i;
-                        #else
                         idx = vm->stackptr - num_free + i;
-                        #endif
-
-                        //free_val = vm->stackobjects[idx];
                         free_val = *(ApeObject_t*)ape_valdict_getbykey(vm->stackobjects, &idx);
                         ape_object_function_setfreeval(function_obj, i, free_val);
                     }
@@ -2692,6 +2586,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                     valdouble = val;
                     #endif
                     objval = ape_object_make_number(vm->context, valdouble);
+                    objval.handle->datatype = APE_OBJECT_NUMBER;
                     ape_vm_pushstack(vm, objval);
                 }
                 break;
@@ -2733,7 +2628,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
         if(ape_errorlist_count(vm->errors) > 0)
         {
             err = ape_errorlist_lasterror(vm->errors);
-            if(err->type == APE_ERROR_RUNTIME && ape_errorlist_count(vm->errors) == 1)
+            if(err->errtype == APE_ERROR_RUNTIME && ape_errorlist_count(vm->errors) == 1)
             {
                 recover_frame_ix = -1;
                 for(ui = vm->countframes - 1; ui >= 0; ui--)

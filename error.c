@@ -126,7 +126,7 @@ const char* ape_tostring_errortype(ApeErrorType_t type)
 
 ApeErrorType_t ape_error_gettype(ApeError_t* error)
 {
-    switch(error->type)
+    switch(error->errtype)
     {
         case APE_ERROR_NONE:
             return APE_ERROR_NONE;
@@ -204,7 +204,7 @@ void ape_errorlist_add(ApeErrorList_t* errors, ApeErrorType_t type, ApePosition_
         return;
     }
     memset(&err, 0, sizeof(ApeError_t));
-    err.type = type;
+    err.errtype = type;
     len = (int)strlen(message);
     to_copy = len;
     if(to_copy >= (APE_CONF_SIZE_ERROR_MAXMSGLENGTH - 1))

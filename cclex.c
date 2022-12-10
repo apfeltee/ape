@@ -65,7 +65,7 @@ static ApePosition_t ape_lexer_makesourcepos(const ApeCompFile_t* file, int line
 
 void ape_lexer_token_init(ApeToken_t* tok, ApeTokenType_t type, const char* literal, int len)
 {
-    tok->type = type;
+    tok->toktype = type;
     tok->literal = literal;
     tok->len = len;
 }
@@ -125,12 +125,12 @@ void ape_lexer_continuetemplatestring(ApeLexer_t* lex)
 
 bool ape_lexer_currenttokenis(ApeLexer_t* lex, ApeTokenType_t type)
 {
-    return lex->curtoken.type == type;
+    return lex->curtoken.toktype == type;
 }
 
 bool ape_lexer_peektokenis(ApeLexer_t* lex, ApeTokenType_t type)
 {
-    return lex->peektoken.type == type;
+    return lex->peektoken.toktype == type;
 }
 
 bool ape_lexer_nexttoken(ApeLexer_t* lex)
@@ -143,7 +143,7 @@ bool ape_lexer_nexttoken(ApeLexer_t* lex)
 
 bool ape_lexer_previous_token(ApeLexer_t* lex)
 {
-    if(lex->prevtoken.type == TOKEN_INVALID)
+    if(lex->prevtoken.toktype == TOKEN_INVALID)
     {
         return false;
     }
@@ -170,7 +170,7 @@ ApeToken_t ape_lexer_internalnexttoken(ApeLexer_t* lex)
     const char* numberstr;
     ApeTokenType_t type;
     ApeToken_t outtok;
-    outtok.type = TOKEN_INVALID;
+    outtok.toktype = TOKEN_INVALID;
     lex->prevtokenstate.ch = lex->ch;
     lex->prevtokenstate.column = lex->column;
     lex->prevtokenstate.line = lex->line;
@@ -182,7 +182,7 @@ ApeToken_t ape_lexer_internalnexttoken(ApeLexer_t* lex)
         {
             ape_lexer_skipspace(lex);
         }
-        outtok.type = TOKEN_INVALID;
+        outtok.toktype = TOKEN_INVALID;
         outtok.literal = lex->input + lex->position;
         outtok.len = 1;
         outtok.pos = ape_lexer_makesourcepos(lex->file, lex->line, lex->column);
@@ -548,7 +548,7 @@ ApeToken_t ape_lexer_internalnexttoken(ApeLexer_t* lex)
         lex->continue_template_string = false;
         return outtok;
     }
-    outtok.type = TOKEN_INVALID;
+    outtok.toktype = TOKEN_INVALID;
     return outtok;
 }
 
@@ -563,7 +563,7 @@ bool ape_lexer_expectcurrent(ApeLexer_t* lex, ApeTokenType_t type)
     if(!ape_lexer_currenttokenis(lex, type))
     {
         expectedtypestr = ape_tostring_tokentype(type);
-        actualtypestr = ape_tostring_tokentype(lex->curtoken.type);
+        actualtypestr = ape_tostring_tokentype(lex->curtoken.toktype);
         ape_errorlist_addformat(lex->errors, APE_ERROR_PARSING, lex->curtoken.pos,
             "expected current token to be '%s', got '%s' instead", expectedtypestr, actualtypestr);
         return false;

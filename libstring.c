@@ -61,7 +61,7 @@ const char* ape_object_string_getdata(ApeObject_t object)
 
 char* ape_object_string_getinternalobjdata(ApeObjData_t* data)
 {
-    APE_ASSERT(data->type == APE_OBJECT_STRING);
+    APE_ASSERT(data->datatype == APE_OBJECT_STRING);
     if(data->valstring.is_allocated)
     {
         return data->valstring.value_allocated;

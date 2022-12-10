@@ -103,7 +103,7 @@ THE SOFTWARE.
 #define APE_CONF_MAP_INITIAL_CAPACITY (64/8)
 //#define APE_CONF_MAP_INITIAL_CAPACITY (2)
 
-#define APE_CONF_PLAINLIST_CAPACITY_ADD 8
+#define APE_CONF_PLAINLIST_CAPACITY_ADD 32
 
 #define APE_CONF_SIZE_VM_STACK (1024)
 #define APE_CONF_SIZE_VM_MAXGLOBALS (512 / 4)
@@ -159,6 +159,29 @@ THE SOFTWARE.
 #endif
 
 
+/**/
+#define ape_object_value_type(obj) \
+    (((obj).handle == NULL) ? APE_OBJECT_NULL : ((ApeObjType_t)((obj).handle->datatype)))
+
+#define ape_object_value_istype(o, t) \
+    (ape_object_value_type(o) == (t))
+
+#define ape_object_value_isnumber(o) \
+    ape_object_value_istype(o, APE_OBJECT_NUMBER)
+
+#define ape_object_value_isnumeric(o) \
+    (ape_object_value_istype(o, APE_OBJECT_NUMBER) || ape_object_value_istype(o, APE_OBJECT_BOOL))
+
+#define ape_object_value_isnull(o) \
+    (((o).type == APE_OBJECT_NONE) || ape_object_value_istype(o, APE_OBJECT_NULL))
+
+#define ape_object_value_isstring(o) \
+    ape_object_value_istype(o, APE_OBJECT_STRING)
+
+#define ape_object_value_iscallable(o) \
+    (ape_object_value_istype(o, APE_OBJECT_NATIVEFUNCTION) || ape_object_value_istype(o, APE_OBJECT_SCRIPTFUNCTION))
+
+
 #define make_fn_data(ctx, name, fnc, dataptr, datasize) \
     ape_object_make_nativefuncmemory(ctx, name, fnc, dataptr, datasize)
 
@@ -202,28 +225,6 @@ THE SOFTWARE.
 
 #define ape_object_value_getmem(obj) \
     (ape_object_value_allocated_data(obj)->mem)
-
-/**/
-#define ape_object_value_type(obj) \
-    (((obj).handle == NULL) ? APE_OBJECT_NULL : ((ApeObjType_t)((obj).handle->type)))
-
-#define ape_object_value_istype(o, t) \
-    (ape_object_value_type(o) == (t))
-
-#define ape_object_value_isnumber(o) \
-    ape_object_value_istype(o, APE_OBJECT_NUMBER)
-
-#define ape_object_value_isnumeric(o) \
-    (ape_object_value_istype(o, APE_OBJECT_NUMBER) || ape_object_value_istype(o, APE_OBJECT_BOOL))
-
-#define ape_object_value_isnull(o) \
-    (((o).type == APE_OBJECT_NONE) || ape_object_value_istype(o, APE_OBJECT_NULL))
-
-#define ape_object_value_isstring(o) \
-    ape_object_value_istype(o, APE_OBJECT_STRING)
-
-#define ape_object_value_iscallable(o) \
-    (ape_object_value_istype(o, APE_OBJECT_NATIVEFUNCTION) || ape_object_value_istype(o, APE_OBJECT_SCRIPTFUNCTION))
 
 
 enum ApeErrorType_t
@@ -730,7 +731,7 @@ struct ApeObjData_t
         ApeExternalData_t   valextern;
     };
     bool         gcmark;
-    ApeObjType_t type;
+    ApeObjType_t datatype;
 };
 
 struct ApeObject_t
@@ -807,7 +808,7 @@ struct ApeAllocator_t
 
 struct ApeError_t
 {
-    short  type;
+    short  errtype;
     char            message[APE_CONF_SIZE_ERROR_MAXMSGLENGTH];
     ApePosition_t   pos;
     ApeTraceback_t* traceback;
@@ -821,7 +822,7 @@ struct ApeErrorList_t
 
 struct ApeToken_t
 {
-    ApeTokenType_t type;
+    ApeTokenType_t toktype;
     const char*    literal;
     ApeSize_t      len;
     ApePosition_t  pos;
@@ -991,7 +992,7 @@ struct ApeMapLiteral_t
 struct ApeExpression_t
 {
     ApeContext_t* context;
-    ApeExprType_t type;
+    ApeExprType_t extype;
     bool          stringwasallocd;
     ApeSize_t     stringlitlength;
     union
@@ -1036,7 +1037,7 @@ struct ApeParser_t
 struct ApeSymbol_t
 {
     ApeContext_t*   context;
-    ApeSymbolType_t type;
+    ApeSymbolType_t symtype;
     char*           name;
     ApeSize_t       index;
     bool            assignable;
@@ -1261,7 +1262,7 @@ struct ApeVM_t
     ApeFrame_t frameobjects[APE_CONF_SIZE_MAXFRAMES];
     
     ApeSize_t  countframes;
-    ApeObject_t nullvalue;
+
     ApeObject_t lastpopped;
     ApeFrame_t* currentframe;
 
@@ -1329,8 +1330,9 @@ static APE_INLINE ApeObject_t object_make_from_data(ApeContext_t* ctx, ApeObjTyp
     ApeObject_t object;
     object.type = type;
     data->context = ctx;
+    data->datatype = type;
     object.handle = data;
-    object.handle->type = type;
+    object.handle->datatype = type;
     return object;
 }
 
