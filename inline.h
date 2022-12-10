@@ -4,8 +4,14 @@
 * this file contains code that is intended to be inlined.
 * it is *not* required in production code; only ape.h is.
 */
-#define _ISOC99_SOURCE
-#define _POSIX_C_SOURCE 200112L
+
+#if !defined(_ISOC99_SOURCE)
+    #define _ISOC99_SOURCE
+#endif
+
+#if !defined(_POSIX_C_SOURCE)
+    #define _POSIX_C_SOURCE 200112L
+#endif
 
 #include <signal.h>
 #include <math.h>
@@ -36,47 +42,95 @@
 #endif
 
 #include "dnarray.h"
+#include "zvector.h"
+#include "aadeque.h"
 
-#if defined(APE_USE_ALIST) && (APE_USE_ALIST == 1)
-    /*
-    #define memlist_make(ctx, self) \
-        alist_new()
+#if defined(APE_USE_ALIST) && (APE_USE_ALIST != 0)
+    #if (APE_USE_ALIST == 1)
+        #define memlist_make(ctx, self, sztyp) \
+            da_init(self, 2)
 
-    #define memlist_destroy(list) \
-        alist_destroy(list)
+        #define memlist_destroy(list) \
+            da_free(list)
 
-    #define memlist_at(list, ix) \
-        alist_at(list, ix)
+        #define memlist_at(list, ix) \
+            ((list)[ix])
 
-    #define memlist_count(list) \
-        ((list)->size)
+        #define memlist_get(list, ix) \
+            memlist_at(list, ix)
 
-    #define memlist_append(list, item) \
-        alist_append(list, item)
+        #define memlist_set(list, ix, ...) \
+            (\
+                /* da_maybe_grow_internal((list), memlist_count(list)+ix), */ \
+                (list)[ix] = (__VA_ARGS__) \
+            )
 
-    #define memlist_clear(list) \
-        alist_clear(list)
-    */
-    #define memlist_make(ctx, self) \
-        da_init(self, 2)
+        #define memlist_data(list) \
+            (list)
 
-    #define memlist_destroy(list) \
-        da_free(list)
+        #define memlist_count(list) \
+            da_count(list)
 
-    #define memlist_at(list, ix) \
-        ((list)[ix])
+        #define memlist_size(list) \
+            memlist_count(list)
 
-    #define memlist_count(list) \
-        da_count(list)
+        #define memlist_capacity(list) \
+            da_capacity(list)
 
-    #define memlist_append(list, item) \
-        da_push(list, item)
+        #define memlist_pop(list) \
+            da_pop(list)
 
-    #define memlist_clear(list) \
-        da_clear(list)
+        #define memlist_copy(from, to, begin, end) \
+            da_copy(from, to, begin, end)
 
+        #define memlist_append(list, item) \
+            da_push(list, item)
+
+        #define memlist_removeat(list, ix) \
+            da_removeat(list, ix)
+
+        #define memlist_clear(list) \
+            da_clear(list)
+
+    #elif (APE_USE_ALIST == 2)
+        #define memlist_make(ctx, self, sztyp) \
+            vect_create(APE_CONF_PLAINLIST_CAPACITY_ADD, sztyp, ZV_BYREF)
+
+        #define memlist_destroy(list) \
+            vect_destroy(list)
+
+        #define memlist_data(list) \
+            vect_data(list)
+
+        #define memlist_at(list, ix) \
+            vect_get_at(list, ix)
+
+        #define memlist_set(list, ix, ...) \
+            vect_add_at(arr->vector, ix, (__VA_ARGS__))
+
+        #define memlist_count(list) \
+            vect_size(list)
+
+        #define memlist_capacity(list) \
+            vect_max_size(list)
+
+        #define memlist_pop(list) \
+            vect_pop(list)
+
+        #define memlist_append(list, item) \
+            vect_push_back(list, item)
+
+        #define memlist_copy(from, to, begin, end) \
+            vect_copy(to, from, begin, end)
+
+        #define memlist_removeat(list, ix) \
+            vect_remove_at(list, ix)
+
+        #define memlist_clear(list) \
+            vect_clear(list)
+    #endif
 #else
-    #define memlist_make(ctx, self) \
+    #define memlist_make(ctx, self, typ) \
         ape_make_ptrarray(ctx)
 
     #define memlist_destroy(list) \
@@ -87,6 +141,9 @@
 
     #define memlist_count(list) \
         ape_ptrarray_count(list)
+
+    #define memlist_capacity(list) \
+        ape_ptrarray_capacity(list)
 
     #define memlist_append(list, item) \
         ape_ptrarray_push(list, item)
@@ -170,91 +227,3 @@ static APE_INLINE ApeFloat_t ape_util_uinttofloat(ApeUInt_t val)
     return temp.fltcast_double;
 }
 
-static APE_INLINE ApeSize_t ape_valarray_count(const ApeValArray_t* arr)
-{
-    if(!arr)
-    {
-        return 0;
-    }
-    return arr->count;
-}
-
-static APE_INLINE ApeSize_t ape_ptrarray_count(const ApePtrArray_t* arr)
-{
-    if(!arr)
-    {
-        return 0;
-    }
-    return ape_valarray_count(&arr->arr);
-}
-
-static APE_INLINE bool ape_valarray_set(ApeValArray_t* arr, ApeSize_t ix, void* value)
-{
-    ApeSize_t offset;
-    if(ix >= arr->count)
-    {
-        APE_ASSERT(false);
-        return false;
-    }
-    offset = ix * arr->elemsize;
-    memmove(arr->arraydata + offset, value, arr->elemsize);
-    return true;
-}
-
-static APE_INLINE void* ape_valarray_get(ApeValArray_t* arr, ApeSize_t ix)
-{
-    ApeSize_t offset;
-    if(ix >= arr->count)
-    {
-        APE_ASSERT(false);
-        return NULL;
-    }
-    offset = ix * arr->elemsize;
-    return arr->arraydata + offset;
-}
-
-static APE_INLINE bool ape_valarray_pop(ApeValArray_t* arr, void* out_value)
-{
-    void* res;
-    if(arr->count <= 0)
-    {
-        return false;
-    }
-    if(out_value)
-    {
-        res = (void*)ape_valarray_get(arr, arr->count - 1);
-        memcpy(out_value, res, arr->elemsize);
-    }
-    ape_valarray_removeat(arr, arr->count - 1);
-    return true;
-}
-
-static APE_INLINE void* ape_valarray_top(ApeValArray_t* arr)
-{
-    if(arr->count <= 0)
-    {
-        return NULL;
-    }
-    return (void*)ape_valarray_get(arr, arr->count - 1);
-}
-
-static APE_INLINE void* ape_ptrarray_pop(ApePtrArray_t* arr)
-{
-    ApeSize_t ix;
-    void* res;
-    ix = ape_ptrarray_count(arr) - 1;
-    res = ape_ptrarray_get(arr, ix);
-    ape_ptrarray_removeat(arr, ix);
-    return res;
-}
-
-static APE_INLINE void* ape_ptrarray_top(ApePtrArray_t* arr)
-{
-    ApeSize_t count;
-    count = ape_ptrarray_count(arr);
-    if(count == 0)
-    {
-        return NULL;
-    }
-    return ape_ptrarray_get(arr, count - 1);
-}

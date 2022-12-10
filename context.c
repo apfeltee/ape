@@ -162,7 +162,7 @@ void ape_context_dumpbytecode(ApeContext_t* ctx, ApeCompResult_t* cres)
     ApeWriter_t* strbuf;
     strbuf = ape_make_writerio(ctx, stdout, false, true);
     fprintf(stderr, "bytecode:\n");
-    ape_tostring_compresult(strbuf, cres);
+    ape_tostring_compresult(strbuf, cres, false);
     fprintf(stderr, "\n");
     ape_writer_destroy(strbuf);
 }

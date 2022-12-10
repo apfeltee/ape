@@ -6,6 +6,6 @@ const ary = [
 ]
 
 println("ary=", ary);
-println("len(ary)=", len(ary));
-println("len(ary)==3=", len(ary) == 3);
+println("len(ary)=", ary.length);
+println("len(ary)==3=", ary.length == 3);
 

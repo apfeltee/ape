@@ -34,23 +34,12 @@ static APE_INLINE unsigned char** da_grow_internal(unsigned char** arr, intptr_t
 #define da_count_internal(arr) \
     ((((intptr_t*)(arr)) - 2)[0])
 
-#define da_allocated_internal(arr) \
+#define da_capacity_internal(arr) \
     ((((intptr_t*)(arr)) - 1)[0])
 
 
-/*
 #define da_need_to_grow_internal(arr, n) \
-    (!(arr) || (da_count_internal(arr) + (n)) >= da_allocated_internal(arr))
-*/
-
-static APE_INLINE bool da_need_to_grow_internal(unsigned char** arr, unsigned int n)
-{
-    if(!arr)
-    {
-        return true;
-    }
-    return ((da_count_internal(arr) + n) >= da_allocated_internal(arr));
-}
+    (!(arr) || (da_count_internal(arr) + (n)) >= da_capacity_internal(arr))
 
 #define da_maybe_grow_internal(arr, n) \
     ( \
@@ -61,72 +50,51 @@ static APE_INLINE bool da_need_to_grow_internal(unsigned char** arr, unsigned in
         _da_else(0) \
     )
 
+#define da_init(arr, n) \
+    (__typeof__(arr))  da_grow_internal((unsigned char**)arr, n, sizeof(*arr))
 
+#define da_count(arr) \
+    ( \
+        _da_if((arr) == NULL) \
+        _da_then(0) \
+        _da_else( \
+            da_count_internal(arr) \
+        ) \
+    )
 
-#define da_init(arr, n) (__typeof__(arr)) da_wrap_init((unsigned char**)arr, n, sizeof(*arr))
-
-static APE_INLINE unsigned char** da_wrap_init(unsigned char** arr, unsigned int n, unsigned int tsize)
-{
-    arr = da_grow_internal(arr, n, tsize);
-    return arr;
-}
-
-#define da_count(arr) da_wrap_count((unsigned char**)(arr))
-
-static APE_INLINE unsigned int da_wrap_count(unsigned char** arr)
-{
-    if(arr != NULL)
-    {
-        return da_count_internal(arr);
-    }
-    return 0;
-}
-
-/*
-#define da_allocated(arr) \
+#define da_capacity(arr) \
     ( \
         _da_if(arr) \
-        _da_then(da_allocated_internal(arr)) \
+        _da_then(da_capacity_internal(arr)) \
         _da_else(0) \
     )
-*/
-static APE_INLINE unsigned int da_allocated(unsigned char** arr)
-{
-    if(arr != NULL)
-    {
-        return da_allocated_internal(arr);
-    }
-    return 0;
-}
 
 #define da_last(arr) \
     ( \
         (arr)[da_count_internal(arr) - 1] \
     )
 
-
-#if 0 //defined(__cplusplus)
-
+#if 0
+    #define da_push(arr, ...) \
+        ( \
+            da_maybe_grow_internal((arr), APE_CONF_PLAINLIST_CAPACITY_ADD), \
+            (arr)[da_count_internal(arr)++] = (__VA_ARGS__) \
+        )
 #else
     #define da_push(arr, ...) \
         ( \
             da_maybe_grow_internal((arr), 1), \
             (arr)[da_count_internal(arr)++] = (__VA_ARGS__) \
         )
+
 #endif
-/*
+
 #define da_pushn(arr, n) \
     ( \
         da_maybe_grow_internal((arr), n), \
         da_count_internal(arr) += n \
     )
-*/
 
-static APE_INLINE void da_pushn(unsigned char** arr, unsigned int n)
-{
-    da_maybe_grow_internal(arr, n);
-    da_count_internal(arr) += n;
-}
 
 #define da_pop(arr) \
     ( \
@@ -188,6 +156,22 @@ static APE_INLINE void da_pushn(unsigned char** arr, unsigned int n)
 
 #define da_sizeof(arr) (sizeof(*(arr)) * da_count(arr))
 
+static APE_INLINE void da_copy(unsigned char** from, unsigned char** to, unsigned int begin, unsigned int end)
+{
+    unsigned int i;
+    for(i=begin; i<end; i++)
+    {
+        da_maybe_grow_internal(to, APE_CONF_PLAINLIST_CAPACITY_ADD);
+        to[i] = from[i];
+    }
+}
+
+static APE_INLINE void da_removeat(unsigned char** from, unsigned int ix)
+{
+    (void)from;
+    (void)ix;
+}
+
 /*
 #undef _da_if
 #undef _da_then
@@ -213,7 +197,6 @@ static APE_INLINE unsigned char** da_grow_internal(unsigned char** arr, intptr_t
             if(ptr)
             {
                 memcpy(ptr, ((intptr_t*)arr) - 2, da_count(arr) * size + 2 * sizeof(intptr_t));
-                //free(((intptr_t*)arr) - 2);
                 da_free(arr);
             }
         #endif
@@ -222,7 +205,7 @@ static APE_INLINE unsigned char** da_grow_internal(unsigned char** arr, intptr_t
             zerosize = asize - 2 * sizeof(intptr_t) - ptr[0] * size;
             memset(((char*)ptr) + (asize - zerosize), 0, zerosize);
             res = (unsigned char**)(ptr + 2);
-            da_allocated_internal(res) = acount;
+            da_capacity_internal(res) = acount;
         }
         else
         {
@@ -241,7 +224,7 @@ static APE_INLINE unsigned char** da_grow_internal(unsigned char** arr, intptr_t
             res = (unsigned char**)(ptr + 2);
             memset(ptr, 0, asize);
             da_count_internal(res) = 0;
-            da_allocated_internal(res) = acount;
+            da_capacity_internal(res) = acount;
         }
         else
         {

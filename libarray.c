@@ -178,6 +178,76 @@ void ape_valarray_orphandata(ApeValArray_t* arr)
     ape_valarray_initcapacity(arr, arr->context, 0, arr->elemsize);
 }
 
+
+ApeSize_t ape_valarray_count(const ApeValArray_t* arr)
+{
+    if(!arr)
+    {
+        return 0;
+    }
+    return arr->count;
+}
+
+ApeSize_t ape_ptrarray_count(const ApePtrArray_t* arr)
+{
+    if(!arr)
+    {
+        return 0;
+    }
+    return ape_valarray_count(&arr->arr);
+}
+
+bool ape_valarray_set(ApeValArray_t* arr, ApeSize_t ix, void* value)
+{
+    ApeSize_t offset;
+    if(ix >= arr->count)
+    {
+        APE_ASSERT(false);
+        return false;
+    }
+    offset = ix * arr->elemsize;
+    memmove(arr->arraydata + offset, value, arr->elemsize);
+    return true;
+}
+
+void* ape_valarray_get(ApeValArray_t* arr, ApeSize_t ix)
+{
+    ApeSize_t offset;
+    if(ix >= arr->count)
+    {
+        APE_ASSERT(false);
+        return NULL;
+    }
+    offset = ix * arr->elemsize;
+    return arr->arraydata + offset;
+}
+
+bool ape_valarray_pop(ApeValArray_t* arr, void* out_value)
+{
+    void* res;
+    if(arr->count <= 0)
+    {
+        return false;
+    }
+    if(out_value)
+    {
+        res = (void*)ape_valarray_get(arr, arr->count - 1);
+        memcpy(out_value, res, arr->elemsize);
+    }
+    ape_valarray_removeat(arr, arr->count - 1);
+    return true;
+}
+
+void* ape_valarray_top(ApeValArray_t* arr)
+{
+    if(arr->count <= 0)
+    {
+        return NULL;
+    }
+    return (void*)ape_valarray_get(arr, arr->count - 1);
+}
+
+
 ApePtrArray_t* ape_make_ptrarray(ApeContext_t* ctx)
 {
     return ape_make_ptrarraycapacity(ctx, 0);
@@ -226,6 +296,7 @@ void ape_ptrarray_destroywithitems(ApePtrArray_t* arr, ApeDataCallback_t destroy
     ape_ptrarray_destroy(arr);
 }
 
+
 ApePtrArray_t* ape_ptrarray_copywithitems(ApePtrArray_t* arr, ApeDataCallback_t copy_fn, ApeDataCallback_t destroy_fn)
 {
     bool ok;
@@ -257,6 +328,28 @@ ApePtrArray_t* ape_ptrarray_copywithitems(ApePtrArray_t* arr, ApeDataCallback_t 
 err:
     ape_ptrarray_destroywithitems(arr_copy, (ApeDataCallback_t)destroy_fn);
     return NULL;
+}
+
+
+void* ape_ptrarray_pop(ApePtrArray_t* arr)
+{
+    ApeSize_t ix;
+    void* res;
+    ix = ape_ptrarray_count(arr) - 1;
+    res = ape_ptrarray_get(arr, ix);
+    ape_ptrarray_removeat(arr, ix);
+    return res;
+}
+
+void* ape_ptrarray_top(ApePtrArray_t* arr)
+{
+    ApeSize_t count;
+    count = ape_ptrarray_count(arr);
+    if(count == 0)
+    {
+        return NULL;
+    }
+    return ape_ptrarray_get(arr, count - 1);
 }
 
 bool ape_ptrarray_add(ApePtrArray_t* arr, void* ptr)
@@ -310,6 +403,10 @@ ApeObject_t ape_object_make_array(ApeContext_t* ctx)
 ApeObject_t ape_object_make_arraycapacity(ApeContext_t* ctx, unsigned capacity)
 {
     ApeObjData_t* data;
+    if(capacity == 0)
+    {
+        capacity = 1;
+    }
     data = ape_gcmem_getfrompool(ctx->vm->mem, APE_OBJECT_ARRAY);
     if(data)
     {

@@ -94,8 +94,6 @@ THE SOFTWARE.
     #define APE_INLINE inline
 #endif
 
-#define APE_USE_ALIST 1
-
 #define APE_CONF_INVALID_VALDICT_IX UINT_MAX
 #define APE_CONF_INVALID_STRDICT_IX UINT_MAX
 #define APE_CONF_DICT_INITIAL_SIZE (2)
@@ -104,6 +102,8 @@ THE SOFTWARE.
 
 #define APE_CONF_MAP_INITIAL_CAPACITY (64/8)
 //#define APE_CONF_MAP_INITIAL_CAPACITY (2)
+
+#define APE_CONF_PLAINLIST_CAPACITY_ADD 8
 
 #define APE_CONF_SIZE_VM_STACK (1024)
 #define APE_CONF_SIZE_VM_MAXGLOBALS (512 / 4)
@@ -128,6 +128,8 @@ THE SOFTWARE.
 #define APE_ARRAY_LEN(array) ((int)(sizeof(array) / sizeof(array[0])))
 
 #define APE_DEBUG 0
+
+
 
 #if 1
     #define APE_DBLEQ(a, b) (fabs((a) - (b)) < DBL_EPSILON)
@@ -580,9 +582,21 @@ typedef struct /**/ ApeNativeItem_t        ApeNativeItem_t;
 typedef struct /**/ ApeObjMemberItem_t     ApeObjMemberItem_t;
 typedef struct /**/ ApePseudoClass_t       ApePseudoClass_t;
 typedef struct /**/ ApeArgCheck_t          ApeArgCheck_t;
-typedef struct /**/ ApePlainList_t ApePlainList_t;
-typedef struct /**/ ApePlainNode_t ApePlainNode_t;
 
+#define APE_USE_ALIST 1
+typedef struct Vector_t Vector_t;
+typedef uint32_t VectIndex_t;
+typedef int32_t VectStatus_t;
+
+#if defined(APE_USE_ALIST) && (APE_USE_ALIST != 0)
+    #if (APE_USE_ALIST == 1)
+        typedef void* MemList_t;
+    #elif (APE_USE_ALIST == 2) 
+        typedef Vector_t MemList_t;
+    #endif
+#else
+    typedef struct ApePtrArray_t MemList_t;
+#endif
 
 typedef ApeObject_t (*ApeWrappedNativeFunc_t)(ApeContext_t*, void*, ApeSize_t, ApeObject_t*);
 typedef ApeObject_t (*ApeNativeFuncPtr_t)(ApeVM_t*, void*, ApeSize_t, ApeObject_t*);
@@ -605,21 +619,6 @@ typedef void* (*ApeDataCallback_t)(void*);
 typedef ApeExpression_t* (*ApeRightAssocParseFNCallback_t)(ApeParser_t* p);
 typedef ApeExpression_t* (*ApeLeftAssocParseFNCallback_t)(ApeParser_t* p, ApeExpression_t* expr);
 
-struct ApePlainNode_t
-{
-    void* p;
-    ApePlainNode_t* prev;
-    ApePlainNode_t* next;
-};
-
-struct ApePlainList_t
-{
-    ApePlainNode_t* head;
-    ApePlainNode_t* tail;
-    ApePlainNode_t* current;
-    int idx;
-    size_t size;
-};
 
 struct ApeArgCheck_t
 {
@@ -731,12 +730,12 @@ struct ApeObjData_t
         ApeExternalData_t   valextern;
     };
     bool         gcmark;
-    short type;
+    ApeObjType_t type;
 };
 
 struct ApeObject_t
 {
-    short  type;
+    ApeObjType_t  type;
     ApeObjData_t* handle;
 };
 
@@ -1076,14 +1075,8 @@ struct ApeGCMemory_t
     ApeContext_t*   context;
     ApeAllocator_t* alloc;
     ApeSize_t       allocations_since_sweep;
-    #if defined(APE_USE_ALIST) && (APE_USE_ALIST == 1)
-        ApeObjData_t** frontobjects;
-        ApeObjData_t** backobjects;
-    #else
-        ApePtrArray_t*  frontobjects;
-        ApePtrArray_t*  backobjects;
-    #endif
-
+    MemList_t* frontobjects;
+    MemList_t* backobjects;
     ApeValArray_t*  objects_not_gced;
     ApeObjPool_t    data_only_pool;
     ApeObjPool_t    pools[APE_CONF_SIZE_GCMEM_POOLCOUNT];
@@ -1257,7 +1250,9 @@ struct ApeVM_t
 
     ApeValDict_t* globalobjects;
 
-    ApeObject_t stackobjects[APE_CONF_SIZE_VM_STACK];
+    //ApeObject_t stackobjects[APE_CONF_SIZE_VM_STACK];
+    ApeValDict_t* stackobjects;
+
     int         stackptr;
 
     ApeObject_t thisobjects[APE_CONF_SIZE_VM_THISSTACK];
@@ -1266,7 +1261,7 @@ struct ApeVM_t
     ApeFrame_t frameobjects[APE_CONF_SIZE_MAXFRAMES];
     
     ApeSize_t  countframes;
-
+    ApeObject_t nullvalue;
     ApeObject_t lastpopped;
     ApeFrame_t* currentframe;
 

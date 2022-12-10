@@ -1,8 +1,9 @@
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdarg.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <signal.h>
 #if __has_include(<readline/readline.h>)
 #include <readline/readline.h>
 #include <readline/history.h>

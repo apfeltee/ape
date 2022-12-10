@@ -198,6 +198,7 @@ void ape_tostring_quotestring(ApeWriter_t* buf, const char* str, ApeSize_t len, 
 void ape_tostring_object(ApeWriter_t* buf, ApeObject_t obj, bool quote_str)
 {
     const char* sdata;
+    const char* fname;
     ApeSize_t slen;
     ApeSize_t i;
     ApeFloat_t fltnum;
@@ -268,8 +269,20 @@ void ape_tostring_object(ApeWriter_t* buf, ApeObject_t obj, bool quote_str)
         case APE_OBJECT_SCRIPTFUNCTION:
             {
                 compfunc = ape_object_value_asfunction(obj);
-                ape_writer_appendf(buf, "CompiledFunction: %s\n", ape_object_function_getname(obj));
-                ape_tostring_bytecode(buf, compfunc->compiledcode->bytecode, compfunc->compiledcode->srcpositions, compfunc->compiledcode->count);
+                fname = ape_object_function_getname(obj);
+                #if 0
+                    ape_writer_appendf(buf, "CompiledFunction: %s ", fname);
+                    if(strcmp(fname, "__main__") == 0)
+                    {
+                        ape_writer_append(buf, "<entry point>");
+                    }
+                    else
+                    {
+                        ape_tostring_bytecode(buf, compfunc->compiledcode->bytecode, compfunc->compiledcode->srcpositions, compfunc->compiledcode->count, true);
+                    }
+                #else
+                    ape_writer_appendf(buf, "<function '%s'>", fname);
+                #endif
             }
             break;
         case APE_OBJECT_ARRAY:

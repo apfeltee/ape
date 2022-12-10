@@ -7,7 +7,7 @@ WFLAGS = -Wunused -Wunused-macros -Wunused-local-typedefs
 #EXTRAFLAGS = -fdata-sections -ffunction-sections -Wl,--gc-sections -Wl,--print-gc-sections
 
 ## don't ever remove '-Wall -Wextra' - it's the bare minimum!
-CC = gcc -Wall -Wextra $(EXTRAFLAGS) $(WFLAGS)
+CC = clang -Wall -Wextra $(EXTRAFLAGS) $(WFLAGS)
 
 ## only ever increase -O when in release. -O0 disables inlining entirely, which is needed for debugging.
 #CFLAGS = $(INCFLAGS) -Ofast -march=native -flto -ffast-math -funroll-loops

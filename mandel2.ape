@@ -14,6 +14,7 @@ function do_sub(x, y)
 function do_mul(x, y)
 {
     var t = x * y
+    println("t = ", t)
     return (t + 8192 / 2) / 8192
 }
 

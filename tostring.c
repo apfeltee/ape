@@ -136,54 +136,62 @@ const char* ape_tostring_exprtype(ApeExprType_t type)
 static bool ape_tostring_opcodecoderead(ApeOpcodeDef_t* def, ApeUShort_t* instr, ApeOpByte_t outop[2])
 {
     ApeSize_t i;
-    int offset = 0;
+    ApeOpByte_t operand;
+    int opwidth;
+    int offset;
+    offset = 0;
+    if(def == NULL)
+    {
+        return false;
+    }
     for(i = 0; i < def->operandcount; i++)
     {
-        int opwidth = def->operandwidths[i];
+        opwidth = def->operandwidths[i];
         switch(opwidth)
         {
             case 1:
-            {
-                outop[i] = instr[offset];
+                {
+                    outop[i] = instr[offset];
+                }
                 break;
-            }
             case 2:
-            {
-                ApeOpByte_t operand = 0;
-                operand = operand | (instr[offset] << 8);
-                operand = operand | (instr[offset + 1]);
-                outop[i] = operand;
+                {
+                    operand = 0;
+                    operand = operand | (instr[offset] << 8);
+                    operand = operand | (instr[offset + 1]);
+                    outop[i] = operand;
+                }
                 break;
-            }
             case 4:
-            {
-                ApeOpByte_t operand = 0;
-                operand = operand | (instr[offset + 0] << 24);
-                operand = operand | (instr[offset + 1] << 16);
-                operand = operand | (instr[offset + 2] << 8);
-                operand = operand | (instr[offset + 3]);
-                outop[i] = operand;
+                {
+                    operand = 0;
+                    operand = operand | (instr[offset + 0] << 24);
+                    operand = operand | (instr[offset + 1] << 16);
+                    operand = operand | (instr[offset + 2] << 8);
+                    operand = operand | (instr[offset + 3]);
+                    outop[i] = operand;
+                }
                 break;
-            }
             case 8:
-            {
-                ApeOpByte_t operand = 0;
-                operand = operand | ((ApeOpByte_t)instr[offset + 0] << 56);
-                operand = operand | ((ApeOpByte_t)instr[offset + 1] << 48);
-                operand = operand | ((ApeOpByte_t)instr[offset + 2] << 40);
-                operand = operand | ((ApeOpByte_t)instr[offset + 3] << 32);
-                operand = operand | ((ApeOpByte_t)instr[offset + 4] << 24);
-                operand = operand | ((ApeOpByte_t)instr[offset + 5] << 16);
-                operand = operand | ((ApeOpByte_t)instr[offset + 6] << 8);
-                operand = operand | ((ApeOpByte_t)instr[offset + 7]);
-                outop[i] = operand;
+                {
+                    operand = 0;
+                    operand = operand | ((ApeOpByte_t)instr[offset + 0] << 56);
+                    operand = operand | ((ApeOpByte_t)instr[offset + 1] << 48);
+                    operand = operand | ((ApeOpByte_t)instr[offset + 2] << 40);
+                    operand = operand | ((ApeOpByte_t)instr[offset + 3] << 32);
+                    operand = operand | ((ApeOpByte_t)instr[offset + 4] << 24);
+                    operand = operand | ((ApeOpByte_t)instr[offset + 5] << 16);
+                    operand = operand | ((ApeOpByte_t)instr[offset + 6] << 8);
+                    operand = operand | ((ApeOpByte_t)instr[offset + 7]);
+                    outop[i] = operand;
+                }
                 break;
-            }
             default:
-            {
-                APE_ASSERT(false);
-                return false;
-            }
+                {
+                    APE_ASSERT(false);
+                    return false;
+                }
+                break;
         }
         offset += opwidth;
     }
@@ -548,75 +556,107 @@ bool ape_tostring_codeblock(ApeWriter_t* buf, ApeCodeblock_t* stmt)
     return true;
 }
 
-bool ape_tostring_compresult(ApeWriter_t* buf, ApeCompResult_t* res)
+bool ape_tostring_compresult(ApeWriter_t* buf, ApeCompResult_t* res, bool sparse)
 {
-    return ape_tostring_bytecode(buf, res->bytecode, res->srcpositions, res->count);
+    return ape_tostring_bytecode(buf, res->bytecode, res->srcpositions, res->count, sparse);
 }
 
-bool ape_tostring_bytecode(ApeWriter_t* buf, ApeUShort_t* code, ApePosition_t* source_positions, size_t code_size)
+bool ape_tostring_bytecode(ApeWriter_t* buf, ApeUShort_t* code, ApePosition_t* source_positions, size_t code_size, bool sparse)
 {
+    enum { kMaxDepth = 128*2 };
     bool ok;
     unsigned int pos;
     ApeOpByte_t operands[2];
     ApeSize_t i;
+    ApeSize_t cntdef;
+    ApeSize_t cntdepth;
     ApeUShort_t op;
     double dv;
     ApeOpcodeDef_t* def;
     ApePosition_t srcpos;
     pos = 0;
-    while(pos < code_size)
+    cntdepth = 0;
+    fprintf(stderr, "ape_tostring_bytecode: code_size=%d\n", code_size);
+    while((pos < code_size) && (cntdepth < kMaxDepth))
     {
         op = code[pos];
         def = ape_vm_opcodefind(op);
         //APE_ASSERT(def);
-        ape_writer_append(buf, "  ");
-        if(source_positions)
+        if(sparse)
         {
-            srcpos = source_positions[pos];
-            ape_writer_appendf(buf, "[%s:%d:%d]%-2s\t", srcpos.file->path, srcpos.line, srcpos.column, " ");
-        }
-        ape_writer_appendf(buf, "%04d %s", pos, def->name);
-        pos++;
-        ok = ape_tostring_opcodecoderead(def, code + pos, operands);
-        if(!ok)
-        {
-            fprintf(stderr, "internal error: cannot read opcode at %p\n", code+pos);
-            return false;
-        }
-        for(i = 0; i < def->operandcount; i++)
-        {
-            ape_writer_append(buf, " ");
-            if(op == APE_OPCODE_MKNUMBER)
+            cntdef = 0;
+            ok = ape_tostring_opcodecoderead(def, code + pos, operands);
+            if(!ok)
             {
-                #if 0
-                dv = ape_util_uinttofloat(operands[i]);
-                #else
-                dv = (ApeFloat_t)operands[i];
-                #endif
-                #if 0
-                ape_writer_appendf(buf, "%1.17g", dv);
-                #else
-                if(dv == ((ApeInt_t)dv))
+                fprintf(stderr, "internal error: cannot read opcode at %p\n", code+pos);
+                return false;
+            }
+            for(i = 0; i < def->operandcount; i++)
+            {
+                cntdef += 1;
+                if(def->operandwidths[i] <= 0)
+                {
+                    pos += 1;
+                }
+                else
+                {
+                    pos += def->operandwidths[i];
+                }
+            }
+            ape_writer_appendf(buf, "<%d instructions>", cntdef);
+        }
+        else
+        {
+            ape_writer_append(buf, "  ");
+            if(source_positions)
+            {
+                srcpos = source_positions[pos];
+                ape_writer_appendf(buf, "[%s:%d:%d]%-2s\t", srcpos.file->path, srcpos.line, srcpos.column, " ");
+            }
+            ape_writer_appendf(buf, "%04d %s", pos, def->name);
+            pos++;
+            ok = ape_tostring_opcodecoderead(def, code + pos, operands);
+            if(!ok)
+            {
+                fprintf(stderr, "internal error: cannot read opcode at %p\n", code+pos);
+                return false;
+            }
+            for(i = 0; i < def->operandcount; i++)
+            {
+                ape_writer_append(buf, " ");
+                if(op == APE_OPCODE_MKNUMBER)
                 {
                     #if 0
-                    ape_writer_appendf(buf, "%" PRId64, (ApeInt_t)fltnum);
+                    dv = ape_util_uinttofloat(operands[i]);
                     #else
-                    ape_writer_appendf(buf, "int<%" PRIi64 ">", (ApeInt_t)dv);
+                    dv = (ApeFloat_t)operands[i];
+                    #endif
+                    #if 0
+                    ape_writer_appendf(buf, "%1.17g", dv);
+                    #else
+                    if(dv == ((ApeInt_t)dv))
+                    {
+                        #if 0
+                        ape_writer_appendf(buf, "%" PRId64, (ApeInt_t)fltnum);
+                        #else
+                        ape_writer_appendf(buf, "int<%" PRIi64 ">", (ApeInt_t)dv);
+                        #endif
+                    }
+                    else
+                    {
+                        ape_writer_appendf(buf, "flt<%f>", dv);
+                    }
                     #endif
                 }
                 else
                 {
-                    ape_writer_appendf(buf, "flt<%f>", dv);
+                    ape_writer_appendf(buf, "@%llu", (long long unsigned int)operands[i]);
                 }
-                #endif
+                pos += def->operandwidths[i];
             }
-            else
-            {
-                ape_writer_appendf(buf, "@%llu", (long long unsigned int)operands[i]);
-            }
-            pos += def->operandwidths[i];
+            ape_writer_append(buf, "\n");
         }
-        ape_writer_append(buf, "\n");
+        cntdepth++;
     }
     return true;
 }
