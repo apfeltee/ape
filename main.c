@@ -405,7 +405,7 @@ int main(int argc, char* argv[])
             args_array = ape_object_make_array(ctx);
             for(i=0; i<fx.poscnt; i++)
             {
-                ape_object_array_pushstring(args_array, fx.positional[i]);
+                ape_object_array_pushstring(ctx, args_array, fx.positional[i]);
             }
             ape_context_setglobal(ctx, "args", args_array);
             if(opts.codeline)

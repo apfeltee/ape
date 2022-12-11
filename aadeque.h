@@ -33,6 +33,8 @@ typedef void* DequeValue_t;
 /* the type of the lengths and indices */
 typedef unsigned int DequeSize_t;
 
+typedef struct DequeList_t DequeList_t;
+
 /* The deque type, optionally prefixed user-defined extra members */
 struct DequeList_t
 {
@@ -44,9 +46,6 @@ struct DequeList_t
     DequeSize_t  len; /* length */
     DequeValue_t els[1]; /* elements, allocated in-place */
 };
-
-typedef struct DequeList_t DequeList_t;
-
 /* aadeque.h */
 static  size_t deqlist_sizeof(unsigned int cap);
 static  unsigned int deqlist_idx(DequeList_t *a, unsigned int i);

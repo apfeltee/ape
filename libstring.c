@@ -19,7 +19,7 @@ char* ape_object_string_getinternalobjdata(ApeGCObjData_t* data)
     return data->valstring.value_buf;
 }
 
-bool ape_object_string_reservecapacity(ApeGCObjData_t* data, ApeSize_t capacity)
+bool ape_object_string_reservecapacity(ApeContext_t* ctx, ApeGCObjData_t* data, ApeSize_t capacity)
 {
     char* new_value;
     ApeObjString_t* string;
@@ -37,20 +37,20 @@ bool ape_object_string_reservecapacity(ApeGCObjData_t* data, ApeSize_t capacity)
             /* should never happen */
             APE_ASSERT(false);
             /* just in case */
-            ape_allocator_free(data->mem->alloc, string->value_allocated);
+            ape_allocator_free(&ctx->alloc, string->value_allocated);
         }
         string->capacity = APE_CONF_SIZE_STRING_BUFSIZE - 1;
         string->is_allocated = false;
         return true;
     }
-    new_value = (char*)ape_allocator_alloc(data->mem->alloc, capacity + 1);
+    new_value = (char*)ape_allocator_alloc(&ctx->alloc, capacity + 1);
     if(!new_value)
     {
         return false;
     }
     if(string->is_allocated)
     {
-        ape_allocator_free(data->mem->alloc, string->value_allocated);
+        ape_allocator_free(&ctx->alloc, string->value_allocated);
     }
     string->value_allocated = new_value;
     string->is_allocated = true;

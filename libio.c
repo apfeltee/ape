@@ -139,13 +139,13 @@ static ApeObject_t timespec_to_map(ApeVM_t* vm, struct timespec ts)
 {
     ApeObject_t map;
     map = ape_object_make_map(vm->context);
-    ape_object_map_setnamednumber(map, "sec", ts.tv_sec);
-    ape_object_map_setnamednumber(map, "nsec", ts.tv_nsec);
+    ape_object_map_setnamednumber(vm->context, map, "sec", ts.tv_sec);
+    ape_object_map_setnamednumber(vm->context, map, "nsec", ts.tv_nsec);
     return map;
 }
 #endif
 
-#define for_field(f, val, mapfn, retfn) \
+#define for_field(ctx, f, val, mapfn, retfn) \
     { \
         if(specificfield) \
         { \
@@ -156,15 +156,15 @@ static ApeObject_t timespec_to_map(ApeVM_t* vm, struct timespec ts)
         } \
         else \
         { \
-            mapfn(map, f, val); \
+            mapfn(ctx, map, f, val); \
         } \
     }
 
-#define for_field_string(f, val) \
-    for_field(f, val, ape_object_map_setnamedstring, ape_object_make_string)
+#define for_field_string(ctx, f, val) \
+    for_field(ctx, f, val, ape_object_map_setnamedstring, ape_object_make_string)
 
-#define for_field_number(f, val) \
-    for_field(f, val, ape_object_map_setnamednumber, ape_object_make_number)
+#define for_field_number(ctx, f, val) \
+    for_field(ctx, f, val, ape_object_map_setnamednumber, ape_object_make_number)
 
 static ApeObject_t cfn_file_stat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
@@ -172,12 +172,14 @@ static ApeObject_t cfn_file_stat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObj
     const char* path;
     const char* field;
     struct stat st;
+    ApeContext_t* ctx;
     ApeObject_t objsecond;
     ApeObject_t objpath;
     ApeObject_t map;
     (void)data;
     field = NULL;
     specificfield = false;
+    ctx = vm->context;
     map.type = APE_OBJECT_NULL;
     map.handle = NULL;
     if((argc == 0) || !ape_object_value_isstring(args[0]))
@@ -207,25 +209,25 @@ static ApeObject_t cfn_file_stat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObj
         {
             map = ape_object_make_map(vm->context);
         }
-        for_field_string("name", path);
-        for_field_string("name", path);
-        for_field_string("path", path);
-        for_field_number("dev", st.st_dev);
-        for_field_number("inode", st.st_ino);
-        for_field_number("mode", st.st_mode);
-        for_field_number("nlink", st.st_nlink);
-        for_field_number("uid", st.st_uid);
-        for_field_number("gid", st.st_gid);
-        for_field_number("rdev", st.st_rdev);
-        for_field_number("size", st.st_size);
+        for_field_string(ctx, "name", path);
+        for_field_string(ctx, "name", path);
+        for_field_string(ctx, "path", path);
+        for_field_number(ctx, "dev", st.st_dev);
+        for_field_number(ctx, "inode", st.st_ino);
+        for_field_number(ctx, "mode", st.st_mode);
+        for_field_number(ctx, "nlink", st.st_nlink);
+        for_field_number(ctx, "uid", st.st_uid);
+        for_field_number(ctx, "gid", st.st_gid);
+        for_field_number(ctx, "rdev", st.st_rdev);
+        for_field_number(ctx, "size", st.st_size);
         #if defined(__linux__) && !defined(APE_CCENV_ANSIMODE)
-        for_field_number("blksize", st.st_blksize);
-        for_field_number("blocks", st.st_blocks);
+        for_field_number(ctx, "blksize", st.st_blksize);
+        for_field_number(ctx, "blocks", st.st_blocks);
         if(map.handle != NULL)
         {
-            ape_object_map_setnamedvalue(map, "atim", timespec_to_map(vm, st.st_atim));
-            ape_object_map_setnamedvalue(map, "mtim", timespec_to_map(vm, st.st_mtim));
-            ape_object_map_setnamedvalue(map, "ctim", timespec_to_map(vm, st.st_ctim));
+            ape_object_map_setnamedvalue(ctx, map, "atim", timespec_to_map(vm, st.st_atim));
+            ape_object_map_setnamedvalue(ctx, map, "mtim", timespec_to_map(vm, st.st_mtim));
+            ape_object_map_setnamedvalue(ctx, map, "ctim", timespec_to_map(vm, st.st_ctim));
         }
         #endif
         if(map.handle != NULL)
@@ -250,9 +252,11 @@ static ApeObject_t cfn_dir_readdir(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
     const char* path;
     DIR* hnd;
     struct dirent* dent;
+    ApeContext_t* ctx;
     ApeObject_t ary;
     ApeObject_t subm;
     (void)data;
+    ctx = vm->context;
     if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING))
     {
         return ape_object_make_null(vm->context);
@@ -274,11 +278,11 @@ static ApeObject_t cfn_dir_readdir(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
         isfile = (dent->d_type == DT_REG);
         isdir = (dent->d_type == DT_DIR);
         subm = ape_object_make_map(vm->context);
-        ape_object_map_setnamedstring(subm, "name", dent->d_name);
-        ape_object_map_setnamednumber(subm, "ino", dent->d_ino);
-        ape_object_map_setnamednumber(subm, "type", dent->d_type);
-        ape_object_map_setnamedbool(subm, "isfile", isfile);
-        ape_object_map_setnamedbool(subm, "isdir", isdir);
+        ape_object_map_setnamedstring(ctx, subm, "name", dent->d_name);
+        ape_object_map_setnamednumber(ctx, subm, "ino", dent->d_ino);
+        ape_object_map_setnamednumber(ctx, subm, "type", dent->d_type);
+        ape_object_map_setnamedbool(ctx, subm, "isfile", isfile);
+        ape_object_map_setnamedbool(ctx, subm, "isdir", isdir);
         ape_object_array_pushvalue(ary, subm);
     }
     closedir(hnd);

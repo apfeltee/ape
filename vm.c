@@ -1049,7 +1049,10 @@ ApeObject_t ape_vm_popstack(ApeVM_t* vm)
     * so far i've only observed this when objres.type==APE_OBJECT_NUMBER.
     * very strange, very weird, very heisenbug-ish.
     */
-    objres.handle->datatype = objres.type;
+    if(objres.handle != NULL)
+    {
+        objres.handle->datatype = objres.type;
+    }
     vm->lastpopped = objres;
     return objres;
 }

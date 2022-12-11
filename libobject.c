@@ -6,8 +6,10 @@
 static APE_INLINE ApeGCObjData_t* ape_object_make_primitive(ApeContext_t* ctx, ApeObjType_t type)
 {
     ApeGCObjData_t* data;
+    #if 1
     data = ape_gcmem_getfrompool(ctx->mem, type);
     if(!data)
+    #endif
     {
         data = ape_gcmem_allocobjdata(ctx->mem, type);
     }
@@ -38,9 +40,16 @@ ApeObject_t ape_object_make_bool(ApeContext_t* ctx, bool val)
 
 ApeObject_t ape_object_make_null(ApeContext_t* ctx)
 {
-    ApeGCObjData_t* data;
-    data = ape_object_make_primitive(ctx, APE_OBJECT_NULL);
-    return object_make_from_data(ctx, data->datatype, data);
+    #if 0
+        ApeGCObjData_t* data;
+        data = ape_object_make_primitive(ctx, APE_OBJECT_NULL);
+        return object_make_from_data(ctx, data->datatype, data);
+    #else
+        ApeObject_t rt;
+        rt.type = APE_OBJECT_NULL;
+        rt.handle = NULL;
+        return rt;
+    #endif
 }
 
 ApeObject_t ape_object_make_stringlen(ApeContext_t* ctx, const char* string, ApeSize_t len)
@@ -69,8 +78,10 @@ ApeObject_t ape_object_make_stringcapacity(ApeContext_t* ctx, ApeSize_t capacity
 {
     bool ok;
     ApeGCObjData_t* data;
+    #if 1
     data = ape_gcmem_getfrompool(ctx->mem, APE_OBJECT_STRING);
     if(!data)
+    #endif
     {
         data = ape_gcmem_allocobjdata(ctx->mem, APE_OBJECT_STRING);
         if(!data)
@@ -84,7 +95,7 @@ ApeObject_t ape_object_make_stringcapacity(ApeContext_t* ctx, ApeSize_t capacity
     data->valstring.hash = 0;
     if(capacity > data->valstring.capacity)
     {
-        ok = ape_object_string_reservecapacity(data, capacity);
+        ok = ape_object_string_reservecapacity(ctx, data, capacity);
         if(!ok)
         {
             return ape_object_make_null(ctx);
@@ -105,12 +116,14 @@ ApeObject_t ape_object_make_arraycapacity(ApeContext_t* ctx, unsigned capacity)
     {
         capacity = 1;
     }
+    #if 1
     data = ape_gcmem_getfrompool(ctx->vm->mem, APE_OBJECT_ARRAY);
     if(data)
     {
         ape_valarray_clear(data->valarray);
         return object_make_from_data(ctx, APE_OBJECT_ARRAY, data);
     }
+    #endif
     data = ape_gcmem_allocobjdata(ctx->vm->mem, APE_OBJECT_ARRAY);
     if(!data)
     {
@@ -132,12 +145,14 @@ ApeObject_t ape_object_make_map(ApeContext_t* ctx)
 ApeObject_t ape_object_make_mapcapacity(ApeContext_t* ctx, unsigned capacity)
 {
     ApeGCObjData_t* data;
+    #if 1
     data = ape_gcmem_getfrompool(ctx->vm->mem, APE_OBJECT_MAP);
     if(data)
     {
         ape_valdict_clear(data->valmap);
         return object_make_from_data(ctx, APE_OBJECT_MAP, data);
     }
+    #endif
     data = ape_gcmem_allocobjdata(ctx->vm->mem, APE_OBJECT_MAP);
     if(!data)
     {
@@ -515,7 +530,6 @@ void ape_tostring_object(ApeWriter_t* buf, ApeObject_t obj, bool quote_str)
     }
 }
 
-
 const char* ape_object_value_typename(const ApeObjType_t type)
 {
     switch(type)
@@ -550,14 +564,13 @@ const char* ape_object_value_typename(const ApeObjType_t type)
     return "NONE";
 }
 
-
-void ape_object_data_deinit(ApeGCObjData_t* data)
+void ape_object_data_deinit(ApeContext_t* ctx, ApeGCObjData_t* data)
 {
     switch(data->datatype)
     {
         case APE_OBJECT_FREED:
             {
-                APE_ASSERT(false);
+                //APE_ASSERT(false);
                 return;
             }
             break;
@@ -565,7 +578,7 @@ void ape_object_data_deinit(ApeGCObjData_t* data)
             {
                 if(data->valstring.is_allocated)
                 {
-                    ape_allocator_free(data->mem->alloc, data->valstring.value_allocated);
+                    ape_allocator_free(&ctx->alloc, data->valstring.value_allocated);
                 }
             }
             break;
@@ -573,10 +586,10 @@ void ape_object_data_deinit(ApeGCObjData_t* data)
             {
                 if(data->valscriptfunc.owns_data)
                 {
-                    ape_allocator_free(data->mem->alloc, data->valscriptfunc.name);
+                    ape_allocator_free(&ctx->alloc, data->valscriptfunc.name);
                     ape_compresult_destroy(data->valscriptfunc.compiledcode);
                 }
-                ape_allocator_free(data->mem->alloc, data->valscriptfunc.freevals);
+                ape_allocator_free(&ctx->alloc, data->valscriptfunc.freevals);
             }
             break;
         case APE_OBJECT_ARRAY:
@@ -591,7 +604,7 @@ void ape_object_data_deinit(ApeGCObjData_t* data)
             break;
         case APE_OBJECT_NATIVEFUNCTION:
             {
-                ape_allocator_free(data->mem->alloc, data->valnatfunc.name);
+                ape_allocator_free(&ctx->alloc, data->valnatfunc.name);
             }
             break;
         case APE_OBJECT_EXTERNAL:
@@ -604,7 +617,7 @@ void ape_object_data_deinit(ApeGCObjData_t* data)
             break;
         case APE_OBJECT_ERROR:
             {
-                ape_allocator_free(data->mem->alloc, data->valerror.message);
+                ape_allocator_free(&ctx->alloc, data->valerror.message);
                 ape_traceback_destroy(data->valerror.traceback);
             }
             break;
@@ -1001,7 +1014,8 @@ ApeObject_t ape_object_value_copyflat(ApeContext_t* ctx, ApeObject_t obj)
             break;
         case APE_OBJECT_NULL:
             {
-                copy = ape_object_make_number(ctx, ape_object_value_asnumber(obj));
+                //copy = ape_object_make_number(ctx, ape_object_value_asnumber(obj));
+                copy = ape_object_make_number(ctx, 0);
             }
             break;
         case APE_OBJECT_SCRIPTFUNCTION:

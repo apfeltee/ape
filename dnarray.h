@@ -29,7 +29,7 @@
         )
 #endif
 
-static APE_INLINE unsigned char** da_grow_internal(unsigned char** arr, intptr_t count, intptr_t size);
+static APE_INLINE intptr_t* da_grow_internal(intptr_t* arr, intptr_t count, intptr_t tsize);
 
 #define da_count_internal(arr) \
     ((((intptr_t*)(arr)) - 2)[0])
@@ -43,15 +43,15 @@ static APE_INLINE unsigned char** da_grow_internal(unsigned char** arr, intptr_t
 
 #define da_maybe_grow_internal(arr, n) \
     ( \
-        _da_if(da_need_to_grow_internal((unsigned char**)(arr), (n))) \
+        _da_if(da_need_to_grow_internal((intptr_t*)(arr), (n))) \
         _da_then( \
-            (arr) = (__typeof__(arr)) da_grow_internal((unsigned char**)(arr), (n), sizeof(*(arr))) \
+            (arr) = (__typeof__(arr)) da_grow_internal((intptr_t*)(arr), (n), sizeof(*(arr))) \
         ) \
         _da_else(0) \
     )
 
 #define da_make(arr, n, sztyp) \
-    (__typeof__(arr))  da_grow_internal((unsigned char**)arr, n, sizeof(*arr))
+    (__typeof__(arr))  da_grow_internal((intptr_t*)arr, n, sztyp)
 
 #define da_init(arr, n, sztyp) \
     da_init(arr, n, sztyp)
@@ -80,20 +80,20 @@ static APE_INLINE unsigned char** da_grow_internal(unsigned char** arr, intptr_t
     )
 
 #define da_count(arr) \
-    ( \
+    ((unsigned int)( \
         _da_if((arr) == NULL) \
         _da_then(0) \
         _da_else( \
             da_count_internal(arr) \
         ) \
-    )
+    ))
 
 #define da_capacity(arr) \
-    ( \
+    ((unsigned int)( \
         _da_if(arr) \
         _da_then(da_capacity_internal(arr)) \
         _da_else(0) \
-    )
+    ))
 
 #define da_get(arr, idx) \
     (arr)[(idx)]
@@ -165,7 +165,7 @@ static APE_INLINE unsigned char** da_grow_internal(unsigned char** arr, intptr_t
 
 #define da_sizeof(arr) (sizeof(*(arr)) * da_count(arr))
 
-static APE_INLINE void da_copy(unsigned char** from, unsigned char** to, unsigned int begin, unsigned int end)
+static APE_INLINE void da_copy(intptr_t* from, intptr_t* to, unsigned int begin, unsigned int end)
 {
     unsigned int i;
     for(i=begin; i<end; i++)
@@ -175,7 +175,7 @@ static APE_INLINE void da_copy(unsigned char** from, unsigned char** to, unsigne
     }
 }
 
-static APE_INLINE void da_removeat(unsigned char** from, unsigned int ix)
+static APE_INLINE void da_removeat(intptr_t* from, unsigned int ix)
 {
     (void)from;
     (void)ix;
@@ -187,33 +187,34 @@ static APE_INLINE void da_removeat(unsigned char** from, unsigned int ix)
 #undef _da_else
 */
 
-static APE_INLINE unsigned char** da_grow_internal(unsigned char** arr, intptr_t count, intptr_t size)
+static APE_INLINE intptr_t* da_grow_internal(intptr_t* arr, intptr_t count, intptr_t tsize)
 {
     intptr_t asize;
     intptr_t acount;
     intptr_t zerosize;
-    unsigned char** res;
+    intptr_t* res;
     intptr_t* ptr;
     res = NULL;
     acount = JK_DYNARRAY_MAX(2 * da_count(arr), da_count(arr) + count);
-    asize = 2 * sizeof(intptr_t) + acount * size;
+    asize = 2 * sizeof(intptr_t) + acount * tsize;
     if(arr)
     {
         #if 0
-            ptr = (intptr_t*)realloc(((intptr_t*)arr)-2, asize);
+            ptr = (intptr_t*)realloc(((intptr_t*)arr)-2, asize*tsize);
         #else
-            ptr = (intptr_t*)malloc(asize);
+            //ptr = (intptr_t*)malloc(asize);
+            ptr = (intptr_t*)calloc(asize, tsize);
             if(ptr)
             {
-                memcpy(ptr, ((intptr_t*)arr) - 2, da_count(arr) * size + 2 * sizeof(intptr_t));
+                memcpy(ptr, ((intptr_t*)arr) - 2, da_count(arr) * tsize + 2 * sizeof(intptr_t));
                 da_free(arr);
             }
         #endif
         if(ptr)
         {
-            zerosize = asize - 2 * sizeof(intptr_t) - ptr[0] * size;
-            memset(((char*)ptr) + (asize - zerosize), 0, zerosize);
-            res = (unsigned char**)(ptr + 2);
+            zerosize = asize - 2 * sizeof(intptr_t) - ptr[0] * tsize;
+            memset(((intptr_t*)ptr) + (asize - zerosize), 0, zerosize);
+            res = (intptr_t*)(ptr + 2);
             da_capacity_internal(res) = acount;
         }
         else
@@ -224,13 +225,14 @@ static APE_INLINE unsigned char** da_grow_internal(unsigned char** arr, intptr_t
     else
     {
         #if 0
-            ptr = (intptr_t*)realloc(0, asize);
+            ptr = (intptr_t*)realloc(0, asize*tsize);
         #else
-            ptr = (intptr_t*)malloc(asize);
+            //ptr = (intptr_t*)malloc(asize);
+            ptr = (intptr_t*)calloc(asize, tsize);
         #endif
         if(ptr)
         {
-            res = (unsigned char**)(ptr + 2);
+            res = (intptr_t*)(ptr + 2);
             memset(ptr, 0, asize);
             da_count_internal(res) = 0;
             da_capacity_internal(res) = acount;
@@ -244,45 +246,3 @@ static APE_INLINE unsigned char** da_grow_internal(unsigned char** arr, intptr_t
     return res;
 }
 
-#if 1
-    #ifndef JK_DYNAMIC_ARRAY_NO_PRINTF
-        #define da_printf(buf, ...) da_printf_internal(&(buf), __VA_ARGS__)
-
-        //TODO This needs to checked for portability. I'm not sure what the status of va_copy is on msvc for example.
-        static APE_INLINE int da_printf_internal(char** buf, const char* format, ...)
-        {
-            int len;
-            int res;
-            unsigned char** p;
-            
-            va_list va;
-            va_list copied;
-            va_start(va, format);
-            va_copy(copied, va);
-            /*
-            * do you ever just stop and wonder, "what the hell am i even doing"?
-            * case in point, taking pointer to reference of dereference of $buf, casting to a pointer to a pointer of unsigned char.
-            * which sounds silly, but it gets us a (type-corrected) pointer to the thing
-            * that $buf actually points to. and it's only needed because C++ won't allow it. normally.
-            */
-            p = (unsigned char**)&*buf;
-            len = vsnprintf(NULL, 0, format, va);
-            va_end(va);
-            if(len > 0)
-            {
-                da_maybe_grow_internal(p, len + 1);
-                res = vsnprintf((char*)(p + da_count(p)), len + 1, format, copied);
-                assert(res == len);
-                da_count_internal(p) += res;
-                return res;
-            }
-            else if(len < 0)
-            {
-                assert(0);
-            }
-            va_end(copied);
-            return len;
-        }
-
-    #endif
-#endif

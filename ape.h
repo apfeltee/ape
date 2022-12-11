@@ -189,7 +189,7 @@ THE SOFTWARE.
     make_fn_data(ctx, name, fnc, NULL, 0)
 
 #define make_fn_entry_data(ctx, map, name, fnc, dataptr, datasize) \
-    ape_object_map_setnamedvalue(map, name, make_fn(ctx, name, fnc))
+    ape_object_map_setnamedvalue(ctx, map, name, make_fn(ctx, name, fnc))
 
 #define make_fn_entry(ctx, map, name, fnc) \
     make_fn_entry_data(ctx, map, name, fnc, NULL, 0)
@@ -588,6 +588,11 @@ typedef struct /**/ ApeArgCheck_t          ApeArgCheck_t;
 typedef struct Vector_t Vector_t;
 typedef uint32_t VectIndex_t;
 typedef int32_t VectStatus_t;
+
+typedef void* DequeValue_t;
+typedef unsigned int DequeSize_t;
+typedef struct DequeList_t DequeList_t;
+
 
 #if defined(APE_USE_ALIST) && (APE_USE_ALIST != 0)
     #if (APE_USE_ALIST == 1)
@@ -1170,24 +1175,6 @@ struct ApeGCObjData_t
     };
     bool         gcmark;
     ApeObjType_t datatype;
-};
-
-struct ApeGCObjPool_t
-{
-    ApeGCObjData_t* datapool[APE_CONF_SIZE_GCMEM_POOLSIZE];
-    ApeSize_t     count;
-};
-
-struct ApeGCMemory_t
-{
-    ApeContext_t*   context;
-    ApeAllocator_t* alloc;
-    ApeSize_t       allocations_since_sweep;
-    ApeGCObjData_t** frontobjects;
-    ApeGCObjData_t** backobjects;
-    ApeValArray_t*  objects_not_gced;
-    ApeGCObjPool_t    data_only_pool;
-    ApeGCObjPool_t    pools[APE_CONF_SIZE_GCMEM_POOLCOUNT];
 };
 
 struct ApeFrame_t

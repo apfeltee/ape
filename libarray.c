@@ -468,7 +468,7 @@ bool ape_object_array_removeat(ApeObject_t object, ApeInt_t ix)
     return ape_valarray_removeat(array, ix);
 }
 
-bool ape_object_array_pushstring(ApeObject_t obj, const char* string)
+bool ape_object_array_pushstring(ApeContext_t* ctx, ApeObject_t obj, const char* string)
 {
     ApeObject_t new_value;
     ApeGCMemory_t* mem;
@@ -477,7 +477,7 @@ bool ape_object_array_pushstring(ApeObject_t obj, const char* string)
     {
         return false;
     }
-    new_value = ape_object_make_string(mem->context, string);
+    new_value = ape_object_make_string(ctx, string);
     return ape_object_array_pushvalue(obj, new_value);
 }
 
