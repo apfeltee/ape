@@ -257,7 +257,7 @@ enum ApeObjType_t
     APE_OBJECT_ANY = 0xffff,
 };
 
-enum ApeTokenType_t
+enum ApeAstTokType_t
 {
     TOKEN_INVALID = 0,
     TOKEN_EOF,
@@ -363,7 +363,7 @@ enum ApeOperator_t
     APE_OPERATOR_RIGHTSHIFT,
 };
 
-enum ApeExprType_t
+enum ApeAstExprType_t
 {
     APE_EXPR_NONE,
     APE_EXPR_IDENT,
@@ -464,7 +464,7 @@ enum ApeOpcodeValue_t
     APE_OPCODE_MAX,
 };
 
-enum ApePrecedence_t
+enum ApeAstPrecedence_t
 {
     PRECEDENCE_LOWEST = 0,
     /* a = b */
@@ -510,16 +510,16 @@ typedef int8_t   ApeShort_t;
 typedef uint8_t  ApeUShort_t;
 typedef size_t   ApeSize_t;
 
-typedef enum /**/ ApeTokenType_t           ApeTokenType_t;
+typedef enum /**/ ApeAstTokType_t           ApeAstTokType_t;
 typedef enum /**/ ApeOperator_t            ApeOperator_t;
 typedef enum /**/ ApeSymbolType_t          ApeSymbolType_t;
-typedef enum /**/ ApeExprType_t            ApeExprType_t;
+typedef enum /**/ ApeAstExprType_t            ApeAstExprType_t;
 typedef enum /**/ ApeOpcodeValue_t         ApeOpcodeValue_t;
-typedef enum /**/ ApePrecedence_t          ApePrecedence_t;
+typedef enum /**/ ApeAstPrecedence_t          ApeAstPrecedence_t;
 typedef enum /**/ ApeObjType_t             ApeObjType_t;
 typedef enum /**/ ApeErrorType_t           ApeErrorType_t;
 typedef struct /**/ ApeContext_t           ApeContext_t;
-typedef struct /**/ ApeProgram_t           ApeProgram_t;
+typedef struct /**/ ApeAstProgram_t           ApeAstProgram_t;
 typedef struct /**/ ApeVM_t                ApeVM_t;
 typedef struct /**/ ApeConfig_t            ApeConfig_t;
 typedef struct /**/ ApePosition_t          ApePosition_t;
@@ -527,44 +527,44 @@ typedef struct /**/ ApeTimer_t             ApeTimer_t;
 typedef struct /**/ ApeAllocator_t         ApeAllocator_t;
 typedef struct /**/ ApeError_t             ApeError_t;
 typedef struct /**/ ApeErrorList_t         ApeErrorList_t;
-typedef struct /**/ ApeToken_t             ApeToken_t;
-typedef struct /**/ ApeCompFile_t          ApeCompFile_t;
-typedef struct /**/ ApeLexer_t             ApeLexer_t;
-typedef struct /**/ ApeCodeblock_t         ApeCodeblock_t;
-typedef struct /**/ ApeMapLiteral_t        ApeMapLiteral_t;
-typedef struct /**/ ApePrefixExpr_t        ApePrefixExpr_t;
-typedef struct /**/ ApeInfixExpr_t         ApeInfixExpr_t;
-typedef struct /**/ ApeIfCase_t            ApeIfCase_t;
-typedef struct /**/ ApeFnLiteral_t         ApeFnLiteral_t;
-typedef struct /**/ ApeCallExpr_t          ApeCallExpr_t;
-typedef struct /**/ ApeIndexExpr_t         ApeIndexExpr_t;
-typedef struct /**/ ApeAssignExpr_t        ApeAssignExpr_t;
-typedef struct /**/ ApeLogicalExpr_t       ApeLogicalExpr_t;
-typedef struct /**/ ApeTernaryExpr_t       ApeTernaryExpr_t;
-typedef struct /**/ ApeIdent_t             ApeIdent_t;
-typedef struct /**/ ApeExpression_t        ApeExpression_t;
-typedef struct /**/ ApeDefineStmt_t        ApeDefineStmt_t;
-typedef struct /**/ ApeIfStmt_t            ApeIfStmt_t;
-typedef struct /**/ ApeWhileLoopStmt_t     ApeWhileLoopStmt_t;
-typedef struct /**/ ApeForeachStmt_t       ApeForeachStmt_t;
-typedef struct /**/ ApeForLoopStmt_t       ApeForLoopStmt_t;
-typedef struct /**/ ApeIncludeStmt_t       ApeIncludeStmt_t;
-typedef struct /**/ ApeRecoverStmt_t       ApeRecoverStmt_t;
-typedef struct /**/ ApeParser_t            ApeParser_t;
+typedef struct /**/ ApeAstToken_t             ApeAstToken_t;
+typedef struct /**/ ApeAstCompFile_t          ApeAstCompFile_t;
+typedef struct /**/ ApeAstLexer_t             ApeAstLexer_t;
+typedef struct /**/ ApeAstBlockExpr_t         ApeAstBlockExpr_t;
+typedef struct /**/ ApeAstLiteralMapExpr_t        ApeAstLiteralMapExpr_t;
+typedef struct /**/ ApeAstPrefixExpr_t        ApeAstPrefixExpr_t;
+typedef struct /**/ ApeAstInfixExpr_t         ApeAstInfixExpr_t;
+typedef struct /**/ ApeAstIfCaseExpr_t            ApeAstIfCaseExpr_t;
+typedef struct /**/ ApeAstLiteralFuncExpr_t         ApeAstLiteralFuncExpr_t;
+typedef struct /**/ ApeAstCallExpr_t          ApeAstCallExpr_t;
+typedef struct /**/ ApeAstIndexExpr_t         ApeAstIndexExpr_t;
+typedef struct /**/ ApeAstAssignExpr_t        ApeAstAssignExpr_t;
+typedef struct /**/ ApeAstLogicalExpr_t       ApeAstLogicalExpr_t;
+typedef struct /**/ ApeAstTernaryExpr_t       ApeAstTernaryExpr_t;
+typedef struct /**/ ApeAstIdentExpr_t             ApeAstIdentExpr_t;
+typedef struct /**/ ApeAstExpression_t        ApeAstExpression_t;
+typedef struct /**/ ApeAstDefineExpr_t        ApeAstDefineExpr_t;
+typedef struct /**/ ApeAstIfExpr_t            ApeAstIfExpr_t;
+typedef struct /**/ ApeAstWhileLoopExpr_t     ApeAstWhileLoopExpr_t;
+typedef struct /**/ ApeAstForeachExpr_t       ApeAstForeachExpr_t;
+typedef struct /**/ ApeAstForExpr_t       ApeAstForExpr_t;
+typedef struct /**/ ApeAstIncludeExpr_t       ApeAstIncludeExpr_t;
+typedef struct /**/ ApeAstRecoverExpr_t       ApeAstRecoverExpr_t;
+typedef struct /**/ ApeAstParser_t            ApeAstParser_t;
 typedef struct /**/ ApeObject_t            ApeObject_t;
 typedef struct /**/ ApeScriptFunction_t    ApeScriptFunction_t;
 typedef struct /**/ ApeNativeFunction_t    ApeNativeFunction_t;
 typedef struct /**/ ApeExternalData_t      ApeExternalData_t;
 typedef struct /**/ ApeObjError_t          ApeObjError_t;
 typedef struct /**/ ApeObjString_t         ApeObjString_t;
-typedef struct /**/ ApeObjData_t           ApeObjData_t;
+typedef struct /**/ ApeGCObjData_t           ApeGCObjData_t;
 typedef struct /**/ ApeSymbol_t            ApeSymbol_t;
-typedef struct /**/ ApeBlockScope_t        ApeBlockScope_t;
+typedef struct /**/ ApeAstBlockScope_t        ApeAstBlockScope_t;
 typedef struct /**/ ApeSymTable_t          ApeSymTable_t;
 typedef struct /**/ ApeOpcodeDef_t         ApeOpcodeDef_t;
-typedef struct /**/ ApeCompResult_t        ApeCompResult_t;
-typedef struct /**/ ApeCompScope_t         ApeCompScope_t;
-typedef struct /**/ ApeObjPool_t           ApeObjPool_t;
+typedef struct /**/ ApeAstCompResult_t        ApeAstCompResult_t;
+typedef struct /**/ ApeAstCompScope_t         ApeAstCompScope_t;
+typedef struct /**/ ApeGCObjPool_t           ApeGCObjPool_t;
 typedef struct /**/ ApeGCMemory_t          ApeGCMemory_t;
 typedef struct /**/ ApeTracebackItem_t     ApeTracebackItem_t;
 typedef struct /**/ ApeTraceback_t         ApeTraceback_t;
@@ -576,8 +576,8 @@ typedef struct /**/ ApePtrArray_t          ApePtrArray_t;
 typedef struct /**/ ApeWriter_t            ApeWriter_t;
 typedef struct /**/ ApeGlobalStore_t       ApeGlobalStore_t;
 typedef struct /**/ ApeModule_t            ApeModule_t;
-typedef struct /**/ ApeFileScope_t         ApeFileScope_t;
-typedef struct /**/ ApeCompiler_t          ApeCompiler_t;
+typedef struct /**/ ApeAstFileScope_t         ApeAstFileScope_t;
+typedef struct /**/ ApeAstCompiler_t          ApeAstCompiler_t;
 typedef struct /**/ ApeNativeFuncWrapper_t ApeNativeFuncWrapper_t;
 typedef struct /**/ ApeNativeItem_t        ApeNativeItem_t;
 typedef struct /**/ ApeObjMemberItem_t     ApeObjMemberItem_t;
@@ -617,8 +617,8 @@ typedef bool (*ApeDataEqualsFunc_t)(const void*, const void*);
 typedef void* (*ApeDataCallback_t)(void*);
 
 
-typedef ApeExpression_t* (*ApeRightAssocParseFNCallback_t)(ApeParser_t* p);
-typedef ApeExpression_t* (*ApeLeftAssocParseFNCallback_t)(ApeParser_t* p, ApeExpression_t* expr);
+typedef ApeAstExpression_t* (*ApeRightAssocParseFNCallback_t)(ApeAstParser_t* p);
+typedef ApeAstExpression_t* (*ApeLeftAssocParseFNCallback_t)(ApeAstParser_t* p, ApeAstExpression_t* expr);
 
 
 struct ApeArgCheck_t
@@ -665,7 +665,7 @@ struct ApeScriptFunction_t
         char*       name;
         const char* const_name;
     };
-    ApeCompResult_t* compiledcode;
+    ApeAstCompResult_t* compiledcode;
     ApeSize_t        numlocals;
     ApeSize_t        numargs;
     ApeSize_t        numfreevals;
@@ -714,79 +714,17 @@ struct ApeNativeFuncWrapper_t
     void*                  data;
 };
 
-struct ApeObjData_t
-{
-    ApeContext_t*  context;
-    ApeGCMemory_t* mem;
-    union
-    {
-        bool                valbool;
-        ApeFloat_t          valnum;
-        ApeObjString_t      valstring;
-        ApeObjError_t       valerror;
-        ApeValArray_t*      valarray;
-        ApeValDict_t*       valmap;
-        ApeScriptFunction_t valscriptfunc;
-        ApeNativeFunction_t valnatfunc;
-        ApeExternalData_t   valextern;
-    };
-    bool         gcmark;
-    ApeObjType_t datatype;
-};
-
 struct ApeObject_t
 {
     ApeObjType_t  type;
-    ApeObjData_t* handle;
-};
-
-struct ApeObjPool_t
-{
-    ApeObjData_t* datapool[APE_CONF_SIZE_GCMEM_POOLSIZE];
-    ApeSize_t     count;
+    ApeGCObjData_t* handle;
 };
 
 struct ApePosition_t
 {
-    const ApeCompFile_t* file;
+    const ApeAstCompFile_t* file;
     int                  line;
     int                  column;
-};
-
-struct ApeConfig_t
-{
-    struct
-    {
-        struct
-        {
-            ApeIOStdoutWriteFunc_t write;
-            void*                  context;
-        } write;
-    } stdio;
-
-    struct
-    {
-        struct
-        {
-            ApeIOReadFunc_t fnreadfile;
-            void*           context;
-        } ioreader;
-
-        struct
-        {
-            ApeIOWriteFunc_t fnwritefile;
-            void*            context;
-        } iowriter;
-    } fileio;
-
-    /* allows redefinition of symbols */
-    bool   replmode;
-    double max_execution_time_ms;
-    bool   max_execution_time_set;
-    bool   runafterdump;
-    bool   dumpast;
-    bool   dumpbytecode;
-    bool   dumpstack;
 };
 
 struct ApeTimer_t
@@ -797,302 +735,6 @@ struct ApeTimer_t
     double pc_frequency;
 #endif
     double start_time_ms;
-};
-
-struct ApeAllocator_t
-{
-    ApeMemAllocFunc_t fnmalloc;
-    ApeMemFreeFunc_t  fnfree;
-    void*             ctx;
-};
-
-struct ApeError_t
-{
-    short  errtype;
-    char            message[APE_CONF_SIZE_ERROR_MAXMSGLENGTH];
-    ApePosition_t   pos;
-    ApeTraceback_t* traceback;
-};
-
-struct ApeErrorList_t
-{
-    ApeError_t errors[APE_CONF_SIZE_ERRORS_MAXCOUNT];
-    ApeSize_t  count;
-};
-
-struct ApeToken_t
-{
-    ApeTokenType_t toktype;
-    const char*    literal;
-    ApeSize_t      len;
-    ApePosition_t  pos;
-};
-
-struct ApeCompFile_t
-{
-    ApeContext_t*  context;
-    char*          dirpath;
-    char*          path;
-    ApePtrArray_t* lines;
-};
-
-struct ApeLexer_t
-{
-    ApeContext_t*   context;
-    ApeErrorList_t* errors;
-    const char*     input;
-    ApeSize_t       inputlen;
-    ApeSize_t       position;
-    ApeSize_t       nextposition;
-    char            ch;
-    ApeInt_t        line;
-    ApeInt_t        column;
-    ApeCompFile_t*  file;
-    bool            failed;
-    bool            continue_template_string;
-    struct
-    {
-        ApeSize_t position;
-        ApeSize_t nextposition;
-        char      ch;
-        ApeInt_t  line;
-        ApeInt_t  column;
-    } prevtokenstate;
-    ApeToken_t prevtoken;
-    ApeToken_t curtoken;
-    ApeToken_t peektoken;
-};
-
-struct ApeCodeblock_t
-{
-    ApeContext_t*  context;
-    ApePtrArray_t* statements;
-};
-
-struct ApePrefixExpr_t
-{
-    ApeOperator_t    op;
-    ApeExpression_t* right;
-};
-
-struct ApeInfixExpr_t
-{
-    ApeOperator_t    op;
-    ApeExpression_t* left;
-    ApeExpression_t* right;
-};
-
-struct ApeIfCase_t
-{
-    ApeContext_t*    context;
-    ApeExpression_t* test;
-    ApeCodeblock_t*  consequence;
-};
-
-struct ApeFnLiteral_t
-{
-    char*           name;
-    ApePtrArray_t*  params;
-    ApeCodeblock_t* body;
-};
-
-struct ApeCallExpr_t
-{
-    ApeExpression_t* function;
-    ApePtrArray_t*   args;
-};
-
-struct ApeIndexExpr_t
-{
-    ApeExpression_t* left;
-    ApeExpression_t* index;
-};
-
-struct ApeAssignExpr_t
-{
-    ApeExpression_t* dest;
-    ApeExpression_t* source;
-    bool             ispostfix;
-};
-
-struct ApeLogicalExpr_t
-{
-    ApeOperator_t    op;
-    ApeExpression_t* left;
-    ApeExpression_t* right;
-};
-
-struct ApeTernaryExpr_t
-{
-    ApeExpression_t* test;
-    ApeExpression_t* iftrue;
-    ApeExpression_t* iffalse;
-};
-
-struct ApeIdent_t
-{
-    ApeContext_t* context;
-    char*         value;
-    ApePosition_t pos;
-};
-
-struct ApeDefineStmt_t
-{
-    ApeIdent_t*      name;
-    ApeExpression_t* value;
-    bool             assignable;
-};
-
-struct ApeIfStmt_t
-{
-    ApePtrArray_t*  cases;
-    ApeCodeblock_t* alternative;
-};
-
-struct ApeWhileLoopStmt_t
-{
-    ApeExpression_t* test;
-    ApeCodeblock_t*  body;
-};
-
-struct ApeForeachStmt_t
-{
-    ApeIdent_t*      iterator;
-    ApeExpression_t* source;
-    ApeCodeblock_t*  body;
-};
-
-struct ApeForLoopStmt_t
-{
-    ApeExpression_t* init;
-    ApeExpression_t* test;
-    ApeExpression_t* update;
-    ApeCodeblock_t*  body;
-};
-
-struct ApeIncludeStmt_t
-{
-    char*            path;
-    ApeExpression_t* left;
-};
-
-struct ApeRecoverStmt_t
-{
-    ApeIdent_t*     errorident;
-    ApeCodeblock_t* body;
-};
-
-struct ApeMapLiteral_t
-{
-    ApePtrArray_t* keys;
-    ApePtrArray_t* values;
-};
-
-
-struct ApeExpression_t
-{
-    ApeContext_t* context;
-    ApeExprType_t extype;
-    bool          stringwasallocd;
-    ApeSize_t     stringlitlength;
-    union
-    {
-        ApeIdent_t*        exident;
-        ApeFloat_t         exliteralnumber;
-        bool               exliteralbool;
-        char*              exliteralstring;
-        ApePtrArray_t*     exarray;
-        ApeMapLiteral_t    exmap;
-        ApePrefixExpr_t    exprefix;
-        ApeInfixExpr_t     exinfix;
-        ApeFnLiteral_t     exliteralfunc;
-        ApeCallExpr_t      excall;
-        ApeIndexExpr_t     exindex;
-        ApeAssignExpr_t    exassign;
-        ApeLogicalExpr_t   exlogical;
-        ApeTernaryExpr_t   externary;
-        ApeDefineStmt_t    exdefine;
-        ApeIfStmt_t        exifstmt;
-        ApeExpression_t*   exreturn;
-        ApeExpression_t*   exexpression;
-        ApeWhileLoopStmt_t exwhilestmt;
-        ApeForeachStmt_t   exforeachstmt;
-        ApeForLoopStmt_t   exforstmt;
-        ApeCodeblock_t*    exblock;
-        ApeIncludeStmt_t   exincludestmt;
-        ApeRecoverStmt_t   exrecoverstmt;
-    };
-    ApePosition_t pos;
-};
-
-struct ApeParser_t
-{
-    ApeContext_t*                  context;
-    const ApeConfig_t*             config;
-    ApeLexer_t                     lexer;
-    ApeErrorList_t*                errors;
-    ApeSize_t                      depth;
-};
-
-struct ApeSymbol_t
-{
-    ApeContext_t*   context;
-    ApeSymbolType_t symtype;
-    char*           name;
-    ApeSize_t       index;
-    bool            assignable;
-};
-
-struct ApeBlockScope_t
-{
-    ApeContext_t* context;
-    ApeStrDict_t* store;
-    ApeInt_t      offset;
-    ApeSize_t     numdefinitions;
-};
-
-struct ApeSymTable_t
-{
-    ApeContext_t*     context;
-    ApeSymTable_t*    outer;
-    ApeGlobalStore_t* globalstore;
-    ApePtrArray_t*    blockscopes;
-    ApePtrArray_t*    freesymbols;
-    ApePtrArray_t*    modglobalsymbols;
-    ApeSize_t         maxnumdefinitions;
-    ApeInt_t          modglobaloffset;
-};
-
-struct ApeOpcodeDef_t
-{
-    const char* name;
-    ApeSize_t   operandcount;
-    ApeInt_t    operandwidths[2];
-};
-
-
-struct ApeGCMemory_t
-{
-    ApeContext_t*   context;
-    ApeAllocator_t* alloc;
-    ApeSize_t       allocations_since_sweep;
-    MemList_t* frontobjects;
-    MemList_t* backobjects;
-    ApeValArray_t*  objects_not_gced;
-    ApeObjPool_t    data_only_pool;
-    ApeObjPool_t    pools[APE_CONF_SIZE_GCMEM_POOLCOUNT];
-};
-
-struct ApeTracebackItem_t
-{
-    char*         function_name;
-    ApePosition_t pos;
-};
-
-struct ApeTraceback_t
-{
-    ApeContext_t*  context;
-    ApeValArray_t* items;
 };
 
 
@@ -1161,12 +803,290 @@ struct ApeWriter_t
     bool                 iomustflush;
 };
 
-struct ApeGlobalStore_t
+struct ApeAllocator_t
+{
+    ApeMemAllocFunc_t fnmalloc;
+    ApeMemFreeFunc_t  fnfree;
+    void*             ctx;
+};
+
+struct ApeError_t
+{
+    short  errtype;
+    char            message[APE_CONF_SIZE_ERROR_MAXMSGLENGTH];
+    ApePosition_t   pos;
+    ApeTraceback_t* traceback;
+};
+
+struct ApeErrorList_t
+{
+    ApeError_t errors[APE_CONF_SIZE_ERRORS_MAXCOUNT];
+    ApeSize_t  count;
+};
+
+struct ApeTracebackItem_t
+{
+    char*         function_name;
+    ApePosition_t pos;
+};
+
+struct ApeTraceback_t
 {
     ApeContext_t*  context;
-    ApeStrDict_t*  symbols;
-    ApeValArray_t* objects;
+    ApeValArray_t* items;
 };
+
+
+struct ApeAstToken_t
+{
+    ApeAstTokType_t toktype;
+    const char*    literal;
+    ApeSize_t      len;
+    ApePosition_t  pos;
+};
+
+struct ApeAstCompFile_t
+{
+    ApeContext_t*  context;
+    char*          dirpath;
+    char*          path;
+    ApePtrArray_t* lines;
+};
+
+struct ApeAstLexer_t
+{
+    ApeContext_t*   context;
+    ApeErrorList_t* errors;
+    const char*     input;
+    ApeSize_t       inputlen;
+    ApeSize_t       position;
+    ApeSize_t       nextposition;
+    char            ch;
+    ApeInt_t        line;
+    ApeInt_t        column;
+    ApeAstCompFile_t*  file;
+    bool            failed;
+    bool            continue_template_string;
+    struct
+    {
+        ApeSize_t position;
+        ApeSize_t nextposition;
+        char      ch;
+        ApeInt_t  line;
+        ApeInt_t  column;
+    } prevtokenstate;
+    ApeAstToken_t prevtoken;
+    ApeAstToken_t curtoken;
+    ApeAstToken_t peektoken;
+};
+
+struct ApeAstBlockExpr_t
+{
+    ApeContext_t*  context;
+    ApePtrArray_t* statements;
+};
+
+struct ApeAstPrefixExpr_t
+{
+    ApeOperator_t    op;
+    ApeAstExpression_t* right;
+};
+
+struct ApeAstInfixExpr_t
+{
+    ApeOperator_t    op;
+    ApeAstExpression_t* left;
+    ApeAstExpression_t* right;
+};
+
+struct ApeAstIfCaseExpr_t
+{
+    ApeContext_t*    context;
+    ApeAstExpression_t* test;
+    ApeAstBlockExpr_t*  consequence;
+};
+
+struct ApeAstLiteralFuncExpr_t
+{
+    char*           name;
+    ApePtrArray_t*  params;
+    ApeAstBlockExpr_t* body;
+};
+
+struct ApeAstCallExpr_t
+{
+    ApeAstExpression_t* function;
+    ApePtrArray_t*   args;
+};
+
+struct ApeAstIndexExpr_t
+{
+    ApeAstExpression_t* left;
+    ApeAstExpression_t* index;
+};
+
+struct ApeAstAssignExpr_t
+{
+    ApeAstExpression_t* dest;
+    ApeAstExpression_t* source;
+    bool             ispostfix;
+};
+
+struct ApeAstLogicalExpr_t
+{
+    ApeOperator_t    op;
+    ApeAstExpression_t* left;
+    ApeAstExpression_t* right;
+};
+
+struct ApeAstTernaryExpr_t
+{
+    ApeAstExpression_t* test;
+    ApeAstExpression_t* iftrue;
+    ApeAstExpression_t* iffalse;
+};
+
+struct ApeAstIdentExpr_t
+{
+    ApeContext_t* context;
+    char*         value;
+    ApePosition_t pos;
+};
+
+struct ApeAstDefineExpr_t
+{
+    ApeAstIdentExpr_t*      name;
+    ApeAstExpression_t* value;
+    bool             assignable;
+};
+
+struct ApeAstIfExpr_t
+{
+    ApePtrArray_t*  cases;
+    ApeAstBlockExpr_t* alternative;
+};
+
+struct ApeAstWhileLoopExpr_t
+{
+    ApeAstExpression_t* test;
+    ApeAstBlockExpr_t*  body;
+};
+
+struct ApeAstForeachExpr_t
+{
+    ApeAstIdentExpr_t*      iterator;
+    ApeAstExpression_t* source;
+    ApeAstBlockExpr_t*  body;
+};
+
+struct ApeAstForExpr_t
+{
+    ApeAstExpression_t* init;
+    ApeAstExpression_t* test;
+    ApeAstExpression_t* update;
+    ApeAstBlockExpr_t*  body;
+};
+
+struct ApeAstIncludeExpr_t
+{
+    char*            path;
+    ApeAstExpression_t* left;
+};
+
+struct ApeAstRecoverExpr_t
+{
+    ApeAstIdentExpr_t*     errorident;
+    ApeAstBlockExpr_t* body;
+};
+
+struct ApeAstLiteralMapExpr_t
+{
+    ApePtrArray_t* keys;
+    ApePtrArray_t* values;
+};
+
+
+struct ApeAstExpression_t
+{
+    ApeContext_t* context;
+    ApeAstExprType_t extype;
+    bool          stringwasallocd;
+    ApeSize_t     stringlitlength;
+    union
+    {
+        ApeAstIdentExpr_t*        exident;
+        ApeFloat_t         exliteralnumber;
+        bool               exliteralbool;
+        char*              exliteralstring;
+        ApePtrArray_t*     exarray;
+        ApeAstLiteralMapExpr_t    exmap;
+        ApeAstPrefixExpr_t    exprefix;
+        ApeAstInfixExpr_t     exinfix;
+        ApeAstLiteralFuncExpr_t     exliteralfunc;
+        ApeAstCallExpr_t      excall;
+        ApeAstIndexExpr_t     exindex;
+        ApeAstAssignExpr_t    exassign;
+        ApeAstLogicalExpr_t   exlogical;
+        ApeAstTernaryExpr_t   externary;
+        ApeAstDefineExpr_t    exdefine;
+        ApeAstIfExpr_t        exifstmt;
+        ApeAstExpression_t*   exreturn;
+        ApeAstExpression_t*   exexpression;
+        ApeAstWhileLoopExpr_t exwhilestmt;
+        ApeAstForeachExpr_t   exforeachstmt;
+        ApeAstForExpr_t   exforstmt;
+        ApeAstBlockExpr_t*    exblock;
+        ApeAstIncludeExpr_t   exincludestmt;
+        ApeAstRecoverExpr_t   exrecoverstmt;
+    };
+    ApePosition_t pos;
+};
+
+struct ApeAstParser_t
+{
+    ApeContext_t*                  context;
+    const ApeConfig_t*             config;
+    ApeAstLexer_t                     lexer;
+    ApeErrorList_t*                errors;
+    ApeSize_t                      depth;
+};
+
+struct ApeSymbol_t
+{
+    ApeContext_t*   context;
+    ApeSymbolType_t symtype;
+    char*           name;
+    ApeSize_t       index;
+    bool            assignable;
+};
+
+struct ApeAstBlockScope_t
+{
+    ApeContext_t* context;
+    ApeStrDict_t* store;
+    ApeInt_t      offset;
+    ApeSize_t     numdefinitions;
+};
+
+struct ApeSymTable_t
+{
+    ApeContext_t*     context;
+    ApeSymTable_t*    outer;
+    ApeGlobalStore_t* globalstore;
+    ApePtrArray_t*    blockscopes;
+    ApePtrArray_t*    freesymbols;
+    ApePtrArray_t*    modglobalsymbols;
+    ApeSize_t         maxnumdefinitions;
+    ApeInt_t          modglobaloffset;
+};
+
+struct ApeOpcodeDef_t
+{
+    const char* name;
+    ApeSize_t   operandcount;
+    ApeInt_t    operandwidths[2];
+};
+
 
 struct ApeModule_t
 {
@@ -1175,16 +1095,16 @@ struct ApeModule_t
     ApePtrArray_t* symbols;
 };
 
-struct ApeFileScope_t
+struct ApeAstFileScope_t
 {
     ApeContext_t*  context;
-    ApeParser_t*   parser;
+    ApeAstParser_t*   parser;
     ApeSymTable_t* symtable;
-    ApeCompFile_t* file;
+    ApeAstCompFile_t* file;
     ApePtrArray_t* loadedmodulenames;
 };
 
-struct ApeCompResult_t
+struct ApeAstCompResult_t
 {
     ApeContext_t*  context;
     ApeUShort_t*   bytecode;
@@ -1192,10 +1112,10 @@ struct ApeCompResult_t
     ApeSize_t      count;
 };
 
-struct ApeCompScope_t
+struct ApeAstCompScope_t
 {
     ApeContext_t*   context;
-    ApeCompScope_t* outer;
+    ApeAstCompScope_t* outer;
     ApeValArray_t*  bytecode;
     ApeValArray_t*  srcpositions;
     ApeValArray_t*  breakipstack;
@@ -1203,7 +1123,7 @@ struct ApeCompScope_t
     ApeOpByte_t     lastopcode;
 };
 
-struct ApeCompiler_t
+struct ApeAstCompiler_t
 {
     ApeContext_t*      context;
     const ApeConfig_t* config;
@@ -1212,17 +1132,62 @@ struct ApeCompiler_t
     ApePtrArray_t*     files;
     ApeGlobalStore_t*  globalstore;
     ApeValArray_t*     constants;
-    ApeCompScope_t*    compilation_scope;
+    ApeAstCompScope_t*    compilation_scope;
     ApePtrArray_t*     filescopes;
     ApeValArray_t*     srcpositionsstack;
     ApeStrDict_t*      modules;
     ApeStrDict_t*      stringconstantspositions;
 };
 
-struct ApeProgram_t
+struct ApeAstProgram_t
 {
     ApeContext_t*    context;
-    ApeCompResult_t* comp_res;
+    ApeAstCompResult_t* comp_res;
+};
+
+struct ApeGlobalStore_t
+{
+    ApeContext_t*  context;
+    ApeStrDict_t*  symbols;
+    ApeValArray_t* objects;
+};
+
+struct ApeGCObjData_t
+{
+    ApeContext_t*  context;
+    ApeGCMemory_t* mem;
+    union
+    {
+        bool                valbool;
+        ApeFloat_t          valnum;
+        ApeObjString_t      valstring;
+        ApeObjError_t       valerror;
+        ApeValArray_t*      valarray;
+        ApeValDict_t*       valmap;
+        ApeScriptFunction_t valscriptfunc;
+        ApeNativeFunction_t valnatfunc;
+        ApeExternalData_t   valextern;
+    };
+    bool         gcmark;
+    ApeObjType_t datatype;
+};
+
+struct ApeGCObjPool_t
+{
+    ApeGCObjData_t* datapool[APE_CONF_SIZE_GCMEM_POOLSIZE];
+    ApeSize_t     count;
+};
+
+struct ApeGCMemory_t
+{
+    ApeContext_t*   context;
+    ApeAllocator_t* alloc;
+    ApeSize_t       allocations_since_sweep;
+    ApeGCObjData_t** frontobjects;
+    ApeGCObjData_t** backobjects;
+    ApeValArray_t*  objects_not_gced;
+    ApeGCObjPool_t    data_only_pool;
+    ApeGCObjPool_t    pools[APE_CONF_SIZE_GCMEM_POOLCOUNT];
 };
 
 struct ApeFrame_t
@@ -1269,6 +1234,42 @@ struct ApeVM_t
     bool running;
 };
 
+struct ApeConfig_t
+{
+    struct
+    {
+        struct
+        {
+            ApeIOStdoutWriteFunc_t write;
+            void*                  context;
+        } write;
+    } stdio;
+
+    struct
+    {
+        struct
+        {
+            ApeIOReadFunc_t fnreadfile;
+            void*           context;
+        } ioreader;
+
+        struct
+        {
+            ApeIOWriteFunc_t fnwritefile;
+            void*            context;
+        } iowriter;
+    } fileio;
+
+    /* allows redefinition of symbols */
+    bool   replmode;
+    double max_execution_time_ms;
+    bool   max_execution_time_set;
+    bool   runafterdump;
+    bool   dumpast;
+    bool   dumpbytecode;
+    bool   dumpstack;
+};
+
 
 struct ApeContext_t
 {
@@ -1294,7 +1295,7 @@ struct ApeContext_t
     ApeGlobalStore_t* globalstore;
 
     /* the main compiler instance - may spawn additional compiler instances */
-    ApeCompiler_t* compiler;
+    ApeAstCompiler_t* compiler;
 
     /* the main VM instance - may spawn additional VM instances */
     ApeVM_t* vm;
@@ -1325,7 +1326,7 @@ APE_EXTERNC_BEGIN
 #endif
 */
 
-static APE_INLINE ApeObject_t object_make_from_data(ApeContext_t* ctx, ApeObjType_t type, ApeObjData_t* data)
+static APE_INLINE ApeObject_t object_make_from_data(ApeContext_t* ctx, ApeObjType_t type, ApeGCObjData_t* data)
 {
     ApeObject_t object;
     object.type = type;

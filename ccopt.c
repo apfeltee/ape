@@ -1,7 +1,7 @@
 
 #include "inline.h"
 
-ApeExpression_t* ape_optimizer_optexpr(ApeExpression_t* expr)
+ApeAstExpression_t* ape_optimizer_optexpr(ApeAstExpression_t* expr)
 {
     return NULL;
     switch(expr->extype)
@@ -24,7 +24,7 @@ ApeExpression_t* ape_optimizer_optexpr(ApeExpression_t* expr)
     return NULL;
 }
 
-ApeExpression_t* ape_optimizer_optinfixexpr(ApeExpression_t* expr)
+ApeAstExpression_t* ape_optimizer_optinfixexpr(ApeAstExpression_t* expr)
 {
     bool leftisnum;
     bool rightisnum;
@@ -36,11 +36,11 @@ ApeExpression_t* ape_optimizer_optinfixexpr(ApeExpression_t* expr)
     char* rtstr;
     const char* leftstr;
     const char* rightstr;
-    ApeExpression_t* leftexpr;
-    ApeExpression_t* leftopt;
-    ApeExpression_t* rightexpr;
-    ApeExpression_t* rightopt;
-    ApeExpression_t* res;
+    ApeAstExpression_t* leftexpr;
+    ApeAstExpression_t* leftopt;
+    ApeAstExpression_t* rightexpr;
+    ApeAstExpression_t* rightopt;
+    ApeAstExpression_t* res;
     ApeWriter_t* buf;
     ApeFloat_t leftval;
     ApeFloat_t rightval;
@@ -181,11 +181,11 @@ ApeExpression_t* ape_optimizer_optinfixexpr(ApeExpression_t* expr)
     return res;
 }
 
-ApeExpression_t* ape_optimizer_optprefixexpr(ApeExpression_t* expr)
+ApeAstExpression_t* ape_optimizer_optprefixexpr(ApeAstExpression_t* expr)
 {
-    ApeExpression_t* rightexpr;
-    ApeExpression_t* rightopt;
-    ApeExpression_t* res;
+    ApeAstExpression_t* rightexpr;
+    ApeAstExpression_t* rightopt;
+    ApeAstExpression_t* res;
     rightexpr = expr->exprefix.right;
     rightopt = ape_optimizer_optexpr(rightexpr);
     if(rightopt)

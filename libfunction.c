@@ -1,9 +1,9 @@
 
 #include "inline.h"
 
-ApeObject_t ape_object_make_function(ApeContext_t* ctx, const char* name, ApeCompResult_t* cres, bool wdata, ApeInt_t nloc, ApeInt_t nargs, ApeSize_t fvcount)
+ApeObject_t ape_object_make_function(ApeContext_t* ctx, const char* name, ApeAstCompResult_t* cres, bool wdata, ApeInt_t nloc, ApeInt_t nargs, ApeSize_t fvcount)
 {
-    ApeObjData_t* data;
+    ApeGCObjData_t* data;
     data = ape_gcmem_allocobjdata(ctx->mem, APE_OBJECT_SCRIPTFUNCTION);
     if(!data)
     {
@@ -39,7 +39,7 @@ ApeObject_t ape_object_make_function(ApeContext_t* ctx, const char* name, ApeCom
 
 ApeObject_t ape_object_make_nativefuncmemory(ApeContext_t* ctx, const char* name, ApeNativeFuncPtr_t fn, void* data, ApeSize_t dlen)
 {
-    ApeObjData_t* obj;
+    ApeGCObjData_t* obj;
     if(dlen > APE_CONF_SIZE_NATFN_MAXDATALEN)
     {
         return ape_object_make_null(ctx);
@@ -69,7 +69,7 @@ ApeObject_t ape_object_make_nativefuncmemory(ApeContext_t* ctx, const char* name
 
 const char* ape_object_function_getname(ApeObject_t obj)
 {
-    ApeObjData_t* data;
+    ApeGCObjData_t* data;
     APE_ASSERT(ape_object_value_type(obj) == APE_OBJECT_SCRIPTFUNCTION);
     data = ape_object_value_allocated_data(obj);
     APE_ASSERT(data);
@@ -86,7 +86,7 @@ const char* ape_object_function_getname(ApeObject_t obj)
 
 ApeObject_t ape_object_function_getfreeval(ApeObject_t obj, ApeInt_t ix)
 {
-    ApeObjData_t* data;
+    ApeGCObjData_t* data;
     ApeScriptFunction_t* fun;
     APE_ASSERT(ape_object_value_type(obj) == APE_OBJECT_SCRIPTFUNCTION);
     data = ape_object_value_allocated_data(obj);
@@ -107,7 +107,7 @@ ApeObject_t ape_object_function_getfreeval(ApeObject_t obj, ApeInt_t ix)
 
 void ape_object_function_setfreeval(ApeObject_t obj, ApeInt_t ix, ApeObject_t val)
 {
-    ApeObjData_t* data;
+    ApeGCObjData_t* data;
     ApeScriptFunction_t* fun;
     APE_ASSERT(ape_object_value_type(obj) == APE_OBJECT_SCRIPTFUNCTION);
     data = ape_object_value_allocated_data(obj);

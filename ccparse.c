@@ -7,15 +7,15 @@ static ApeRightAssocParseFNCallback_t rightassocparsefns[TOKEN_TYPE_MAX];
 static ApeLeftAssocParseFNCallback_t  leftassocparsefns[TOKEN_TYPE_MAX];
 
 
-ApeParser_t* ape_ast_make_parser(ApeContext_t* ctx, const ApeConfig_t* config, ApeErrorList_t* errors)
+ApeAstParser_t* ape_ast_make_parser(ApeContext_t* ctx, const ApeConfig_t* config, ApeErrorList_t* errors)
 {
-    ApeParser_t* parser;
-    parser = (ApeParser_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeParser_t));
+    ApeAstParser_t* parser;
+    parser = (ApeAstParser_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstParser_t));
     if(!parser)
     {
         return NULL;
     }
-    memset(parser, 0, sizeof(ApeParser_t));
+    memset(parser, 0, sizeof(ApeAstParser_t));
     parser->context = ctx;
     parser->config = config;
     parser->errors = errors;
@@ -77,7 +77,7 @@ ApeParser_t* ape_ast_make_parser(ApeContext_t* ctx, const ApeConfig_t* config, A
     return parser;
 }
 
-void ape_parser_destroy(ApeParser_t* parser)
+void ape_parser_destroy(ApeAstParser_t* parser)
 {
     if(!parser)
     {
@@ -86,11 +86,11 @@ void ape_parser_destroy(ApeParser_t* parser)
     ape_allocator_free(&parser->context->alloc, parser);
 }
 
-ApePtrArray_t * ape_parser_parseall(ApeParser_t* parser, const char* input, ApeCompFile_t* file)
+ApePtrArray_t * ape_parser_parseall(ApeAstParser_t* parser, const char* input, ApeAstCompFile_t* file)
 {
     bool ok;
     ApePtrArray_t* statements;
-    ApeExpression_t* stmt;
+    ApeAstExpression_t* stmt;
     parser->depth = 0;
     ok = ape_lexer_init(&parser->lexer, parser->context, parser->errors, input, file);
     if(!ok)
@@ -133,10 +133,10 @@ err:
     return NULL;
 }
 
-ApeIdent_t* ape_ast_make_ident(ApeContext_t* ctx, ApeToken_t tok)
+ApeAstIdentExpr_t* ape_ast_make_ident(ApeContext_t* ctx, ApeAstToken_t tok)
 {
-    ApeIdent_t* res;
-    res = (ApeIdent_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeIdent_t));
+    ApeAstIdentExpr_t* res;
+    res = (ApeAstIdentExpr_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstIdentExpr_t));
     if(!res)
     {
         return NULL;
@@ -152,10 +152,10 @@ ApeIdent_t* ape_ast_make_ident(ApeContext_t* ctx, ApeToken_t tok)
     return res;
 }
 
-ApeExpression_t* ape_ast_make_expression(ApeContext_t* ctx, ApeExprType_t type)
+ApeAstExpression_t* ape_ast_make_expression(ApeContext_t* ctx, ApeAstExprType_t type)
 {
-    ApeExpression_t* res;
-    res = (ApeExpression_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeExpression_t));
+    ApeAstExpression_t* res;
+    res = (ApeAstExpression_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstExpression_t));
     if(!res)
     {
         return NULL;
@@ -166,9 +166,9 @@ ApeExpression_t* ape_ast_make_expression(ApeContext_t* ctx, ApeExprType_t type)
     return res;
 }
 
-ApeExpression_t* ape_ast_make_identexpr(ApeContext_t* ctx, ApeIdent_t* ident)
+ApeAstExpression_t* ape_ast_make_identexpr(ApeContext_t* ctx, ApeAstIdentExpr_t* ident)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_IDENT);
     if(!res)
     {
@@ -178,9 +178,9 @@ ApeExpression_t* ape_ast_make_identexpr(ApeContext_t* ctx, ApeIdent_t* ident)
     return res;
 }
 
-ApeExpression_t* ape_ast_make_literalnumberexpr(ApeContext_t* ctx, ApeFloat_t val)
+ApeAstExpression_t* ape_ast_make_literalnumberexpr(ApeContext_t* ctx, ApeFloat_t val)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_LITERALNUMBER);
     if(!res)
     {
@@ -190,9 +190,9 @@ ApeExpression_t* ape_ast_make_literalnumberexpr(ApeContext_t* ctx, ApeFloat_t va
     return res;
 }
 
-ApeExpression_t* ape_ast_make_literalboolexpr(ApeContext_t* ctx, bool val)
+ApeAstExpression_t* ape_ast_make_literalboolexpr(ApeContext_t* ctx, bool val)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_LITERALBOOL);
     if(!res)
     {
@@ -202,9 +202,9 @@ ApeExpression_t* ape_ast_make_literalboolexpr(ApeContext_t* ctx, bool val)
     return res;
 }
 
-ApeExpression_t* ape_ast_make_literalstringexpr(ApeContext_t* ctx, char* value, ApeSize_t len, bool wasallocd)
+ApeAstExpression_t* ape_ast_make_literalstringexpr(ApeContext_t* ctx, char* value, ApeSize_t len, bool wasallocd)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_LITERALSTRING);
     if(!res)
     {
@@ -216,9 +216,9 @@ ApeExpression_t* ape_ast_make_literalstringexpr(ApeContext_t* ctx, char* value, 
     return res;
 }
 
-ApeExpression_t* ape_ast_make_literalnullexpr(ApeContext_t* ctx)
+ApeAstExpression_t* ape_ast_make_literalnullexpr(ApeContext_t* ctx)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_LITERALNULL);
     if(!res)
     {
@@ -227,9 +227,9 @@ ApeExpression_t* ape_ast_make_literalnullexpr(ApeContext_t* ctx)
     return res;
 }
 
-ApeExpression_t* ape_ast_make_literalarrayexpr(ApeContext_t* ctx, ApePtrArray_t * values)
+ApeAstExpression_t* ape_ast_make_literalarrayexpr(ApeContext_t* ctx, ApePtrArray_t * values)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_LITERALARRAY);
     if(!res)
     {
@@ -239,9 +239,9 @@ ApeExpression_t* ape_ast_make_literalarrayexpr(ApeContext_t* ctx, ApePtrArray_t 
     return res;
 }
 
-ApeExpression_t* ape_ast_make_literalmapexpr(ApeContext_t* ctx, ApePtrArray_t * keys, ApePtrArray_t * values)
+ApeAstExpression_t* ape_ast_make_literalmapexpr(ApeContext_t* ctx, ApePtrArray_t * keys, ApePtrArray_t * values)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_LITERALMAP);
     if(!res)
     {
@@ -252,9 +252,9 @@ ApeExpression_t* ape_ast_make_literalmapexpr(ApeContext_t* ctx, ApePtrArray_t * 
     return res;
 }
 
-ApeExpression_t* ape_ast_make_prefixexpr(ApeContext_t* ctx, ApeOperator_t op, ApeExpression_t* right)
+ApeAstExpression_t* ape_ast_make_prefixexpr(ApeContext_t* ctx, ApeOperator_t op, ApeAstExpression_t* right)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_PREFIX);
     if(!res)
     {
@@ -265,9 +265,9 @@ ApeExpression_t* ape_ast_make_prefixexpr(ApeContext_t* ctx, ApeOperator_t op, Ap
     return res;
 }
 
-ApeExpression_t* ape_ast_make_infixexpr(ApeContext_t* ctx, ApeOperator_t op, ApeExpression_t* left, ApeExpression_t* right)
+ApeAstExpression_t* ape_ast_make_infixexpr(ApeContext_t* ctx, ApeOperator_t op, ApeAstExpression_t* left, ApeAstExpression_t* right)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_INFIX);
     if(!res)
     {
@@ -279,9 +279,9 @@ ApeExpression_t* ape_ast_make_infixexpr(ApeContext_t* ctx, ApeOperator_t op, Ape
     return res;
 }
 
-ApeExpression_t* ape_ast_make_literalfuncexpr(ApeContext_t* ctx, ApePtrArray_t * params, ApeCodeblock_t* body)
+ApeAstExpression_t* ape_ast_make_literalfuncexpr(ApeContext_t* ctx, ApePtrArray_t * params, ApeAstBlockExpr_t* body)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_LITERALFUNCTION);
     if(!res)
     {
@@ -293,9 +293,9 @@ ApeExpression_t* ape_ast_make_literalfuncexpr(ApeContext_t* ctx, ApePtrArray_t *
     return res;
 }
 
-ApeExpression_t* ape_ast_make_callexpr(ApeContext_t* ctx, ApeExpression_t* function, ApePtrArray_t * args)
+ApeAstExpression_t* ape_ast_make_callexpr(ApeContext_t* ctx, ApeAstExpression_t* function, ApePtrArray_t * args)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_CALL);
     if(!res)
     {
@@ -306,9 +306,9 @@ ApeExpression_t* ape_ast_make_callexpr(ApeContext_t* ctx, ApeExpression_t* funct
     return res;
 }
 
-ApeExpression_t* ape_ast_make_indexexpr(ApeContext_t* ctx, ApeExpression_t* left, ApeExpression_t* index)
+ApeAstExpression_t* ape_ast_make_indexexpr(ApeContext_t* ctx, ApeAstExpression_t* left, ApeAstExpression_t* index)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_INDEX);
     if(!res)
     {
@@ -319,9 +319,9 @@ ApeExpression_t* ape_ast_make_indexexpr(ApeContext_t* ctx, ApeExpression_t* left
     return res;
 }
 
-ApeExpression_t* ape_ast_make_assignexpr(ApeContext_t* ctx, ApeExpression_t* dest, ApeExpression_t* source, bool ispostfix)
+ApeAstExpression_t* ape_ast_make_assignexpr(ApeContext_t* ctx, ApeAstExpression_t* dest, ApeAstExpression_t* source, bool ispostfix)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_ASSIGN);
     if(!res)
     {
@@ -333,9 +333,9 @@ ApeExpression_t* ape_ast_make_assignexpr(ApeContext_t* ctx, ApeExpression_t* des
     return res;
 }
 
-ApeExpression_t* ape_ast_make_logicalexpr(ApeContext_t* ctx, ApeOperator_t op, ApeExpression_t* left, ApeExpression_t* right)
+ApeAstExpression_t* ape_ast_make_logicalexpr(ApeContext_t* ctx, ApeOperator_t op, ApeAstExpression_t* left, ApeAstExpression_t* right)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_LOGICAL);
     if(!res)
     {
@@ -347,9 +347,9 @@ ApeExpression_t* ape_ast_make_logicalexpr(ApeContext_t* ctx, ApeOperator_t op, A
     return res;
 }
 
-ApeExpression_t* ape_ast_make_ternaryexpr(ApeContext_t* ctx, ApeExpression_t* test, ApeExpression_t* iftrue, ApeExpression_t* iffalse)
+ApeAstExpression_t* ape_ast_make_ternaryexpr(ApeContext_t* ctx, ApeAstExpression_t* test, ApeAstExpression_t* iftrue, ApeAstExpression_t* iffalse)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_TERNARY);
     if(!res)
     {
@@ -361,9 +361,9 @@ ApeExpression_t* ape_ast_make_ternaryexpr(ApeContext_t* ctx, ApeExpression_t* te
     return res;
 }
 
-ApeExpression_t* ape_ast_make_definestmt(ApeContext_t* ctx, ApeIdent_t* name, ApeExpression_t* value, bool assignable)
+ApeAstExpression_t* ape_ast_make_definestmt(ApeContext_t* ctx, ApeAstIdentExpr_t* name, ApeAstExpression_t* value, bool assignable)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_DEFINE);
     if(!res)
     {
@@ -375,9 +375,9 @@ ApeExpression_t* ape_ast_make_definestmt(ApeContext_t* ctx, ApeIdent_t* name, Ap
     return res;
 }
 
-ApeExpression_t* ape_ast_make_ifstmt(ApeContext_t* ctx, ApePtrArray_t * cases, ApeCodeblock_t* alternative)
+ApeAstExpression_t* ape_ast_make_ifstmt(ApeContext_t* ctx, ApePtrArray_t * cases, ApeAstBlockExpr_t* alternative)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_IF);
     if(!res)
     {
@@ -388,9 +388,9 @@ ApeExpression_t* ape_ast_make_ifstmt(ApeContext_t* ctx, ApePtrArray_t * cases, A
     return res;
 }
 
-ApeExpression_t* ape_ast_make_returnstmt(ApeContext_t* ctx, ApeExpression_t* value)
+ApeAstExpression_t* ape_ast_make_returnstmt(ApeContext_t* ctx, ApeAstExpression_t* value)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_RETURNVALUE);
     if(!res)
     {
@@ -400,9 +400,9 @@ ApeExpression_t* ape_ast_make_returnstmt(ApeContext_t* ctx, ApeExpression_t* val
     return res;
 }
 
-ApeExpression_t* ape_ast_make_expressionstmt(ApeContext_t* ctx, ApeExpression_t* value)
+ApeAstExpression_t* ape_ast_make_expressionstmt(ApeContext_t* ctx, ApeAstExpression_t* value)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_EXPRESSION);
     if(!res)
     {
@@ -412,9 +412,9 @@ ApeExpression_t* ape_ast_make_expressionstmt(ApeContext_t* ctx, ApeExpression_t*
     return res;
 }
 
-ApeExpression_t* ape_ast_make_whilestmt(ApeContext_t* ctx, ApeExpression_t* test, ApeCodeblock_t* body)
+ApeAstExpression_t* ape_ast_make_whilestmt(ApeContext_t* ctx, ApeAstExpression_t* test, ApeAstBlockExpr_t* body)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_WHILELOOP);
     if(!res)
     {
@@ -425,9 +425,9 @@ ApeExpression_t* ape_ast_make_whilestmt(ApeContext_t* ctx, ApeExpression_t* test
     return res;
 }
 
-ApeExpression_t* ape_ast_make_breakstmt(ApeContext_t* ctx)
+ApeAstExpression_t* ape_ast_make_breakstmt(ApeContext_t* ctx)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_BREAK);
     if(!res)
     {
@@ -436,9 +436,9 @@ ApeExpression_t* ape_ast_make_breakstmt(ApeContext_t* ctx)
     return res;
 }
 
-ApeExpression_t* ape_ast_make_foreachstmt(ApeContext_t* ctx, ApeIdent_t* iterator, ApeExpression_t* source, ApeCodeblock_t* body)
+ApeAstExpression_t* ape_ast_make_foreachstmt(ApeContext_t* ctx, ApeAstIdentExpr_t* iterator, ApeAstExpression_t* source, ApeAstBlockExpr_t* body)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_FOREACH);
     if(!res)
     {
@@ -450,9 +450,9 @@ ApeExpression_t* ape_ast_make_foreachstmt(ApeContext_t* ctx, ApeIdent_t* iterato
     return res;
 }
 
-ApeExpression_t* ape_ast_make_forstmt(ApeContext_t* ctx, ApeExpression_t* init, ApeExpression_t* test, ApeExpression_t* update, ApeCodeblock_t* body)
+ApeAstExpression_t* ape_ast_make_forstmt(ApeContext_t* ctx, ApeAstExpression_t* init, ApeAstExpression_t* test, ApeAstExpression_t* update, ApeAstBlockExpr_t* body)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_FORLOOP);
     if(!res)
     {
@@ -465,9 +465,9 @@ ApeExpression_t* ape_ast_make_forstmt(ApeContext_t* ctx, ApeExpression_t* init, 
     return res;
 }
 
-ApeExpression_t* ape_ast_make_continuestmt(ApeContext_t* ctx)
+ApeAstExpression_t* ape_ast_make_continuestmt(ApeContext_t* ctx)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_CONTINUE);
     if(!res)
     {
@@ -476,9 +476,9 @@ ApeExpression_t* ape_ast_make_continuestmt(ApeContext_t* ctx)
     return res;
 }
 
-ApeExpression_t* ape_ast_make_blockstmt(ApeContext_t* ctx, ApeCodeblock_t* block)
+ApeAstExpression_t* ape_ast_make_blockstmt(ApeContext_t* ctx, ApeAstBlockExpr_t* block)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_BLOCK);
     if(!res)
     {
@@ -488,9 +488,9 @@ ApeExpression_t* ape_ast_make_blockstmt(ApeContext_t* ctx, ApeCodeblock_t* block
     return res;
 }
 
-ApeExpression_t* ape_ast_make_includestmt(ApeContext_t* ctx, char* path)
+ApeAstExpression_t* ape_ast_make_includestmt(ApeContext_t* ctx, char* path)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_INCLUDE);
     if(!res)
     {
@@ -500,9 +500,9 @@ ApeExpression_t* ape_ast_make_includestmt(ApeContext_t* ctx, char* path)
     return res;
 }
 
-ApeExpression_t* ape_ast_make_recoverstmt(ApeContext_t* ctx, ApeIdent_t* errorident, ApeCodeblock_t* body)
+ApeAstExpression_t* ape_ast_make_recoverstmt(ApeContext_t* ctx, ApeAstIdentExpr_t* errorident, ApeAstBlockExpr_t* body)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_RECOVER);
     if(!res)
     {
@@ -513,10 +513,10 @@ ApeExpression_t* ape_ast_make_recoverstmt(ApeContext_t* ctx, ApeIdent_t* errorid
     return res;
 }
 
-ApeCodeblock_t* ape_ast_make_codeblock(ApeContext_t* ctx, ApePtrArray_t * statements)
+ApeAstBlockExpr_t* ape_ast_make_codeblock(ApeContext_t* ctx, ApePtrArray_t * statements)
 {
-    ApeCodeblock_t* block;
-    block = (ApeCodeblock_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeCodeblock_t));
+    ApeAstBlockExpr_t* block;
+    block = (ApeAstBlockExpr_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstBlockExpr_t));
     if(!block)
     {
         return NULL;
@@ -526,10 +526,10 @@ ApeCodeblock_t* ape_ast_make_codeblock(ApeContext_t* ctx, ApePtrArray_t * statem
     return block;
 }
 
-ApeIdent_t* ape_ast_copy_ident(ApeIdent_t* ident)
+ApeAstIdentExpr_t* ape_ast_copy_ident(ApeAstIdentExpr_t* ident)
 {
-    ApeIdent_t* res;
-    res = (ApeIdent_t*)ape_allocator_alloc(&ident->context->alloc, sizeof(ApeIdent_t));
+    ApeAstIdentExpr_t* res;
+    res = (ApeAstIdentExpr_t*)ape_allocator_alloc(&ident->context->alloc, sizeof(ApeAstIdentExpr_t));
     if(!res)
     {
         return NULL;
@@ -545,9 +545,9 @@ ApeIdent_t* ape_ast_copy_ident(ApeIdent_t* ident)
     return res;
 }
 
-ApeCodeblock_t* ape_ast_copy_codeblock(ApeCodeblock_t* block)
+ApeAstBlockExpr_t* ape_ast_copy_codeblock(ApeAstBlockExpr_t* block)
 {
-    ApeCodeblock_t* res;
+    ApeAstBlockExpr_t* res;
     ApePtrArray_t* statementscopy;
     ApeDataCallback_t copyfn;
     ApeDataCallback_t destroyfn;
@@ -572,11 +572,11 @@ ApeCodeblock_t* ape_ast_copy_codeblock(ApeCodeblock_t* block)
     return res;
 }
 
-ApeIfCase_t* ape_ast_copy_ifcase(ApeIfCase_t* ifcase)
+ApeAstIfCaseExpr_t* ape_ast_copy_ifcase(ApeAstIfCaseExpr_t* ifcase)
 {
-    ApeExpression_t* testcopy;
-    ApeCodeblock_t* consequencecopy;
-    ApeIfCase_t* ifcasecopy;
+    ApeAstExpression_t* testcopy;
+    ApeAstBlockExpr_t* consequencecopy;
+    ApeAstIfCaseExpr_t* ifcasecopy;
     if(!ifcase)
     {
         return NULL;
@@ -608,34 +608,34 @@ err:
     return NULL;
 }
 
-ApeExpression_t* ape_ast_copy_expr(ApeExpression_t* expr)
+ApeAstExpression_t* ape_ast_copy_expr(ApeAstExpression_t* expr)
 {
     char* pathcopy;
     char* stringcopy;
     char* namecopy;
-    ApeIdent_t* ident;
+    ApeAstIdentExpr_t* ident;
     ApePtrArray_t* valuescopy;
     ApePtrArray_t* keyscopy;
     ApePtrArray_t* paramscopy;
-    ApeCodeblock_t* bodycopy;
-    ApeExpression_t* functioncopy;
+    ApeAstBlockExpr_t* bodycopy;
+    ApeAstExpression_t* functioncopy;
     ApePtrArray_t* argscopy;
-    ApeExpression_t* rightcopy;
-    ApeExpression_t* leftcopy;
-    ApeExpression_t* indexcopy;
-    ApeExpression_t* destcopy;
-    ApeExpression_t* sourcecopy;
-    ApeExpression_t* iftruecopy;
-    ApeExpression_t* iffalsecopy;
-    ApeExpression_t* initcopy;
-    ApeExpression_t* testcopy;
-    ApeExpression_t* updatecopy;
-    ApeCodeblock_t* blockcopy;
-    ApeIdent_t* erroridentcopy;
-    ApeCodeblock_t* alternativecopy;
+    ApeAstExpression_t* rightcopy;
+    ApeAstExpression_t* leftcopy;
+    ApeAstExpression_t* indexcopy;
+    ApeAstExpression_t* destcopy;
+    ApeAstExpression_t* sourcecopy;
+    ApeAstExpression_t* iftruecopy;
+    ApeAstExpression_t* iffalsecopy;
+    ApeAstExpression_t* initcopy;
+    ApeAstExpression_t* testcopy;
+    ApeAstExpression_t* updatecopy;
+    ApeAstBlockExpr_t* blockcopy;
+    ApeAstIdentExpr_t* erroridentcopy;
+    ApeAstBlockExpr_t* alternativecopy;
     ApePtrArray_t* casescopy;
-    ApeExpression_t* valuecopy;
-    ApeExpression_t* res;
+    ApeAstExpression_t* valuecopy;
+    ApeAstExpression_t* res;
     ApeDataCallback_t copyfn;
     ApeDataCallback_t destroyfn;
     if(!expr)
@@ -1095,10 +1095,10 @@ ApeExpression_t* ape_ast_copy_expr(ApeExpression_t* expr)
 
 
 
-ApeIfCase_t* ape_ast_make_ifcase(ApeContext_t* ctx, ApeExpression_t* test, ApeCodeblock_t* consequence)
+ApeAstIfCaseExpr_t* ape_ast_make_ifcase(ApeContext_t* ctx, ApeAstExpression_t* test, ApeAstBlockExpr_t* consequence)
 {
-    ApeIfCase_t* res;
-    res = (ApeIfCase_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeIfCase_t));
+    ApeAstIfCaseExpr_t* res;
+    res = (ApeAstIfCaseExpr_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstIfCaseExpr_t));
     if(!res)
     {
         return NULL;
@@ -1109,7 +1109,7 @@ ApeIfCase_t* ape_ast_make_ifcase(ApeContext_t* ctx, ApeExpression_t* test, ApeCo
     return res;
 }
 
-void* ape_ast_destroy_ifcase(ApeIfCase_t* cond)
+void* ape_ast_destroy_ifcase(ApeAstIfCaseExpr_t* cond)
 {
     if(!cond)
     {
@@ -1121,9 +1121,9 @@ void* ape_ast_destroy_ifcase(ApeIfCase_t* cond)
     return NULL;
 }
 
-void* ape_ast_destroy_expr(ApeExpression_t* expr)
+void* ape_ast_destroy_expr(ApeAstExpression_t* expr)
 {
-    ApeFnLiteral_t* fn;
+    ApeAstLiteralFuncExpr_t* fn;
     ApeDataCallback_t destroyfn;
     if(!expr)
     {
@@ -1293,7 +1293,7 @@ void* ape_ast_destroy_expr(ApeExpression_t* expr)
 }
 
 
-void* ape_ast_destroy_codeblock(ApeCodeblock_t* block)
+void* ape_ast_destroy_codeblock(ApeAstBlockExpr_t* block)
 {
     if(!block)
     {
@@ -1304,7 +1304,7 @@ void* ape_ast_destroy_codeblock(ApeCodeblock_t* block)
     return NULL;
 }
 
-void* ape_ast_destroy_ident(ApeIdent_t* ident)
+void* ape_ast_destroy_ident(ApeAstIdentExpr_t* ident)
 {
     if(!ident)
     {
@@ -1317,10 +1317,10 @@ void* ape_ast_destroy_ident(ApeIdent_t* ident)
     return NULL;
 }
 
-ApeExpression_t* ape_parser_parsestmt(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parsestmt(ApeAstParser_t* p)
 {
     ApePosition_t pos;
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     pos = p->lexer.curtoken.pos;
     res = NULL;
     switch(p->lexer.curtoken.toktype)
@@ -1408,12 +1408,12 @@ ApeExpression_t* ape_parser_parsestmt(ApeParser_t* p)
     return res;
 }
 
-ApeExpression_t* ape_parser_parsedefinestmt(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parsedefinestmt(ApeAstParser_t* p)
 {
     bool assignable;
-    ApeIdent_t* nameident;
-    ApeExpression_t* value;
-    ApeExpression_t* res;
+    ApeAstIdentExpr_t* nameident;
+    ApeAstExpression_t* value;
+    ApeAstExpression_t* res;
     nameident = NULL;
     value = NULL;
     assignable = ape_lexer_currenttokenis(&p->lexer, TOKEN_KWVAR);
@@ -1458,14 +1458,14 @@ err:
     return NULL;
 }
 
-ApeExpression_t* ape_parser_parseifstmt(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parseifstmt(ApeAstParser_t* p)
 {
     bool ok;
     ApePtrArray_t* cases;
-    ApeCodeblock_t* alternative;
-    ApeIfCase_t* elif;
-    ApeExpression_t* res;
-    ApeIfCase_t* cond;
+    ApeAstBlockExpr_t* alternative;
+    ApeAstIfCaseExpr_t* elif;
+    ApeAstExpression_t* res;
+    ApeAstIfCaseExpr_t* cond;
     cases = NULL;
     alternative = NULL;
     cases = ape_make_ptrarray(p->context);
@@ -1564,11 +1564,11 @@ err:
     return NULL;
 }
 
-ApeExpression_t* ape_parser_parsereturnstmt(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parsereturnstmt(ApeAstParser_t* p)
 {
     bool isexprblock;
-    ApeExpression_t* expr;
-    ApeExpression_t* res;
+    ApeAstExpression_t* expr;
+    ApeAstExpression_t* res;
     expr = NULL;
     ape_lexer_nexttoken(&p->lexer);
     isexprblock = (
@@ -1593,10 +1593,10 @@ ApeExpression_t* ape_parser_parsereturnstmt(ApeParser_t* p)
     return res;
 }
 
-ApeExpression_t* ape_parser_parseexprstmt(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parseexprstmt(ApeAstParser_t* p)
 {
-    ApeExpression_t* expr;
-    ApeExpression_t* res;
+    ApeAstExpression_t* expr;
+    ApeAstExpression_t* res;
     expr = ape_parser_parseexpr(p, PRECEDENCE_LOWEST);
     if(!expr)
     {
@@ -1623,11 +1623,11 @@ ApeExpression_t* ape_parser_parseexprstmt(ApeParser_t* p)
     return res;
 }
 
-ApeExpression_t* ape_parser_parsewhileloopstmt(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parsewhileloopstmt(ApeAstParser_t* p)
 {
-    ApeExpression_t* test;
-    ApeCodeblock_t* body;
-    ApeExpression_t* res;
+    ApeAstExpression_t* test;
+    ApeAstBlockExpr_t* body;
+    ApeAstExpression_t* res;
     test = NULL;
     body = NULL;
     ape_lexer_nexttoken(&p->lexer);
@@ -1663,22 +1663,22 @@ err:
     return NULL;
 }
 
-ApeExpression_t* ape_parser_parsebreakstmt(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parsebreakstmt(ApeAstParser_t* p)
 {
     ape_lexer_nexttoken(&p->lexer);
     return ape_ast_make_breakstmt(p->context);
 }
 
-ApeExpression_t* ape_parser_parsecontinuestmt(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parsecontinuestmt(ApeAstParser_t* p)
 {
     ape_lexer_nexttoken(&p->lexer);
     return ape_ast_make_continuestmt(p->context);
 }
 
-ApeExpression_t* ape_parser_parseblockstmt(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parseblockstmt(ApeAstParser_t* p)
 {
-    ApeCodeblock_t* block;
-    ApeExpression_t* res;
+    ApeAstBlockExpr_t* block;
+    ApeAstExpression_t* res;
     block = ape_parser_parsecodeblock(p);
     if(!block)
     {
@@ -1693,11 +1693,11 @@ ApeExpression_t* ape_parser_parseblockstmt(ApeParser_t* p)
     return res;
 }
 
-ApeExpression_t* ape_parser_parseincludestmt(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parseincludestmt(ApeAstParser_t* p)
 {
     char* processedname;
     ApeSize_t len;
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     ape_lexer_nexttoken(&p->lexer);
     if(!ape_lexer_expectcurrent(&p->lexer, TOKEN_VALSTRING))
     {
@@ -1719,11 +1719,11 @@ ApeExpression_t* ape_parser_parseincludestmt(ApeParser_t* p)
     return res;
 }
 
-ApeExpression_t* ape_parser_parserecoverstmt(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parserecoverstmt(ApeAstParser_t* p)
 {
-    ApeIdent_t* errorident;
-    ApeCodeblock_t* body;
-    ApeExpression_t* res;
+    ApeAstIdentExpr_t* errorident;
+    ApeAstBlockExpr_t* body;
+    ApeAstExpression_t* res;
     errorident = NULL;
     body = NULL;
     ape_lexer_nexttoken(&p->lexer);
@@ -1764,7 +1764,7 @@ err:
     return NULL;
 }
 
-ApeExpression_t* ape_parser_parseforloopstmt(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parseforloopstmt(ApeAstParser_t* p)
 {
     ape_lexer_nexttoken(&p->lexer);
     if(!ape_lexer_expectcurrent(&p->lexer, TOKEN_OPLEFTPAREN))
@@ -1779,12 +1779,12 @@ ApeExpression_t* ape_parser_parseforloopstmt(ApeParser_t* p)
     return ape_parser_parseclassicforstmt(p);
 }
 
-ApeExpression_t* ape_parser_parseforeachstmt(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parseforeachstmt(ApeAstParser_t* p)
 {
-    ApeExpression_t* source;
-    ApeCodeblock_t* body;
-    ApeIdent_t* iteratorident;
-    ApeExpression_t* res;
+    ApeAstExpression_t* source;
+    ApeAstBlockExpr_t* body;
+    ApeAstIdentExpr_t* iteratorident;
+    ApeAstExpression_t* res;
     source = NULL;
     body = NULL;
     iteratorident = ape_ast_make_ident(p->context, p->lexer.curtoken);
@@ -1826,13 +1826,13 @@ err:
     return NULL;
 }
 
-ApeExpression_t* ape_parser_parseclassicforstmt(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parseclassicforstmt(ApeAstParser_t* p)
 {
-    ApeExpression_t* init;
-    ApeExpression_t* test;
-    ApeExpression_t* update;
-    ApeCodeblock_t* body;
-    ApeExpression_t* res;
+    ApeAstExpression_t* init;
+    ApeAstExpression_t* test;
+    ApeAstExpression_t* update;
+    ApeAstBlockExpr_t* body;
+    ApeAstExpression_t* res;
     init = NULL;
     test = NULL;
     update = NULL;
@@ -1900,12 +1900,12 @@ err:
     return NULL;
 }
 
-ApeExpression_t* ape_parser_parsefuncstmt(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parsefuncstmt(ApeAstParser_t* p)
 {
-    ApeIdent_t* nameident;
-    ApeExpression_t* value;
+    ApeAstIdentExpr_t* nameident;
+    ApeAstExpression_t* value;
     ApePosition_t pos;
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     value = NULL;
     nameident = NULL;
     pos = p->lexer.curtoken.pos;
@@ -1943,12 +1943,12 @@ err:
     return NULL;
 }
 
-ApeCodeblock_t* ape_parser_parsecodeblock(ApeParser_t* p)
+ApeAstBlockExpr_t* ape_parser_parsecodeblock(ApeAstParser_t* p)
 {
     bool ok;
     ApePtrArray_t* statements;
-    ApeExpression_t* stmt;
-    ApeCodeblock_t* res;
+    ApeAstExpression_t* stmt;
+    ApeAstBlockExpr_t* res;
     if(!ape_lexer_expectcurrent(&p->lexer, TOKEN_OPLEFTBRACE))
     {
         return NULL;
@@ -1998,14 +1998,14 @@ err:
     return NULL;
 }
 
-ApeExpression_t* ape_parser_parseexpr(ApeParser_t* p, ApePrecedence_t prec)
+ApeAstExpression_t* ape_parser_parseexpr(ApeAstParser_t* p, ApeAstPrecedence_t prec)
 {
     char* literal;
     ApePosition_t pos;
     ApeRightAssocParseFNCallback_t prighta;
     ApeLeftAssocParseFNCallback_t plefta;
-    ApeExpression_t* leftexpr;
-    ApeExpression_t* newleftexpr;
+    ApeAstExpression_t* leftexpr;
+    ApeAstExpression_t* newleftexpr;
     pos = p->lexer.curtoken.pos;
     if(p->lexer.curtoken.toktype == TOKEN_INVALID)
     {
@@ -2050,10 +2050,10 @@ ApeExpression_t* ape_parser_parseexpr(ApeParser_t* p, ApePrecedence_t prec)
     return leftexpr;
 }
 
-ApeExpression_t* ape_parser_parseident(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parseident(ApeAstParser_t* p)
 {
-    ApeIdent_t* ident;
-    ApeExpression_t* res;
+    ApeAstIdentExpr_t* ident;
+    ApeAstExpression_t* res;
     ident = ape_ast_make_ident(p->context, p->lexer.curtoken);
     if(!ident)
     {
@@ -2069,7 +2069,7 @@ ApeExpression_t* ape_parser_parseident(ApeParser_t* p)
     return res;
 }
 
-ApeExpression_t* ape_parser_parseliteralnumber(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parseliteralnumber(ApeAstParser_t* p)
 {
     char* end;
     char* literal;
@@ -2090,19 +2090,19 @@ ApeExpression_t* ape_parser_parseliteralnumber(ApeParser_t* p)
     return ape_ast_make_literalnumberexpr(p->context, number);
 }
 
-ApeExpression_t* ape_parser_parseliteralbool(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parseliteralbool(ApeAstParser_t* p)
 {
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     res = ape_ast_make_literalboolexpr(p->context, p->lexer.curtoken.toktype == TOKEN_KWTRUE);
     ape_lexer_nexttoken(&p->lexer);
     return res;
 }
 
-ApeExpression_t* ape_parser_parseliteralstring(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parseliteralstring(ApeAstParser_t* p)
 {
     char* processedliteral;
     ApeSize_t len;
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     processedliteral = ape_ast_processandcopystring(&p->context->alloc, p->lexer.curtoken.literal, p->lexer.curtoken.len, &len);
     if(!processedliteral)
     {
@@ -2119,16 +2119,16 @@ ApeExpression_t* ape_parser_parseliteralstring(ApeParser_t* p)
     return res;
 }
 
-ApeExpression_t* ape_parser_parseliteraltplstring(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parseliteraltplstring(ApeAstParser_t* p)
 {
     char* processedliteral;
     ApeSize_t len;
-    ApeExpression_t* leftstringexpr;
-    ApeExpression_t* templateexpr;
-    ApeExpression_t* tostrcallexpr;
-    ApeExpression_t* leftaddexpr;
-    ApeExpression_t* rightexpr;
-    ApeExpression_t* rightaddexpr;
+    ApeAstExpression_t* leftstringexpr;
+    ApeAstExpression_t* templateexpr;
+    ApeAstExpression_t* tostrcallexpr;
+    ApeAstExpression_t* leftaddexpr;
+    ApeAstExpression_t* rightexpr;
+    ApeAstExpression_t* rightaddexpr;
     ApePosition_t pos;
     processedliteral = NULL;
     leftstringexpr = NULL;
@@ -2212,16 +2212,16 @@ err:
     return NULL;
 }
 
-ApeExpression_t* ape_parser_parseliteralnull(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parseliteralnull(ApeAstParser_t* p)
 {
     ape_lexer_nexttoken(&p->lexer);
     return ape_ast_make_literalnullexpr(p->context);
 }
 
-ApeExpression_t* ape_parser_parseliteralarray(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parseliteralarray(ApeAstParser_t* p)
 {
     ApePtrArray_t* array;
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     array = ape_parser_parseexprlist(p, TOKEN_OPLEFTBRACKET, TOKEN_OPRIGHTBRACKET, true);
     if(!array)
     {
@@ -2236,15 +2236,15 @@ ApeExpression_t* ape_parser_parseliteralarray(ApeParser_t* p)
     return res;
 }
 
-ApeExpression_t* ape_parser_parseliteralmap(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parseliteralmap(ApeAstParser_t* p)
 {
     bool ok;
     char* str;
     ApePtrArray_t* keys;
     ApePtrArray_t* values;
-    ApeExpression_t* key;
-    ApeExpression_t* value;
-    ApeExpression_t* res;
+    ApeAstExpression_t* key;
+    ApeAstExpression_t* value;
+    ApeAstExpression_t* res;
     keys = ape_make_ptrarray(p->context);
     values = ape_make_ptrarray(p->context);
     if(!keys || !values)
@@ -2336,11 +2336,11 @@ err:
     return NULL;
 }
 
-ApeExpression_t* ape_parser_parseprefixexpr(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parseprefixexpr(ApeAstParser_t* p)
 {
     ApeOperator_t op;
-    ApeExpression_t* right;
-    ApeExpression_t* res;
+    ApeAstExpression_t* right;
+    ApeAstExpression_t* res;
     op = ape_parser_tokentooperator(p->lexer.curtoken.toktype);
     ape_lexer_nexttoken(&p->lexer);
     right = ape_parser_parseexpr(p, PRECEDENCE_PREFIX);
@@ -2357,12 +2357,12 @@ ApeExpression_t* ape_parser_parseprefixexpr(ApeParser_t* p)
     return res;
 }
 
-ApeExpression_t* ape_parser_parseinfixexpr(ApeParser_t* p, ApeExpression_t* left)
+ApeAstExpression_t* ape_parser_parseinfixexpr(ApeAstParser_t* p, ApeAstExpression_t* left)
 {
     ApeOperator_t op;
-    ApePrecedence_t prec;
-    ApeExpression_t* right;
-    ApeExpression_t* res;
+    ApeAstPrecedence_t prec;
+    ApeAstExpression_t* right;
+    ApeAstExpression_t* res;
     op = ape_parser_tokentooperator(p->lexer.curtoken.toktype);
     prec = ape_parser_getprecedence(p->lexer.curtoken.toktype);
     ape_lexer_nexttoken(&p->lexer);
@@ -2380,9 +2380,9 @@ ApeExpression_t* ape_parser_parseinfixexpr(ApeParser_t* p, ApeExpression_t* left
     return res;
 }
 
-ApeExpression_t* ape_parser_parsegroupedexpr(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parsegroupedexpr(ApeAstParser_t* p)
 {
-    ApeExpression_t* expr;
+    ApeAstExpression_t* expr;
     ape_lexer_nexttoken(&p->lexer);
     expr = ape_parser_parseexpr(p, PRECEDENCE_LOWEST);
     if(!expr || !ape_lexer_expectcurrent(&p->lexer, TOKEN_OPRIGHTPAREN))
@@ -2394,12 +2394,12 @@ ApeExpression_t* ape_parser_parsegroupedexpr(ApeParser_t* p)
     return expr;
 }
 
-ApeExpression_t* ape_parser_parseliteralfunc(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parseliteralfunc(ApeAstParser_t* p)
 {
     bool ok;
     ApePtrArray_t* params;
-    ApeCodeblock_t* body;
-    ApeExpression_t* res;
+    ApeAstBlockExpr_t* body;
+    ApeAstExpression_t* res;
     p->depth++;
     params = NULL;
     body = NULL;
@@ -2432,10 +2432,10 @@ err:
     return NULL;
 }
 
-bool ape_parser_parsefuncparams(ApeParser_t* p, ApePtrArray_t * outparams)
+bool ape_parser_parsefuncparams(ApeAstParser_t* p, ApePtrArray_t * outparams)
 {
     bool ok;
-    ApeIdent_t* ident;
+    ApeAstIdentExpr_t* ident;
     if(!ape_lexer_expectcurrent(&p->lexer, TOKEN_OPLEFTPAREN))
     {
         return false;
@@ -2491,11 +2491,11 @@ bool ape_parser_parsefuncparams(ApeParser_t* p, ApePtrArray_t * outparams)
     return true;
 }
 
-ApeExpression_t* ape_parser_parsecallexpr(ApeParser_t* p, ApeExpression_t* left)
+ApeAstExpression_t* ape_parser_parsecallexpr(ApeAstParser_t* p, ApeAstExpression_t* left)
 {
-    ApeExpression_t* function;
+    ApeAstExpression_t* function;
     ApePtrArray_t* args;
-    ApeExpression_t* res;
+    ApeAstExpression_t* res;
     function = left;
     args = ape_parser_parseexprlist(p, TOKEN_OPLEFTPAREN, TOKEN_OPRIGHTPAREN, false);
     if(!args)
@@ -2511,11 +2511,11 @@ ApeExpression_t* ape_parser_parsecallexpr(ApeParser_t* p, ApeExpression_t* left)
     return res;
 }
 
-ApePtrArray_t* ape_parser_parseexprlist(ApeParser_t* p, ApeTokenType_t starttoken, ApeTokenType_t endtoken, bool trailingcommaallowed)
+ApePtrArray_t* ape_parser_parseexprlist(ApeAstParser_t* p, ApeAstTokType_t starttoken, ApeAstTokType_t endtoken, bool trailingcommaallowed)
 {
     bool ok;
     ApePtrArray_t* res;
-    ApeExpression_t* argexpr;
+    ApeAstExpression_t* argexpr;
     if(!ape_lexer_expectcurrent(&p->lexer, starttoken))
     {
         return NULL;
@@ -2568,10 +2568,10 @@ err:
     return NULL;
 }
 
-ApeExpression_t* ape_parser_parseindexexpr(ApeParser_t* p, ApeExpression_t* left)
+ApeAstExpression_t* ape_parser_parseindexexpr(ApeAstParser_t* p, ApeAstExpression_t* left)
 {
-    ApeExpression_t* index;
-    ApeExpression_t* res;
+    ApeAstExpression_t* index;
+    ApeAstExpression_t* res;
     ape_lexer_nexttoken(&p->lexer);
     index = ape_parser_parseexpr(p, PRECEDENCE_LOWEST);
     if(!index)
@@ -2593,15 +2593,15 @@ ApeExpression_t* ape_parser_parseindexexpr(ApeParser_t* p, ApeExpression_t* left
     return res;
 }
 
-ApeExpression_t* ape_parser_parseassignexpr(ApeParser_t* p, ApeExpression_t* left)
+ApeAstExpression_t* ape_parser_parseassignexpr(ApeAstParser_t* p, ApeAstExpression_t* left)
 {
-    ApeTokenType_t assigntype;
+    ApeAstTokType_t assigntype;
     ApePosition_t pos;
     ApeOperator_t op;
-    ApeExpression_t* source;
-    ApeExpression_t* leftcopy;
-    ApeExpression_t* newsource;
-    ApeExpression_t* res;
+    ApeAstExpression_t* source;
+    ApeAstExpression_t* leftcopy;
+    ApeAstExpression_t* newsource;
+    ApeAstExpression_t* res;
     source = NULL;
     assigntype = p->lexer.curtoken.toktype;
     ape_lexer_nexttoken(&p->lexer);
@@ -2661,12 +2661,12 @@ err:
     return NULL;
 }
 
-ApeExpression_t* ape_parser_parselogicalexpr(ApeParser_t* p, ApeExpression_t* left)
+ApeAstExpression_t* ape_parser_parselogicalexpr(ApeAstParser_t* p, ApeAstExpression_t* left)
 {
     ApeOperator_t op;
-    ApePrecedence_t prec;
-    ApeExpression_t* right;
-    ApeExpression_t* res;
+    ApeAstPrecedence_t prec;
+    ApeAstExpression_t* right;
+    ApeAstExpression_t* res;
     op = ape_parser_tokentooperator(p->lexer.curtoken.toktype);
     prec = ape_parser_getprecedence(p->lexer.curtoken.toktype);
     ape_lexer_nexttoken(&p->lexer);
@@ -2684,11 +2684,11 @@ ApeExpression_t* ape_parser_parselogicalexpr(ApeParser_t* p, ApeExpression_t* le
     return res;
 }
 
-ApeExpression_t* ape_parser_parseternaryexpr(ApeParser_t* p, ApeExpression_t* left)
+ApeAstExpression_t* ape_parser_parseternaryexpr(ApeAstParser_t* p, ApeAstExpression_t* left)
 {
-    ApeExpression_t* iftrue;
-    ApeExpression_t* iffalse;
-    ApeExpression_t* res;
+    ApeAstExpression_t* iftrue;
+    ApeAstExpression_t* iffalse;
+    ApeAstExpression_t* res;
     ape_lexer_nexttoken(&p->lexer);
     iftrue = ape_parser_parseexpr(p, PRECEDENCE_LOWEST);
     if(!iftrue)
@@ -2717,17 +2717,17 @@ ApeExpression_t* ape_parser_parseternaryexpr(ApeParser_t* p, ApeExpression_t* le
     return res;
 }
 
-ApeExpression_t* ape_parser_parseincdecprefixexpr(ApeParser_t* p)
+ApeAstExpression_t* ape_parser_parseincdecprefixexpr(ApeAstParser_t* p)
 {
-    ApeExpression_t* source;
-    ApeTokenType_t operationtype;
+    ApeAstExpression_t* source;
+    ApeAstTokType_t operationtype;
     ApePosition_t pos;
     ApeOperator_t op;
-    ApeExpression_t* dest;
-    ApeExpression_t* oneliteral;
-    ApeExpression_t* destcopy;
-    ApeExpression_t* operation;
-    ApeExpression_t* res;
+    ApeAstExpression_t* dest;
+    ApeAstExpression_t* oneliteral;
+    ApeAstExpression_t* destcopy;
+    ApeAstExpression_t* operation;
+    ApeAstExpression_t* res;
     source = NULL;
     operationtype = p->lexer.curtoken.toktype;
     pos = p->lexer.curtoken.pos;
@@ -2774,16 +2774,16 @@ err:
     return NULL;
 }
 
-ApeExpression_t* ape_parser_parseincdecpostfixexpr(ApeParser_t* p, ApeExpression_t* left)
+ApeAstExpression_t* ape_parser_parseincdecpostfixexpr(ApeAstParser_t* p, ApeAstExpression_t* left)
 {
-    ApeExpression_t* source;
-    ApeTokenType_t operationtype;
+    ApeAstExpression_t* source;
+    ApeAstTokType_t operationtype;
     ApePosition_t pos;
     ApeOperator_t op;
-    ApeExpression_t* leftcopy;
-    ApeExpression_t* oneliteral;
-    ApeExpression_t* operation;
-    ApeExpression_t* res;
+    ApeAstExpression_t* leftcopy;
+    ApeAstExpression_t* oneliteral;
+    ApeAstExpression_t* operation;
+    ApeAstExpression_t* res;
     source = NULL;
     operationtype = p->lexer.curtoken.toktype;
     pos = p->lexer.curtoken.pos;
@@ -2821,11 +2821,11 @@ err:
     return NULL;
 }
 
-ApeExpression_t* ape_parser_parsedotexpr(ApeParser_t* p, ApeExpression_t* left)
+ApeAstExpression_t* ape_parser_parsedotexpr(ApeAstParser_t* p, ApeAstExpression_t* left)
 {
     char* str;
-    ApeExpression_t* index;
-    ApeExpression_t* res;
+    ApeAstExpression_t* index;
+    ApeAstExpression_t* res;
     ape_lexer_nexttoken(&p->lexer);
     if(!ape_lexer_expectcurrent(&p->lexer, TOKEN_VALIDENT))
     {
@@ -2849,7 +2849,7 @@ ApeExpression_t* ape_parser_parsedotexpr(ApeParser_t* p, ApeExpression_t* left)
     return res;
 }
 
-ApePrecedence_t ape_parser_getprecedence(ApeTokenType_t tk)
+ApeAstPrecedence_t ape_parser_getprecedence(ApeAstTokType_t tk)
 {
     switch(tk)
     {
@@ -2929,7 +2929,7 @@ ApePrecedence_t ape_parser_getprecedence(ApeTokenType_t tk)
     return PRECEDENCE_LOWEST;
 }
 
-ApeOperator_t ape_parser_tokentooperator(ApeTokenType_t tk)
+ApeOperator_t ape_parser_tokentooperator(ApeAstTokType_t tk)
 {
     switch(tk)
     {
@@ -3070,14 +3070,14 @@ error:
     return NULL;
 }
 
-ApeExpression_t* ape_ast_wrapexprinfunccall(ApeContext_t* ctx, ApeExpression_t* expr, const char* functionname)
+ApeAstExpression_t* ape_ast_wrapexprinfunccall(ApeContext_t* ctx, ApeAstExpression_t* expr, const char* functionname)
 {
     bool ok;
-    ApeExpression_t* callexpr;
-    ApeIdent_t* ident;
-    ApeExpression_t* functionidentexpr;
+    ApeAstExpression_t* callexpr;
+    ApeAstIdentExpr_t* ident;
+    ApeAstExpression_t* functionidentexpr;
     ApePtrArray_t* args;
-    ApeToken_t fntoken;
+    ApeAstToken_t fntoken;
     ape_lexer_token_init(&fntoken, TOKEN_VALIDENT, functionname, (int)strlen(functionname));
     fntoken.pos = expr->pos;
     ident = ape_ast_make_ident(ctx, fntoken);

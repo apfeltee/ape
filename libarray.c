@@ -402,7 +402,7 @@ ApeObject_t ape_object_make_array(ApeContext_t* ctx)
 
 ApeObject_t ape_object_make_arraycapacity(ApeContext_t* ctx, unsigned capacity)
 {
-    ApeObjData_t* data;
+    ApeGCObjData_t* data;
     if(capacity == 0)
     {
         capacity = 1;
@@ -516,7 +516,7 @@ bool ape_object_array_pushstring(ApeObject_t obj, const char* string)
 
 ApeValArray_t * ape_object_array_getarray(ApeObject_t object)
 {
-    ApeObjData_t* data;
+    ApeGCObjData_t* data;
     APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_ARRAY);
     data = ape_object_value_allocated_data(object);
     return data->valarray;

@@ -3,9 +3,9 @@
 #include "inline.h"
 
 
-static APE_INLINE ApeObjData_t* ape_object_make_primitive(ApeContext_t* ctx, ApeObjType_t type)
+static APE_INLINE ApeGCObjData_t* ape_object_make_primitive(ApeContext_t* ctx, ApeObjType_t type)
 {
-    ApeObjData_t* data;
+    ApeGCObjData_t* data;
     data = ape_gcmem_getfrompool(ctx->mem, type);
     if(!data)
     {
@@ -22,7 +22,7 @@ static APE_INLINE ApeObjData_t* ape_object_make_primitive(ApeContext_t* ctx, Ape
 
 ApeObject_t ape_object_make_number(ApeContext_t* ctx, ApeFloat_t val)
 {
-    ApeObjData_t* data;
+    ApeGCObjData_t* data;
     data = ape_object_make_primitive(ctx, APE_OBJECT_NUMBER);
     data->valnum = val;
     return object_make_from_data(ctx, data->datatype, data);
@@ -30,7 +30,7 @@ ApeObject_t ape_object_make_number(ApeContext_t* ctx, ApeFloat_t val)
 
 ApeObject_t ape_object_make_bool(ApeContext_t* ctx, bool val)
 {
-    ApeObjData_t* data;
+    ApeGCObjData_t* data;
     data = ape_object_make_primitive(ctx, APE_OBJECT_BOOL);
     data->valbool = val;
     return object_make_from_data(ctx, data->datatype, data);
@@ -38,14 +38,14 @@ ApeObject_t ape_object_make_bool(ApeContext_t* ctx, bool val)
 
 ApeObject_t ape_object_make_null(ApeContext_t* ctx)
 {
-    ApeObjData_t* data;
+    ApeGCObjData_t* data;
     data = ape_object_make_primitive(ctx, APE_OBJECT_NULL);
     return object_make_from_data(ctx, data->datatype, data);
 }
 
 ApeObject_t ape_object_make_external(ApeContext_t* ctx, void* ptr)
 {
-    ApeObjData_t* data;
+    ApeGCObjData_t* data;
     data = ape_gcmem_allocobjdata(ctx->mem, APE_OBJECT_EXTERNAL);
     if(!data)
     {
@@ -375,7 +375,7 @@ const char* ape_object_value_typename(const ApeObjType_t type)
 }
 
 
-void ape_object_data_deinit(ApeObjData_t* data)
+void ape_object_data_deinit(ApeGCObjData_t* data)
 {
     switch(data->datatype)
     {
@@ -548,7 +548,7 @@ ApeObject_t ape_object_getkvpairat(ApeContext_t* ctx, ApeObject_t object, int ix
     ApeObject_t res;
     ApeObject_t key_obj;
     ApeObject_t val_obj;
-    ApeObjData_t* data;
+    ApeGCObjData_t* data;
     APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_MAP);
     data = ape_object_value_allocated_data(object);
     if(ix >= (ApeInt_t)ape_valdict_count(data->valmap))
@@ -587,7 +587,7 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
     ApeScriptFunction_t* function_copy;
     ApeScriptFunction_t* function;
     ApePosition_t* src_positions_copy;
-    ApeCompResult_t* comp_res_copy;
+    ApeAstCompResult_t* comp_res_copy;
     ApeObject_t free_val;
     ApeObject_t free_val_copy;
     ApeObject_t item;

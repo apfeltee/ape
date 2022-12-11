@@ -197,7 +197,7 @@ void ape_context_dumpast(ApeContext_t* ctx, ApePtrArray_t* statements)
     ape_writer_destroy(strbuf);
 }
 
-void ape_context_dumpbytecode(ApeContext_t* ctx, ApeCompResult_t* cres)
+void ape_context_dumpbytecode(ApeContext_t* ctx, ApeAstCompResult_t* cres)
 {
     ApeWriter_t* strbuf;
     strbuf = ape_make_writerio(ctx, stdout, false, true);
@@ -211,7 +211,7 @@ ApeObject_t ape_context_executesource(ApeContext_t* ctx, const char* code, bool 
 {
     bool ok;
     ApeObject_t objres;
-    ApeCompResult_t* cres;
+    ApeAstCompResult_t* cres;
     if(alsoreset)
     {
         ape_context_resetstate(ctx);
@@ -252,7 +252,7 @@ ApeObject_t ape_context_executefile(ApeContext_t* ctx, const char* path)
 {
     bool ok;
     ApeObject_t objres;
-    ApeCompResult_t* cres;
+    ApeAstCompResult_t* cres;
     ape_context_resetstate(ctx);
     cres = ape_compiler_compilefile(ctx->compiler, path);
     if(!cres || ape_errorlist_count(&ctx->errors) > 0)

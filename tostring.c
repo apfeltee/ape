@@ -68,7 +68,7 @@ const char* ape_tostring_operator(ApeOperator_t op)
     return "operator_unknown";
 }
 
-const char* ape_tostring_exprtype(ApeExprType_t type)
+const char* ape_tostring_exprtype(ApeAstExprType_t type)
 {
     switch(type)
     {
@@ -202,11 +202,11 @@ bool ape_tostring_exprlist(ApeWriter_t* buf, ApePtrArray_t* statements)
 {
     ApeSize_t i;
     ApeSize_t count;
-    ApeExpression_t* stmt;
+    ApeAstExpression_t* stmt;
     count = ape_ptrarray_count(statements);
     for(i = 0; i < count; i++)
     {
-        stmt = (ApeExpression_t*)ape_ptrarray_get(statements, i);
+        stmt = (ApeAstExpression_t*)ape_ptrarray_get(statements, i);
         ape_tostring_expression(buf, stmt);
         if(i < (count - 1))
         {
@@ -216,21 +216,21 @@ bool ape_tostring_exprlist(ApeWriter_t* buf, ApePtrArray_t* statements)
     return true;
 }
 
-bool ape_tostring_expression(ApeWriter_t* buf, ApeExpression_t* expr)
+bool ape_tostring_expression(ApeWriter_t* buf, ApeAstExpression_t* expr)
 {
     ApeSize_t i;
     ApeFloat_t fltnum;
-    ApeExpression_t* arrexpr;
-    ApeMapLiteral_t* mapexpr;
-    ApeExpression_t* keyexpr;
-    ApeExpression_t* valexpr;
-    ApeFnLiteral_t* fnexpr;
-    ApeIdent_t* paramexpr;
-    ApeExpression_t* argexpr;
-    ApeCallExpr_t* callexpr;
-    ApeDefineStmt_t* defstmt;
-    ApeIfCase_t* ifcase;
-    ApeIfCase_t* elifcase;
+    ApeAstExpression_t* arrexpr;
+    ApeAstLiteralMapExpr_t* mapexpr;
+    ApeAstExpression_t* keyexpr;
+    ApeAstExpression_t* valexpr;
+    ApeAstLiteralFuncExpr_t* fnexpr;
+    ApeAstIdentExpr_t* paramexpr;
+    ApeAstExpression_t* argexpr;
+    ApeAstCallExpr_t* callexpr;
+    ApeAstDefineExpr_t* defstmt;
+    ApeAstIfCaseExpr_t* ifcase;
+    ApeAstIfCaseExpr_t* elifcase;
     switch(expr->extype)
     {
         case APE_EXPR_IDENT:
@@ -279,7 +279,7 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeExpression_t* expr)
                 ape_writer_append(buf, "[");
                 for(i = 0; i < ape_ptrarray_count(expr->exarray); i++)
                 {
-                    arrexpr = (ApeExpression_t*)ape_ptrarray_get(expr->exarray, i);
+                    arrexpr = (ApeAstExpression_t*)ape_ptrarray_get(expr->exarray, i);
                     ape_tostring_expression(buf, arrexpr);
                     if(i < (ape_ptrarray_count(expr->exarray) - 1))
                     {
@@ -295,8 +295,8 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeExpression_t* expr)
                 ape_writer_append(buf, "{");
                 for(i = 0; i < ape_ptrarray_count(mapexpr->keys); i++)
                 {
-                    keyexpr = (ApeExpression_t*)ape_ptrarray_get(mapexpr->keys, i);
-                    valexpr = (ApeExpression_t*)ape_ptrarray_get(mapexpr->values, i);
+                    keyexpr = (ApeAstExpression_t*)ape_ptrarray_get(mapexpr->keys, i);
+                    valexpr = (ApeAstExpression_t*)ape_ptrarray_get(mapexpr->values, i);
                     ape_tostring_expression(buf, keyexpr);
                     ape_writer_append(buf, " : ");
                     ape_tostring_expression(buf, valexpr);
@@ -334,7 +334,7 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeExpression_t* expr)
                 ape_writer_append(buf, "(");
                 for(i = 0; i < ape_ptrarray_count(fnexpr->params); i++)
                 {
-                    paramexpr = (ApeIdent_t*)ape_ptrarray_get(fnexpr->params, i);
+                    paramexpr = (ApeAstIdentExpr_t*)ape_ptrarray_get(fnexpr->params, i);
                     ape_writer_append(buf, paramexpr->value);
                     if(i < (ape_ptrarray_count(fnexpr->params) - 1))
                     {
@@ -352,7 +352,7 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeExpression_t* expr)
                 ape_writer_append(buf, "(");
                 for(i = 0; i < ape_ptrarray_count(callexpr->args); i++)
                 {
-                    argexpr = (ApeExpression_t*)ape_ptrarray_get(callexpr->args, i);
+                    argexpr = (ApeAstExpression_t*)ape_ptrarray_get(callexpr->args, i);
                     ape_tostring_expression(buf, argexpr);
                     if(i < (ape_ptrarray_count(callexpr->args) - 1))
                     {
@@ -417,14 +417,14 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeExpression_t* expr)
             break;
         case APE_EXPR_IF:
             {
-                ifcase = (ApeIfCase_t*)ape_ptrarray_get(expr->exifstmt.cases, 0);
+                ifcase = (ApeAstIfCaseExpr_t*)ape_ptrarray_get(expr->exifstmt.cases, 0);
                 ape_writer_append(buf, "if (");
                 ape_tostring_expression(buf, ifcase->test);
                 ape_writer_append(buf, ") ");
                 ape_tostring_codeblock(buf, ifcase->consequence);
                 for(i = 1; i < ape_ptrarray_count(expr->exifstmt.cases); i++)
                 {
-                    elifcase = (ApeIfCase_t*)ape_ptrarray_get(expr->exifstmt.cases, i);
+                    elifcase = (ApeAstIfCaseExpr_t*)ape_ptrarray_get(expr->exifstmt.cases, i);
                     ape_writer_append(buf, " elif (");
                     ape_tostring_expression(buf, elifcase->test);
                     ape_writer_append(buf, ") ");
@@ -536,15 +536,15 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeExpression_t* expr)
     return true;
 }
 
-bool ape_tostring_codeblock(ApeWriter_t* buf, ApeCodeblock_t* stmt)
+bool ape_tostring_codeblock(ApeWriter_t* buf, ApeAstBlockExpr_t* stmt)
 {
     bool ok;
     ApeSize_t i;
-    ApeExpression_t* istmt;
+    ApeAstExpression_t* istmt;
     ape_writer_append(buf, "{ ");
     for(i = 0; i < ape_ptrarray_count(stmt->statements); i++)
     {
-        istmt = (ApeExpression_t*)ape_ptrarray_get(stmt->statements, i);
+        istmt = (ApeAstExpression_t*)ape_ptrarray_get(stmt->statements, i);
         ok = ape_tostring_expression(buf, istmt);
         ape_writer_append(buf, "\n");
         if(!ok)
@@ -556,7 +556,7 @@ bool ape_tostring_codeblock(ApeWriter_t* buf, ApeCodeblock_t* stmt)
     return true;
 }
 
-bool ape_tostring_compresult(ApeWriter_t* buf, ApeCompResult_t* res, bool sparse)
+bool ape_tostring_compresult(ApeWriter_t* buf, ApeAstCompResult_t* res, bool sparse)
 {
     return ape_tostring_bytecode(buf, res->bytecode, res->srcpositions, res->count, sparse);
 }
@@ -662,7 +662,7 @@ bool ape_tostring_bytecode(ApeWriter_t* buf, ApeUShort_t* code, ApePosition_t* s
 }
 
 
-const char* ape_tostring_tokentype(ApeTokenType_t type)
+const char* ape_tostring_tokentype(ApeAstTokType_t type)
 {
     return g_type_names[type];
 }
