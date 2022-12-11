@@ -24,18 +24,34 @@ static APE_INLINE ApeGCObjData_t* ape_object_make_primitive(ApeContext_t* ctx, A
 
 ApeObject_t ape_object_make_number(ApeContext_t* ctx, ApeFloat_t val)
 {
-    ApeGCObjData_t* data;
-    data = ape_object_make_primitive(ctx, APE_OBJECT_NUMBER);
-    data->valnum = val;
-    return object_make_from_data(ctx, data->datatype, data);
+    #if 0
+        ApeGCObjData_t* data;
+        data = ape_object_make_primitive(ctx, APE_OBJECT_NUMBER);
+        data->valnum = val;
+        return object_make_from_data(ctx, data->datatype, data);
+    #else
+        ApeObject_t rt;
+        rt.handle = NULL;
+        rt.type = APE_OBJECT_NUMBER;
+        rt.valnum = val;
+        return rt;
+    #endif
 }
 
 ApeObject_t ape_object_make_bool(ApeContext_t* ctx, bool val)
 {
-    ApeGCObjData_t* data;
-    data = ape_object_make_primitive(ctx, APE_OBJECT_BOOL);
-    data->valbool = val;
-    return object_make_from_data(ctx, data->datatype, data);
+    #if 0
+        ApeGCObjData_t* data;
+        data = ape_object_make_primitive(ctx, APE_OBJECT_BOOL);
+        data->valbool = val;
+        return object_make_from_data(ctx, data->datatype, data);
+    #else
+        ApeObject_t rt;
+        rt.handle = NULL;
+        rt.type = APE_OBJECT_BOOL;
+        rt.valbool = val;
+        return rt;
+    #endif
 }
 
 ApeObject_t ape_object_make_null(ApeContext_t* ctx)
@@ -46,8 +62,9 @@ ApeObject_t ape_object_make_null(ApeContext_t* ctx)
         return object_make_from_data(ctx, data->datatype, data);
     #else
         ApeObject_t rt;
-        rt.type = APE_OBJECT_NULL;
         rt.handle = NULL;
+        rt.type = APE_OBJECT_NULL;
+        rt.valnull = NULL;
         return rt;
     #endif
 }
@@ -1171,9 +1188,12 @@ ApeFloat_t ape_object_value_compare(ApeObject_t a, ApeObject_t b, bool* out_ok)
     ApeFloat_t rightval;
     ApeObjType_t a_type;
     ApeObjType_t b_type;
-    if(a.handle == b.handle)
+    if((a.handle != NULL) && (b.handle != NULL))
     {
-        return 0;
+        if(a.handle == b.handle)
+        {
+            return 0;
+        }
     }
     *out_ok = true;
     a_type = ape_object_value_type(a);

@@ -443,11 +443,13 @@ void ape_gcmem_markobject(ApeObject_t obj)
                 val = ape_object_map_getvalueat(obj, i);
                 if(ape_object_value_isallocated(val))
                 {
-
                     val_data = ape_object_value_allocated_data(val);
-                    if(!val_data->gcmark)
+                    if(val_data != NULL)
                     {
-                        ape_gcmem_markobject(val);
+                        if(!val_data->gcmark)
+                        {
+                            ape_gcmem_markobject(val);
+                        }
                     }
                 }
             }
@@ -462,7 +464,7 @@ void ape_gcmem_markobject(ApeObject_t obj)
                     if(ape_object_value_isallocated(val))
                     {
                         val_data = ape_object_value_allocated_data(val);
-                        if(val_data)
+                        if(val_data != NULL)
                         {
                             if(!val_data->gcmark)
                             {

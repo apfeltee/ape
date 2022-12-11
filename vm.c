@@ -2589,7 +2589,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                     valdouble = val;
                     #endif
                     objval = ape_object_make_number(vm->context, valdouble);
-                    objval.handle->datatype = APE_OBJECT_NUMBER;
+                    //objval.handle->datatype = APE_OBJECT_NUMBER;
                     ape_vm_pushstack(vm, objval);
                 }
                 break;

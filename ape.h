@@ -160,8 +160,23 @@ THE SOFTWARE.
 
 
 /**/
-#define ape_object_value_type(obj) \
-    (((obj).handle == NULL) ? APE_OBJECT_NULL : ((ApeObjType_t)((obj).handle->datatype)))
+#if 0
+    #define ape_object_value_type(obj) \
+        (((obj).handle == NULL) ? APE_OBJECT_NULL : ((ApeObjType_t)((obj).handle->datatype)))
+#else
+    #if 0
+        #define ape_object_value_type(obj) \
+            ( \
+                ((obj).handle == NULL) ? \
+                ((obj).type) : \
+                ((ApeObjType_t)((obj).handle->datatype)) \
+            )
+    #else
+        #define ape_object_value_type(obj) \
+            (obj).type
+    #endif
+#endif
+
 
 #define ape_object_value_istype(o, t) \
     (ape_object_value_type(o) == (t))
@@ -208,11 +223,19 @@ THE SOFTWARE.
 #define ape_object_value_isallocated(o) \
     (true)
 
-#define ape_object_value_asnumber(obj) \
-    (ape_object_value_allocated_data((obj))->valnum)
+#if 0
+    #define ape_object_value_asnumber(obj) \
+        (ape_object_value_allocated_data((obj))->valnum)
 
-#define ape_object_value_asbool(obj) \
-    (ape_object_value_allocated_data((obj))->valbool)
+    #define ape_object_value_asbool(obj) \
+        (ape_object_value_allocated_data((obj))->valbool)
+#else
+    #define ape_object_value_asnumber(obj) \
+        ((obj).valnum)
+
+    #define ape_object_value_asbool(obj) \
+        ((obj).valbool)
+#endif
 
 #define ape_object_value_asfunction(obj) \
     (&(ape_object_value_allocated_data((obj))->valscriptfunc))
@@ -722,7 +745,32 @@ struct ApeNativeFuncWrapper_t
 struct ApeObject_t
 {
     ApeObjType_t  type;
+    union
+    {
+        bool valbool;
+        ApeFloat_t valnum;
+        /* technically redundant, but regrettably needed for some tools. always NULL. */
+        void* valnull;
+    };
     ApeGCObjData_t* handle;
+};
+
+struct ApeGCObjData_t
+{
+    ApeContext_t*  context;
+    ApeGCMemory_t* mem;
+    union
+    {
+        ApeObjString_t      valstring;
+        ApeObjError_t       valerror;
+        ApeValArray_t*      valarray;
+        ApeValDict_t*       valmap;
+        ApeScriptFunction_t valscriptfunc;
+        ApeNativeFunction_t valnatfunc;
+        ApeExternalData_t   valextern;
+    };
+    bool         gcmark;
+    ApeObjType_t datatype;
 };
 
 struct ApePosition_t
@@ -1155,26 +1203,6 @@ struct ApeGlobalStore_t
     ApeContext_t*  context;
     ApeStrDict_t*  symbols;
     ApeValArray_t* objects;
-};
-
-struct ApeGCObjData_t
-{
-    ApeContext_t*  context;
-    ApeGCMemory_t* mem;
-    union
-    {
-        bool                valbool;
-        ApeFloat_t          valnum;
-        ApeObjString_t      valstring;
-        ApeObjError_t       valerror;
-        ApeValArray_t*      valarray;
-        ApeValDict_t*       valmap;
-        ApeScriptFunction_t valscriptfunc;
-        ApeNativeFunction_t valnatfunc;
-        ApeExternalData_t   valextern;
-    };
-    bool         gcmark;
-    ApeObjType_t datatype;
 };
 
 struct ApeFrame_t
