@@ -659,36 +659,6 @@ bool ape_strdict_setinternal(ApeStrDict_t* dict, const char* ckey, char* mkey, v
     return true;
 }
 
-ApeObject_t ape_object_make_map(ApeContext_t* ctx)
-{
-    return ape_object_make_mapcapacity(ctx, APE_CONF_MAP_INITIAL_CAPACITY);
-}
-
-ApeObject_t ape_object_make_mapcapacity(ApeContext_t* ctx, unsigned capacity)
-{
-    ApeGCObjData_t* data;
-    data = ape_gcmem_getfrompool(ctx->vm->mem, APE_OBJECT_MAP);
-    if(data)
-    {
-        ape_valdict_clear(data->valmap);
-        return object_make_from_data(ctx, APE_OBJECT_MAP, data);
-    }
-    data = ape_gcmem_allocobjdata(ctx->vm->mem, APE_OBJECT_MAP);
-    if(!data)
-    {
-        return ape_object_make_null(ctx);
-    }
-    data->valmap = ape_make_valdictcapacity(ctx, capacity, sizeof(ApeObject_t), sizeof(ApeObject_t));
-    if(!data->valmap)
-    {
-        return ape_object_make_null(ctx);
-    }
-    ape_valdict_sethashfunction(data->valmap, (ApeDataHashFunc_t)ape_object_value_hash);
-    ape_valdict_setequalsfunction(data->valmap, (ApeDataEqualsFunc_t)ape_object_value_wrapequals);
-    return object_make_from_data(ctx, APE_OBJECT_MAP, data);
-}
-
-
 ApeSize_t ape_object_map_getlength(ApeObject_t object)
 {
     ApeGCObjData_t* data;

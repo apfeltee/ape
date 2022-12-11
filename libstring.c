@@ -1,56 +1,6 @@
 
 #include "inline.h"
 
-ApeObject_t ape_object_make_stringlen(ApeContext_t* ctx, const char* string, ApeSize_t len)
-{
-    bool ok;
-    ApeObject_t res;
-    res = ape_object_make_stringcapacity(ctx, len);
-    if(ape_object_value_isnull(res))
-    {
-        return res;
-    }
-    ok = ape_object_string_append(res, string, len);
-    if(!ok)
-    {
-        return ape_object_make_null(ctx);
-    }
-    return res;
-}
-
-ApeObject_t ape_object_make_string(ApeContext_t* ctx, const char* string)
-{
-    return ape_object_make_stringlen(ctx, string, strlen(string));
-}
-
-ApeObject_t ape_object_make_stringcapacity(ApeContext_t* ctx, ApeSize_t capacity)
-{
-    bool ok;
-    ApeGCObjData_t* data;
-    data = ape_gcmem_getfrompool(ctx->mem, APE_OBJECT_STRING);
-    if(!data)
-    {
-        data = ape_gcmem_allocobjdata(ctx->mem, APE_OBJECT_STRING);
-        if(!data)
-        {
-            return ape_object_make_null(ctx);
-        }
-        data->valstring.capacity = APE_CONF_SIZE_STRING_BUFSIZE - 1;
-        data->valstring.is_allocated = false;
-    }
-    data->valstring.length = 0;
-    data->valstring.hash = 0;
-    if(capacity > data->valstring.capacity)
-    {
-        ok = ape_object_string_reservecapacity(data, capacity);
-        if(!ok)
-        {
-            return ape_object_make_null(ctx);
-        }
-    }
-    return object_make_from_data(ctx, APE_OBJECT_STRING, data);
-}
-
 const char* ape_object_string_getdata(ApeObject_t object)
 {
     ApeGCObjData_t* data;

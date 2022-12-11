@@ -3,6 +3,31 @@
 
 static const ApePosition_t g_mempriv_srcposinvalid = { NULL, -1, -1 };
 
+void poolput(ApeGCObjPool_t* pool, ApeSize_t idx, ApeGCObjData_t* data)
+{
+    #if 0
+    if(idx > da_size(pool->datapool))
+    {
+        da_push(pool->datapool, data);
+    }
+    else
+    {
+        pool->datapool[idx] = data;
+    }
+    #else
+        pool->datapool[idx] = data;
+    #endif
+}
+
+ApeGCObjData_t* poolget(ApeGCObjPool_t* pool, ApeSize_t idx)
+{
+    #if 0
+    
+    #else
+        return pool->datapool[idx];
+    #endif
+}
+
 void* ape_mem_defaultmalloc(void* opaqptr, size_t size)
 {
     void* resptr;
@@ -136,7 +161,7 @@ void ape_gcmem_destroy(ApeGCMemory_t* mem)
         pool = &mem->pools[i];
         for(j = 0; j < pool->count; j++)
         {
-            data = pool->datapool[j];
+            data = poolget(pool, j);
             ape_object_data_deinit(data);
             ape_allocator_free(mem->alloc, data);
         }
@@ -144,7 +169,7 @@ void ape_gcmem_destroy(ApeGCMemory_t* mem)
     }
     for(i = 0; i < mem->data_only_pool.count; i++)
     {
-        ape_allocator_free(mem->alloc, mem->data_only_pool.datapool[i]);
+        ape_allocator_free(mem->alloc, poolget(&mem->data_only_pool, i));
     }
     ape_allocator_free(mem->alloc, mem);
 }
@@ -157,7 +182,7 @@ ApeGCObjData_t* ape_gcmem_allocobjdata(ApeGCMemory_t* mem, ApeObjType_t type)
     mem->allocations_since_sweep++;
     if(mem->data_only_pool.count > 0)
     {
-        data = mem->data_only_pool.datapool[mem->data_only_pool.count - 1];
+        data = poolget(&mem->data_only_pool, mem->data_only_pool.count - 1);
         mem->data_only_pool.count--;
     }
     else
@@ -265,7 +290,7 @@ ApeGCObjData_t* ape_gcmem_getfrompool(ApeGCMemory_t* mem, ApeObjType_t type)
     {
         return NULL;
     }
-    data = pool->datapool[pool->count - 1];
+    data = poolget(pool, pool->count - 1);
     APE_ASSERT(da_count(mem->backobjects) >= da_count(mem->frontobjects));
     /*
     // we want to make sure that appending to backobjects never fails in sweep
@@ -425,7 +450,7 @@ void ape_gcmem_sweep(ApeGCMemory_t* mem)
             if(ape_gcmem_canputinpool(mem, data))
             {
                 pool = ape_gcmem_getpoolfor(mem, (ApeObjType_t)data->datatype);
-                pool->datapool[pool->count] = data;
+                poolput(pool, pool->count, data);
                 pool->count++;
             }
             else
@@ -433,7 +458,7 @@ void ape_gcmem_sweep(ApeGCMemory_t* mem)
                 ape_object_data_deinit(data);
                 if(mem->data_only_pool.count < APE_CONF_SIZE_GCMEM_POOLSIZE)
                 {
-                    mem->data_only_pool.datapool[mem->data_only_pool.count] = data;
+                    poolput(&mem->data_only_pool, mem->data_only_pool.count, data);
                     mem->data_only_pool.count++;
                 }
                 else

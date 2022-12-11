@@ -43,6 +43,182 @@ ApeObject_t ape_object_make_null(ApeContext_t* ctx)
     return object_make_from_data(ctx, data->datatype, data);
 }
 
+ApeObject_t ape_object_make_stringlen(ApeContext_t* ctx, const char* string, ApeSize_t len)
+{
+    bool ok;
+    ApeObject_t res;
+    res = ape_object_make_stringcapacity(ctx, len);
+    if(ape_object_value_isnull(res))
+    {
+        return res;
+    }
+    ok = ape_object_string_append(res, string, len);
+    if(!ok)
+    {
+        return ape_object_make_null(ctx);
+    }
+    return res;
+}
+
+ApeObject_t ape_object_make_string(ApeContext_t* ctx, const char* string)
+{
+    return ape_object_make_stringlen(ctx, string, strlen(string));
+}
+
+ApeObject_t ape_object_make_stringcapacity(ApeContext_t* ctx, ApeSize_t capacity)
+{
+    bool ok;
+    ApeGCObjData_t* data;
+    data = ape_gcmem_getfrompool(ctx->mem, APE_OBJECT_STRING);
+    if(!data)
+    {
+        data = ape_gcmem_allocobjdata(ctx->mem, APE_OBJECT_STRING);
+        if(!data)
+        {
+            return ape_object_make_null(ctx);
+        }
+        data->valstring.capacity = APE_CONF_SIZE_STRING_BUFSIZE - 1;
+        data->valstring.is_allocated = false;
+    }
+    data->valstring.length = 0;
+    data->valstring.hash = 0;
+    if(capacity > data->valstring.capacity)
+    {
+        ok = ape_object_string_reservecapacity(data, capacity);
+        if(!ok)
+        {
+            return ape_object_make_null(ctx);
+        }
+    }
+    return object_make_from_data(ctx, APE_OBJECT_STRING, data);
+}
+
+ApeObject_t ape_object_make_array(ApeContext_t* ctx)
+{
+    return ape_object_make_arraycapacity(ctx, 8);
+}
+
+ApeObject_t ape_object_make_arraycapacity(ApeContext_t* ctx, unsigned capacity)
+{
+    ApeGCObjData_t* data;
+    if(capacity == 0)
+    {
+        capacity = 1;
+    }
+    data = ape_gcmem_getfrompool(ctx->vm->mem, APE_OBJECT_ARRAY);
+    if(data)
+    {
+        ape_valarray_clear(data->valarray);
+        return object_make_from_data(ctx, APE_OBJECT_ARRAY, data);
+    }
+    data = ape_gcmem_allocobjdata(ctx->vm->mem, APE_OBJECT_ARRAY);
+    if(!data)
+    {
+        return ape_object_make_null(ctx);
+    }
+    data->valarray = ape_make_valarraycapacity(ctx, capacity, sizeof(ApeObject_t));
+    if(!data->valarray)
+    {
+        return ape_object_make_null(ctx);
+    }
+    return object_make_from_data(ctx, APE_OBJECT_ARRAY, data);
+}
+
+ApeObject_t ape_object_make_map(ApeContext_t* ctx)
+{
+    return ape_object_make_mapcapacity(ctx, APE_CONF_MAP_INITIAL_CAPACITY);
+}
+
+ApeObject_t ape_object_make_mapcapacity(ApeContext_t* ctx, unsigned capacity)
+{
+    ApeGCObjData_t* data;
+    data = ape_gcmem_getfrompool(ctx->vm->mem, APE_OBJECT_MAP);
+    if(data)
+    {
+        ape_valdict_clear(data->valmap);
+        return object_make_from_data(ctx, APE_OBJECT_MAP, data);
+    }
+    data = ape_gcmem_allocobjdata(ctx->vm->mem, APE_OBJECT_MAP);
+    if(!data)
+    {
+        return ape_object_make_null(ctx);
+    }
+    data->valmap = ape_make_valdictcapacity(ctx, capacity, sizeof(ApeObject_t), sizeof(ApeObject_t));
+    if(!data->valmap)
+    {
+        return ape_object_make_null(ctx);
+    }
+    ape_valdict_sethashfunction(data->valmap, (ApeDataHashFunc_t)ape_object_value_hash);
+    ape_valdict_setequalsfunction(data->valmap, (ApeDataEqualsFunc_t)ape_object_value_wrapequals);
+    return object_make_from_data(ctx, APE_OBJECT_MAP, data);
+}
+
+ApeObject_t ape_object_make_function(ApeContext_t* ctx, const char* name, ApeAstCompResult_t* cres, bool wdata, ApeInt_t nloc, ApeInt_t nargs, ApeSize_t fvcount)
+{
+    ApeGCObjData_t* data;
+    data = ape_gcmem_allocobjdata(ctx->mem, APE_OBJECT_SCRIPTFUNCTION);
+    if(!data)
+    {
+        return ape_object_make_null(ctx);
+    }
+    if(wdata)
+    {
+        data->valscriptfunc.name = name ? ape_util_strdup(ctx, name) : ape_util_strdup(ctx, "anonymous");
+        if(!data->valscriptfunc.name)
+        {
+            return ape_object_make_null(ctx);
+        }
+    }
+    else
+    {
+        data->valscriptfunc.const_name = name ? name : "anonymous";
+    }
+    data->valscriptfunc.compiledcode = cres;
+    data->valscriptfunc.owns_data = wdata;
+    data->valscriptfunc.numlocals = nloc;
+    data->valscriptfunc.numargs = nargs;
+    if(((ApeInt_t)fvcount) >= 0)
+    {
+        data->valscriptfunc.freevals = (ApeObject_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeObject_t) * fvcount);
+        if(!data->valscriptfunc.freevals)
+        {
+            return ape_object_make_null(ctx);
+        }
+    }
+    data->valscriptfunc.numfreevals = fvcount;
+    return object_make_from_data(ctx, APE_OBJECT_SCRIPTFUNCTION, data);
+}
+
+ApeObject_t ape_object_make_nativefuncmemory(ApeContext_t* ctx, const char* name, ApeNativeFuncPtr_t fn, void* data, ApeSize_t dlen)
+{
+    ApeGCObjData_t* obj;
+    if(dlen > APE_CONF_SIZE_NATFN_MAXDATALEN)
+    {
+        return ape_object_make_null(ctx);
+    }
+    obj = ape_gcmem_allocobjdata(ctx->mem, APE_OBJECT_NATIVEFUNCTION);
+    if(!obj)
+    {
+        return ape_object_make_null(ctx);
+    }
+    obj->valnatfunc.name = ape_util_strdup(ctx, name);
+    if(!obj->valnatfunc.name)
+    {
+        return ape_object_make_null(ctx);
+    }
+    obj->valnatfunc.nativefnptr = fn;
+    if(data)
+    {
+        #if 0
+        memcpy(obj->valnatfunc.data, data, dlen);
+        #else
+        obj->valnatfunc.dataptr = data;
+        #endif
+    }
+    obj->valnatfunc.datalen = dlen;
+    return object_make_from_data(ctx, APE_OBJECT_NATIVEFUNCTION, obj);
+}
+
 ApeObject_t ape_object_make_external(ApeContext_t* ctx, void* ptr)
 {
     ApeGCObjData_t* data;

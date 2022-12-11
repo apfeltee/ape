@@ -395,38 +395,6 @@ void ape_ptrarray_clearanddestroyitems(ApePtrArray_t* arr, ApeDataCallback_t des
     ape_ptrarray_clear(arr);
 }
 
-ApeObject_t ape_object_make_array(ApeContext_t* ctx)
-{
-    return ape_object_make_arraycapacity(ctx, 8);
-}
-
-ApeObject_t ape_object_make_arraycapacity(ApeContext_t* ctx, unsigned capacity)
-{
-    ApeGCObjData_t* data;
-    if(capacity == 0)
-    {
-        capacity = 1;
-    }
-    data = ape_gcmem_getfrompool(ctx->vm->mem, APE_OBJECT_ARRAY);
-    if(data)
-    {
-        ape_valarray_clear(data->valarray);
-        return object_make_from_data(ctx, APE_OBJECT_ARRAY, data);
-    }
-    data = ape_gcmem_allocobjdata(ctx->vm->mem, APE_OBJECT_ARRAY);
-    if(!data)
-    {
-        return ape_object_make_null(ctx);
-    }
-    data->valarray = ape_make_valarraycapacity(ctx, capacity, sizeof(ApeObject_t));
-    if(!data->valarray)
-    {
-        return ape_object_make_null(ctx);
-    }
-    return object_make_from_data(ctx, APE_OBJECT_ARRAY, data);
-}
-
-
 ApeObject_t ape_object_array_getvalue(ApeObject_t object, ApeSize_t ix)
 {
     ApeObject_t* res;
