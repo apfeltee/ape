@@ -1332,8 +1332,6 @@ bool ape_vm_tryoverloadoperator(ApeVM_t* vm, ApeObject_t left, ApeObject_t right
         vm->overloadkeys[op] = key_obj;             \
     } while(0)
 
-#define USE_DYNAMIC_FRAMES 1
-
 ApeVM_t* ape_make_vm(ApeContext_t* ctx, const ApeConfig_t* config, ApeGCMemory_t* mem, ApeErrorList_t* errors, ApeGlobalStore_t* global_store)
 {
     ApeSize_t i;
@@ -1358,12 +1356,9 @@ ApeVM_t* ape_make_vm(ApeContext_t* ctx, const ApeConfig_t* config, ApeGCMemory_t
     vm->globalobjects = ape_make_valdict(ctx, ApeSize_t, ApeObject_t);
     vm->stackobjects = ape_make_valdict(ctx, ApeSize_t, ApeObject_t);
     vm->lastframe = NULL;
-    #if (USE_DYNAMIC_FRAMES == 0)
-        vm->frameobjects = (ApeFrame_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeFrame_t));
-    #else
-        //vm->frameobjects = da_make(vm->frameobjects, APE_CONF_SIZE_MAXFRAMES, sizeof(ApeFrame_t));
-        vm->frameobjects = da_make(vm->frameobjects, 2, sizeof(ApeFrame_t*));
-    #endif
+    //vm->frameobjects = da_make(vm->frameobjects, APE_CONF_SIZE_MAXFRAMES, sizeof(ApeFrame_t));
+    //vm->frameobjects = da_make(vm->frameobjects, 2, sizeof(ApeFrame_t*));
+    vm->frameobjects = deqlist_create_empty();
     for(i = 0; i < APE_OPCODE_MAX; i++)
     {
         vm->overloadkeys[i] = ape_object_make_null(ctx);
@@ -1404,28 +1399,23 @@ void ape_vm_destroy(ApeVM_t* vm)
     ctx = vm->context;
     ape_valdict_destroy(vm->globalobjects);
     ape_valdict_destroy(vm->stackobjects);
-    #if (USE_DYNAMIC_FRAMES == 0)
-        ape_allocator_free(&ctx->alloc, vm->frameobjects);
-    #else
-        fprintf(stderr, "da_count(vm->frameobjects)=%d\n", da_count(vm->frameobjects));
-        if(da_count(vm->frameobjects) != 0)
+    fprintf(stderr, "da_count(vm->frameobjects)=%d\n", deqlist_count(vm->frameobjects));
+    if(deqlist_count(vm->frameobjects) != 0)
+    {
+        while(deqlist_count(vm->frameobjects) != 0)
         {
-            while(da_count(vm->frameobjects) != 0)
+            popped = deqlist_get(vm->frameobjects, deqlist_count(vm->frameobjects)-1);
+            if(popped != NULL)
             {
-                //popped = da_pop(vm->frameobjects);
-                popped = vm->frameobjects[da_count(vm->frameobjects) - 1];
-                da_pop(vm->frameobjects);
-                if(popped != NULL)
+                if(popped->allocated)
                 {
-                    if(popped->allocated)
-                    {
-                        ape_allocator_free(&vm->context->alloc, popped);
-                    }
+                    ape_allocator_free(&vm->context->alloc, popped);
                 }
             }
+            deqlist_pop(&vm->frameobjects);
         }
-        da_destroy(vm->frameobjects);
-    #endif
+    }
+    deqlist_destroy(vm->frameobjects);
     ape_allocator_free(&ctx->alloc, vm);
 }
 
@@ -1489,38 +1479,19 @@ bool ape_vm_pushframe(ApeVM_t* vm, ApeFrame_t frame)
     ApeFrame_t* pf;
     ApeFrame_t* tmp;
     ApeScriptFunction_t* fn;
-    #if (USE_DYNAMIC_FRAMES == 0)
-        if(vm->countframes >= APE_CONF_SIZE_MAXFRAMES)
-        {
-            APE_ASSERT(false);
-            return false;
-        }
-        vm->frameobjects[vm->countframes] = frame;
-        vm->currentframe = &vm->frameobjects[vm->countframes];
-    #else
-        if(vm->countframes >= da_count(vm->frameobjects))
-        {
-            pf = ape_frame_copyalloc(vm, &frame);
-            da_push(vm->frameobjects, pf);
-        }
-        else
-        {
-            /*
-            tmp = vm->frameobjects[vm->countframes];
-            if(tmp != NULL)
-            {
-                ape_allocator_free(&vm->context->alloc, tmp);
-            }
-            else
-            {
-                vm->frameobjects[vm->countframes] = pf;
-            }
-            */
-            pf = ape_frame_update(vm, vm->frameobjects[vm->countframes], &frame);
-        }
-        vm->lastframe = pf;
-        vm->currentframe = vm->frameobjects[vm->countframes];
-    #endif
+    if(vm->countframes >= deqlist_count(vm->frameobjects))
+    {
+        pf = ape_frame_copyalloc(vm, &frame);
+        deqlist_push(&vm->frameobjects, pf);
+    }
+    else
+    {
+        tmp = deqlist_get(vm->frameobjects, vm->countframes);
+        pf = ape_frame_update(vm, tmp, &frame);
+        deqlist_set(vm->frameobjects, vm->countframes, pf);
+    }
+    vm->lastframe = pf;
+    vm->currentframe = deqlist_get(vm->frameobjects, vm->countframes);
     vm->countframes++;
     fn = ape_object_value_asfunction(frame.function);
     ape_vm_setstackpointer(vm, frame.basepointer + fn->numlocals);
@@ -1543,15 +1514,11 @@ bool ape_vm_popframe(ApeVM_t* vm)
         vm->currentframe = NULL;
         return false;
     }
-    #if (USE_DYNAMIC_FRAMES == 0)
-        vm->currentframe = &vm->frameobjects[vm->countframes - 1];
-    #else
-        //popped = da_pop(vm->frameobjects);
-        popped = vm->frameobjects[vm->countframes];
-        //da_pop(vm->frameobjects);
-        //ape_allocator_free(&vm->context->alloc, popped);
-        vm->currentframe = vm->frameobjects[vm->countframes - 1];
-    #endif
+    //popped = da_pop(vm->frameobjects);
+    popped = deqlist_get(vm->frameobjects, vm->countframes);
+    //da_pop(vm->frameobjects);
+    //ape_allocator_free(&vm->context->alloc, popped);
+    vm->currentframe = deqlist_get(vm->frameobjects, vm->countframes - 1);
     return true;
 }
 
@@ -1568,11 +1535,7 @@ void ape_vm_collectgarbage(ApeVM_t* vm, ApeValArray_t* constants, bool alsostack
     ape_gcmem_markobjlist((ApeObject_t*)(vm->globalobjects->values), vm->globalobjects->count);
     for(i = 0; i < vm->countframes; i++)
     {
-        #if (USE_DYNAMIC_FRAMES == 0)
-            frame = &vm->frameobjects[i];        
-        #else
-            frame = vm->frameobjects[i];
-        #endif
+        frame = deqlist_get(vm->frameobjects, i);
         ape_gcmem_markobject(frame->function);
     }
     if(alsostack)
@@ -2716,11 +2679,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                 recover_frame_ix = -1;
                 for(ui = vm->countframes - 1; ui >= 0; ui--)
                 {
-                    #if (USE_DYNAMIC_FRAMES == 0)
-                        frame = &vm->frameobjects[ui];
-                    #else
-                        frame = vm->frameobjects[ui];
-                    #endif
+                    frame = deqlist_get(vm->frameobjects, ui);
                     if(frame->recoverip >= 0 && !frame->isrecovering)
                     {
                         recover_frame_ix = ui;

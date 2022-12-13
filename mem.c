@@ -1,7 +1,7 @@
 
 #include "inline.h"
 
-#define USE_DYNAMIC_POOL 0
+#define USE_DYNAMIC_POOL 1
 
 #define APE_ACTUAL_POOLSIZE (APE_CONF_SIZE_GCMEM_POOLSIZE)
 
@@ -10,7 +10,6 @@ struct ApeGCObjPool_t
     #if USE_DYNAMIC_POOL
         DequeList_t* datapool;
     #else
-        //ApeGCObjData_t* datapool[APE_CONF_SIZE_GCMEM_POOLSIZE];
         ApeGCObjData_t** datapool;
     #endif
     ApeSize_t     count;
@@ -39,7 +38,6 @@ void poolinit(ApeContext_t* ctx, ApeGCObjPool_t* pool)
     pool->count = 0;
     //memset(pool, 0, sizeof(ApeGCObjPool_t));
     #if USE_DYNAMIC_POOL
-        //pool->datapool = da_make(pool->datapool, 1, sizeof(ApeGCObjData_t*));
         pool->datapool = deqlist_create_empty();
     #else
         //pool->datapool = ape_allocator_alloc(&ctx->alloc, howmuch+1);
@@ -54,8 +52,7 @@ void poolinit(ApeContext_t* ctx, ApeGCObjPool_t* pool)
 void pooldestroy(ApeContext_t* ctx, ApeGCObjPool_t* pool)
 {
     #if USE_DYNAMIC_POOL
-        //da_destroy(pool->datapool);
-        
+        deqlist_destroy(pool->datapool);
     #else
         ape_allocator_free(&ctx->alloc, pool->datapool);
     #endif
@@ -65,15 +62,12 @@ void poolput(ApeGCObjPool_t* pool, ApeInt_t idx, ApeGCObjData_t* data)
 {
     //fprintf(stderr, "poolput: idx=%d\n", idx);
     #if USE_DYNAMIC_POOL
-        if(idx > deqlist_len(pool->datapool))
+        if(idx >= deqlist_len(pool->datapool))
         {
-            //da_push(pool->datapool, data);
             deqlist_push(&pool->datapool, data);
-            
         }
         else
         {
-            //pool->datapool[idx] = data;
             deqlist_set(pool->datapool, idx, data);
         }
     #else
@@ -86,9 +80,9 @@ ApeGCObjData_t* poolget(ApeGCObjPool_t* pool, ApeInt_t idx)
     //fprintf(stderr, "poolget: idx=%d\n", idx);
     #if USE_DYNAMIC_POOL
         //return pool->datapool[idx];
-        if(idx >= deqlist_len(pool->datapool))
+        //if(idx >= deqlist_len(pool->datapool))
         {
-            return NULL;
+            //return NULL;
         }
         return deqlist_get(pool->datapool, idx);
     #else

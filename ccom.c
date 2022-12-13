@@ -131,7 +131,7 @@ ApeAstCompScope_t* ape_make_compscope(ApeContext_t* ctx, ApeAstCompScope_t* oute
     {
         goto err;
     }
-    scope->breakipstack = ape_make_valarray(ctx, int);
+    scope->breakipstack = ape_make_valarray(ctx, ApeInt_t);
     if(!scope->breakipstack)
     {
         goto err;
@@ -2337,12 +2337,20 @@ static ApeInt_t ape_compiler_getbreakip(ApeAstCompiler_t* comp)
     ApeInt_t* res;
     ApeAstCompScope_t* compscope;
     compscope = ape_compiler_getcompscope(comp);
+    if(compscope == NULL)
+    {
+        return -1;
+    }
     if(ape_valarray_count(compscope->breakipstack) == 0)
     {
         return -1;
     }
     res = (ApeInt_t*)ape_valarray_top(compscope->breakipstack);
-    return *res;
+    if(res != NULL)
+    {
+        return *res;
+    }
+    return -1;
 }
 
 static bool ape_compiler_pushcontip(ApeAstCompiler_t* comp, ApeInt_t ip)
