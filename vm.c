@@ -858,25 +858,6 @@ int ape_make_code(ApeOpByte_t op, ApeSize_t operands_count, ApeOpByte_t* operand
 }
 #undef APPEND_BYTE
 
-bool ape_frame_init(ApeFrame_t* frame, ApeObject_t function_obj, int bptr)
-{
-    ApeScriptFunction_t* function;
-    if(ape_object_value_type(function_obj) != APE_OBJECT_SCRIPTFUNCTION)
-    {
-        return false;
-    }
-    function = ape_object_value_asfunction(function_obj);
-    frame->function = function_obj;
-    frame->ip = 0;
-    frame->basepointer = bptr;
-    frame->srcip = 0;
-    frame->bytecode = function->compiledcode->bytecode;
-    frame->srcpositions = function->compiledcode->srcpositions;
-    frame->bcsize = function->compiledcode->count;
-    frame->recoverip = -1;
-    frame->isrecovering = false;
-    return true;
-}
 
 ApeOpcodeValue_t ape_frame_readopcode(ApeFrame_t* frame)
 {
@@ -940,12 +921,6 @@ bool ape_vm_haserrors(ApeVM_t* vm)
 bool ape_vm_setglobal(ApeVM_t* vm, ApeSize_t ix, ApeObject_t val)
 {
     ApeObject_t nullval;
-    if(ix >= APE_CONF_SIZE_VM_MAXGLOBALS)
-    {
-        APE_ASSERT(false);
-        ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->currentframe), "global write out of range");
-        return false;
-    }
     ape_valdict_set(vm->globalobjects, &ix, &val);
     return true;
 }
@@ -995,12 +970,6 @@ void ape_vm_pushstack(ApeVM_t* vm, ApeObject_t obj)
 {
     ApeSize_t idx;
 #if defined(APE_DEBUG) && (APE_DEBUG == 1)
-    if(vm->stackptr >= APE_CONF_SIZE_VM_STACK)
-    {
-        APE_ASSERT(false);
-        ape_errorlist_add(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->currentframe), "stack overflow");
-        return;
-    }
     if(vm->currentframe)
     {
         ApeFrame_t* frame = vm->currentframe;
@@ -1062,14 +1031,6 @@ ApeObject_t ape_vm_getstack(ApeVM_t* vm, int nth_item)
     ApeSize_t ix;
     ApeObject_t* p;
     ix = vm->stackptr - 1 - nth_item;
-#if defined(APE_DEBUG) && (APE_DEBUG == 1)
-    if(ix < 0 || ix >= APE_CONF_SIZE_VM_STACK)
-    {
-        ape_errorlist_addformat(vm->errors, APE_ERROR_RUNTIME, ape_frame_srcposition(vm->currentframe), "invalid stack index: %d", nth_item);
-        APE_ASSERT(false);
-        return ape_object_make_null(vm->context);
-    }
-#endif
     p = (ApeObject_t*)ape_valdict_getbykey(vm->stackobjects, &ix);
     if(p == NULL)
     {
@@ -1125,66 +1086,6 @@ ApeObject_t ape_vm_getthisstack(ApeVM_t* vm, int nth_item)
     return vm->thisobjects[ix];
 }
 
-bool ape_vm_pushframe(ApeVM_t* vm, ApeFrame_t frame)
-{
-    ApeScriptFunction_t* fn;
-    if(vm->countframes >= APE_CONF_SIZE_MAXFRAMES)
-    {
-        APE_ASSERT(false);
-        return false;
-    }
-    vm->frameobjects[vm->countframes] = frame;
-    vm->currentframe = &vm->frameobjects[vm->countframes];
-    vm->countframes++;
-    fn = ape_object_value_asfunction(frame.function);
-    ape_vm_setstackpointer(vm, frame.basepointer + fn->numlocals);
-    return true;
-}
-
-bool ape_vm_popframe(ApeVM_t* vm)
-{
-    ape_vm_setstackpointer(vm, vm->currentframe->basepointer - 1);
-    if(vm->countframes <= 0)
-    {
-        APE_ASSERT(false);
-        vm->currentframe = NULL;
-        return false;
-    }
-    vm->countframes--;
-    if(vm->countframes == 0)
-    {
-        vm->currentframe = NULL;
-        return false;
-    }
-    vm->currentframe = &vm->frameobjects[vm->countframes - 1];
-    return true;
-}
-
-void ape_vm_collectgarbage(ApeVM_t* vm, ApeValArray_t* constants, bool alsostack)
-{
-    ApeSize_t i;
-    ApeFrame_t* frame;
-    ape_gcmem_unmarkall(vm->mem);
-    ape_gcmem_markobjlist(ape_globalstore_getobjectdata(vm->globalstore), ape_globalstore_getobjectcount(vm->globalstore));
-    if(constants != NULL)
-    {
-        ape_gcmem_markobjlist((ApeObject_t*)ape_valarray_data(constants), ape_valarray_count(constants));
-    }
-    ape_gcmem_markobjlist((ApeObject_t*)(vm->globalobjects->values), vm->globalobjects->count);
-    for(i = 0; i < vm->countframes; i++)
-    {
-        frame = &vm->frameobjects[i];
-        ape_gcmem_markobject(frame->function);
-    }
-    if(alsostack)
-    {
-        ape_gcmem_markobjlist(((ApeObject_t*)(vm->stackobjects->values)), vm->stackptr);
-        ape_gcmem_markobjlist(vm->thisobjects, vm->thisptr);
-    }
-    ape_gcmem_markobject(vm->lastpopped);
-    ape_gcmem_markobjlist(vm->overloadkeys, APE_OPCODE_MAX);
-    ape_gcmem_sweep(vm->mem);
-}
 
 void ape_vm_dumpstack(ApeVM_t* vm)
 {
@@ -1267,6 +1168,7 @@ bool ape_vm_callobjectargs(ApeVM_t* vm, ApeObject_t callee, ApeInt_t nargs, ApeO
     if(calleetype == APE_OBJECT_SCRIPTFUNCTION)
     {
         scriptcallee = ape_object_value_asfunction(callee);
+        #if 0
         if(nargs != -1)
         {
             if(nargs != (ApeInt_t)scriptcallee->numargs)
@@ -1277,6 +1179,7 @@ bool ape_vm_callobjectargs(ApeVM_t* vm, ApeObject_t callee, ApeInt_t nargs, ApeO
                 return false;
             }
         }
+        #endif
         ofs = nargs;
         if(nargs == -1)
         {
@@ -1429,6 +1332,8 @@ bool ape_vm_tryoverloadoperator(ApeVM_t* vm, ApeObject_t left, ApeObject_t right
         vm->overloadkeys[op] = key_obj;             \
     } while(0)
 
+#define USE_DYNAMIC_FRAMES 1
+
 ApeVM_t* ape_make_vm(ApeContext_t* ctx, const ApeConfig_t* config, ApeGCMemory_t* mem, ApeErrorList_t* errors, ApeGlobalStore_t* global_store)
 {
     ApeSize_t i;
@@ -1452,7 +1357,13 @@ ApeVM_t* ape_make_vm(ApeContext_t* ctx, const ApeConfig_t* config, ApeGCMemory_t
     vm->running = false;
     vm->globalobjects = ape_make_valdict(ctx, ApeSize_t, ApeObject_t);
     vm->stackobjects = ape_make_valdict(ctx, ApeSize_t, ApeObject_t);
-
+    vm->lastframe = NULL;
+    #if (USE_DYNAMIC_FRAMES == 0)
+        vm->frameobjects = (ApeFrame_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeFrame_t));
+    #else
+        //vm->frameobjects = da_make(vm->frameobjects, APE_CONF_SIZE_MAXFRAMES, sizeof(ApeFrame_t));
+        vm->frameobjects = da_make(vm->frameobjects, 2, sizeof(ApeFrame_t*));
+    #endif
     for(i = 0; i < APE_OPCODE_MAX; i++)
     {
         vm->overloadkeys[i] = ape_object_make_null(ctx);
@@ -1485,6 +1396,7 @@ err:
 void ape_vm_destroy(ApeVM_t* vm)
 {
     ApeContext_t* ctx;
+    ApeFrame_t* popped;
     if(!vm)
     {
         return;
@@ -1492,6 +1404,28 @@ void ape_vm_destroy(ApeVM_t* vm)
     ctx = vm->context;
     ape_valdict_destroy(vm->globalobjects);
     ape_valdict_destroy(vm->stackobjects);
+    #if (USE_DYNAMIC_FRAMES == 0)
+        ape_allocator_free(&ctx->alloc, vm->frameobjects);
+    #else
+        fprintf(stderr, "da_count(vm->frameobjects)=%d\n", da_count(vm->frameobjects));
+        if(da_count(vm->frameobjects) != 0)
+        {
+            while(da_count(vm->frameobjects) != 0)
+            {
+                //popped = da_pop(vm->frameobjects);
+                popped = vm->frameobjects[da_count(vm->frameobjects) - 1];
+                da_pop(vm->frameobjects);
+                if(popped != NULL)
+                {
+                    if(popped->allocated)
+                    {
+                        ape_allocator_free(&vm->context->alloc, popped);
+                    }
+                }
+            }
+        }
+        da_destroy(vm->frameobjects);
+    #endif
     ape_allocator_free(&ctx->alloc, vm);
 }
 
@@ -1503,6 +1437,152 @@ void ape_vm_reset(ApeVM_t* vm)
     {
         ape_vm_popframe(vm);
     }
+}
+
+
+bool ape_frame_init(ApeFrame_t* frame, ApeObject_t function_obj, int bptr)
+{
+    ApeScriptFunction_t* function;
+    if(ape_object_value_type(function_obj) != APE_OBJECT_SCRIPTFUNCTION)
+    {
+        return false;
+    }
+    function = ape_object_value_asfunction(function_obj);
+    frame->function = function_obj;
+    frame->ip = 0;
+    frame->basepointer = bptr;
+    frame->srcip = 0;
+    frame->bytecode = function->compiledcode->bytecode;
+    frame->srcpositions = function->compiledcode->srcpositions;
+    frame->bcsize = function->compiledcode->count;
+    frame->recoverip = -1;
+    frame->isrecovering = false;
+    return true;
+}
+
+
+ApeFrame_t* ape_frame_update(ApeVM_t* vm, ApeFrame_t* rt, ApeFrame_t* from)
+{
+    rt->allocated = true;
+    rt->function = from->function;
+    rt->srcpositions = from->srcpositions;
+    rt->bytecode = from->bytecode;
+    rt->ip = from->ip;
+    rt->basepointer = from->basepointer;
+    rt->srcip = from->srcip;
+    rt->bcsize = from->bcsize;
+    rt->recoverip = from->recoverip;
+    rt->isrecovering = from->isrecovering;
+    return rt;
+}
+
+ApeFrame_t* ape_frame_copyalloc(ApeVM_t* vm, ApeFrame_t* from)
+{
+    ApeFrame_t* rt;
+    rt = (ApeFrame_t*)ape_allocator_alloc(&vm->context->alloc, sizeof(ApeFrame_t));
+    ape_frame_update(vm, rt, from);
+    return rt;
+}
+
+bool ape_vm_pushframe(ApeVM_t* vm, ApeFrame_t frame)
+{
+    ApeFrame_t* pf;
+    ApeFrame_t* tmp;
+    ApeScriptFunction_t* fn;
+    #if (USE_DYNAMIC_FRAMES == 0)
+        if(vm->countframes >= APE_CONF_SIZE_MAXFRAMES)
+        {
+            APE_ASSERT(false);
+            return false;
+        }
+        vm->frameobjects[vm->countframes] = frame;
+        vm->currentframe = &vm->frameobjects[vm->countframes];
+    #else
+        if(vm->countframes >= da_count(vm->frameobjects))
+        {
+            pf = ape_frame_copyalloc(vm, &frame);
+            da_push(vm->frameobjects, pf);
+        }
+        else
+        {
+            /*
+            tmp = vm->frameobjects[vm->countframes];
+            if(tmp != NULL)
+            {
+                ape_allocator_free(&vm->context->alloc, tmp);
+            }
+            else
+            {
+                vm->frameobjects[vm->countframes] = pf;
+            }
+            */
+            pf = ape_frame_update(vm, vm->frameobjects[vm->countframes], &frame);
+        }
+        vm->lastframe = pf;
+        vm->currentframe = vm->frameobjects[vm->countframes];
+    #endif
+    vm->countframes++;
+    fn = ape_object_value_asfunction(frame.function);
+    ape_vm_setstackpointer(vm, frame.basepointer + fn->numlocals);
+    return true;
+}
+
+bool ape_vm_popframe(ApeVM_t* vm)
+{
+    ApeFrame_t* popped;
+    ape_vm_setstackpointer(vm, vm->currentframe->basepointer - 1);
+    if(vm->countframes <= 0)
+    {
+        APE_ASSERT(false);
+        vm->currentframe = NULL;
+        return false;
+    }
+    vm->countframes--;
+    if(vm->countframes == 0)
+    {
+        vm->currentframe = NULL;
+        return false;
+    }
+    #if (USE_DYNAMIC_FRAMES == 0)
+        vm->currentframe = &vm->frameobjects[vm->countframes - 1];
+    #else
+        //popped = da_pop(vm->frameobjects);
+        popped = vm->frameobjects[vm->countframes];
+        //da_pop(vm->frameobjects);
+        //ape_allocator_free(&vm->context->alloc, popped);
+        vm->currentframe = vm->frameobjects[vm->countframes - 1];
+    #endif
+    return true;
+}
+
+void ape_vm_collectgarbage(ApeVM_t* vm, ApeValArray_t* constants, bool alsostack)
+{
+    ApeSize_t i;
+    ApeFrame_t* frame;
+    ape_gcmem_unmarkall(vm->mem);
+    ape_gcmem_markobjlist(ape_globalstore_getobjectdata(vm->globalstore), ape_globalstore_getobjectcount(vm->globalstore));
+    if(constants != NULL)
+    {
+        ape_gcmem_markobjlist((ApeObject_t*)ape_valarray_data(constants), ape_valarray_count(constants));
+    }
+    ape_gcmem_markobjlist((ApeObject_t*)(vm->globalobjects->values), vm->globalobjects->count);
+    for(i = 0; i < vm->countframes; i++)
+    {
+        #if (USE_DYNAMIC_FRAMES == 0)
+            frame = &vm->frameobjects[i];        
+        #else
+            frame = vm->frameobjects[i];
+        #endif
+        ape_gcmem_markobject(frame->function);
+    }
+    if(alsostack)
+    {
+        ape_gcmem_markobjlist(((ApeObject_t*)(vm->stackobjects->values)), vm->stackptr);
+        ape_gcmem_markobjlist(vm->thisobjects, vm->thisptr);
+    }
+    ape_gcmem_markobject(vm->lastpopped);
+    ape_gcmem_markobjlist(vm->overloadkeys, APE_OPCODE_MAX);
+    ape_gcmem_sweep(vm->mem);
 }
 
 bool ape_vm_run(ApeVM_t* vm, ApeAstCompResult_t* comp_res, ApeValArray_t * constants)
@@ -2636,7 +2716,11 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                 recover_frame_ix = -1;
                 for(ui = vm->countframes - 1; ui >= 0; ui--)
                 {
-                    frame = &vm->frameobjects[ui];
+                    #if (USE_DYNAMIC_FRAMES == 0)
+                        frame = &vm->frameobjects[ui];
+                    #else
+                        frame = vm->frameobjects[ui];
+                    #endif
                     if(frame->recoverip >= 0 && !frame->isrecovering)
                     {
                         recover_frame_ix = ui;

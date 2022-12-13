@@ -1129,12 +1129,12 @@ static ApeObject_t cfn_vm_stack(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObje
             ape_vm_adderror(vm, APE_ERROR_RUNTIME, "stack() optional argument out of bounds (idx=%d stackptr=%d)", idx, vm->stackptr);
             return ape_object_make_null(vm->context);
         }
-        return *(ApeObject_t*)vect_get_at(vm->stackobjects, idx);
+        return *(ApeObject_t*)ape_valdict_getbykey(vm->stackobjects, &idx);
     }
     arr = ape_object_make_array(vm->context);
     for(i=0; i<(ApeSize_t)(vm->stackptr + 1); i++)
     {
-        ape_object_array_pushvalue(arr, *(ApeObject_t*)vect_get_at(vm->stackobjects, i));
+        ape_object_array_pushvalue(arr, *(ApeObject_t*)ape_valdict_getbykey(vm->stackobjects, &i));
     }
     return arr;
 }

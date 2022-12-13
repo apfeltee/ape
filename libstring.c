@@ -551,6 +551,7 @@ void ape_builtins_install_string(ApeVM_t* vm)
         {"split", true, objfn_string_split},
         {"index", true, objfn_string_indexof},
         {"substr", true, objfn_string_substr},
+        {"substring", true, objfn_string_substr},
 
         /* js-isms */
         {"charAt", true, objfn_string_charat},

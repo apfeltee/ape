@@ -583,6 +583,10 @@ const char* ape_object_value_typename(const ApeObjType_t type)
 
 void ape_object_data_deinit(ApeContext_t* ctx, ApeGCObjData_t* data)
 {
+    if(data == NULL)
+    {
+        return;
+    }
     switch(data->datatype)
     {
         case APE_OBJECT_FREED:

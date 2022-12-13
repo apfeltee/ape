@@ -128,7 +128,10 @@ static APE_INLINE intptr_t* da_grow_internal(intptr_t* arr, intptr_t count, intp
 #define da_pop(arr) \
     ( \
         _da_if(da_count(arr) > 0) \
-        _da_then(memset((arr) + (--da_count_internal(arr)), 0, sizeof(*(arr))), 0) \
+        _da_then( \
+            memset((arr) + (--da_count_internal(arr)), 0, sizeof(*(arr))), \
+            0 \
+        ) \
         _da_else(0) \
     )
 

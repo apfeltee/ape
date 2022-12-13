@@ -97,16 +97,14 @@ THE SOFTWARE.
 #define APE_CONF_INVALID_VALDICT_IX UINT_MAX
 #define APE_CONF_INVALID_STRDICT_IX UINT_MAX
 #define APE_CONF_DICT_INITIAL_SIZE (2)
-#define APE_CONF_ARRAY_INITIAL_CAPACITY (64/8)
+#define APE_CONF_ARRAY_INITIAL_CAPACITY (64/32)
 //#define APE_CONF_ARRAY_INITIAL_CAPACITY (2)
 
-#define APE_CONF_MAP_INITIAL_CAPACITY (64/8)
+#define APE_CONF_MAP_INITIAL_CAPACITY (64/32)
 //#define APE_CONF_MAP_INITIAL_CAPACITY (2)
 
 #define APE_CONF_PLAINLIST_CAPACITY_ADD 32
 
-#define APE_CONF_SIZE_VM_STACK (1024)
-#define APE_CONF_SIZE_VM_MAXGLOBALS (512 / 4)
 #define APE_CONF_SIZE_MAXFRAMES (512 / 4)
 #define APE_CONF_SIZE_VM_THISSTACK (512 / 4)
 
@@ -120,7 +118,7 @@ THE SOFTWARE.
 /* decreasing these incurs higher memory use */
 #define APE_CONF_SIZE_GCMEM_POOLSIZE (512 * 4)
 #define APE_CONF_SIZE_GCMEM_POOLCOUNT ((3) + 1)
-#define APE_CONF_CONST_GCMEM_SWEEPINTERVAL (128 / 1)
+#define APE_CONF_CONST_GCMEM_SWEEPINTERVAL (128 / 64)
 
 
 #define APE_STREQ(a, b) (strcmp((a), (b)) == 0)
@@ -742,6 +740,12 @@ struct ApeNativeFuncWrapper_t
     void*                  data;
 };
 
+/**
+// don't access these struct fields directly - use the provided macros.
+// some fields (specifically, .type and .handle->type) may depend on eachother,
+// and since .handle can sometimes be NULL, it's just easier to use the specific macros,
+// since they already take care of those issues for you.
+*/
 struct ApeObject_t
 {
     ApeObjType_t  type;
@@ -1207,15 +1211,27 @@ struct ApeGlobalStore_t
 
 struct ApeFrame_t
 {
-    ApeObject_t    function;
-    ApeInt_t       ip;
-    ApeInt_t       basepointer;
+    bool allocated;
+    ApeObject_t function;
     ApePosition_t* srcpositions;
-    ApeUShort_t*   bytecode;
-    ApeInt_t       srcip;
-    ApeSize_t      bcsize;
-    ApeInt_t       recoverip;
-    bool           isrecovering;
+    ApeUShort_t* bytecode;
+
+    ApeInt_t ip;
+    //short ip;
+
+    ApeInt_t basepointer;
+    //short basepointer;
+
+    ApeInt_t srcip;
+    //short srcip;
+
+    ApeSize_t bcsize;
+    //short bcsize;
+
+    ApeInt_t recoverip;
+    //short recoverip;
+
+    bool isrecovering;
 };
 
 struct ApeVM_t
@@ -1231,7 +1247,6 @@ struct ApeVM_t
 
     ApeValDict_t* globalobjects;
 
-    //ApeObject_t stackobjects[APE_CONF_SIZE_VM_STACK];
     ApeValDict_t* stackobjects;
 
     int         stackptr;
@@ -1239,9 +1254,10 @@ struct ApeVM_t
     ApeObject_t thisobjects[APE_CONF_SIZE_VM_THISSTACK];
     int         thisptr;
 
-    ApeFrame_t frameobjects[APE_CONF_SIZE_MAXFRAMES];
-    
+    ApeFrame_t** frameobjects;
+    //DequeList_t* frameobjects;
     ApeSize_t  countframes;
+    ApeFrame_t* lastframe;
 
     ApeObject_t lastpopped;
     ApeFrame_t* currentframe;

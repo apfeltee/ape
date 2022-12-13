@@ -137,6 +137,16 @@ static inline void deqlist_destroy(DequeList_t* a)
 /*
  * Returns the number of elements in the array.
  */
+static inline DequeSize_t deqlist_size(DequeList_t* a)
+{
+    return a->len;
+}
+
+static inline DequeSize_t deqlist_count(DequeList_t* a)
+{
+    return a->len;
+}
+
 static inline DequeSize_t deqlist_len(DequeList_t* a)
 {
     return a->len;

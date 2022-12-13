@@ -42,7 +42,6 @@
 #endif
 
 #include "dnarray.h"
-#include "zvector.h"
 #include "aadeque.h"
 
 #if defined(APE_USE_ALIST) && (APE_USE_ALIST != 0)

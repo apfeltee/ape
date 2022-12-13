@@ -3,7 +3,7 @@
 
 #define USE_DYNAMIC_POOL 0
 
-#define APE_ACTUAL_POOLSIZE (APE_CONF_SIZE_GCMEM_POOLSIZE/2)
+#define APE_ACTUAL_POOLSIZE (APE_CONF_SIZE_GCMEM_POOLSIZE)
 
 struct ApeGCObjPool_t
 {
@@ -18,18 +18,18 @@ struct ApeGCObjPool_t
 
 struct ApeGCMemory_t
 {
-    ApeContext_t*   context;
+    ApeContext_t* context;
     ApeAllocator_t* alloc;
-    ApeSize_t       allocations_since_sweep;
+    ApeSize_t allocations_since_sweep;
     ApeGCObjData_t** frontobjects;
     ApeGCObjData_t** backobjects;
-    ApeValArray_t*  objects_not_gced;
-    ApeGCObjPool_t    data_only_pool;
-    ApeGCObjPool_t    pools[APE_CONF_SIZE_GCMEM_POOLCOUNT];
+    ApeValArray_t* objects_not_gced;
+    ApeGCObjPool_t data_only_pool;
+    ApeGCObjPool_t pools[APE_CONF_SIZE_GCMEM_POOLCOUNT];
 };
 
 
-static const ApePosition_t g_mempriv_srcposinvalid = { NULL, -1, -1 };
+static const ApePosition_t g_posinvalid = { NULL, -1, -1 };
 
 void poolinit(ApeContext_t* ctx, ApeGCObjPool_t* pool)
 {
@@ -65,7 +65,7 @@ void poolput(ApeGCObjPool_t* pool, ApeInt_t idx, ApeGCObjData_t* data)
 {
     //fprintf(stderr, "poolput: idx=%d\n", idx);
     #if USE_DYNAMIC_POOL
-        if(idx > da_count(pool->datapool))
+        if(idx > deqlist_len(pool->datapool))
         {
             //da_push(pool->datapool, data);
             deqlist_push(&pool->datapool, data);
@@ -86,6 +86,10 @@ ApeGCObjData_t* poolget(ApeGCObjPool_t* pool, ApeInt_t idx)
     //fprintf(stderr, "poolget: idx=%d\n", idx);
     #if USE_DYNAMIC_POOL
         //return pool->datapool[idx];
+        if(idx >= deqlist_len(pool->datapool))
+        {
+            return NULL;
+        }
         return deqlist_get(pool->datapool, idx);
     #else
         return pool->datapool[idx];
@@ -100,7 +104,7 @@ void* ape_mem_defaultmalloc(void* opaqptr, size_t size)
     resptr = (void*)ape_allocator_alloc(&ctx->custom_allocator, size);
     if(!resptr)
     {
-        ape_errorlist_add(&ctx->errors, APE_ERROR_ALLOCATION, g_mempriv_srcposinvalid, "allocation failed");
+        ape_errorlist_add(&ctx->errors, APE_ERROR_ALLOCATION, g_posinvalid, "allocation failed");
     }
     return resptr;
 }
@@ -245,20 +249,22 @@ ApeGCObjData_t* ape_gcmem_allocobjdata(ApeGCMemory_t* mem, ApeObjType_t type)
     ApeGCObjData_t* data;
     data = NULL;
     mem->allocations_since_sweep++;
-    #if 1
     if(mem->data_only_pool.count > 0)
     {
         data = poolget(&mem->data_only_pool, mem->data_only_pool.count - 1);
         mem->data_only_pool.count--;
     }
     else
-    #endif
     {
         data = (ApeGCObjData_t*)ape_allocator_alloc(mem->alloc, sizeof(ApeGCObjData_t));
-        if(!data)
+        if(data == NULL)
         {
             return NULL;
         }
+    }
+    if(data == NULL)
+    {
+        return NULL;
     }
     memset(data, 0, sizeof(ApeGCObjData_t));
     APE_ASSERT(da_count(mem->backobjects) >= da_count(mem->frontobjects));
@@ -376,7 +382,10 @@ void ape_gcmem_unmarkall(ApeGCMemory_t* mem)
     for(i = 0; i < da_count(mem->frontobjects); i++)
     {
         data = (ApeGCObjData_t*)da_get(mem->frontobjects, i);
-        data->gcmark = false;
+        if(data != NULL)
+        {
+            data->gcmark = false;
+        }
     }
 }
 
@@ -513,30 +522,33 @@ void ape_gcmem_sweep(ApeGCMemory_t* mem)
     for(i = 0; i < da_count(mem->frontobjects); i++)
     {
         data = (ApeGCObjData_t*)da_get(mem->frontobjects, i);
-        if(data->gcmark)
+        if(data != NULL)
         {
-            /* this should never fail because backobjects's size should be equal to objects */
-            da_push(mem->backobjects, data);
-        }
-        else
-        {
-            if(ape_gcmem_canputinpool(mem, data))
+            if(data->gcmark)
             {
-                pool = ape_gcmem_getpoolfor(mem, (ApeObjType_t)data->datatype);
-                poolput(pool, pool->count, data);
-                pool->count++;
+                /* this should never fail because backobjects's size should be equal to objects */
+                da_push(mem->backobjects, data);
             }
             else
             {
-                ape_object_data_deinit(mem->context, data);
-                if(mem->data_only_pool.count < APE_ACTUAL_POOLSIZE)
+                if(ape_gcmem_canputinpool(mem, data))
                 {
-                    poolput(&mem->data_only_pool, mem->data_only_pool.count, data);
-                    mem->data_only_pool.count++;
+                    pool = ape_gcmem_getpoolfor(mem, (ApeObjType_t)data->datatype);
+                    poolput(pool, pool->count, data);
+                    pool->count++;
                 }
                 else
                 {
-                    ape_allocator_free(mem->alloc, data);
+                    ape_object_data_deinit(mem->context, data);
+                    if(mem->data_only_pool.count < APE_ACTUAL_POOLSIZE)
+                    {
+                        poolput(&mem->data_only_pool, mem->data_only_pool.count, data);
+                        mem->data_only_pool.count++;
+                    }
+                    else
+                    {
+                        ape_allocator_free(mem->alloc, data);
+                    }
                 }
             }
         }
