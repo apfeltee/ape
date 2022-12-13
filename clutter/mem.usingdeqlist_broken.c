@@ -14,8 +14,13 @@ struct ApeGCMemory_t
     ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeSize_t allocations_since_sweep;
-    ApeGCObjData_t** frontobjects;
-    ApeGCObjData_t** backobjects;
+
+    //ApeGCObjData_t** frontobjects;
+    DequeList_t* frontobjects;
+
+    //ApeGCObjData_t** backobjects;
+    DequeList_t* backobjects;
+
     ApeValArray_t* objects_not_gced;
     ApeGCObjPool_t data_only_pool;
     ApeGCObjPool_t pools[APE_CONF_SIZE_GCMEM_POOLCOUNT];
@@ -140,13 +145,15 @@ ApeGCMemory_t* ape_make_gcmem(ApeContext_t* ctx)
     mem->context = ctx;
     mem->alloc = &ctx->alloc;
     //mem->frontobjects = ape_make_ptrarray(ctx);
-    mem->frontobjects = da_make(mem->frontobjects, APE_CONF_PLAINLIST_CAPACITY_ADD, sizeof(ApeGCObjData_t*));
+    //mem->frontobjects = da_make(mem->frontobjects, APE_CONF_PLAINLIST_CAPACITY_ADD, sizeof(ApeGCObjData_t*));
+    mem->frontobjects = deqlist_create(APE_CONF_PLAINLIST_CAPACITY_ADD);
     if(!mem->frontobjects)
     {
         goto error;
     }
     //mem->backobjects = ape_make_ptrarray(ctx);
-    mem->backobjects = da_make(mem->backobjects, APE_CONF_PLAINLIST_CAPACITY_ADD, sizeof(ApeGCObjData_t*));
+    //mem->backobjects = da_make(mem->backobjects, APE_CONF_PLAINLIST_CAPACITY_ADD, sizeof(ApeGCObjData_t*));
+    mem->backobjects = deqlist_create(APE_CONF_PLAINLIST_CAPACITY_ADD);
     if(!mem->backobjects)
     {
         goto error;
@@ -181,14 +188,14 @@ void ape_gcmem_destroy(ApeGCMemory_t* mem)
         return;
     }
     ape_valarray_destroy(mem->objects_not_gced);
-    da_destroy(mem->backobjects);
-    for(i = 0; i < da_count(mem->frontobjects); i++)
+    deqlist_destroy(mem->backobjects);
+    for(i = 0; i < deqlist_count(mem->frontobjects); i++)
     {
-        obj = (ApeGCObjData_t*)da_get(mem->frontobjects, i);
+        obj = (ApeGCObjData_t*)deqlist_get(mem->frontobjects, i);
         ape_object_data_deinit(mem->context, obj);
         ape_allocator_free(mem->alloc, obj);
     }
-    da_destroy(mem->frontobjects);
+    deqlist_destroy(mem->frontobjects);
     for(i = 0; i < APE_CONF_SIZE_GCMEM_POOLCOUNT; i++)
     {
         pool = &mem->pools[i];
@@ -233,13 +240,14 @@ ApeGCObjData_t* ape_gcmem_allocobjdata(ApeGCMemory_t* mem, ApeObjType_t type)
         return NULL;
     }
     memset(data, 0, sizeof(ApeGCObjData_t));
-    APE_ASSERT(da_count(mem->backobjects) >= da_count(mem->frontobjects));
+    fprintf(stderr, "allocobjdata: deqlist_count(mem->backobjects)=%d deqlist_count(mem->frontobjects)=%d\n", deqlist_count(mem->backobjects), deqlist_count(mem->frontobjects));
+    //APE_ASSERT(deqlist_count(mem->backobjects) >= deqlist_count(mem->frontobjects));
     /*
     // we want to make sure that appending to backobjects never fails in sweep
     // so this only reserves space there.
     */
-    da_push(mem->backobjects, data);
-    da_push(mem->frontobjects, data);
+    deqlist_push(&mem->backobjects, data);
+    deqlist_push(&mem->frontobjects, data);
     data->mem = mem;
     //data->datatype = type;
     return data;
@@ -330,13 +338,14 @@ ApeGCObjData_t* ape_gcmem_getfrompool(ApeGCMemory_t* mem, ApeObjType_t type)
         return NULL;
     }
     data = poolget(pool, pool->count - 1);
-    APE_ASSERT(da_count(mem->backobjects) >= da_count(mem->frontobjects));
+    fprintf(stderr, "getfrompool: deqlist_count(mem->backobjects)=%d deqlist_count(mem->frontobjects)=%d\n", deqlist_count(mem->backobjects), deqlist_count(mem->frontobjects));
+    //APE_ASSERT(deqlist_count(mem->backobjects) >= deqlist_count(mem->frontobjects));
     /*
     // we want to make sure that appending to backobjects never fails in sweep
     // so this only reserves space there.
     */
-    da_push(mem->backobjects, data);
-    da_push(mem->frontobjects, data);
+    deqlist_push(&mem->backobjects, data);
+    deqlist_push(&mem->frontobjects, data);
     pool->count--;
     return data;
 }
@@ -345,9 +354,9 @@ void ape_gcmem_unmarkall(ApeGCMemory_t* mem)
 {
     ApeSize_t i;
     ApeGCObjData_t* data;
-    for(i = 0; i < da_count(mem->frontobjects); i++)
+    for(i = 0; i < deqlist_count(mem->frontobjects); i++)
     {
-        data = (ApeGCObjData_t*)da_get(mem->frontobjects, i);
+        data = (ApeGCObjData_t*)deqlist_get(mem->frontobjects, i);
         if(data != NULL)
         {
             data->gcmark = false;
@@ -481,19 +490,20 @@ void ape_gcmem_sweep(ApeGCMemory_t* mem)
     bool ok;
     ApeGCObjData_t* data;
     ApeGCObjPool_t* pool;
-    ApeGCObjData_t** objs_temp;
+    //ApeGCObjData_t** objs_temp;
+    DequeList_t* objs_temp;
     ape_gcmem_markobjlist((ApeObject_t*)ape_valarray_data(mem->objects_not_gced), ape_valarray_count(mem->objects_not_gced));
-    APE_ASSERT(da_count(mem->backobjects) >= da_count(mem->frontobjects));
-    da_clear(mem->backobjects);
-    for(i = 0; i < da_count(mem->frontobjects); i++)
+    //APE_ASSERT(deqlist_count(mem->backobjects) >= deqlist_count(mem->frontobjects));
+    deqlist_clear(mem->backobjects, 0, deqlist_count(mem->backobjects)-1);
+    for(i = 0; i < deqlist_count(mem->frontobjects); i++)
     {
-        data = (ApeGCObjData_t*)da_get(mem->frontobjects, i);
+        data = (ApeGCObjData_t*)deqlist_get(mem->frontobjects, i);
         if(data != NULL)
         {
             if(data->gcmark)
             {
                 /* this should never fail because backobjects's size should be equal to objects */
-                da_push(mem->backobjects, data);
+                deqlist_push(&mem->backobjects, data);
             }
             else
             {

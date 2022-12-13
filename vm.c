@@ -1356,8 +1356,6 @@ ApeVM_t* ape_make_vm(ApeContext_t* ctx, const ApeConfig_t* config, ApeGCMemory_t
     vm->globalobjects = ape_make_valdict(ctx, ApeSize_t, ApeObject_t);
     vm->stackobjects = ape_make_valdict(ctx, ApeSize_t, ApeObject_t);
     vm->lastframe = NULL;
-    //vm->frameobjects = da_make(vm->frameobjects, APE_CONF_SIZE_MAXFRAMES, sizeof(ApeFrame_t));
-    //vm->frameobjects = da_make(vm->frameobjects, 2, sizeof(ApeFrame_t*));
     vm->frameobjects = deqlist_create_empty();
     for(i = 0; i < APE_OPCODE_MAX; i++)
     {
@@ -1399,7 +1397,7 @@ void ape_vm_destroy(ApeVM_t* vm)
     ctx = vm->context;
     ape_valdict_destroy(vm->globalobjects);
     ape_valdict_destroy(vm->stackobjects);
-    fprintf(stderr, "da_count(vm->frameobjects)=%d\n", deqlist_count(vm->frameobjects));
+    fprintf(stderr, "deqlist_count(vm->frameobjects)=%d\n", deqlist_count(vm->frameobjects));
     if(deqlist_count(vm->frameobjects) != 0)
     {
         while(deqlist_count(vm->frameobjects) != 0)
@@ -1514,9 +1512,7 @@ bool ape_vm_popframe(ApeVM_t* vm)
         vm->currentframe = NULL;
         return false;
     }
-    //popped = da_pop(vm->frameobjects);
     popped = deqlist_get(vm->frameobjects, vm->countframes);
-    //da_pop(vm->frameobjects);
     //ape_allocator_free(&vm->context->alloc, popped);
     vm->currentframe = deqlist_get(vm->frameobjects, vm->countframes - 1);
     return true;
