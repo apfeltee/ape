@@ -1,6 +1,11 @@
 
 #include "inline.h"
 
+/*
+* TODO: strings are internally allocated outside of the mempool.
+* this is fine for now, but is less than ideal...
+*/
+
 char* ape_object_string_getinternalobjdata(ApeGCObjData_t* data)
 {
     APE_ASSERT(data->datatype == APE_OBJECT_STRING);
@@ -25,6 +30,7 @@ char* ape_object_string_getmutable(ApeObject_t object)
 
 bool ape_object_string_reservecapacity(ApeContext_t* ctx, ApeGCObjData_t *data, ApeSize_t capacity)
 {
+    (void)ctx;
     if(data->valstring.valalloc == NULL)
     {
         data->valstring.valalloc = ds_newempty();
@@ -53,7 +59,7 @@ void ape_object_string_setlength(ApeObject_t object, ApeSize_t len)
     ApeGCObjData_t* data;
     APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_STRING);
     data = ape_object_value_allocated_data(object);
-    //ds_setlength(data->valstring.valalloc, len);
+    ds_setlength(data->valstring.valalloc, len);
 }
 
 bool ape_object_string_append(ApeObject_t obj, const char* src, ApeSize_t len)
@@ -110,8 +116,8 @@ static ApeObject_t objfn_string_substr(ApeVM_t* vm, void* data, ApeSize_t argc, 
     const char* str;
     (void)data;
     self = ape_vm_popthisstack(vm);
-    ape_args_checkinit(vm, &check, "substr", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_NUMBER))
+    ape_args_init(vm, &check, "substr", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER))
     {
         return ape_object_make_null(vm->context);        
     }
@@ -153,7 +159,7 @@ static ApeObject_t objfn_string_split(ApeVM_t* vm, void* data, ApeSize_t argc, A
     (void)data;
     delimstr = "";
     delimlen = 0;
-    ape_args_checkinit(vm, &check, "split", argc, args);
+    ape_args_init(vm, &check, "split", argc, args);
     self = ape_vm_popthisstack(vm);
     inpstr = ape_object_string_getdata(self);
     if(ape_args_checkoptional(&check, 0, APE_OBJECT_STRING, true))
@@ -198,8 +204,8 @@ static ApeObject_t objfn_string_indexof(ApeVM_t* vm, void* data, ApeSize_t argc,
     ApeArgCheck_t check;
     (void)data;
     self = ape_vm_popthisstack(vm);
-    ape_args_checkinit(vm, &check, "index", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_STRING | APE_OBJECT_NUMBER))
+    ape_args_init(vm, &check, "index", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_STRING | APE_OBJECT_NUMBER))
     {
         return ape_object_make_null(vm->context);
     }
@@ -246,8 +252,8 @@ static ApeObject_t objfn_string_charat(ApeVM_t* vm, void* data, ApeSize_t argc, 
     ApeArgCheck_t check;
     (void)data;
     (void)inplen;
-    ape_args_checkinit(vm, &check, "charAt", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_NUMBER))
+    ape_args_init(vm, &check, "charAt", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER))
     {
         return ape_object_make_null(vm->context);
     }
@@ -270,8 +276,8 @@ static ApeObject_t objfn_string_byteat(ApeVM_t* vm, void* data, ApeSize_t argc, 
     ApeArgCheck_t check;
     (void)data;
     (void)inplen;
-    ape_args_checkinit(vm, &check, "charAt", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_NUMBER))
+    ape_args_init(vm, &check, "charAt", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER))
     {
         return ape_object_make_null(vm->context);
     }
@@ -300,7 +306,7 @@ ApeObject_t ape_builtins_stringformat(ApeContext_t* ctx, const char* fmt, ApeSiz
     pch = -1;
     nch = -1;
     buf = ape_make_writercapacity(ctx, fmtlen + 10);
-    ape_args_checkinit(ctx->vm, &check, "format-string", argc, args);
+    ape_args_init(ctx->vm, &check, "format-string", argc, args);
     for(i=0; i<fmtlen; i++)
     {
         pch = cch;
@@ -324,7 +330,7 @@ ApeObject_t ape_builtins_stringformat(ApeContext_t* ctx, const char* fmt, ApeSiz
                 case 'i':
                     {
                         i++;
-                        if(!ape_args_checktype(&check, idx, APE_OBJECT_NUMBER))
+                        if(!ape_args_check(&check, idx, APE_OBJECT_NUMBER))
                         {
                             return ape_object_make_null(ctx);
                         }
@@ -335,7 +341,7 @@ ApeObject_t ape_builtins_stringformat(ApeContext_t* ctx, const char* fmt, ApeSiz
                 case 'c':
                     {
                         i++;
-                        if(!ape_args_checktype(&check, idx, APE_OBJECT_NUMBER))
+                        if(!ape_args_check(&check, idx, APE_OBJECT_NUMBER))
                         {
                             return ape_object_make_null(ctx);
                         }
@@ -347,7 +353,7 @@ ApeObject_t ape_builtins_stringformat(ApeContext_t* ctx, const char* fmt, ApeSiz
                 case 's':
                     {
                         i++;
-                        if(!ape_args_checktype(&check, idx, APE_OBJECT_ANY))
+                        if(!ape_args_check(&check, idx, APE_OBJECT_ANY))
                         {
                             return ape_object_make_null(ctx);
                         }
@@ -360,7 +366,7 @@ ApeObject_t ape_builtins_stringformat(ApeContext_t* ctx, const char* fmt, ApeSiz
                 case 'o':
                     {
                         i++;
-                        if(!ape_args_checktype(&check, idx, APE_OBJECT_ANY))
+                        if(!ape_args_check(&check, idx, APE_OBJECT_ANY))
                         {
                             return ape_object_make_null(ctx);
                         }
@@ -404,7 +410,9 @@ static ApeObject_t cfn_string_chr(ApeVM_t* vm, void* data, ApeSize_t argc, ApeOb
     char buf[2];
     ApeFloat_t val;
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "chr", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER))
     {
         return ape_object_make_null(vm->context);
     }
@@ -419,7 +427,9 @@ static ApeObject_t cfn_string_ord(ApeVM_t* vm, void* data, ApeSize_t argc, ApeOb
 {
     const char* str;
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING | APE_OBJECT_NULL))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "sqrt", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_STRING | APE_OBJECT_NULL))
     {
         return ape_object_make_null(vm->context);
     }
@@ -448,8 +458,8 @@ static ApeObject_t cfn_string_join(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
     (void)data;
     sstr = "";
     slen = 0;
-    ape_args_checkinit(vm, &check, "String.join", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_ARRAY))
+    ape_args_init(vm, &check, "String.join", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ARRAY))
     {
         return ape_object_make_null(vm->context);        
     }

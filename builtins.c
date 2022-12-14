@@ -2,144 +2,15 @@
 #include <stdarg.h>
 #include "inline.h"
 
-ApeObjType_t* ape_args_make_typarray(int first, ...)
-{
-    int idx;
-    int thing;
-    va_list va;
-    static ApeObjType_t rt[20];
-    idx = 0;
-    rt[idx] = (ApeObjType_t)first;
-    va_start(va, first);
-    idx++;
-    while(true)
-    {
-        thing = va_arg(va, int);
-        if(thing == -1)
-        {
-            break;
-        }
-        rt[idx] = (ApeObjType_t)thing;
-        idx++;
-    }
-    va_end(va);
-    return rt;
-}
-
-
-void ape_args_checkinit(ApeVM_t* vm, ApeArgCheck_t* check, const char* name, ApeSize_t argc, ApeObject_t* args)
-{
-    check->vm = vm;
-    check->name = name;
-    check->haveminargs = false;
-    check->counterror = false;
-    check->minargs = 0;
-    check->argc = argc;
-    check->args = args;
-}
-
-void ape_args_raisetyperror(ApeArgCheck_t* check, ApeSize_t ix, int typ)
-{
-    char* extypestr;
-    const char* typestr;
-    typestr = ape_object_value_typename(ape_object_value_type(check->args[ix]));
-    extypestr = ape_object_value_typeunionname(check->vm->context, (ApeObjType_t)typ);
-    ape_vm_adderror(check->vm, APE_ERROR_RUNTIME,
-        "invalid arguments: function '%s' expects argument #%d to be a %s, but got %s instead", check->name, ix, extypestr, typestr);
-    ape_allocator_free(check->vm->alloc, extypestr);
-}
-
-bool ape_args_checkoptional(ApeArgCheck_t* check, ApeSize_t ix, int typ, bool raisetyperror)
-{
-    check->counterror = false;
-    if((check->argc == 0) || (check->argc <= ix))
-    {
-        check->counterror = true;
-        return false;
-    }
-    if(!(ape_object_value_type(check->args[ix]) & typ))
-    {
-        if(raisetyperror)
-        {
-            ape_args_raisetyperror(check, ix, typ);
-        }
-        return false;
-    }
-    return true;
-}
-
-bool ape_args_checktype(ApeArgCheck_t* check, ApeSize_t ix, int typ)
-{
-    ApeSize_t ixval;
-    if(!ape_args_checkoptional(check, ix, typ, false))
-    {
-        if(check->counterror)
-        {
-            ixval = ix;
-            if(check->haveminargs)
-            {
-                ixval = check->minargs;               
-            }
-            else
-            {
-            }
-            ape_vm_adderror(check->vm, APE_ERROR_RUNTIME, "invalid arguments: function '%s' expects at least %d arguments", check->name, ixval);
-        }
-        else
-        {
-            ape_args_raisetyperror(check, ix, typ);
-        }
-    }
-    return true;
-}
-
-bool ape_args_check(ApeVM_t* vm, bool generate_error, ApeSize_t argc, ApeObject_t* args, ApeSize_t expected_argc, const ApeObjType_t* expected_types)
-{
-    ApeSize_t i;
-    ApeObject_t arg;
-    ApeObjType_t type;
-    ApeObjType_t extype;
-    char* extypestr;
-    const char* typestr;
-    if(argc != expected_argc)
-    {
-        if(generate_error)
-        {
-            ape_vm_adderror(vm, APE_ERROR_RUNTIME, "invalid number of arguments, got %d instead of %d", argc, expected_argc);
-        }
-        return false;
-    }
-    for(i = 0; i < argc; i++)
-    {
-        arg = args[i];
-        type = ape_object_value_type(arg);
-        extype = expected_types[i];
-        if(!(type & extype))
-        {
-            if(generate_error)
-            {
-                typestr = ape_object_value_typename(type);
-                extypestr = ape_object_value_typeunionname(vm->context, extype);
-                if(!extypestr)
-                {
-                    return false;
-                }
-                ape_vm_adderror(vm, APE_ERROR_RUNTIME, "invalid argument %d type, got %s, expected %s", i, typestr, extypestr);
-                ape_allocator_free(vm->alloc, extypestr);
-            }
-            return false;
-        }
-    }
-    return true;
-}
-
 static ApeObject_t cfn_object_length(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     ApeSize_t len;
     ApeObject_t arg;
     ApeObjType_t type;
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING | APE_OBJECT_ARRAY | APE_OBJECT_MAP))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "length", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_STRING | APE_OBJECT_ARRAY | APE_OBJECT_MAP))
     {
         return ape_object_make_null(vm->context);
     }
@@ -167,7 +38,9 @@ static ApeObject_t cfn_object_first(ApeVM_t* vm, void* data, ApeSize_t argc, Ape
 {
     ApeObject_t arg;
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ARRAY))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "first", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ARRAY))
     {
         return ape_object_make_null(vm->context);
     }
@@ -179,7 +52,9 @@ static ApeObject_t cfn_object_last(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
 {
     ApeObject_t arg;
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ARRAY))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "last", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ARRAY))
     {
         return ape_object_make_null(vm->context);
     }
@@ -196,7 +71,9 @@ static ApeObject_t cfn_object_rest(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
     ApeObject_t res;
     ApeObject_t item;
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ARRAY))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "rest", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ARRAY))
     {
         return ape_object_make_null(vm->context);
     }
@@ -236,7 +113,9 @@ static ApeObject_t cfn_reverse(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObjec
     ApeSize_t i;
     ApeSize_t len;
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ARRAY | APE_OBJECT_STRING))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "reverse", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ARRAY | APE_OBJECT_STRING))
     {
         return ape_object_make_null(vm->context);
     }
@@ -292,9 +171,11 @@ static ApeObject_t cfn_array(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     ApeObject_t res;
     ApeObject_t obj_null;
     (void)data;
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "array", argc, args);
     if(argc == 1)
     {
-        if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER))
+        if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER))
         {
             return ape_object_make_null(vm->context);
         }
@@ -317,7 +198,7 @@ static ApeObject_t cfn_array(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     }
     else if(argc == 2)
     {
-        if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER, APE_OBJECT_ANY))
+        if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER) && !ape_args_check(&check, 1, APE_OBJECT_ANY))
         {
             return ape_object_make_null(vm->context);
         }
@@ -337,7 +218,6 @@ static ApeObject_t cfn_array(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
         }
         return res;
     }
-    APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER);
     return ape_object_make_null(vm->context);
 }
 
@@ -346,7 +226,9 @@ static ApeObject_t cfn_object_append(ApeVM_t* vm, void* data, ApeSize_t argc, Ap
     bool ok;
     ApeSize_t len;
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ARRAY, APE_OBJECT_ANY))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "reverse", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ARRAY | APE_OBJECT_STRING) && !ape_args_check(&check, 1, APE_OBJECT_ANY))
     {
         return ape_object_make_null(vm->context);
     }
@@ -436,7 +318,9 @@ static ApeObject_t cfn_toint(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     ApeSize_t lenstr;
     ApeSize_t lenparsed;
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING | APE_OBJECT_NUMBER | APE_OBJECT_BOOL | APE_OBJECT_NULL))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "toint", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_STRING | APE_OBJECT_NUMBER | APE_OBJECT_BOOL | APE_OBJECT_NULL))
     {
         return ape_object_make_null(vm->context);
     }
@@ -560,7 +444,9 @@ static ApeObject_t cfn_object_objkeys(ApeVM_t* vm, void* data, ApeSize_t argc, A
     ApeObject_t res;
     ApeObject_t key;
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_MAP))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "keys", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_MAP))
     {
         return ape_object_make_null(vm->context);
     }
@@ -592,7 +478,9 @@ static ApeObject_t cfn_object_objvalues(ApeVM_t* vm, void* data, ApeSize_t argc,
     ApeObject_t res;
     ApeObject_t arg;
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_MAP))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "value", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_MAP))
     {
         return ape_object_make_null(vm->context);
     }
@@ -618,7 +506,9 @@ static ApeObject_t cfn_object_objvalues(ApeVM_t* vm, void* data, ApeSize_t argc,
 static ApeObject_t cfn_object_copy(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ANY))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "copy", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ANY))
     {
         return ape_object_make_null(vm->context);
     }
@@ -628,7 +518,9 @@ static ApeObject_t cfn_object_copy(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
 static ApeObject_t cfn_object_deepcopy(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ANY))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "reverse", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ANY))
     {
         return ape_object_make_null(vm->context);
     }
@@ -649,7 +541,9 @@ static ApeObject_t cfn_concat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
     ApeObjType_t type;
     ApeObjType_t itemtype;
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ARRAY | APE_OBJECT_STRING, APE_OBJECT_ARRAY | APE_OBJECT_STRING))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "concat", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ARRAY | APE_OBJECT_STRING) && !ape_args_check(&check, 1, APE_OBJECT_ARRAY | APE_OBJECT_STRING))
     {
         return ape_object_make_null(vm->context);
     }
@@ -676,7 +570,7 @@ static ApeObject_t cfn_concat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
     }
     else if(type == APE_OBJECT_STRING)
     {
-        if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING, APE_OBJECT_STRING))
+        if(!ape_args_check(&check, 0, APE_OBJECT_STRING) && !ape_args_check(&check, 0, APE_OBJECT_STRING))
         {
             return ape_object_make_null(vm->context);
         }
@@ -712,7 +606,9 @@ static ApeObject_t cfn_object_removekey(ApeVM_t* vm, void* data, ApeSize_t argc,
     ApeInt_t ix;
     ApeObject_t obj;
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ARRAY, APE_OBJECT_ANY))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "removekey", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ARRAY) && !ape_args_check(&check, 1, APE_OBJECT_ANY))
     {
         return ape_object_make_null(vm->context);
     }
@@ -740,7 +636,9 @@ static ApeObject_t cfn_object_removeat(ApeVM_t* vm, void* data, ApeSize_t argc, 
     ApeSize_t ix;
     ApeObjType_t type;
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_ARRAY, APE_OBJECT_NUMBER))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "removeat", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ARRAY) && !ape_args_check(&check, 1, APE_OBJECT_NUMBER))
     {
         return ape_object_make_null(vm->context);
     }
@@ -792,7 +690,9 @@ static ApeObject_t cfn_crash(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
 static ApeObject_t cfn_assert(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_BOOL))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "assert", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_BOOL))
     {
         return ape_object_make_null(vm->context);
     }
@@ -808,7 +708,9 @@ static ApeObject_t cfn_random_seed(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
 {
     ApeSize_t seed;
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "seed", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER))
     {
         return ape_object_make_null(vm->context);
     }
@@ -824,6 +726,8 @@ static ApeObject_t cfn_random(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
     ApeFloat_t res;
     ApeFloat_t range;
     (void)data;
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "random", argc, args);
     res = (ApeFloat_t)rand() / RAND_MAX;
     if(argc == 0)
     {
@@ -831,7 +735,7 @@ static ApeObject_t cfn_random(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
     }
     else if(argc == 2)
     {
-        if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_NUMBER, APE_OBJECT_NUMBER))
+        if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER) && !ape_args_check(&check, 1, APE_OBJECT_NUMBER))
         {
             return ape_object_make_null(vm->context);
         }
@@ -866,8 +770,8 @@ static ApeObject_t cfn_object_slice(ApeVM_t* vm, void* data, ApeSize_t argc, Ape
     ApeObjType_t argtype;
     (void)data;
     ApeArgCheck_t check;
-    ape_args_checkinit(vm, &check, "Object.slice", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_STRING | APE_OBJECT_ARRAY | APE_OBJECT_NUMBER))
+    ape_args_init(vm, &check, "Object.slice", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_STRING | APE_OBJECT_ARRAY | APE_OBJECT_NUMBER))
     {
         return ape_object_make_null(vm->context);        
     }
@@ -942,8 +846,8 @@ static ApeObject_t cfn_object_isstring(ApeVM_t* vm, void* data, ApeSize_t argc, 
 {
     (void)data;
     ApeArgCheck_t check;
-    ape_args_checkinit(vm, &check, "isstring", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_ANY))
+    ape_args_init(vm, &check, "isstring", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ANY))
     {
         return ape_object_make_null(vm->context);        
     }
@@ -954,8 +858,8 @@ static ApeObject_t cfn_object_isarray(ApeVM_t* vm, void* data, ApeSize_t argc, A
 {
     (void)data;
     ApeArgCheck_t check;
-    ape_args_checkinit(vm, &check, "isarray", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_ANY))
+    ape_args_init(vm, &check, "isarray", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ANY))
     {
         return ape_object_make_null(vm->context);        
     }
@@ -966,8 +870,8 @@ static ApeObject_t cfn_object_ismap(ApeVM_t* vm, void* data, ApeSize_t argc, Ape
 {
     (void)data;
     ApeArgCheck_t check;
-    ape_args_checkinit(vm, &check, "ismap", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_ANY))
+    ape_args_init(vm, &check, "ismap", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ANY))
     {
         return ape_object_make_null(vm->context);        
     }
@@ -978,8 +882,8 @@ static ApeObject_t cfn_object_isnumber(ApeVM_t* vm, void* data, ApeSize_t argc, 
 {
     (void)data;
     ApeArgCheck_t check;
-    ape_args_checkinit(vm, &check, "isnumber", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_ANY))
+    ape_args_init(vm, &check, "isnumber", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ANY))
     {
         return ape_object_make_null(vm->context);        
     }
@@ -990,8 +894,8 @@ static ApeObject_t cfn_object_isbool(ApeVM_t* vm, void* data, ApeSize_t argc, Ap
 {
     (void)data;
     ApeArgCheck_t check;
-    ape_args_checkinit(vm, &check, "isbool", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_ANY))
+    ape_args_init(vm, &check, "isbool", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ANY))
     {
         return ape_object_make_null(vm->context);        
     }
@@ -1002,8 +906,8 @@ static ApeObject_t cfn_object_isnull(ApeVM_t* vm, void* data, ApeSize_t argc, Ap
 {
     (void)data;
     ApeArgCheck_t check;
-    ape_args_checkinit(vm, &check, "isnull", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_ANY))
+    ape_args_init(vm, &check, "isnull", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ANY))
     {
         return ape_object_make_null(vm->context);        
     }
@@ -1014,8 +918,8 @@ static ApeObject_t cfn_object_isfunction(ApeVM_t* vm, void* data, ApeSize_t argc
 {
     (void)data;
     ApeArgCheck_t check;
-    ape_args_checkinit(vm, &check, "isfunction", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_ANY))
+    ape_args_init(vm, &check, "isfunction", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ANY))
     {
         return ape_object_make_null(vm->context);        
     }
@@ -1026,8 +930,8 @@ static ApeObject_t cfn_object_isexternal(ApeVM_t* vm, void* data, ApeSize_t argc
 {
     (void)data;
     ApeArgCheck_t check;
-    ape_args_checkinit(vm, &check, "isexternal", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_ANY))
+    ape_args_init(vm, &check, "isexternal", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ANY))
     {
         return ape_object_make_null(vm->context);        
     }
@@ -1038,8 +942,8 @@ static ApeObject_t cfn_object_iserror(ApeVM_t* vm, void* data, ApeSize_t argc, A
 {
     (void)data;
     ApeArgCheck_t check;
-    ape_args_checkinit(vm, &check, "iserror", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_ANY))
+    ape_args_init(vm, &check, "iserror", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ANY))
     {
         return ape_object_make_null(vm->context);        
     }
@@ -1050,8 +954,8 @@ static ApeObject_t cfn_object_isnativefunction(ApeVM_t* vm, void* data, ApeSize_
 {
     (void)data;
     ApeArgCheck_t check;
-    ape_args_checkinit(vm, &check, "isnativefunction", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_ANY))
+    ape_args_init(vm, &check, "isnativefunction", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_ANY))
     {
         return ape_object_make_null(vm->context);        
     }
@@ -1063,8 +967,8 @@ static ApeObject_t cfn_bitnot(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
     ApeInt_t val;
     ApeArgCheck_t check;
     (void)data;
-    ape_args_checkinit(vm, &check, "bitnot", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_NUMBER))
+    ape_args_init(vm, &check, "bitnot", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER))
     {
         return ape_object_make_null(vm->context);        
     }
@@ -1082,8 +986,8 @@ static ApeObject_t cfn_object_eval(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
     (void)data;
     (void)slen;
     (void)data;
-    ape_args_checkinit(vm, &check, "eval", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_STRING))
+    ape_args_init(vm, &check, "eval", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_STRING))
     {
         return ape_object_make_null(vm->context);        
     }

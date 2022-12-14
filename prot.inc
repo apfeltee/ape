@@ -421,6 +421,7 @@ void *ape_allocator_alloc_debug(ApeAllocator_t *alloc, const char *str, const ch
 void *ape_allocator_alloc_real(ApeAllocator_t *alloc, size_t size);
 void ape_allocator_free(ApeAllocator_t *alloc, void *ptr);
 ApeAllocator_t* ape_make_allocator(ApeContext_t* ctx, ApeAllocator_t* dest, ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t free_fn, void* optr);
+void ape_allocator_destroy(ApeAllocator_t* alloc);
 ApeGCMemory_t *ape_make_gcmem(ApeContext_t *ctx);
 void ape_gcmem_destroy(ApeGCMemory_t *mem);
 ApeGCObjData_t *ape_gcmem_allocobjdata(ApeGCMemory_t *mem, ApeObjType_t type);
@@ -531,11 +532,6 @@ bool ape_tostring_bytecode(ApeWriter_t *buf, ApeUShort_t *code, ApePosition_t *s
 const char *ape_tostring_tokentype(ApeAstTokType_t type);
 /* builtins.c */
 ApeObjType_t *ape_args_make_typarray(int first, ...);
-void ape_args_checkinit(ApeVM_t *vm, ApeArgCheck_t *check, const char *name, ApeSize_t argc, ApeObject_t *args);
-void ape_args_raisetyperror(ApeArgCheck_t *check, ApeSize_t ix, int typ);
-bool ape_args_checkoptional(ApeArgCheck_t *check, ApeSize_t ix, int typ, bool raisetyperror);
-bool ape_args_checktype(ApeArgCheck_t *check, ApeSize_t ix, int typ);
-bool ape_args_check(ApeVM_t *vm, bool generate_error, ApeSize_t argc, ApeObject_t *args, ApeSize_t expected_argc, const ApeObjType_t *expected_types);
 void ape_builtins_setup_namespace(ApeVM_t *vm, const char *nsname, ApeNativeItem_t *fnarray);
 void ape_builtins_install_vm(ApeVM_t *vm);
 void ape_builtins_install_object(ApeVM_t *vm);

@@ -5,6 +5,11 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef _MSC_VER
+    #define JK_DYNARRAY_TYPEOF(...) intptr_t*
+#else
+    #define JK_DYNARRAY_TYPEOF(...) __typeof__(__VA_ARGS__)
+#endif
 
 // ifexpr ? thenexpr : elseexpr
 #define _da_if(...) (__VA_ARGS__) ?
@@ -45,13 +50,13 @@ static APE_INLINE intptr_t* da_grow_internal(intptr_t* arr, intptr_t count, intp
     ( \
         _da_if(da_need_to_grow_internal((intptr_t*)(arr), (n))) \
         _da_then( \
-            (arr) = (__typeof__(arr)) da_grow_internal((intptr_t*)(arr), (n), sizeof(*(arr))) \
+            (arr) = da_grow_internal((intptr_t*)(arr), (n), sizeof(*(arr))) \
         ) \
         _da_else(0) \
     )
 
 #define da_make(arr, n, sztyp) \
-    (__typeof__(arr))  da_grow_internal((intptr_t*)arr, n, sztyp)
+    (da_grow_internal((intptr_t*)arr, n, sztyp))
 
 #define da_init(arr, n, sztyp) \
     da_init(arr, n, sztyp)
@@ -107,13 +112,13 @@ static APE_INLINE intptr_t* da_grow_internal(intptr_t* arr, intptr_t count, intp
     #define da_push(arr, ...) \
         ( \
             da_maybe_grow_internal((arr), APE_CONF_PLAINLIST_CAPACITY_ADD), \
-            (arr)[da_count_internal(arr)++] = (__VA_ARGS__) \
+            ((intptr_t*)(arr))[da_count_internal(arr)++] = (intptr_t)(__VA_ARGS__) \
         )
 #else
     #define da_push(arr, ...) \
         ( \
             da_maybe_grow_internal((arr), 1), \
-            (arr)[da_count_internal(arr)++] = (__VA_ARGS__) \
+            ((intptr_t*)(arr))[da_count_internal(arr)++] = (intptr_t)(__VA_ARGS__) \
         )
 
 #endif
@@ -152,7 +157,7 @@ static APE_INLINE intptr_t* da_grow_internal(intptr_t* arr, intptr_t count, intp
 
 #define da_grow(arr, n) \
     ( \
-        ((arr) = da_grow_internal((arr), (n), sizeof(*(arr)))), \
+        ((arr) = da_grow_internal((intptr_t*)(arr), (n), sizeof(*(arr)))), \
         da_count_internal(arr) += (n) \
     )
 

@@ -575,7 +575,9 @@ bool ape_tostring_bytecode(ApeWriter_t* buf, ApeUShort_t* code, ApePosition_t* s
     ApePosition_t srcpos;
     pos = 0;
     cntdepth = 0;
-    fprintf(stderr, "ape_tostring_bytecode: code_size=%d\n", code_size);
+    #if 0
+        fprintf(stderr, "ape_tostring_bytecode: code_size=%d\n", (int)code_size);
+    #endif
     while((pos < code_size) && (cntdepth < kMaxDepth))
     {
         op = code[pos];

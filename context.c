@@ -70,13 +70,16 @@ err:
 
 void ape_context_destroy(ApeContext_t* ctx)
 {
+    ApeAllocator_t alloc;
     if(!ctx)
     {
         return;
     }
     ape_context_deinit(ctx);
-    ApeAllocator_t alloc = ctx->alloc;
+    alloc = ctx->alloc;
     ape_allocator_free(&alloc, ctx);
+    //free(ctx);
+    ape_allocator_destroy(&alloc);
 }
 
 void ape_context_deinit(ApeContext_t* ctx)

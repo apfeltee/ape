@@ -585,12 +585,12 @@ static ApeObject_t objfn_array_fill(ApeVM_t* vm, void* data, ApeSize_t argc, Ape
     (void)argc;
     (void)args;
     (void)len;
-    ape_args_checkinit(vm, &check, "fill", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_NUMBER))
+    ape_args_init(vm, &check, "fill", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER))
     {
         return ape_object_make_null(vm->context);  
     }
-    if(!ape_args_checktype(&check, 1, APE_OBJECT_ANY))
+    if(!ape_args_check(&check, 1, APE_OBJECT_ANY))
     {
         return ape_object_make_null(vm->context);
     }
@@ -619,8 +619,8 @@ static ApeObject_t objfn_array_map(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
     (void)data;
     (void)argc;
     (void)args;
-    ape_args_checkinit(vm, &check, "map", argc, args);
-    if(!ape_args_checktype(&check, 0, APE_OBJECT_SCRIPTFUNCTION | APE_OBJECT_NATIVEFUNCTION))
+    ape_args_init(vm, &check, "map", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_SCRIPTFUNCTION | APE_OBJECT_NATIVEFUNCTION))
     {
         return ape_object_make_null(vm->context);  
     }
@@ -677,7 +677,7 @@ static ApeObject_t objfn_array_join(ApeVM_t* vm, void* data, ApeSize_t argc, Ape
     sstr = "";
     slen = 0;
     self = ape_vm_popthisstack(vm);
-    ape_args_checkinit(vm, &check, "join", argc, args);
+    ape_args_init(vm, &check, "join", argc, args);
     if(ape_args_checkoptional(&check, 0, APE_OBJECT_STRING, true))
     {
         sjoin = args[0];

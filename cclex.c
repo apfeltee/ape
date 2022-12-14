@@ -56,11 +56,11 @@ static ApeAstTokType_t ape_lexer_lookupident(const char* ident, ApeSize_t len)
 
 static ApePosition_t ape_lexer_makesourcepos(const ApeAstCompFile_t* file, int line, int column)
 {
-    return (ApePosition_t){
-        .file = file,
-        .line = line,
-        .column = column,
-    };
+    ApePosition_t r;
+    r.file = file;
+    r.line = line;
+    r.column = column;
+    return r;
 }
 
 void ape_lexer_token_init(ApeAstToken_t* tok, ApeAstTokType_t type, const char* literal, int len)

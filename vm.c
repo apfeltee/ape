@@ -920,7 +920,6 @@ bool ape_vm_haserrors(ApeVM_t* vm)
 
 bool ape_vm_setglobal(ApeVM_t* vm, ApeSize_t ix, ApeObject_t val)
 {
-    ApeObject_t nullval;
     ape_valdict_set(vm->globalobjects, &ix, &val);
     return true;
 }
@@ -944,7 +943,7 @@ void ape_vm_setstackpointer(ApeVM_t* vm, int new_sp)
     ApeSize_t idx;
     idx = vm->stackptr;
     /* to avoid gcing freed objects */
-    if(new_sp > idx)
+    if((ApeInt_t)new_sp > (ApeInt_t)idx)
     {
         count = new_sp - idx;
         bytescount = count * sizeof(ApeObject_t);
@@ -1153,7 +1152,6 @@ bool ape_vm_callobjectargs(ApeVM_t* vm, ApeObject_t callee, ApeInt_t nargs, ApeO
 {
     bool ok;
     ApeSize_t idx;
-    ApeSize_t* obegin;
     ApeInt_t ofs;
     ApeInt_t actualargs;
     ApeObjType_t calleetype;
@@ -1448,9 +1446,15 @@ bool ape_frame_init(ApeFrame_t* frame, ApeObject_t function_obj, int bptr)
     return true;
 }
 
-
+/*
+* this function updates an existing stack-alloc'd frame.
+* since frames only hold primitive data (integrals and pointers), NO copying
+* beyond primitives is done here.
+* if a frame needs to copy something, do so in ape_frame_copyalloc.
+*/
 ApeFrame_t* ape_frame_update(ApeVM_t* vm, ApeFrame_t* rt, ApeFrame_t* from)
 {
+    (void)vm;
     rt->allocated = true;
     rt->function = from->function;
     rt->srcpositions = from->srcpositions;
@@ -1464,6 +1468,9 @@ ApeFrame_t* ape_frame_update(ApeVM_t* vm, ApeFrame_t* rt, ApeFrame_t* from)
     return rt;
 }
 
+/*
+* creates a new frame with data provided by an existing frame.
+*/
 ApeFrame_t* ape_frame_copyalloc(ApeVM_t* vm, ApeFrame_t* from)
 {
     ApeFrame_t* rt;
@@ -1477,6 +1484,12 @@ bool ape_vm_pushframe(ApeVM_t* vm, ApeFrame_t frame)
     ApeFrame_t* pf;
     ApeFrame_t* tmp;
     ApeScriptFunction_t* fn;
+    /*
+    * when a new frame exceeds existing the frame list, then
+    * allocate a new one from $frame ...
+    * ... otherwise, copy data from $frame, and stuff it back into the frame list.
+    * this saves a considerable amount of memory by reusing existing memory.
+    */
     if(vm->countframes >= deqlist_count(vm->frameobjects))
     {
         pf = ape_frame_copyalloc(vm, &frame);
@@ -1513,7 +1526,9 @@ bool ape_vm_popframe(ApeVM_t* vm)
         return false;
     }
     popped = (ApeFrame_t*)deqlist_get(vm->frameobjects, vm->countframes);
-    //ape_allocator_free(&vm->context->alloc, popped);
+    /*
+    * don't deallocate $popped here - they'll be deallocated in ape_vm_destroy.
+    */
     vm->currentframe = (ApeFrame_t*)deqlist_get(vm->frameobjects, vm->countframes - 1);
     return true;
 }
@@ -1944,7 +1959,6 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
     ApeSize_t idx;
     ApeSize_t tmpi;
     ApeSize_t kvstart;
-    ApeSize_t* obegin;
     ApeFloat_t comparison_res;
     ApeFloat_t maxexecms;
     ApeFloat_t valdouble;

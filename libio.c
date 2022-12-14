@@ -45,7 +45,9 @@
 static ApeObject_t cfn_file_write(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING, APE_OBJECT_STRING))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "write", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_STRING) && !ape_args_check(&check, 1, APE_OBJECT_STRING))
     {
         return ape_object_make_null(vm->context);
     }
@@ -69,7 +71,9 @@ static ApeObject_t cfn_file_write(ApeVM_t* vm, void* data, ApeSize_t argc, ApeOb
 static ApeObject_t cfn_file_read(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "read", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_STRING))
     {
         return ape_object_make_null(vm->context);
     }
@@ -98,7 +102,9 @@ static ApeObject_t cfn_file_isfile(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
     const char* path;
     struct stat st;
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "isfile", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_STRING))
     {
         return ape_object_make_bool(vm->context, false);
     }
@@ -118,7 +124,9 @@ static ApeObject_t cfn_file_isdirectory(ApeVM_t* vm, void* data, ApeSize_t argc,
     const char* path;
     struct stat st;
     (void)data;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "isdirectory", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_STRING))
     {
         return ape_object_make_bool(vm->context, false);
     }
@@ -257,7 +265,9 @@ static ApeObject_t cfn_dir_readdir(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
     ApeObject_t subm;
     (void)data;
     ctx = vm->context;
-    if(!APE_CHECK_ARGS(vm, true, argc, args, APE_OBJECT_STRING))
+    ApeArgCheck_t check;
+    ape_args_init(vm, &check, "readdir", argc, args);
+    if(!ape_args_check(&check, 0, APE_OBJECT_STRING))
     {
         return ape_object_make_null(vm->context);
     }

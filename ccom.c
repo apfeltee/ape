@@ -2414,6 +2414,7 @@ static ApeAstFileScope_t* ape_compiler_makefilescope(ApeAstCompiler_t* comp, Ape
         return NULL;
     }
     memset(filescope, 0, sizeof(ApeAstFileScope_t));
+    filescope->context = comp->context;
     filescope->parser = ape_ast_make_parser(comp->context, comp->config, comp->errors);
     if(!filescope->parser)
     {

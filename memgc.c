@@ -3,6 +3,9 @@
 
 #define APE_ACTUAL_POOLSIZE (APE_CONF_SIZE_GCMEM_POOLSIZE)
 
+#define APE_CONF_SIZE_MEMPOOL_INITIAL (1024)
+#define APE_CONF_SIZE_MEMPOOL_MAX 1024
+
 struct ApeGCObjPool_t
 {
     DequeList_t* datapool;
@@ -14,33 +17,35 @@ struct ApeGCMemory_t
     ApeContext_t* context;
     ApeAllocator_t* alloc;
     ApeSize_t allocations_since_sweep;
-    ApeGCObjData_t** frontobjects;
-    ApeGCObjData_t** backobjects;
+
+    //ApeGCObjData_t** frontobjects;
+    intptr_t* frontobjects;
+
+    //ApeGCObjData_t** backobjects;
+    intptr_t* backobjects;
+
     ApeValArray_t* objects_not_gced;
     ApeGCObjPool_t data_only_pool;
     ApeGCObjPool_t pools[APE_CONF_SIZE_GCMEM_POOLCOUNT];
 };
 
-
 static const ApePosition_t g_posinvalid = { NULL, -1, -1 };
 
 void poolinit(ApeContext_t* ctx, ApeGCObjPool_t* pool)
 {
-    ApeInt_t i;
-    ApeInt_t howmuch;
-    howmuch = APE_ACTUAL_POOLSIZE;
+    (void)ctx;
     pool->count = 0;
     pool->datapool = deqlist_create_empty();
 }
 
 void pooldestroy(ApeContext_t* ctx, ApeGCObjPool_t* pool)
 {
+    (void)ctx;
     deqlist_destroy(pool->datapool);
 }
 
 void poolput(ApeGCObjPool_t* pool, ApeInt_t idx, ApeGCObjData_t* data)
 {
-    //fprintf(stderr, "poolput: idx=%d\n", idx);
     if(idx >= deqlist_len(pool->datapool))
     {
         deqlist_push(&pool->datapool, data);
@@ -53,17 +58,13 @@ void poolput(ApeGCObjPool_t* pool, ApeInt_t idx, ApeGCObjData_t* data)
 
 ApeGCObjData_t* poolget(ApeGCObjPool_t* pool, ApeInt_t idx)
 {
-    //fprintf(stderr, "poolget: idx=%d\n", idx);
-    //if(idx >= deqlist_len(pool->datapool))
-    {
-        //return NULL;
-    }
     return (ApeGCObjData_t*)deqlist_get(pool->datapool, idx);
 }
 
 void* ape_mem_defaultmalloc(ApeContext_t* ctx, void* userptr, size_t size)
 {
     void* resptr;
+    (void)userptr;
     resptr = (void*)ape_allocator_alloc(&ctx->custom_allocator, size);
     if(!resptr)
     {
@@ -74,14 +75,13 @@ void* ape_mem_defaultmalloc(ApeContext_t* ctx, void* userptr, size_t size)
 
 void ape_mem_defaultfree(ApeContext_t* ctx, void* userptr, void* objptr)
 {
+    (void)userptr;
     ape_allocator_free(&ctx->custom_allocator, objptr);
 }
 
-//        ape_allocator_alloc_debug(alc, #sz, __FUNCTION__, __FILE__, __LINE__, sz)
-
 void* ape_allocator_alloc_debug(ApeAllocator_t* alloc, const char* str, const char* func, const char* file, int line, size_t size)
 {
-    fprintf(stderr, "%d bytes allocd in %s:%d:%s: %s\n", size, file, line, func, str);
+    fprintf(stderr, "%d bytes allocd in %s:%d:%s: %s\n", (int)size, file, line, func, str);
     return ape_allocator_alloc_real(alloc, size);
 }
 
@@ -110,32 +110,21 @@ void wrap_free(ApeAllocator_t* alloc, void* ptr)
     free(ptr);    
 }
 
-#define INITIAL_SIZE (1024)*1024
-
 void* ape_allocator_alloc_real(ApeAllocator_t* alloc, size_t size)
 {
-    fprintf(stderr, "allocator_alloc: alloc=%p size=%d\n", alloc, size);
-    #if 0
-        if(!alloc->ready)
-        {
-            fprintf(stderr, "not ready, must initialize\n");
-            alloc->memory = wrap_alloc(alloc, INITIAL_SIZE);
-            mplite_init(&alloc->pool, alloc->memory, INITIAL_SIZE, 2, NULL);
-            alloc->ready = true;
-        }
-        return mplite_malloc(&alloc->pool, size);
-    #else
-        return wrap_alloc(alloc, size);
-    #endif
+    if(!alloc->ready)
+    {
+        fprintf(stderr, "not ready, must initialize\n");
+        alloc->pool = ape_mempool_init(APE_CONF_SIZE_MEMPOOL_INITIAL, APE_CONF_SIZE_MEMPOOL_MAX);
+        alloc->ready = true;
+    }
+    return ape_mempool_alloc(alloc->pool, size);
 }
 
 void ape_allocator_free(ApeAllocator_t* alloc, void* ptr)
 {
-    #if 0
-        //mplite_free(&alloc->pool, ptr);
-    #else
-        wrap_free(alloc, ptr);
-    #endif
+    /* nothing to do */
+    ape_mempool_free(alloc->pool, ptr);
 }
 
 ApeAllocator_t* ape_make_allocator(ApeContext_t* ctx, ApeAllocator_t* dest, ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t free_fn, void* optr)
@@ -147,6 +136,12 @@ ApeAllocator_t* ape_make_allocator(ApeContext_t* ctx, ApeAllocator_t* dest, ApeM
     dest->optr = optr;
     dest->ready = false;
     return dest;
+}
+
+void ape_allocator_destroy(ApeAllocator_t* alloc)
+{
+    (void)alloc;
+    ape_mempool_destroy(alloc->pool);
 }
 
 ApeGCMemory_t* ape_make_gcmem(ApeContext_t* ctx)
@@ -205,7 +200,7 @@ void ape_gcmem_destroy(ApeGCMemory_t* mem)
     notgclen = ape_valarray_count(mem->objects_not_gced);
     if(notgclen != 0)
     {
-        fprintf(stderr, "releasing %d objects not caught by GC\n", notgclen);
+        fprintf(stderr, "releasing %d objects not caught by GC\n", (int)notgclen);
         for(i=0; i<notgclen; i++)
         {
         }
@@ -244,8 +239,8 @@ void ape_gcmem_destroy(ApeGCMemory_t* mem)
 
 ApeGCObjData_t* ape_gcmem_allocobjdata(ApeGCMemory_t* mem, ApeObjType_t type)
 {
-    bool ok;
     ApeGCObjData_t* data;
+    (void)type;
     data = NULL;
     mem->allocations_since_sweep++;
     if(mem->data_only_pool.count > 0)
@@ -274,7 +269,7 @@ ApeGCObjData_t* ape_gcmem_allocobjdata(ApeGCMemory_t* mem, ApeObjType_t type)
     da_push(mem->backobjects, data);
     da_push(mem->frontobjects, data);
     data->mem = mem;
-    //data->datatype = type;
+    data->datatype = type;
     return data;
 }
 
@@ -358,7 +353,6 @@ ApeGCObjPool_t* ape_gcmem_getpoolfor(ApeGCMemory_t* mem, ApeObjType_t type)
 
 ApeGCObjData_t* ape_gcmem_getfrompool(ApeGCMemory_t* mem, ApeObjType_t type)
 {
-    bool ok;
     ApeGCObjData_t* data;
     ApeGCObjPool_t* pool;
     pool = ape_gcmem_getpoolfor(mem, type);
@@ -497,9 +491,12 @@ void ape_gcmem_markobject(ApeObject_t obj)
                     if(ape_object_value_isallocated(free_val))
                     {
                         free_val_data = ape_object_value_allocated_data(free_val);
-                        if(!free_val_data->gcmark)
+                        if(free_val_data)
                         {
-                            ape_gcmem_markobject(free_val);
+                            if(!free_val_data->gcmark)
+                            {
+                                ape_gcmem_markobject(free_val);
+                            }
                         }
                     }
                 }
@@ -515,10 +512,9 @@ void ape_gcmem_markobject(ApeObject_t obj)
 void ape_gcmem_sweep(ApeGCMemory_t* mem)
 {
     ApeSize_t i;
-    bool ok;
     ApeGCObjData_t* data;
     ApeGCObjPool_t* pool;
-    ApeGCObjData_t** objs_temp;
+    intptr_t* objs_temp;
     ape_gcmem_markobjlist((ApeObject_t*)ape_valarray_data(mem->objects_not_gced), ape_valarray_count(mem->objects_not_gced));
     APE_ASSERT(da_count(mem->backobjects) >= da_count(mem->frontobjects));
     da_clear(mem->backobjects);

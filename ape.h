@@ -54,7 +54,6 @@ THE SOFTWARE.
 #include <limits.h>
 #include <assert.h>
 #include <errno.h>
-#include "mplite.h"
 
 #if defined(__linux__)
     #define APE_LINUX
@@ -125,8 +124,7 @@ THE SOFTWARE.
 #define APE_ARRAY_LEN(array) ((int)(sizeof(array) / sizeof(array[0])))
 
 #define APE_DEBUG 0
-
-
+#define APE_USE_MEMPOOL 1
 
 #if 1
     #define APE_DBLEQ(a, b) (fabs((a) - (b)) < DBL_EPSILON)
@@ -145,16 +143,6 @@ THE SOFTWARE.
 #else
     #define APE_LOG(...) ((void)0)
 #endif
-
-#if 0
-    #define APE_CHECK_ARGS(vm, generate_error, argc, args, ...)                                                                  \
-        ape_args_check((vm), (generate_error), (argc), (args), (sizeof((ApeObjType_t[]){ __VA_ARGS__ }) / sizeof(ApeObjType_t)), \
-                       ((ApeObjType_t*)((ApeObjType_t[]){ __VA_ARGS__ })))
-#else
-    #define APE_CHECK_ARGS(vm, generate_error, argc, args, ...) \
-        ape_args_check((vm), (generate_error), (argc), (args), (sizeof((int[]){ __VA_ARGS__ }) / sizeof(int)), ape_args_make_typarray(__VA_ARGS__, -1))
-#endif
-
 
 /**/
 #if 0
@@ -603,6 +591,7 @@ typedef struct /**/ ApeNativeItem_t        ApeNativeItem_t;
 typedef struct /**/ ApeObjMemberItem_t     ApeObjMemberItem_t;
 typedef struct /**/ ApePseudoClass_t       ApePseudoClass_t;
 typedef struct /**/ ApeArgCheck_t          ApeArgCheck_t;
+typedef struct /**/ApeMemPool_t ApeMemPool_t;
 
 #define APE_USE_ALIST 1
 typedef struct Vector_t Vector_t;
@@ -859,6 +848,34 @@ struct ApeWriter_t
     bool                 iomustflush;
 };
 
+struct ApeMemPool_t
+{
+    bool available;
+
+    /* actual pool count */
+    int poolcount;
+
+    /* pool array length (2^x ceil of ct) */
+    int poolarrlength;
+
+    /* minimum pool size */
+    int minpoolsize;
+
+    /* maximum pool size */
+    int maxpoolsize;
+
+    /* page size, typically 4096 */
+    int pgsize;
+
+    /* pools */
+    void **pools;
+
+    /* chunk size for each pool */
+    int* psizes;
+
+    /* heads for pools' free lists */
+    void* heads[1];
+};
 
 struct ApeAllocator_t
 {
@@ -866,12 +883,8 @@ struct ApeAllocator_t
     ApeMemAllocFunc_t fnmalloc;
     ApeMemFreeFunc_t  fnfree;
     void* optr;
-
-    mplite_t pool;
-    mplite_lock_t lock;
-    unsigned char** memory;
+    ApeMemPool_t* pool;
     bool ready;
-    
 };
 
 struct ApeError_t
@@ -1361,6 +1374,8 @@ APE_EXTERNC_BEGIN
 #endif
 */
 
+#include "prot.inc"
+
 static APE_INLINE ApeObject_t object_make_from_data(ApeContext_t* ctx, ApeObjType_t type, ApeGCObjData_t* data)
 {
     ApeObject_t object;
@@ -1372,7 +1387,72 @@ static APE_INLINE ApeObject_t object_make_from_data(ApeContext_t* ctx, ApeObjTyp
     return object;
 }
 
-#include "prot.inc"
+static APE_INLINE void ape_args_init(ApeVM_t* vm, ApeArgCheck_t* check, const char* name, ApeSize_t argc, ApeObject_t* args)
+{
+    check->vm = vm;
+    check->name = name;
+    check->haveminargs = false;
+    check->counterror = false;
+    check->minargs = 0;
+    check->argc = argc;
+    check->args = args;
+}
+
+static APE_INLINE void ape_args_raisetyperror(ApeArgCheck_t* check, ApeSize_t ix, int typ)
+{
+    char* extypestr;
+    const char* typestr;
+    typestr = ape_object_value_typename(ape_object_value_type(check->args[ix]));
+    extypestr = ape_object_value_typeunionname(check->vm->context, (ApeObjType_t)typ);
+    ape_vm_adderror(check->vm, APE_ERROR_RUNTIME,
+        "invalid arguments: function '%s' expects argument #%d to be a %s, but got %s instead", check->name, ix, extypestr, typestr);
+    ape_allocator_free(check->vm->alloc, extypestr);
+}
+
+static APE_INLINE bool ape_args_checkoptional(ApeArgCheck_t* check, ApeSize_t ix, int typ, bool raisetyperror)
+{
+    check->counterror = false;
+    if((check->argc == 0) || (check->argc <= ix))
+    {
+        check->counterror = true;
+        return false;
+    }
+    if(!(ape_object_value_type(check->args[ix]) & typ))
+    {
+        if(raisetyperror)
+        {
+            ape_args_raisetyperror(check, ix, typ);
+        }
+        return false;
+    }
+    return true;
+}
+
+static APE_INLINE bool ape_args_check(ApeArgCheck_t* check, ApeSize_t ix, int typ)
+{
+    ApeSize_t ixval;
+    if(!ape_args_checkoptional(check, ix, typ, false))
+    {
+        if(check->counterror)
+        {
+            ixval = ix;
+            if(check->haveminargs)
+            {
+                ixval = check->minargs;               
+            }
+            else
+            {
+            }
+            ape_vm_adderror(check->vm, APE_ERROR_RUNTIME, "invalid arguments: function '%s' expects at least %d arguments", check->name, ixval);
+        }
+        else
+        {
+            ape_args_raisetyperror(check, ix, typ);
+        }
+    }
+    return true;
+}
+
 
 /*
 #ifdef __cplusplus

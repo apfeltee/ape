@@ -5,8 +5,8 @@
 #include <string.h>
 #include <signal.h>
 #if __has_include(<readline/readline.h>)
-#include <readline/readline.h>
-#include <readline/history.h>
+    #include <readline/readline.h>
+    #include <readline/history.h>
 #else
     #define NO_READLINE
 #endif

@@ -6,10 +6,8 @@
 static APE_INLINE ApeGCObjData_t* ape_object_make_primitive(ApeContext_t* ctx, ApeObjType_t type)
 {
     ApeGCObjData_t* data;
-    #if 1
     data = ape_gcmem_getfrompool(ctx->mem, type);
     if(!data)
-    #endif
     {
         data = ape_gcmem_allocobjdata(ctx->mem, type);
     }
@@ -24,6 +22,7 @@ static APE_INLINE ApeGCObjData_t* ape_object_make_primitive(ApeContext_t* ctx, A
 
 ApeObject_t ape_object_make_number(ApeContext_t* ctx, ApeFloat_t val)
 {
+    (void)ctx;
     #if 0
         ApeGCObjData_t* data;
         data = ape_object_make_primitive(ctx, APE_OBJECT_NUMBER);
@@ -40,6 +39,7 @@ ApeObject_t ape_object_make_number(ApeContext_t* ctx, ApeFloat_t val)
 
 ApeObject_t ape_object_make_bool(ApeContext_t* ctx, bool val)
 {
+    (void)ctx;
     #if 0
         ApeGCObjData_t* data;
         data = ape_object_make_primitive(ctx, APE_OBJECT_BOOL);
@@ -56,6 +56,7 @@ ApeObject_t ape_object_make_bool(ApeContext_t* ctx, bool val)
 
 ApeObject_t ape_object_make_null(ApeContext_t* ctx)
 {
+    (void)ctx;
     #if 0
         ApeGCObjData_t* data;
         data = ape_object_make_primitive(ctx, APE_OBJECT_NULL);
