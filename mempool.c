@@ -1,35 +1,41 @@
-/* 
- * Copyright (c) 2011 Scott Vokes <vokes.s@gmail.com>
- *  
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *  
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
- * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
- * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
- * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- */
 
 /*
- * A memory pool allocator, designed for systems that need to
- * allocate/free pointers in amortized O(1) time. Memory is allocated a
- * page at a time, then added to a set of pools of equally sized
- * regions. A free list for each size is maintained in the unused
- * regions. When a pointer is repooled, it is linked back into the
- * pool with the given size's free list.
- *
- * Note that repooling with the wrong size leads to subtle/ugly memory
- * clobbering bugs. Turning on memory use logging via MPOOL_DEBUG
- * can help pin down the location of most such errors.
- * 
- * Allocations larger than the page size are allocated whole via
- * mmap, and those larger than mp->maxpoolsize (configurable) are
- * freed immediately via munmap; no free list is used.
- */
+* this file contains the memory pool logic.
+* like memgc.c, do not touch it unless you know what you're doing.
+*/
+
+/* 
+* Copyright (c) 2011 Scott Vokes <vokes.s@gmail.com>
+*  
+* Permission to use, copy, modify, and/or distribute this software for any
+* purpose with or without fee is hereby granted, provided that the above
+* copyright notice and this permission notice appear in all copies.
+*  
+* THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+* WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+* MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+* ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+* WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+* ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+* OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+*/
+
+/*
+* A memory pool allocator, designed for systems that need to
+* allocate/free pointers in amortized O(1) time. Memory is allocated a
+* page at a time, then added to a set of pools of equally sized
+* regions. A free list for each size is maintained in the unused
+* regions. When a pointer is repooled, it is linked back into the
+* pool with the given size's free list.
+*
+* Note that repooling with the wrong size leads to subtle/ugly memory
+* clobbering bugs. Turning on memory use logging via MPOOL_DEBUG
+* can help pin down the location of most such errors.
+* 
+* Allocations larger than the page size are allocated whole via
+* mmap, and those larger than mp->maxpoolsize (configurable) are
+* freed immediately via munmap; no free list is used.
+*/
 
 
 #if defined(__linux__) || defined(__unix__) || defined(__CYGWIN__)
@@ -183,12 +189,16 @@ ApeMemPool_t* ape_mempool_init(int min2, int max2)
     #if defined(APE_MEMPOOL_ISLINUX)
         pgsz = sysconf(_SC_PAGESIZE);
     #endif
-    palen = iceil2(ct);
     if(DBG)
     {
         fprintf(stderr, "mempool_init for cells %d - %d bytes\n", 1 << min2, 1 << max2);
     }
-    assert(ct > 0);
+    if(ct < 1)
+    {
+        ct = min2;
+    }
+    palen = iceil2(ct);
+    //assert(ct > 0);
     mp = (ApeMemPool_t*)MPOOL_MALLOC(sizeof(ApeMemPool_t) + (ct - 1) * sizeof(void*));
     pools = MPOOL_MALLOC(palen * sizeof(void**));
     sizes = (int*)MPOOL_MALLOC(palen * sizeof(int));
@@ -303,6 +313,7 @@ void* ape_mempool_alloc(ApeMemPool_t* mp, int sz)
         {
             return NULL;
         }
+        fprintf(stderr, "mp->pools=%p i=%d pool=%p\n", mp->pools[i], i, pool[0]);
         mp->pools[i] = pool;
         mp->heads[i] = &pool[0];
         mp->psizes[i] = szceil;

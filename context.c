@@ -22,7 +22,7 @@ ApeContext_t* ape_make_contextex(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t f
     thisalloc = custalloc;
     ctx->alloc = thisalloc;
     ctx->custom_allocator = custalloc;
-    fprintf(stderr, "ctx->alloc=%p\n", &ctx->alloc);
+    fprintf(stderr, "ctx=%p, ctx->alloc=%p\n", ctx, &ctx->alloc);
     
 
     ape_context_setdefaultconfig(ctx);

@@ -1,4 +1,9 @@
 
+/*
+* this file contains most (but not all, see libobject.c) stringification
+* functions. they typically only affect output.
+*/
+
 #include <inttypes.h>
 #include "inline.h"
 
@@ -40,8 +45,12 @@ const char* ape_tostring_operator(ApeOperator_t op)
             return "/";
         case APE_OPERATOR_LESSTHAN:
             return "<";
+        case APE_OPERATOR_LESSEQUAL:
+            return "<=";
         case APE_OPERATOR_GREATERTHAN:
             return ">";
+        case APE_OPERATOR_GREATEREQUAL:
+            return ">=";
         case APE_OPERATOR_EQUAL:
             return "==";
         case APE_OPERATOR_NOTEQUAL:
@@ -309,10 +318,10 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeAstExpression_t* expr)
             break;
         case APE_EXPR_PREFIX:
             {
-                ape_writer_append(buf, "(");
+                //ape_writer_append(buf, "(");
                 ape_writer_append(buf, ape_tostring_operator(expr->exinfix.op));
                 ape_tostring_expression(buf, expr->exprefix.right);
-                ape_writer_append(buf, ")");
+                //ape_writer_append(buf, ")");
             }
             break;
         case APE_EXPR_INFIX:
@@ -363,11 +372,12 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeAstExpression_t* expr)
             break;
         case APE_EXPR_INDEX:
             {
-                ape_writer_append(buf, "(");
+                //ape_writer_append(buf, "(");
                 ape_tostring_expression(buf, expr->exindex.left);
                 ape_writer_append(buf, "[");
                 ape_tostring_expression(buf, expr->exindex.index);
-                ape_writer_append(buf, "])");
+                ape_writer_append(buf, "]");
+                //ape_writer_append(buf, ")");
             }
             break;
         case APE_EXPR_ASSIGN:
@@ -469,22 +479,15 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeAstExpression_t* expr)
                     ape_tostring_expression(buf, expr->exforstmt.init);
                     ape_writer_append(buf, " ");
                 }
-                else
-                {
-                    ape_writer_append(buf, ";");
-                }
+                ape_writer_append(buf, ";");
                 if(expr->exforstmt.test)
                 {
                     ape_tostring_expression(buf, expr->exforstmt.test);
-                    ape_writer_append(buf, "; ");
                 }
-                else
-                {
-                    ape_writer_append(buf, ";");
-                }
+                ape_writer_append(buf, ";");
                 if(expr->exforstmt.update)
                 {
-                    ape_tostring_expression(buf, expr->exforstmt.test);
+                    ape_tostring_expression(buf, expr->exforstmt.update);
                 }
                 ape_writer_append(buf, ")");
                 ape_tostring_codeblock(buf, expr->exforstmt.body);

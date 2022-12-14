@@ -1,4 +1,12 @@
 
+/*
+* this file is meant to cross-reference against C++ compilers that introduce subtle, but
+* annoying issues.
+* specifically, Visual Studio.
+* also, to check that it compiles as C++, for standards-conforming compilers, such
+* as GCC, Clang, etc.
+*/
+
 #include "ape.h"
 #include "inline.h"
 #include "builtins.c"

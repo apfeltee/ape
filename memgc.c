@@ -1,10 +1,17 @@
 
+/*
+* this file contains the brunt of the garbage collector logic.
+* be careful when modifying, as this is programmatically
+* akin to the "jesus nut" (https://en.wikipedia.org/wiki/Jesus_nut),
+* and things WILL break terribly.
+*/
+
 #include "inline.h"
 
 #define APE_ACTUAL_POOLSIZE (APE_CONF_SIZE_GCMEM_POOLSIZE)
 
-#define APE_CONF_SIZE_MEMPOOL_INITIAL (1024)
-#define APE_CONF_SIZE_MEMPOOL_MAX 1024
+#define APE_CONF_SIZE_MEMPOOL_INITIAL (1024/4)
+#define APE_CONF_SIZE_MEMPOOL_MAX 0
 
 struct ApeGCObjPool_t
 {

@@ -1,6 +1,11 @@
 /*
-SPDX-License-Identifier: MIT
+* this file contains the VM of ape.
+* it also contains some functions that probably should be in their own files,
+* but that's legacy from the original code (where everything was stuffed into one file).
+*/
 
+/*
+SPDX-License-Identifier: MIT
 ape
 https://github.com/kgabis/ape
 Copyright (c) 2021 Krzysztof Gabis
