@@ -37,12 +37,12 @@
     #define ape_allocator_alloc(alc, sz) \
         ape_allocator_alloc_debug(alc, #sz, __FUNCTION__, __FILE__, __LINE__, sz)
 #else
-    #define ape_allocator_alloc(alc, sz) \
-        ape_allocator_alloc_real(alc, sz)
+    #define ape_allocator_alloc(alc, sz) ape_allocator_alloc_real(alc, sz)
 #endif
 
 #include "dnarray.h"
 #include "aadeque.h"
+#include "sds.h"
 
 static APE_INLINE int ape_util_doubletoint(double n)
 {

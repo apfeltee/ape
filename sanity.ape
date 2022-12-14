@@ -256,9 +256,5 @@ _check_result = ("a" + "b" == "ab"); println(`checking (${"\"a\" + \"b\""} ${"==
         assert(str[i] == "x")
     }
 }
-_check_result = (reverse("abc") == "cba"); println(`checking (${"reverse(\"abc\")"} ${"=="} ${"cba"}) = ${_check_result}`); assert(_check_result);
-_check_result = (reverse("abcd") == "dcba"); println(`checking (${"reverse(\"abcd\")"} ${"=="} ${"dcba"}) = ${_check_result}`); assert(_check_result);
-_check_result = (slice("abc", 1) == "bc"); println(`checking (${"slice(\"abc\", 1)"} ${"=="} ${"bc"}) = ${_check_result}`); assert(_check_result);
-_check_result = (slice("abc", -1) == "c"); println(`checking (${"slice(\"abc\", -1)"} ${"=="} ${"c"}) = ${_check_result}`); assert(_check_result);
-_check_result = (concat("abc", "def") == "abcdef"); println(`checking (${"concat(\"abc\", \"def\")"} ${"=="} ${"abcdef"}) = ${_check_result}`); assert(_check_result);
+
 println("all is well")

@@ -1,77 +1,18 @@
 
 #include "inline.h"
 
+char* ape_object_string_getinternalobjdata(ApeGCObjData_t* data)
+{
+    APE_ASSERT(data->datatype == APE_OBJECT_STRING);
+    return data->valstring.valalloc;
+}
+
 const char* ape_object_string_getdata(ApeObject_t object)
 {
     ApeGCObjData_t* data;
     APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_STRING);
     data = ape_object_value_allocated_data(object);
     return ape_object_string_getinternalobjdata(data);
-}
-
-char* ape_object_string_getinternalobjdata(ApeGCObjData_t* data)
-{
-    APE_ASSERT(data->datatype == APE_OBJECT_STRING);
-    if(data->valstring.is_allocated)
-    {
-        return data->valstring.value_allocated;
-    }
-    return data->valstring.value_buf;
-}
-
-bool ape_object_string_reservecapacity(ApeContext_t* ctx, ApeGCObjData_t* data, ApeSize_t capacity)
-{
-    char* new_value;
-    ApeObjString_t* string;
-    string = &data->valstring;
-    string->length = 0;
-    string->hash = 0;
-    if(capacity <= string->capacity)
-    {
-        return true;
-    }
-    if(capacity <= (APE_CONF_SIZE_STRING_BUFSIZE - 1))
-    {
-        if(string->is_allocated)
-        {
-            /* should never happen */
-            APE_ASSERT(false);
-            /* just in case */
-            ape_allocator_free(&ctx->alloc, string->value_allocated);
-        }
-        string->capacity = APE_CONF_SIZE_STRING_BUFSIZE - 1;
-        string->is_allocated = false;
-        return true;
-    }
-    new_value = (char*)ape_allocator_alloc(&ctx->alloc, capacity + 1);
-    if(!new_value)
-    {
-        return false;
-    }
-    if(string->is_allocated)
-    {
-        ape_allocator_free(&ctx->alloc, string->value_allocated);
-    }
-    string->value_allocated = new_value;
-    string->is_allocated = true;
-    string->capacity = capacity;
-    return true;
-}
-
-ApeSize_t ape_object_string_getlength(ApeObject_t object)
-{
-    ApeGCObjData_t* data;
-    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_STRING);
-    data = ape_object_value_allocated_data(object);
-    return data->valstring.length;
-}
-
-void ape_object_string_setlength(ApeObject_t object, ApeSize_t len)
-{
-    ApeGCObjData_t* data;
-    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_STRING);
-    data = ape_object_value_allocated_data(object);
-    data->valstring.length = len;
 }
 
 char* ape_object_string_getmutable(ApeObject_t object)
@@ -82,27 +23,45 @@ char* ape_object_string_getmutable(ApeObject_t object)
     return ape_object_string_getinternalobjdata(data);
 }
 
+bool ape_object_string_reservecapacity(ApeContext_t* ctx, ApeGCObjData_t *data, ApeSize_t capacity)
+{
+    if(data->valstring.valalloc == NULL)
+    {
+        data->valstring.valalloc = ds_newempty();
+    }
+    if(capacity >= ds_getavailable(data->valstring.valalloc))
+    {
+        //data->valstring.valalloc = ds_makeroomfor(data->valstring.valalloc, capacity+1);
+    }
+    return true;
+}
+
+ApeSize_t ape_object_string_getlength(ApeObject_t object)
+{
+    ApeGCObjData_t* data;
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_STRING);
+    data = ape_object_value_allocated_data(object);
+    if(data->valstring.valalloc == NULL)
+    {
+        return 0;
+    }
+    return ds_getlength(data->valstring.valalloc);
+}
+
+void ape_object_string_setlength(ApeObject_t object, ApeSize_t len)
+{
+    ApeGCObjData_t* data;
+    APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_STRING);
+    data = ape_object_value_allocated_data(object);
+    //ds_setlength(data->valstring.valalloc, len);
+}
+
 bool ape_object_string_append(ApeObject_t obj, const char* src, ApeSize_t len)
 {
-    ApeSize_t capacity;
-    ApeSize_t current_len;
-    char* str_buf;
     ApeGCObjData_t* data;
-    ApeObjString_t* string;
     APE_ASSERT(ape_object_value_type(obj) == APE_OBJECT_STRING);
     data = ape_object_value_allocated_data(obj);
-    string = &data->valstring;
-    str_buf = ape_object_string_getmutable(obj);
-    current_len = string->length;
-    capacity = string->capacity;
-    if((len + current_len) > capacity)
-    {
-        APE_ASSERT(false);
-        return false;
-    }
-    memcpy(str_buf + current_len, src, len);
-    string->length += len;
-    str_buf[string->length] = '\0';
+    data->valstring.valalloc = ds_appendlen(data->valstring.valalloc, src, len);
     return true;
 }
 
@@ -125,7 +84,6 @@ unsigned long ape_object_string_gethash(ApeObject_t obj)
     }
     return data->valstring.hash;
 }
-
 
 static ApeObject_t objfn_string_length(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {

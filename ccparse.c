@@ -378,7 +378,7 @@ ApeAstExpression_t* ape_ast_make_definestmt(ApeContext_t* ctx, ApeAstIdentExpr_t
 ApeAstExpression_t* ape_ast_make_ifstmt(ApeContext_t* ctx, ApePtrArray_t * cases, ApeAstBlockExpr_t* alternative)
 {
     ApeAstExpression_t* res;
-    res = ape_ast_make_expression(ctx, APE_EXPR_IF);
+    res = ape_ast_make_expression(ctx, APE_EXPR_IFELSE);
     if(!res)
     {
         return NULL;
@@ -908,7 +908,7 @@ ApeAstExpression_t* ape_ast_copy_expr(ApeAstExpression_t* expr)
                 }
             }
             break;
-        case APE_EXPR_IF:
+        case APE_EXPR_IFELSE:
             {
                 copyfn = (ApeDataCallback_t)ape_ast_copy_ifcase;
                 destroyfn = (ApeDataCallback_t)ape_ast_destroy_ifcase;
@@ -1226,7 +1226,7 @@ void* ape_ast_destroy_expr(ApeAstExpression_t* expr)
                 ape_ast_destroy_expr(expr->exdefine.value);
             }
             break;
-        case APE_EXPR_IF:
+        case APE_EXPR_IFELSE:
             {
                 ape_ptrarray_destroywithitems(expr->exifstmt.cases, (ApeDataCallback_t)ape_ast_destroy_ifcase);
                 ape_ast_destroy_codeblock(expr->exifstmt.alternative);

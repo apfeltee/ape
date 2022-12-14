@@ -15,6 +15,7 @@ ApeValArray_t* ape_make_valarraycapacity(ApeContext_t* ctx, ApeSize_t capacity, 
     {
         return NULL;
     }
+    arr->context = ctx;
     ok = ape_valarray_initcapacity(arr, ctx, capacity, elsz);
     if(!ok)
     {
@@ -51,7 +52,10 @@ bool ape_valarray_initcapacity(ApeValArray_t* arr, ApeContext_t* ctx, ApeSize_t 
 
 void ape_valarray_deinit(ApeValArray_t* arr)
 {
-    ape_allocator_free(&arr->context->alloc, arr->allocdata);
+    if(arr)
+    {
+        ape_allocator_free(&arr->context->alloc, arr->allocdata);
+    }
 }
 
 void ape_valarray_destroy(ApeValArray_t* arr)
@@ -74,6 +78,7 @@ ApeValArray_t* ape_valarray_copy(const ApeValArray_t* arr)
     {
         return NULL;
     }
+    copy->context = arr->context;
     copy->capacity = arr->capacity;
     copy->count = arr->count;
     copy->elemsize = arr->elemsize;

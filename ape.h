@@ -97,11 +97,9 @@ THE SOFTWARE.
 #define APE_CONF_INVALID_VALDICT_IX UINT_MAX
 #define APE_CONF_INVALID_STRDICT_IX UINT_MAX
 #define APE_CONF_DICT_INITIAL_SIZE (2)
-#define APE_CONF_ARRAY_INITIAL_CAPACITY (64/32)
-//#define APE_CONF_ARRAY_INITIAL_CAPACITY (2)
+#define APE_CONF_ARRAY_INITIAL_CAPACITY (64/4)
 
-#define APE_CONF_MAP_INITIAL_CAPACITY (64/32)
-//#define APE_CONF_MAP_INITIAL_CAPACITY (2)
+#define APE_CONF_MAP_INITIAL_CAPACITY (64/4)
 
 #define APE_CONF_PLAINLIST_CAPACITY_ADD 32
 
@@ -109,15 +107,15 @@ THE SOFTWARE.
 #define APE_CONF_SIZE_VM_THISSTACK (512 / 4)
 
 #define APE_CONF_SIZE_NATFN_MAXDATALEN (16 * 2)
-#define APE_CONF_SIZE_STRING_BUFSIZE (4)
+#define APE_CONF_SIZE_STRING_BUFSIZE (32)
 
-#define APE_CONF_SIZE_ERRORS_MAXCOUNT (16)
+#define APE_CONF_SIZE_ERRORS_MAXCOUNT (4)
 #define APE_CONF_SIZE_ERROR_MAXMSGLENGTH (80)
 
 
 /* decreasing these incurs higher memory use */
 #define APE_CONF_SIZE_GCMEM_POOLSIZE (512 * 4)
-#define APE_CONF_SIZE_GCMEM_POOLCOUNT ((3) + 1)
+#define APE_CONF_SIZE_GCMEM_POOLCOUNT ((4) + 1)
 #define APE_CONF_CONST_GCMEM_SWEEPINTERVAL (128 / 64)
 
 
@@ -403,7 +401,7 @@ enum ApeAstExprType_t
     APE_EXPR_LOGICAL,
     APE_EXPR_TERNARY,
     APE_EXPR_DEFINE,
-    APE_EXPR_IF,
+    APE_EXPR_IFELSE,
     APE_EXPR_RETURNVALUE,
     APE_EXPR_EXPRESSION,
     APE_EXPR_WHILELOOP,
@@ -636,8 +634,8 @@ typedef size_t (*ApeIOFlushFunc_t)(void* context, const char*, const char*, size
 typedef size_t (*ApeWriterWriteFunc_t)(ApeContext_t*, void*, const char*, size_t);
 typedef void (*ApeWriterFlushFunc_t)(ApeContext_t*, void*);
 
-typedef void* (*ApeMemAllocFunc_t)(void*, size_t);
-typedef void (*ApeMemFreeFunc_t)(void*, void*);
+typedef void* (*ApeMemAllocFunc_t)(ApeContext_t*, void*, size_t);
+typedef void (*ApeMemFreeFunc_t)(ApeContext_t*, void*, void*);
 typedef unsigned long (*ApeDataHashFunc_t)(const void*);
 typedef bool (*ApeDataEqualsFunc_t)(const void*, const void*);
 typedef void* (*ApeDataCallback_t)(void*);
@@ -701,8 +699,8 @@ struct ApeScriptFunction_t
 struct ApeExternalData_t
 {
     void*             data;
-    ApeDataCallback_t data_destroy_fn;
-    ApeDataCallback_t data_copy_fn;
+    ApeDataCallback_t fndestroy;
+    ApeDataCallback_t fncopy;
 };
 
 struct ApeObjError_t
@@ -713,15 +711,15 @@ struct ApeObjError_t
 
 struct ApeObjString_t
 {
-    union
-    {
-        char* value_allocated;
-        char  value_buf[APE_CONF_SIZE_STRING_BUFSIZE];
-    };
+    //union
+    //{
+        char* valalloc;
+        //char  valstack[APE_CONF_SIZE_STRING_BUFSIZE];
+    //};
     unsigned long hash;
-    bool          is_allocated;
-    ApeSize_t     capacity;
-    ApeSize_t     length;
+    //bool          is_allocated;
+    //ApeSize_t     capacity;
+    //ApeSize_t     length;
 };
 
 struct ApeNativeFunction_t
@@ -862,28 +860,29 @@ struct ApeWriter_t
 
 struct ApeAllocator_t
 {
+    ApeContext_t* context;
     ApeMemAllocFunc_t fnmalloc;
     ApeMemFreeFunc_t  fnfree;
-    void*             ctx;
+    void* optr;
 };
 
 struct ApeError_t
 {
     short  errtype;
-    char            message[APE_CONF_SIZE_ERROR_MAXMSGLENGTH];
-    ApePosition_t   pos;
+    char message[APE_CONF_SIZE_ERROR_MAXMSGLENGTH];
+    ApePosition_t pos;
     ApeTraceback_t* traceback;
 };
 
 struct ApeErrorList_t
 {
     ApeError_t errors[APE_CONF_SIZE_ERRORS_MAXCOUNT];
-    ApeSize_t  count;
+    ApeSize_t count;
 };
 
 struct ApeTracebackItem_t
 {
-    char*         function_name;
+    char* function_name;
     ApePosition_t pos;
 };
 
@@ -893,13 +892,12 @@ struct ApeTraceback_t
     ApeValArray_t* items;
 };
 
-
 struct ApeAstToken_t
 {
     ApeAstTokType_t toktype;
-    const char*    literal;
-    ApeSize_t      len;
-    ApePosition_t  pos;
+    const char* literal;
+    ApeSize_t len;
+    ApePosition_t pos;
 };
 
 struct ApeAstCompFile_t

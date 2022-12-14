@@ -226,6 +226,7 @@ static ApeObject_t cfn_object_rest(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
 static ApeObject_t cfn_reverse(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     bool ok;
+    char ch;
     char* resbuf;
     const char* str;
     ApeObject_t obj;
@@ -270,11 +271,13 @@ static ApeObject_t cfn_reverse(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObjec
             return ape_object_make_null(vm->context);
         }
         resbuf = ape_object_string_getmutable(res);
-        for(i = 0; i < len; i++)
+        for(i = len; i > 0; i--)
         {
-            resbuf[len - i - 1] = str[i];
+            //resbuf[len - i - 1] = str[i];
+            ch = str[i];
+            resbuf = ds_appendchar(resbuf, ch);
         }
-        resbuf[len] = '\0';
+        //resbuf[len] = '\0';
         ape_object_string_setlength(res, len);
         return res;
     }
@@ -1201,6 +1204,9 @@ void ape_builtins_install_vm(ApeVM_t* vm)
         {"sweep", cfn_vm_gcsweep},
         {"collect", cfn_vm_gccollect},
         {"stack", cfn_vm_stack},
+        #if 0
+        {"delete", cfn_vm_delete},
+        #endif
         {NULL, NULL},
     };
     ape_builtins_setup_namespace(vm, "VM", staticfuncs);    

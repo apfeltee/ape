@@ -1402,10 +1402,10 @@ void ape_vm_destroy(ApeVM_t* vm)
     {
         while(deqlist_count(vm->frameobjects) != 0)
         {
-            popped = deqlist_get(vm->frameobjects, deqlist_count(vm->frameobjects)-1);
+            popped = (ApeFrame_t*)deqlist_get(vm->frameobjects, deqlist_count(vm->frameobjects)-1);
             if(popped != NULL)
             {
-                if(popped->allocated)
+                //if(popped->allocated)
                 {
                     ape_allocator_free(&vm->context->alloc, popped);
                 }
@@ -1484,12 +1484,12 @@ bool ape_vm_pushframe(ApeVM_t* vm, ApeFrame_t frame)
     }
     else
     {
-        tmp = deqlist_get(vm->frameobjects, vm->countframes);
+        tmp = (ApeFrame_t*)deqlist_get(vm->frameobjects, vm->countframes);
         pf = ape_frame_update(vm, tmp, &frame);
         deqlist_set(vm->frameobjects, vm->countframes, pf);
     }
     vm->lastframe = pf;
-    vm->currentframe = deqlist_get(vm->frameobjects, vm->countframes);
+    vm->currentframe = (ApeFrame_t*)deqlist_get(vm->frameobjects, vm->countframes);
     vm->countframes++;
     fn = ape_object_value_asfunction(frame.function);
     ape_vm_setstackpointer(vm, frame.basepointer + fn->numlocals);
@@ -1512,9 +1512,9 @@ bool ape_vm_popframe(ApeVM_t* vm)
         vm->currentframe = NULL;
         return false;
     }
-    popped = deqlist_get(vm->frameobjects, vm->countframes);
+    popped = (ApeFrame_t*)deqlist_get(vm->frameobjects, vm->countframes);
     //ape_allocator_free(&vm->context->alloc, popped);
-    vm->currentframe = deqlist_get(vm->frameobjects, vm->countframes - 1);
+    vm->currentframe = (ApeFrame_t*)deqlist_get(vm->frameobjects, vm->countframes - 1);
     return true;
 }
 
@@ -1531,7 +1531,7 @@ void ape_vm_collectgarbage(ApeVM_t* vm, ApeValArray_t* constants, bool alsostack
     ape_gcmem_markobjlist((ApeObject_t*)(vm->globalobjects->values), vm->globalobjects->count);
     for(i = 0; i < vm->countframes; i++)
     {
-        frame = deqlist_get(vm->frameobjects, i);
+        frame = (ApeFrame_t*)deqlist_get(vm->frameobjects, i);
         ape_gcmem_markobject(frame->function);
     }
     if(alsostack)
@@ -1571,6 +1571,10 @@ bool ape_vm_run(ApeVM_t* vm, ApeAstCompResult_t* comp_res, ApeValArray_t * const
     return res;
 }
 
+ApeObject_t ape_object_string_copy(ApeContext_t* ctx, ApeObject_t obj)
+{
+    return ape_object_make_stringlen(ctx, ape_object_string_getdata(obj), ape_object_string_getlength(obj));
+}
 
 bool ape_vm_appendstring(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeObjType_t lefttype, ApeObjType_t righttype)
 {
@@ -1591,21 +1595,28 @@ bool ape_vm_appendstring(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOb
         /* avoid doing unnecessary copying by reusing the origin as-is */
         if(leftlen == 0)
         {
+            //ape_vm_pushstack(vm, ape_object_string_copy(vm->context, right));
             ape_vm_pushstack(vm, right);
         }
         else if(rightlen == 0)
         {
+            //ape_vm_pushstack(vm, ape_object_string_copy(vm->context, left));
             ape_vm_pushstack(vm, left);
         }
         else
         {
             leftstr = ape_object_string_getdata(left);
             rightstr = ape_object_string_getdata(right);
+            #if 0
+            ape_gcmem_markobject(left);
+            ape_gcmem_markobject(right);
+            #endif
             objres = ape_object_make_stringcapacity(vm->context, leftlen + rightlen);
             if(ape_object_value_isnull(objres))
             {
                 return false;
             }
+
             ok = ape_object_string_append(objres, leftstr, leftlen);
             if(!ok)
             {
@@ -2675,7 +2686,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                 recover_frame_ix = -1;
                 for(ui = vm->countframes - 1; ui >= 0; ui--)
                 {
-                    frame = deqlist_get(vm->frameobjects, ui);
+                    frame = (ApeFrame_t*)deqlist_get(vm->frameobjects, ui);
                     if(frame->recoverip >= 0 && !frame->isrecovering)
                     {
                         recover_frame_ix = ui;

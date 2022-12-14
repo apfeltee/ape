@@ -17,7 +17,8 @@ ApeValDict_t* ape_make_valdictcapacity(ApeContext_t* ctx, ApeSize_t min_capacity
     {
         return NULL;
     }
-    ok = ape_valdict_init(dict, ksz, vsz, capacity);
+    dict->context = ctx;
+    ok = ape_valdict_init(dict->context, dict, ksz, vsz, capacity);
     if(!ok)
     {
         ape_allocator_free(&ctx->alloc, dict);
@@ -26,7 +27,7 @@ ApeValDict_t* ape_make_valdictcapacity(ApeContext_t* ctx, ApeSize_t min_capacity
     return dict;
 }
 
-bool ape_valdict_init(ApeValDict_t* dict, ApeSize_t ksz, ApeSize_t vsz, ApeSize_t initial_capacity)
+bool ape_valdict_init(ApeContext_t* ctx, ApeValDict_t* dict, ApeSize_t ksz, ApeSize_t vsz, ApeSize_t initial_capacity)
 {
     ApeSize_t i;
     dict->keysize = ksz;
@@ -41,11 +42,11 @@ bool ape_valdict_init(ApeValDict_t* dict, ApeSize_t ksz, ApeSize_t vsz, ApeSize_
     dict->itemcap = (ApeSize_t)(initial_capacity * 0.7f);
     dict->fnequalkeys = NULL;
     dict->fnhashkey = NULL;
-    dict->cells = (unsigned int*)ape_allocator_alloc(&dict->context->alloc, dict->cellcap * sizeof(*dict->cells));
-    dict->keys = (void**)ape_allocator_alloc(&dict->context->alloc, dict->itemcap * ksz);
-    dict->values = (void**)ape_allocator_alloc(&dict->context->alloc, dict->itemcap * vsz);
-    dict->cellindices = (unsigned int*)ape_allocator_alloc(&dict->context->alloc, dict->itemcap * sizeof(*dict->cellindices));
-    dict->hashes = (long unsigned int*)ape_allocator_alloc(&dict->context->alloc, dict->itemcap * sizeof(*dict->hashes));
+    dict->cells = (unsigned int*)ape_allocator_alloc(&ctx->alloc, dict->cellcap * sizeof(*dict->cells));
+    dict->keys = (void**)ape_allocator_alloc(&ctx->alloc, dict->itemcap * ksz);
+    dict->values = (void**)ape_allocator_alloc(&ctx->alloc, dict->itemcap * vsz);
+    dict->cellindices = (unsigned int*)ape_allocator_alloc(&ctx->alloc, dict->itemcap * sizeof(*dict->cellindices));
+    dict->hashes = (long unsigned int*)ape_allocator_alloc(&ctx->alloc, dict->itemcap * sizeof(*dict->hashes));
     if(dict->cells == NULL || dict->keys == NULL || dict->values == NULL || dict->cellindices == NULL || dict->hashes == NULL)
     {
         goto error;
@@ -56,26 +57,28 @@ bool ape_valdict_init(ApeValDict_t* dict, ApeSize_t ksz, ApeSize_t vsz, ApeSize_
     }
     return true;
 error:
-    ape_allocator_free(&dict->context->alloc, dict->cells);
-    ape_allocator_free(&dict->context->alloc, dict->keys);
-    ape_allocator_free(&dict->context->alloc, dict->values);
-    ape_allocator_free(&dict->context->alloc, dict->cellindices);
-    ape_allocator_free(&dict->context->alloc, dict->hashes);
+    ape_allocator_free(&ctx->alloc, dict->cells);
+    ape_allocator_free(&ctx->alloc, dict->keys);
+    ape_allocator_free(&ctx->alloc, dict->values);
+    ape_allocator_free(&ctx->alloc, dict->cellindices);
+    ape_allocator_free(&ctx->alloc, dict->hashes);
     return false;
 }
 
 void ape_valdict_deinit(ApeValDict_t* dict)
 {
+    ApeContext_t* ctx;
+    ctx = dict->context;
     dict->keysize = 0;
     dict->valsize = 0;
     dict->count = 0;
     dict->itemcap = 0;
     dict->cellcap = 0;
-    ape_allocator_free(&dict->context->alloc, dict->cells);
-    ape_allocator_free(&dict->context->alloc, dict->keys);
-    ape_allocator_free(&dict->context->alloc, dict->values);
-    ape_allocator_free(&dict->context->alloc, dict->cellindices);
-    ape_allocator_free(&dict->context->alloc, dict->hashes);
+    ape_allocator_free(&ctx->alloc, dict->cells);
+    ape_allocator_free(&ctx->alloc, dict->keys);
+    ape_allocator_free(&ctx->alloc, dict->values);
+    ape_allocator_free(&ctx->alloc, dict->cellindices);
+    ape_allocator_free(&ctx->alloc, dict->hashes);
     dict->cells = NULL;
     dict->keys = NULL;
     dict->values = NULL;
@@ -238,28 +241,29 @@ bool ape_valdict_growandrehash(ApeValDict_t* dict)
     ApeSize_t i;
     char* key;
     void* value;
-    ApeValDict_t new_dict;
+    ApeValDict_t newdict;
     new_capacity = dict->cellcap == 0 ? APE_CONF_DICT_INITIAL_SIZE : dict->cellcap * 2;
-    ok = ape_valdict_init(&new_dict, dict->keysize, dict->valsize, new_capacity);
+    ok = ape_valdict_init(dict->context, &newdict, dict->keysize, dict->valsize, new_capacity);
     if(!ok)
     {
         return false;
     }
-    new_dict.fnequalkeys = dict->fnequalkeys;
-    new_dict.fnhashkey = dict->fnhashkey;
+    newdict.context = dict->context;
+    newdict.fnequalkeys = dict->fnequalkeys;
+    newdict.fnhashkey = dict->fnhashkey;
     for(i = 0; i < dict->count; i++)
     {
         key = (char*)ape_valdict_getkeyat(dict, i);
         value = ape_valdict_getvalueat(dict, i);
-        ok = ape_valdict_set(&new_dict, key, value);
+        ok = ape_valdict_set(&newdict, key, value);
         if(!ok)
         {
-            ape_valdict_deinit(&new_dict);
+            ape_valdict_deinit(&newdict);
             return false;
         }
     }
     ape_valdict_deinit(dict);
-    *dict = new_dict;
+    *dict = newdict;
     return true;
 }
 
@@ -310,16 +314,19 @@ ApeValDict_t* ape_valdict_copywithitems(ApeValDict_t* dict)
     const char* key;
     void* item;
     void* item_copy;
-    ApeValDict_t* dict_copy;
+    ApeContext_t* ctx;
+    ApeValDict_t* vcopy;
     ok = false;
     if(!dict->fnvalcopy || !dict->fnvaldestroy)
     {
         return NULL;
     }
-    dict_copy = ape_make_valdict(dict->context, dict->keysize, dict->valsize);
-    ape_valdict_setcopyfunc(dict_copy, (ApeDataCallback_t)dict->fnvalcopy);
-    ape_valdict_setdeletefunc(dict_copy, (ApeDataCallback_t)dict->fnvaldestroy);
-    if(!dict_copy)
+    ctx = dict->context;
+    vcopy = ape_make_valdict(ctx, dict->keysize, dict->valsize);
+    vcopy->context = ctx;
+    ape_valdict_setcopyfunc(vcopy, (ApeDataCallback_t)dict->fnvalcopy);
+    ape_valdict_setdeletefunc(vcopy, (ApeDataCallback_t)dict->fnvaldestroy);
+    if(!vcopy)
     {
         return NULL;
     }
@@ -327,21 +334,21 @@ ApeValDict_t* ape_valdict_copywithitems(ApeValDict_t* dict)
     {
         key = (const char*)ape_valdict_getkeyat(dict, i);
         item = ape_valdict_getvalueat(dict, i);
-        item_copy = dict_copy->fnvalcopy(item);
+        item_copy = vcopy->fnvalcopy(item);
         if(item && !item_copy)
         {
-            ape_valdict_destroywithitems(dict_copy);
+            ape_valdict_destroywithitems(vcopy);
             return NULL;
         }
-        ok = ape_valdict_set(dict_copy, (void*)key, item_copy);
+        ok = ape_valdict_set(vcopy, (void*)key, item_copy);
         if(!ok)
         {
-            dict_copy->fnvaldestroy(item_copy);
-            ape_valdict_destroywithitems(dict_copy);
+            vcopy->fnvaldestroy(item_copy);
+            ape_valdict_destroywithitems(vcopy);
             return NULL;
         }
     }
-    return dict_copy;
+    return vcopy;
 }
 
 ApeStrDict_t* ape_make_strdict(ApeContext_t* ctx, ApeDataCallback_t copy_fn, ApeDataCallback_t destroy_fn)
@@ -392,32 +399,34 @@ bool ape_strdict_init(ApeStrDict_t* dict, ApeContext_t* ctx, ApeSize_t initial_c
     }
     return true;
 error:
-    ape_allocator_free(&dict->context->alloc, dict->cells);
-    ape_allocator_free(&dict->context->alloc, dict->keys);
-    ape_allocator_free(&dict->context->alloc, dict->values);
-    ape_allocator_free(&dict->context->alloc, dict->cellindices);
-    ape_allocator_free(&dict->context->alloc, dict->hashes);
+    ape_allocator_free(&ctx->alloc, dict->cells);
+    ape_allocator_free(&ctx->alloc, dict->keys);
+    ape_allocator_free(&ctx->alloc, dict->values);
+    ape_allocator_free(&ctx->alloc, dict->cellindices);
+    ape_allocator_free(&ctx->alloc, dict->hashes);
     return false;
 }
 
 void ape_strdict_deinit(ApeStrDict_t* dict, bool free_keys)
 {
     ApeSize_t i;
+    ApeContext_t* ctx;
+    ctx = dict->context;
     if(free_keys)
     {
         for(i = 0; i < dict->count; i++)
         {
-            ape_allocator_free(&dict->context->alloc, dict->keys[i]);
+            ape_allocator_free(&ctx->alloc, dict->keys[i]);
         }
     }
     dict->count = 0;
     dict->itemcap = 0;
     dict->cellcap = 0;
-    ape_allocator_free(&dict->context->alloc, dict->cells);
-    ape_allocator_free(&dict->context->alloc, dict->keys);
-    ape_allocator_free(&dict->context->alloc, dict->values);
-    ape_allocator_free(&dict->context->alloc, dict->cellindices);
-    ape_allocator_free(&dict->context->alloc, dict->hashes);
+    ape_allocator_free(&ctx->alloc, dict->cells);
+    ape_allocator_free(&ctx->alloc, dict->keys);
+    ape_allocator_free(&ctx->alloc, dict->values);
+    ape_allocator_free(&ctx->alloc, dict->cellindices);
+    ape_allocator_free(&ctx->alloc, dict->hashes);
     dict->cells = NULL;
     dict->keys = NULL;
     dict->values = NULL;
@@ -461,36 +470,39 @@ ApeStrDict_t* ape_strdict_copywithitems(ApeStrDict_t* dict)
     const char* key;
     void* item;
     void* item_copy;
-    ApeStrDict_t* dict_copy;
+    ApeStrDict_t* copy;
+    ApeContext_t* ctx;
     ok = false;
     if(!dict->fnstrcopy || !dict->fnstrdestroy)
     {
         return NULL;
     }
-    dict_copy = ape_make_strdict(dict->context, (ApeDataCallback_t)dict->fnstrcopy, (ApeDataCallback_t)dict->fnstrdestroy);
-    if(!dict_copy)
+    ctx = dict->context;
+    copy = ape_make_strdict(ctx, (ApeDataCallback_t)dict->fnstrcopy, (ApeDataCallback_t)dict->fnstrdestroy);
+    if(!copy)
     {
         return NULL;
     }
+    copy->context = ctx;
     for(i = 0; i < ape_strdict_count(dict); i++)
     {
         key = ape_strdict_getkeyat(dict, i);
         item = ape_strdict_getvalueat(dict, i);
-        item_copy = dict_copy->fnstrcopy(item);
+        item_copy = copy->fnstrcopy(item);
         if(item && !item_copy)
         {
-            ape_strdict_destroywithitems(dict_copy);
+            ape_strdict_destroywithitems(copy);
             return NULL;
         }
-        ok = ape_strdict_set(dict_copy, key, item_copy);
+        ok = ape_strdict_set(copy, key, item_copy);
         if(!ok)
         {
-            dict_copy->fnstrdestroy(item_copy);
-            ape_strdict_destroywithitems(dict_copy);
+            copy->fnstrdestroy(item_copy);
+            ape_strdict_destroywithitems(copy);
             return NULL;
         }
     }
-    return dict_copy;
+    return copy;
 }
 
 bool ape_strdict_set(ApeStrDict_t* dict, const char* key, void* value)
@@ -588,8 +600,10 @@ bool ape_strdict_growandrehash(ApeStrDict_t* dict)
     ApeSize_t i;
     char* key;
     void* value;
-    ApeStrDict_t new_dict;
-    ok = ape_strdict_init(&new_dict, dict->context, dict->cellcap * 2, dict->fnstrcopy, dict->fnstrdestroy);
+    ApeContext_t* ctx;
+    ApeStrDict_t newdict;
+    ctx = dict->context;
+    ok = ape_strdict_init(&newdict, ctx, dict->cellcap * 2, dict->fnstrcopy, dict->fnstrdestroy);
     if(!ok)
     {
         return false;
@@ -598,15 +612,15 @@ bool ape_strdict_growandrehash(ApeStrDict_t* dict)
     {
         key = dict->keys[i];
         value = dict->values[i];
-        ok = ape_strdict_setinternal(&new_dict, key, key, value);
+        ok = ape_strdict_setinternal(&newdict, key, key, value);
         if(!ok)
         {
-            ape_strdict_deinit(&new_dict, false);
+            ape_strdict_deinit(&newdict, false);
             return false;
         }
     }
     ape_strdict_deinit(dict, false);
-    *dict = new_dict;
+    *dict = newdict;
     return true;
 }
 
@@ -619,6 +633,8 @@ bool ape_strdict_setinternal(ApeStrDict_t* dict, const char* ckey, char* mkey, v
     unsigned long hash;
     ApeSize_t cell_ix;
     ApeSize_t item_ix;
+    ApeContext_t* ctx;
+    ctx = dict->context;
     cklen = strlen(ckey);
     hash = ape_util_hashstring(ckey, cklen);
     found = false;
@@ -644,7 +660,7 @@ bool ape_strdict_setinternal(ApeStrDict_t* dict, const char* ckey, char* mkey, v
     }
     else
     {
-        key_copy = ape_util_strdup(dict->context, ckey);
+        key_copy = ape_util_strdup(ctx, ckey);
         if(!key_copy)
         {
             return false;

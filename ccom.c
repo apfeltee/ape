@@ -969,7 +969,7 @@ static bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpressi
                 }
             }
             break;
-        case APE_EXPR_IF:
+        case APE_EXPR_IFELSE:
             {
                 ifstmt = &stmt->exifstmt;
                 jumptoendips = ape_make_valarray(comp->context, ApeInt_t);

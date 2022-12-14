@@ -224,7 +224,7 @@ void ape_context_setdefaultconfig(ApeContext_t *ctx);
 /* libmap.c */
 ApeValDict_t *ape_make_valdict_actual(ApeContext_t *ctx, ApeSize_t ksz, ApeSize_t vsz);
 ApeValDict_t *ape_make_valdictcapacity(ApeContext_t *ctx, ApeSize_t min_capacity, ApeSize_t ksz, ApeSize_t vsz);
-bool ape_valdict_init(ApeValDict_t *dict, ApeSize_t ksz, ApeSize_t vsz, ApeSize_t initial_capacity);
+bool ape_valdict_init(ApeContext_t* ctx, ApeValDict_t *dict, ApeSize_t ksz, ApeSize_t vsz, ApeSize_t initial_capacity);
 void ape_valdict_deinit(ApeValDict_t *dict);
 void ape_valdict_destroy(ApeValDict_t *dict);
 void ape_valdict_destroywithitems(ApeValDict_t *dict);
@@ -415,12 +415,12 @@ bool ape_compiler_pushfilescope(ApeAstCompiler_t *comp, const char *filepath);
 void ape_compiler_popfilescope(ApeAstCompiler_t *comp);
 void ape_compiler_setcompscope(ApeAstCompiler_t *comp, ApeAstCompScope_t *scope);
 /* mem.c */
-void *ape_mem_defaultmalloc(void *opaqptr, size_t size);
-void ape_mem_defaultfree(void *opaqptr, void *objptr);
+void *ape_mem_defaultmalloc(ApeContext_t* ctx, void *userptr, size_t size);
+void ape_mem_defaultfree(ApeContext_t* ctx, void* userptr, void *objptr);
 void *ape_allocator_alloc_debug(ApeAllocator_t *alloc, const char *str, const char *func, const char *file, int line, size_t size);
 void *ape_allocator_alloc_real(ApeAllocator_t *alloc, size_t size);
 void ape_allocator_free(ApeAllocator_t *alloc, void *ptr);
-ApeAllocator_t ape_make_allocator(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t free_fn, void *ctx);
+ApeAllocator_t* ape_make_allocator(ApeContext_t* ctx, ApeAllocator_t* dest, ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t free_fn, void* optr);
 ApeGCMemory_t *ape_make_gcmem(ApeContext_t *ctx);
 void ape_gcmem_destroy(ApeGCMemory_t *mem);
 ApeGCObjData_t *ape_gcmem_allocobjdata(ApeGCMemory_t *mem, ApeObjType_t type);

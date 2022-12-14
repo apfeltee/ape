@@ -104,7 +104,7 @@ const char* ape_tostring_exprtype(ApeAstExprType_t type)
             return "ternary";
         case APE_EXPR_DEFINE:
             return "define";
-        case APE_EXPR_IF:
+        case APE_EXPR_IFELSE:
             return "if";
         case APE_EXPR_RETURNVALUE:
             return "returnvalue";
@@ -126,7 +126,6 @@ const char* ape_tostring_exprtype(ApeAstExprType_t type)
             return "include";
         case APE_EXPR_RECOVER:
             return "recover";
-
         default:
             break;
     }
@@ -415,7 +414,7 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeAstExpression_t* expr)
                 }
             }
             break;
-        case APE_EXPR_IF:
+        case APE_EXPR_IFELSE:
             {
                 ifcase = (ApeAstIfCaseExpr_t*)ape_ptrarray_get(expr->exifstmt.cases, 0);
                 ape_writer_append(buf, "if (");

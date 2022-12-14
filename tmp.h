@@ -69,11 +69,6 @@ ApeObject_t ape_object_make_null(ApeContext_t* ctx)
     #endif
 }
 
-ApeObject_t ape_object_make_string(ApeContext_t* ctx, const char* string)
-{
-    return ape_object_make_stringlen(ctx, string, strlen(string));
-}
-
 ApeObject_t ape_object_make_stringlen(ApeContext_t* ctx, const char* string, ApeSize_t len)
 {
     bool ok;
@@ -91,26 +86,37 @@ ApeObject_t ape_object_make_stringlen(ApeContext_t* ctx, const char* string, Ape
     return res;
 }
 
+ApeObject_t ape_object_make_string(ApeContext_t* ctx, const char* string)
+{
+    return ape_object_make_stringlen(ctx, string, strlen(string));
+}
+
 ApeObject_t ape_object_make_stringcapacity(ApeContext_t* ctx, ApeSize_t capacity)
 {
     bool ok;
     ApeGCObjData_t* data;
-    //fprintf(stderr, "ape_object_make_stringcapacity: capacity=%d\n", capacity);
+    #if 1
     data = ape_gcmem_getfrompool(ctx->mem, APE_OBJECT_STRING);
     if(!data)
+    #endif
     {
         data = ape_gcmem_allocobjdata(ctx->mem, APE_OBJECT_STRING);
         if(!data)
         {
             return ape_object_make_null(ctx);
         }
+        data->valstring.capacity = APE_CONF_SIZE_STRING_BUFSIZE - 1;
+        data->valstring.is_allocated = false;
     }
+    data->valstring.length = 0;
     data->valstring.hash = 0;
-    data->valstring.valalloc = NULL;
-    ok = ape_object_string_reservecapacity(ctx, data, capacity);
-    if(!ok)
+    if(capacity > data->valstring.capacity)
     {
-        return ape_object_make_null(ctx);
+        ok = ape_object_string_reservecapacity(ctx, data, capacity);
+        if(!ok)
+        {
+            return ape_object_make_null(ctx);
+        }
     }
     return object_make_from_data(ctx, APE_OBJECT_STRING, data);
 }
@@ -254,8 +260,8 @@ ApeObject_t ape_object_make_external(ApeContext_t* ctx, void* ptr)
         return ape_object_make_null(ctx);
     }
     data->valextern.data = ptr;
-    data->valextern.fndestroy = NULL;
-    data->valextern.fncopy = NULL;
+    data->valextern.data_destroy_fn = NULL;
+    data->valextern.data_copy_fn = NULL;
     return object_make_from_data(ctx, APE_OBJECT_EXTERNAL, data);
 }
 
@@ -591,9 +597,10 @@ void ape_object_data_deinit(ApeContext_t* ctx, ApeGCObjData_t* data)
             break;
         case APE_OBJECT_STRING:
             {
-                //ape_allocator_free(&ctx->alloc, data->valstring.valalloc);
-                ds_destroy(data->valstring.valalloc);
-                //data->valstring.valalloc = NULL;
+                if(data->valstring.is_allocated)
+                {
+                    ape_allocator_free(&ctx->alloc, data->valstring.value_allocated);
+                }
             }
             break;
         case APE_OBJECT_SCRIPTFUNCTION:
@@ -623,9 +630,9 @@ void ape_object_data_deinit(ApeContext_t* ctx, ApeGCObjData_t* data)
             break;
         case APE_OBJECT_EXTERNAL:
             {
-                if(data->valextern.fndestroy)
+                if(data->valextern.data_destroy_fn)
                 {
-                    data->valextern.fndestroy(data->valextern.data);
+                    data->valextern.data_destroy_fn(data->valextern.data);
                 }
             }
             break;
@@ -713,7 +720,7 @@ bool ape_object_extern_setdestroyfunc(ApeObject_t object, ApeDataCallback_t dest
     {
         return false;
     }
-    data->fndestroy = destroy_fn;
+    data->data_destroy_fn = destroy_fn;
     return true;
 }
 
@@ -740,7 +747,7 @@ bool ape_object_extern_setcopyfunc(ApeObject_t object, ApeDataCallback_t copy_fn
     {
         return false;
     }
-    data->fncopy = copy_fn;
+    data->data_copy_fn = copy_fn;
     return true;
 }
 
@@ -1042,8 +1049,7 @@ ApeObject_t ape_object_value_copyflat(ApeContext_t* ctx, ApeObject_t obj)
         case APE_OBJECT_STRING:
             {
                 str = ape_object_string_getdata(obj);
-                len = ape_object_string_getlength(obj);
-                copy = ape_object_make_stringlen(ctx, str, len);
+                copy = ape_object_make_string(ctx, str);
             }
             break;
         case APE_OBJECT_ARRAY:
@@ -1089,17 +1095,17 @@ ApeObject_t ape_object_value_copyflat(ApeContext_t* ctx, ApeObject_t obj)
                 }
                 external = ape_object_value_asexternal(obj);
                 data_copy = NULL;
-                if(external->fncopy)
+                if(external->data_copy_fn)
                 {
-                    data_copy = external->fncopy(external->data);
+                    data_copy = external->data_copy_fn(external->data);
                 }
                 else
                 {
                     data_copy = external->data;
                 }
                 ape_object_extern_setdata(copy, data_copy);
-                ape_object_extern_setdestroyfunc(copy, external->fndestroy);
-                ape_object_extern_setcopyfunc(copy, external->fncopy);
+                ape_object_extern_setdestroyfunc(copy, external->data_destroy_fn);
+                ape_object_extern_setcopyfunc(copy, external->data_copy_fn);
             }
             break;
     }

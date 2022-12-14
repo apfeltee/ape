@@ -10,22 +10,52 @@ ApeContext_t* ape_make_contextex(ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t f
 {
     ApeContext_t* ctx;
     ApeAllocator_t custom_alloc;
-    custom_alloc = ape_make_allocator(malloc_fn, free_fn, optr);
+    ApeAllocator_t context_alloc;
+
+    /*
+    ctx = NULL;
+    custom_alloc = ape_make_allocator(ctx, malloc_fn, free_fn, optr);
     ctx = (ApeContext_t*)ape_allocator_alloc(&custom_alloc, sizeof(ApeContext_t));
     if(!ctx)
     {
         return NULL;
     }
     memset(ctx, 0, sizeof(ApeContext_t));
-    /* NB. this currently does not work. need to figure this out eventually. */
     {
         #if 0
-        ctx->alloc = ape_make_allocator(ape_mem_defaultmalloc, ape_mem_defaultfree, ctx);
+        ctx->alloc = ape_make_allocator(ctx, ape_mem_defaultmalloc, ape_mem_defaultfree, optr);
         #else
-        ctx->alloc = ape_make_allocator(NULL, NULL, ctx);
+        ctx->alloc = ape_make_allocator(ctx, NULL, NULL, optr);
         ctx->custom_allocator = custom_alloc;
         #endif
     }
+    */
+
+    /*-------------------------*/
+
+    /*
+    allocator_t custom_alloc = allocator_make((allocator_malloc_fn)malloc_fn, (allocator_free_fn)free_fn, ctx);
+    
+    ape_t *ape = allocator_malloc(&custom_alloc, sizeof(ape_t));
+    if (!ape) {
+        return NULL;
+    }
+
+    memset(ape, 0, sizeof(ape_t));
+    ape->alloc = allocator_make(ape_malloc, ape_free, ape);
+    ape->custom_allocator = custom_alloc;
+    */
+    
+    ape_make_allocator(ctx, &custom_alloc, malloc_fn, free_fn, optr);
+    //ctx = (ApeContext_t*)ape_allocator_alloc(&custom_alloc, sizeof(ApeContext_t));
+    ctx = (ApeContext_t*)malloc(sizeof(ApeContext_t));
+    memset(ctx, 0, sizeof(ApeContext_t));
+    ape_make_allocator(ctx, &context_alloc, ape_mem_defaultmalloc, ape_mem_defaultfree, optr);
+    ctx->alloc = context_alloc;
+    ctx->custom_allocator = custom_alloc;
+    fprintf(stderr, "ctx->alloc=%p\n", &ctx->alloc);
+    
+
     ape_context_setdefaultconfig(ctx);
     ctx->debugwriter = ape_make_writerio(ctx, stderr, false, true);
     ctx->stdoutwriter = ape_make_writerio(ctx, stdout, false, true);
