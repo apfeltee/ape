@@ -85,44 +85,67 @@ void* ape_allocator_alloc_debug(ApeAllocator_t* alloc, const char* str, const ch
     return ape_allocator_alloc_real(alloc, size);
 }
 
+void* wrap_alloc(ApeAllocator_t* alloc, size_t size)
+{
+    if(alloc != NULL)
+    {
+        if(alloc->fnmalloc != NULL)
+        {
+            return alloc->fnmalloc(alloc->context, alloc->optr, size);
+        }
+    }
+    return (malloc)(size);
+}
+
+void wrap_free(ApeAllocator_t* alloc, void* ptr)
+{
+    if(alloc != NULL)
+    {
+        if(alloc->fnfree != NULL)
+        {
+            alloc->fnfree(alloc->context, alloc->optr, ptr);
+            return;
+        }
+    }
+    free(ptr);    
+}
+
+#define INITIAL_SIZE (1024)*1024
+
 void* ape_allocator_alloc_real(ApeAllocator_t* alloc, size_t size)
 {
-    (void)alloc;
-    //fprintf(stderr, "ape_allocator_alloc:alloc=%p\n", alloc);
-    #if 1
-    if(!alloc || !alloc->fnmalloc)
-    {
-        return (malloc)(size);
-    }
-    return alloc->fnmalloc(alloc->context, alloc->optr, size);
+    fprintf(stderr, "allocator_alloc: alloc=%p size=%d\n", alloc, size);
+    #if 0
+        if(!alloc->ready)
+        {
+            fprintf(stderr, "not ready, must initialize\n");
+            alloc->memory = wrap_alloc(alloc, INITIAL_SIZE);
+            mplite_init(&alloc->pool, alloc->memory, INITIAL_SIZE, 2, NULL);
+            alloc->ready = true;
+        }
+        return mplite_malloc(&alloc->pool, size);
     #else
-        return malloc(size);
+        return wrap_alloc(alloc, size);
     #endif
 }
 
 void ape_allocator_free(ApeAllocator_t* alloc, void* ptr)
 {
-    (void)alloc;
-    //fprintf(stderr, "ape_allocator_free:alloc=%p\n", alloc);
-
-    #if 1
-        if(!alloc || !alloc->fnfree)
-        {
-            free(ptr);
-            return;
-        }
-        alloc->fnfree(alloc->context, alloc->optr, ptr);
+    #if 0
+        //mplite_free(&alloc->pool, ptr);
     #else
-        free(ptr);
+        wrap_free(alloc, ptr);
     #endif
 }
 
 ApeAllocator_t* ape_make_allocator(ApeContext_t* ctx, ApeAllocator_t* dest, ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t free_fn, void* optr)
 {
+    memset(dest, 0, sizeof(ApeAllocator_t));
     dest->context = ctx;
     dest->fnmalloc = malloc_fn;
     dest->fnfree = free_fn;
     dest->optr = optr;
+    dest->ready = false;
     return dest;
 }
 

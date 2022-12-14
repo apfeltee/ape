@@ -54,6 +54,7 @@ THE SOFTWARE.
 #include <limits.h>
 #include <assert.h>
 #include <errno.h>
+#include "mplite.h"
 
 #if defined(__linux__)
     #define APE_LINUX
@@ -858,12 +859,19 @@ struct ApeWriter_t
     bool                 iomustflush;
 };
 
+
 struct ApeAllocator_t
 {
     ApeContext_t* context;
     ApeMemAllocFunc_t fnmalloc;
     ApeMemFreeFunc_t  fnfree;
     void* optr;
+
+    mplite_t pool;
+    mplite_lock_t lock;
+    unsigned char** memory;
+    bool ready;
+    
 };
 
 struct ApeError_t
@@ -1302,6 +1310,8 @@ struct ApeConfig_t
 struct ApeContext_t
 {
     ApeAllocator_t alloc;
+    /* allocator that abstract malloc/free - TODO: not used right now, because it's broken */
+    ApeAllocator_t custom_allocator;
 
     /* a writer instance that writes to stderr. use with ape_context_debug* */
     ApeWriter_t* debugwriter;
@@ -1333,9 +1343,6 @@ struct ApeContext_t
 
     /* the runtime configuration */
     ApeConfig_t config;
-
-    /* allocator that abstract malloc/free - TODO: not used right now, because it's broken */
-    ApeAllocator_t custom_allocator;
 
     /**
     * stored member function mapping. string->funcpointer
