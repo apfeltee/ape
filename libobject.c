@@ -84,7 +84,7 @@ ApeObject_t ape_object_make_stringlen(ApeContext_t* ctx, const char* string, Ape
     {
         return res;
     }
-    ok = ape_object_string_append(res, string, len);
+    ok = ape_object_string_append(ctx, res, string, len);
     if(!ok)
     {
         return ape_object_make_null(ctx);
@@ -593,7 +593,7 @@ void ape_object_data_deinit(ApeContext_t* ctx, ApeGCObjData_t* data)
         case APE_OBJECT_STRING:
             {
                 //ape_allocator_free(&ctx->alloc, data->valstring.valalloc);
-                ds_destroy(data->valstring.valalloc);
+                ds_destroy(data->valstring.valalloc, ctx);
                 //data->valstring.valalloc = NULL;
             }
             break;

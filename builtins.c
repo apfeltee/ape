@@ -154,7 +154,7 @@ static ApeObject_t cfn_reverse(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObjec
         {
             //resbuf[len - i - 1] = str[i];
             ch = str[i];
-            resbuf = ds_appendchar(resbuf, ch);
+            resbuf = ds_appendchar(resbuf, ch, vm->context);
         }
         //resbuf[len] = '\0';
         ape_object_string_setlength(res, len);
@@ -583,12 +583,12 @@ static ApeObject_t cfn_concat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
         {
             return ape_object_make_null(vm->context);
         }
-        ok = ape_object_string_append(res, leftstr, leftlen);
+        ok = ape_object_string_append(vm->context, res, leftstr, leftlen);
         if(!ok)
         {
             return ape_object_make_null(vm->context);
         }
-        ok = ape_object_string_append(res, rightstr, rightlen);
+        ok = ape_object_string_append(vm->context, res, rightstr, rightlen);
         if(!ok)
         {
             return ape_object_make_null(vm->context);

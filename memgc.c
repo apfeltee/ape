@@ -38,6 +38,30 @@ struct ApeGCMemory_t
 
 static const ApePosition_t g_posinvalid = { NULL, -1, -1 };
 
+void* ds_wrapmalloc(size_t size, void* userptr)
+{
+    ApeContext_t* ctx;
+    ctx = (ApeContext_t*)userptr;
+    //fprintf(stderr, "ds_wrapmalloc: userptr=%p\n", userptr);
+    return ape_allocator_alloc(&ctx->alloc, size);
+}
+
+void* ds_wraprealloc(void* ptr, size_t oldsz, size_t newsz, void* userptr)
+{
+    ApeContext_t* ctx;
+    ctx = (ApeContext_t*)userptr;
+    //fprintf(stderr, "ds_wraprealloc: userptr=%p\n", userptr);    
+    return ape_allocator_realloc(&ctx->alloc, ptr, oldsz, newsz);
+}
+
+void ds_wrapfree(void* ptr, void* userptr)
+{
+    ApeContext_t* ctx;
+    ctx = (ApeContext_t*)userptr;
+    //fprintf(stderr, "ds_wrapfree: userptr=%p\n", userptr);
+    return ape_allocator_free(&ctx->alloc, ptr);
+}
+
 void poolinit(ApeContext_t* ctx, ApeGCObjPool_t* pool)
 {
     (void)ctx;
@@ -133,6 +157,12 @@ void ape_allocator_free(ApeAllocator_t* alloc, void* ptr)
     /* nothing to do */
     ape_mempool_free(alloc->pool, ptr);
 }
+
+void* ape_allocator_realloc(ApeAllocator_t* alloc, void* ptr, size_t oldsz, size_t newsz)
+{
+    return ape_mempool_realloc(alloc->pool, ptr, oldsz, newsz);
+}
+
 
 ApeAllocator_t* ape_make_allocator(ApeContext_t* ctx, ApeAllocator_t* dest, ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t free_fn, void* optr)
 {

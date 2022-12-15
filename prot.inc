@@ -380,7 +380,7 @@ bool ape_object_string_reservecapacity(ApeContext_t* ctx, ApeGCObjData_t *data, 
 ApeSize_t ape_object_string_getlength(ApeObject_t object);
 void ape_object_string_setlength(ApeObject_t object, ApeSize_t len);
 char *ape_object_string_getmutable(ApeObject_t object);
-bool ape_object_string_append(ApeObject_t obj, const char *src, ApeSize_t len);
+bool ape_object_string_append(ApeContext_t* ctx, ApeObject_t obj, const char *src, ApeSize_t len);
 unsigned long ape_object_string_gethash(ApeObject_t obj);
 ApeObject_t ape_builtins_stringformat(ApeContext_t *ctx, const char *fmt, ApeSize_t fmtlen, ApeSize_t argc, ApeObject_t *args);
 void ape_builtins_install_string(ApeVM_t *vm);
@@ -419,6 +419,7 @@ void *ape_mem_defaultmalloc(ApeContext_t* ctx, void *userptr, size_t size);
 void ape_mem_defaultfree(ApeContext_t* ctx, void* userptr, void *objptr);
 void *ape_allocator_alloc_debug(ApeAllocator_t *alloc, const char *str, const char *func, const char *file, int line, size_t size);
 void *ape_allocator_alloc_real(ApeAllocator_t *alloc, size_t size);
+void* ape_allocator_realloc(ApeAllocator_t* alloc, void* ptr, size_t oldsz, size_t newsz);
 void ape_allocator_free(ApeAllocator_t *alloc, void *ptr);
 ApeAllocator_t* ape_make_allocator(ApeContext_t* ctx, ApeAllocator_t* dest, ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t free_fn, void* optr);
 void ape_allocator_destroy(ApeAllocator_t* alloc);

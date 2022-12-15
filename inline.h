@@ -40,9 +40,6 @@
     #define ape_allocator_alloc(alc, sz) ape_allocator_alloc_real(alc, sz)
 #endif
 
-#include "dnarray.h"
-#include "aadeque.h"
-#include "sds.h"
 
 /* Turn on debugging traces */
 #ifndef MPOOL_DEBUG
@@ -55,6 +52,14 @@
     #define MPOOL_REALLOC(p, sz) realloc(p, sz)
     #define MPOOL_FREE(p, sz) free(p)
 #endif
+
+extern void* ds_wrapmalloc(size_t size, void* userptr);
+extern void* ds_wraprealloc(void* ptr, size_t oldsz, size_t newsz, void* userptr);
+extern void ds_wrapfree(void* ptr, void* userptr);
+
+#include "dnarray.h"
+#include "aadeque.h"
+#include "sds.h"
 
 
 /*

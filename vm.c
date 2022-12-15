@@ -1637,12 +1637,12 @@ bool ape_vm_appendstring(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOb
                 return false;
             }
 
-            ok = ape_object_string_append(objres, leftstr, leftlen);
+            ok = ape_object_string_append(vm->context, objres, leftstr, leftlen);
             if(!ok)
             {
                 return false;
             }
-            ok = ape_object_string_append(objres, rightstr, rightlen);
+            ok = ape_object_string_append(vm->context, objres, rightstr, rightlen);
             if(!ok)
             {
                 return false;
@@ -1664,7 +1664,7 @@ bool ape_vm_appendstring(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOb
         ape_writer_appendlen(allbuf, ape_writer_getdata(tostrbuf), ape_writer_getlength(tostrbuf));
         buflen = ape_writer_getlength(allbuf);
         objres = ape_object_make_stringcapacity(vm->context, buflen);
-        ok = ape_object_string_append(objres, ape_writer_getdata(allbuf), buflen);
+        ok = ape_object_string_append(vm->context, objres, ape_writer_getdata(allbuf), buflen);
         ape_writer_destroy(tostrbuf);
         ape_writer_destroy(allbuf);
         if(!ok)

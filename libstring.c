@@ -33,7 +33,7 @@ bool ape_object_string_reservecapacity(ApeContext_t* ctx, ApeGCObjData_t *data, 
     (void)ctx;
     if(data->valstring.valalloc == NULL)
     {
-        data->valstring.valalloc = ds_newempty();
+        data->valstring.valalloc = ds_newempty(ctx);
     }
     if(capacity >= ds_getavailable(data->valstring.valalloc))
     {
@@ -62,12 +62,12 @@ void ape_object_string_setlength(ApeObject_t object, ApeSize_t len)
     ds_setlength(data->valstring.valalloc, len);
 }
 
-bool ape_object_string_append(ApeObject_t obj, const char* src, ApeSize_t len)
+bool ape_object_string_append(ApeContext_t* ctx, ApeObject_t obj, const char* src, ApeSize_t len)
 {
     ApeGCObjData_t* data;
     APE_ASSERT(ape_object_value_type(obj) == APE_OBJECT_STRING);
     data = ape_object_value_allocated_data(obj);
-    data->valstring.valalloc = ds_appendlen(data->valstring.valalloc, src, len);
+    data->valstring.valalloc = ds_appendlen(data->valstring.valalloc, src, len, ctx);
     return true;
 }
 

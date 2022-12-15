@@ -285,6 +285,9 @@ static ApeObject_t cfn_dir_readdir(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
         {
             break;
         }
+        #if 1
+            subm = ape_object_make_string(ctx, dent->d_name);
+        #else
         isfile = (dent->d_type == DT_REG);
         isdir = (dent->d_type == DT_DIR);
         subm = ape_object_make_map(vm->context);
@@ -293,6 +296,7 @@ static ApeObject_t cfn_dir_readdir(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
         ape_object_map_setnamednumber(ctx, subm, "type", dent->d_type);
         ape_object_map_setnamedbool(ctx, subm, "isfile", isfile);
         ape_object_map_setnamedbool(ctx, subm, "isdir", isdir);
+        #endif
         ape_object_array_pushvalue(ary, subm);
     }
     closedir(hnd);

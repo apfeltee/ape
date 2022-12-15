@@ -25,10 +25,12 @@ function walk(dn, fn)
         var fwd = true;
         //var suff = ""
         //var pref = "[FILE]"
-        if(ent.type == 4)
+
+        var fullpath = `${dn}/${ent}`
+        if(File.isdirectory(fullpath))
         {
             contwalk = true;
-            if(ent.name == "." || ent.name == "..")
+            if(ent == "." || ent == "..")
             {
                 fwd = false;
                 contwalk = false;
@@ -36,7 +38,6 @@ function walk(dn, fn)
             //suff = "/"
             //pref = "[DIR] "
         }
-        var fullpath = `${dn}/${ent.name}`
         //var fullpath = dn + "/" + ent.name
         var st = File.stat(fullpath, "size")
         var ssize = 0

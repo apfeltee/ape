@@ -44,7 +44,7 @@
 #endif
 
 #if defined(APE_MEMPOOL_HAVEMMAP) || defined(APE_MEMPOOL_HAVEVIRTALLOC)
-    #define APE_MEMPOOL_ISAVAILABLE
+    //#define APE_MEMPOOL_ISAVAILABLE
 #endif
 
 #if defined(APE_MEMPOOL_HAVEMMAP)
@@ -403,12 +403,20 @@ void ape_mempool_repool(ApeMemPool_t* mp, void* p, int sz)
 void* ape_mempool_realloc(ApeMemPool_t* mp, void* p, int old_sz, int new_sz)
 {
     void* r;
+    if(!mp->available)
+    {
+        return MPOOL_REALLOC(p, new_sz);
+    }
     r = ape_mempool_alloc(mp, new_sz);
     if(r == NULL)
     {
         return NULL;
     }
-    memcpy(r, p, old_sz);
+    #if 0
+        memcpy(r, p, old_sz);
+    #else
+        memcpy(r, p, new_sz);
+    #endif
     ape_mempool_repool(mp, p, old_sz);
     return r;
 }

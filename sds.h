@@ -55,9 +55,7 @@
 #include <limits.h>
 #include <sys/types.h>
 
-#define ds_wrapmalloc malloc
-#define ds_wraprealloc realloc
-#define ds_wrapfree free
+
 
 #define SDS_MAX_PREALLOC (1024 * 1024)
 #define SDS_TYPE_5 0
@@ -91,28 +89,41 @@ static const char* SDS_NOINIT = "SDS_NOINIT";
 
 /* Note: DynStrHead5_t is never used, we just access the flags byte directly.
  * However is here to document the layout of type 5 SDS strings. */
-struct SDS_ATTRIBUTE((__packed__)) DynStrHead5_t
+struct
+//SDS_ATTRIBUTE((__packed__))
+DynStrHead5_t
 {
+    void* userptr;
     unsigned char flags; /* 3 lsb of type, and 5 msb of string length */
     char buf[];
 };
 
-struct SDS_ATTRIBUTE((__packed__)) DynStrHead8_t
+struct
+//SDS_ATTRIBUTE((__packed__))
+DynStrHead8_t
 {
+    void* userptr;
     uint8_t len; /* used */
     uint8_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
     char buf[];
 };
-struct SDS_ATTRIBUTE((__packed__)) DynStrHead16_t
+
+struct
+//SDS_ATTRIBUTE((__packed__))
+DynStrHead16_t
 {
+    void* userptr;
     uint16_t len; /* used */
     uint16_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
     char buf[];
 };
-struct SDS_ATTRIBUTE((__packed__)) DynStrHead32_t
+struct
+//SDS_ATTRIBUTE((__packed__))
+DynStrHead32_t
 {
+    void* userptr;
     uint32_t len; /* used */
     uint32_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
@@ -121,11 +132,42 @@ struct SDS_ATTRIBUTE((__packed__)) DynStrHead32_t
 
 struct SDS_ATTRIBUTE((__packed__)) DynStrHead64_t
 {
+    void* userptr;
     uint64_t len; /* used */
     uint64_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
     char buf[];
 };
+
+/*
+* these functions are called for malloc, realloc, and free.
+*/
+extern void* ds_wrapmalloc(size_t size, void* userptr);
+extern void* ds_wraprealloc(void* ptr, size_t oldsz, size_t newsz, void* userptr);
+extern void ds_wrapfree(void* ptr, void* userptr);
+
+
+/* Wrappers to the allocators used by SDS. Note that SDS will actually
+ * just use the macros defined into ds_getallocated.h in order to avoid to pay
+ * the overhead of function calls. Here we define these wrappers only for
+ * the programs SDS is linked to, if they want to touch the SDS internals
+ * even if they use a different allocator. */
+
+static inline void* ds_malloc(size_t size, void* userptr)
+{
+    return ds_wrapmalloc(size, userptr);
+}
+
+static inline void* ds_realloc(void* ptr, size_t oldsz, size_t newsz, void* userptr)
+{
+    return ds_wraprealloc(ptr, oldsz, newsz, userptr);
+}
+
+static inline void ds_free(void* ptr, void* userptr)
+{
+    ds_wrapfree(ptr, userptr);
+}
+
 
 /* ds_getallocated() = ds_getavailable() + ds_getlength() */
 static inline size_t ds_getallocated(const DynString_t* s);
@@ -140,25 +182,25 @@ static inline void ds_setallocated(DynString_t* s, size_t newlen);
  * The string is always null-termined (all the sds strings are, always) so
  * even if you create an sds string with:
  *
- * mystring = ds_newlen("abc",3);
+ * mystring = ds_newlen("abc", 3, NULL);
  *
  * You can print the string with printf() as there is an implicit \0 at the
  * end of the string. However the string is binary safe and can contain
  * \0 characters in the middle, as the length is stored in the sds header. */
-static inline DynString_t* ds_newlen(const void* init, size_t initlen);
+static inline DynString_t* ds_newlen(const void* init, size_t initlen, void* userptr);
 
 /* Create an empty (zero length) sds string. Even in this case the string
  * always has an implicit null term. */
-static inline DynString_t* ds_newempty(void);
+static inline DynString_t* ds_newempty(void* userptr);
 
 /* Create a new sds string starting from a null terminated C string. */
-static inline DynString_t* ds_new(const char* init);
+static inline DynString_t* ds_new(const char* init, void* userptr);
 
 /* Duplicate an sds string. */
 static inline DynString_t* ds_duplicate(const DynString_t* s);
 
 /* Free an sds string. No operation is performed if 's' is NULL. */
-static inline void ds_destroy(DynString_t* s);
+static inline void ds_destroy(DynString_t* s, void* userptr);
 
 
 /* Set the sds string length to the length as obtained with strlen(), so
@@ -167,7 +209,7 @@ static inline void ds_destroy(DynString_t* s);
  * This function is useful when the sds string is hacked manually in some
  * way, like in the following example:
  *
- * s = ds_new("foobar");
+ * s = ds_new("foobar", NULL);
  * s[2] = '\0';
  * ds_updatelength(s);
  * printf("%d\n", ds_getlength(s));
@@ -190,7 +232,7 @@ static inline void ds_clear(DynString_t* s);
  *
  * Note: this does not change the *length* of the sds string as returned
  * by ds_getlength(), but only the free buffer space we have. */
-static inline DynString_t* ds_makeroomfor(DynString_t* s, size_t addlen);
+static inline DynString_t* ds_makeroomfor(DynString_t* s, size_t addlen, void* userptr);
 
 
 /* Reallocate the sds string so that it has no free space at the end. The
@@ -252,21 +294,21 @@ static inline DynString_t* ds_growzero(DynString_t* s, size_t len);
  *
  * After the call, the passed sds string is no longer valid and all the
  * references must be substituted with the new pointer returned by the call. */
-static inline DynString_t* ds_appendlen(DynString_t* s, const void* t, size_t len);
+static inline DynString_t* ds_appendlen(DynString_t* s, const void* t, size_t len, void* userptr);
 
 /* Append the specified null termianted C string to the sds string 's'.
  *
  * After the call, the passed sds string is no longer valid and all the
  * references must be substituted with the new pointer returned by the call. */
-static inline DynString_t* ds_append(DynString_t* s, const char* t);
+static inline DynString_t* ds_append(DynString_t* s, const char* t, void* userptr);
 
-static inline DynString_t* ds_appendchar(DynString_t* s, char ch);
+static inline DynString_t* ds_appendchar(DynString_t* s, char ch, void* userptr);
 
 /* Append the specified sds 't' to the existing sds 's'.
  *
  * After the call, the modified sds string is no longer valid and all the
  * references must be substituted with the new pointer returned by the call. */
-static inline DynString_t* ds_appendsds(DynString_t* s, const DynString_t* t);
+static inline DynString_t* ds_appendsds(DynString_t* s, const DynString_t* t, void* userptr);
 
 
 /* Destructively modify the sds string 's' to hold the specified binary
@@ -293,9 +335,9 @@ static inline int ds_ull2str(char* s, unsigned long long v);
 /*
 * Create an sds string from a long long value. It is much faster than:
 *
-* ds_appendprintf(ds_newempty(),"%lld\n", value);
+* ds_appendprintf(ds_newempty(NULL),"%lld\n", value);
 */
-static inline DynString_t* ds_fromlonglong(long long value);
+static inline DynString_t* ds_fromlonglong(long long value, void* userptr);
 
  
 /*
@@ -307,13 +349,13 @@ static inline DynString_t* ds_fromlonglong(long long value);
 *
 * Example:
 *
-* s = ds_new("Sum is: ");
+* s = ds_new("Sum is: ", NULL);
 * s = ds_appendprintf(s,"%d+%d = %d",a,b,a+b).
 *
 * Often you need to create a string from scratch with the printf-alike
-* format. When this is the need, just use ds_newempty() as the target string:
+* format. When this is the need, just use ds_newempty(NULL) as the target string:
 *
-* s = ds_appendprintf(ds_newempty(), "... your format ...", args);
+* s = ds_appendprintf(ds_newempty(NULL), "... your format ...", args);
 */
 #ifdef __GNUC__
 static inline DynString_t* ds_appendprintf(DynString_t* s, const char* fmt, ...) SDS_ATTRIBUTE((format(printf, 2, 3)));
@@ -351,7 +393,7 @@ static inline DynString_t* ds_appendfmt(DynString_t* s, char const* fmt, ...);
  *
  * Example:
  *
- * s = ds_new("AA...AA.a.aa.aHelloWorld     :::");
+ * s = ds_new("AA...AA.a.aa.aHelloWorld     :::", NULL);
  * s = ds_trim(s,"Aa. :");
  * printf("%s\n", s);
  *
@@ -372,7 +414,7 @@ static inline DynString_t* ds_trim(DynString_t* s, const char* cset);
  *
  * Example:
  *
- * s = ds_new("Hello World");
+ * s = ds_new("Hello World", NULL);
  * ds_range(s,1,-1); => "ello World"
  */
 static inline void ds_range(DynString_t* s, ssize_t start, ssize_t end);
@@ -412,7 +454,7 @@ static inline int ds_compare(const DynString_t* s1, const DynString_t* s2);
  * requires length arguments. sdssplit() is just the
  * same function but for zero-terminated strings.
  */
-static inline DynString_t* *ds_splitlen(const char* s, ssize_t len, const char* sep, int seplen, size_t* count);
+static inline DynString_t* *ds_splitlen(const char* s, ssize_t len, const char* sep, int seplen, size_t* count, void* userptr);
 
 /* Free the result returned by ds_splitlen(), or do nothing if 'tokens' is NULL. */
 static inline void ds_freesplitres(DynString_t* *tokens, size_t count);
@@ -453,7 +495,7 @@ static inline int sdsutil_hextoint(char c);
  * quotes or closed quotes followed by non space characters
  * as in: "foo"bar or "foo'
  */
-static inline DynString_t* *ds_splitargs(const char* line, int* argc);
+static inline DynString_t* *ds_splitargs(const char* line, int* argc, void* userptr);
 
 /* Modify the string substituting all the occurrences of the set of
  * characters specified in the 'from' string to the corresponding character
@@ -469,17 +511,9 @@ static inline DynString_t* ds_mapchars(DynString_t* s, const char* from, const c
 
 /* Join an array of C strings using the specified separator (also a C string).
  * Returns the result as an sds string. */
-static inline DynString_t* ds_join(char* *argv, int argc, char* sep);
+static inline DynString_t* ds_join(char* *argv, int argc, char* sep, void* userptr);
 static inline DynString_t* ds_joinsds(DynString_t* *argv, int argc, const char* sep, size_t seplen);
 
-/* Wrappers to the allocators used by SDS. Note that SDS will actually
- * just use the macros defined into ds_getallocated.h in order to avoid to pay
- * the overhead of function calls. Here we define these wrappers only for
- * the programs SDS is linked to, if they want to touch the SDS internals
- * even if they use a different allocator. */
-static inline void* ds_malloc(size_t size);
-static inline void* ds_realloc(void* ptr, size_t size);
-static inline void ds_free(void* ptr);
 
 /* TODO: explain these! */
 static inline int ds_getheadersize(char type);
@@ -683,6 +717,10 @@ static inline void ds_increaselength(DynString_t* s, size_t inc)
 static inline size_t ds_getallocated(const DynString_t* s)
 {
     unsigned char flags;
+    if(s == NULL)
+    {
+        return 0;
+    }
     flags = s[-1];
     switch(flags & SDS_TYPE_MASK)
     {
@@ -713,6 +751,46 @@ static inline size_t ds_getallocated(const DynString_t* s)
             break;
     }
     return 0;
+}
+
+static inline void* ds_getuserptr(const DynString_t* s)
+{
+    unsigned char flags;
+    flags = s[-1];
+    switch(flags & SDS_TYPE_MASK)
+    {
+        case SDS_TYPE_5:
+            {
+                return NULL;
+            }
+            break;
+        case SDS_TYPE_8:
+            {
+                return SDS_HDR(8, s)->userptr;
+            }
+            break;
+        case SDS_TYPE_16:
+            {
+                return SDS_HDR(16, s)->userptr;
+            }
+            break;
+        case SDS_TYPE_32:
+            {
+                return SDS_HDR(32, s)->userptr;
+            }
+            break;
+        case SDS_TYPE_64:
+            {
+                return SDS_HDR(64, s)->userptr;
+            }
+            break;
+    }
+    return NULL;
+}
+
+static inline void* ds_getuserpointer(const DynString_t* s)
+{
+    return ds_getuserptr(s);
 }
 
 static inline void ds_setallocated(DynString_t* s, size_t newlen)
@@ -750,7 +828,7 @@ static inline void ds_setallocated(DynString_t* s, size_t newlen)
 }
 
 
-static inline DynString_t* ds_newlen(const void* init, size_t initlen)
+static inline DynString_t* ds_newlen(const void* init, size_t initlen, void* userptr)
 {
     int hdrlen;
     char type;
@@ -765,7 +843,7 @@ static inline DynString_t* ds_newlen(const void* init, size_t initlen)
         type = SDS_TYPE_8;
     }
     hdrlen = ds_getheadersize(type);
-    sh = ds_wrapmalloc(hdrlen + initlen + 1);
+    sh = ds_wrapmalloc(hdrlen + initlen + 1, userptr);
     if(sh == NULL)
     {
         return NULL;
@@ -784,6 +862,10 @@ static inline DynString_t* ds_newlen(const void* init, size_t initlen)
     {
         case SDS_TYPE_5:
             {
+                #if 0
+                SDS_HDR_VAR(5, s);
+                sh->userptr = userptr;
+                #endif
                 *fp = type | (initlen << SDS_TYPE_BITS);
             }
             break;
@@ -792,6 +874,7 @@ static inline DynString_t* ds_newlen(const void* init, size_t initlen)
                 SDS_HDR_VAR(8, s);
                 sh->len = initlen;
                 sh->alloc = initlen;
+                sh->userptr = userptr;
                 *fp = type;
             }
             break;
@@ -800,6 +883,7 @@ static inline DynString_t* ds_newlen(const void* init, size_t initlen)
                 SDS_HDR_VAR(16, s);
                 sh->len = initlen;
                 sh->alloc = initlen;
+                sh->userptr = userptr;
                 *fp = type;
             }
             break;
@@ -808,6 +892,7 @@ static inline DynString_t* ds_newlen(const void* init, size_t initlen)
                 SDS_HDR_VAR(32, s);
                 sh->len = initlen;
                 sh->alloc = initlen;
+                sh->userptr = userptr;
                 *fp = type;
             }
             break;
@@ -816,6 +901,7 @@ static inline DynString_t* ds_newlen(const void* init, size_t initlen)
                 SDS_HDR_VAR(64, s);
                 sh->len = initlen;
                 sh->alloc = initlen;
+                sh->userptr = userptr;
                 *fp = type;
             }
             break;
@@ -828,30 +914,30 @@ static inline DynString_t* ds_newlen(const void* init, size_t initlen)
     return s;
 }
 
-static inline DynString_t* ds_newempty(void)
+static inline DynString_t* ds_newempty(void* userptr)
 {
-    return ds_newlen("", 0);
+    return ds_newlen("", 0, userptr);
 }
 
-static inline DynString_t* ds_new(const char* init)
+static inline DynString_t* ds_new(const char* init, void* userptr)
 {
     size_t initlen;
     initlen = (init == NULL) ? 0 : strlen(init);
-    return ds_newlen(init, initlen);
+    return ds_newlen(init, initlen, userptr);
 }
 
 static inline DynString_t* ds_duplicate(const DynString_t* s)
 {
-    return ds_newlen(s, ds_getlength(s));
+    return ds_newlen(s, ds_getlength(s), ds_getuserptr(s));
 }
 
-static inline void ds_destroy(DynString_t* s)
+static inline void ds_destroy(DynString_t* s, void* userptr)
 {
     if(s == NULL)
     {
         return;
     }
-    ds_wrapfree((char*)s - ds_getheadersize(s[-1]));
+    ds_wrapfree((char*)s - ds_getheadersize(s[-1]), userptr);
 }
 
 static inline void ds_updatelength(DynString_t* s)
@@ -867,7 +953,7 @@ static inline void ds_clear(DynString_t* s)
     s[0] = '\0';
 }
 
-static inline DynString_t* ds_makeroomfor(DynString_t* s, size_t addlen)
+static inline DynString_t* ds_makeroomfor(DynString_t* s, size_t addlen, void* userptr)
 {
     int hdrlen;
     char type;
@@ -875,8 +961,14 @@ static inline DynString_t* ds_makeroomfor(DynString_t* s, size_t addlen)
     size_t avail;
     size_t len;
     size_t newlen;
+    size_t newsz;
+    size_t oldsz;
+    void* up;
     void* sh;
     void* newsh;
+    up = userptr;
+    oldsz = 0;
+    newsz = 0;
     avail = ds_getavailable(s);
     oldtype = s[-1] & SDS_TYPE_MASK;
     /* Return ASAP if there is enough space left. */
@@ -884,6 +976,7 @@ static inline DynString_t* ds_makeroomfor(DynString_t* s, size_t addlen)
     {
         return s;
     }
+    oldsz = ds_getallocated(s);
     len = ds_getlength(s);
     sh = (char*)s - ds_getheadersize(oldtype);
     newlen = (len + addlen);
@@ -907,7 +1000,7 @@ static inline DynString_t* ds_makeroomfor(DynString_t* s, size_t addlen)
     hdrlen = ds_getheadersize(type);
     if(oldtype == type)
     {
-        newsh = ds_wraprealloc(sh, hdrlen + newlen + 1);
+        newsh = ds_wraprealloc(sh, oldsz, hdrlen + newlen + 1, up);
         if(newsh == NULL)
         {
             return NULL;
@@ -918,13 +1011,13 @@ static inline DynString_t* ds_makeroomfor(DynString_t* s, size_t addlen)
     {
         /* Since the header size changes, need to move the string forward,
          * and can't use realloc */
-        newsh = ds_wrapmalloc(hdrlen + newlen + 1);
+        newsh = ds_wrapmalloc(hdrlen + newlen + 1, up);
         if(newsh == NULL)
         {
             return NULL;
         }
         memcpy((char*)newsh + hdrlen, s, len + 1);
-        ds_wrapfree(sh);
+        ds_wrapfree(sh, up);
         s = (char*)newsh + hdrlen;
         s[-1] = type;
         ds_setlength(s, len);
@@ -939,10 +1032,13 @@ static inline DynString_t* ds_removefreespace(DynString_t* s)
     int oldhdrlen;
     size_t len;
     size_t avail;
+    size_t oldsz;
+    void* up;
     void* sh;
     void* newsh;
     char type;
     char oldtype;
+    up = ds_getuserptr(s);
     oldtype = s[-1] & SDS_TYPE_MASK;
     oldhdrlen = ds_getheadersize(oldtype);
     len = ds_getlength(s);
@@ -964,7 +1060,8 @@ static inline DynString_t* ds_removefreespace(DynString_t* s)
      * reallocate the string to use the different header type. */
     if(oldtype == type || type > SDS_TYPE_8)
     {
-        newsh = ds_wraprealloc(sh, oldhdrlen + len + 1);
+        oldsz = ds_getallocated(sh);
+        newsh = ds_wraprealloc(sh, oldsz, oldhdrlen + len + 1, up);
         if(newsh == NULL)
         {
             return NULL;
@@ -973,13 +1070,13 @@ static inline DynString_t* ds_removefreespace(DynString_t* s)
     }
     else
     {
-        newsh = ds_wrapmalloc(hdrlen + len + 1);
+        newsh = ds_wrapmalloc(hdrlen + len + 1, up);
         if(newsh == NULL)
         {
             return NULL;
         }
         memcpy((char*)newsh + hdrlen, s, len + 1);
-        ds_wrapfree(sh);
+        ds_wrapfree(sh, up);
         s = (char*)newsh + hdrlen;
         s[-1] = type;
         ds_setlength(s, len);
@@ -1057,13 +1154,15 @@ static inline void ds_internincrlength(DynString_t* s, ssize_t incr)
 
 static inline DynString_t* ds_growzero(DynString_t* s, size_t len)
 {
+    void* up;
     size_t curlen;
+    up = ds_getuserpointer(s);
     curlen = ds_getlength(s);
     if(len <= curlen)
     {
         return s;
     }
-    s = ds_makeroomfor(s, len - curlen);
+    s = ds_makeroomfor(s, len - curlen, up);
     if(s == NULL)
     {
         return NULL;
@@ -1074,11 +1173,13 @@ static inline DynString_t* ds_growzero(DynString_t* s, size_t len)
     return s;
 }
 
-static inline DynString_t* ds_appendlen(DynString_t* s, const void* t, size_t len)
+static inline DynString_t* ds_appendlen(DynString_t* s, const void* t, size_t len, void* userptr)
 {
+    void* up;
     size_t curlen;
+    up = userptr;
     curlen = ds_getlength(s);
-    s = ds_makeroomfor(s, len);
+    s = ds_makeroomfor(s, len, up);
     if(s == NULL)
     {
         return NULL;
@@ -1089,26 +1190,28 @@ static inline DynString_t* ds_appendlen(DynString_t* s, const void* t, size_t le
     return s;
 }
 
-static inline DynString_t* ds_append(DynString_t* s, const char* t)
+static inline DynString_t* ds_append(DynString_t* s, const char* t, void* userptr)
 {
-    return ds_appendlen(s, t, strlen(t));
+    return ds_appendlen(s, t, strlen(t), userptr);
 }
 
-static inline DynString_t* ds_appendchar(DynString_t* s, char ch)
+static inline DynString_t* ds_appendchar(DynString_t* s, char ch, void* userptr)
 {
-    return ds_appendlen(s, &ch, 1);
+    return ds_appendlen(s, &ch, 1, userptr);
 }
 
-static inline DynString_t* ds_appendsds(DynString_t* s, const DynString_t* t)
+static inline DynString_t* ds_appendsds(DynString_t* s, const DynString_t* t, void* userptr)
 {
-    return ds_appendlen(s, t, ds_getlength(t));
+    return ds_appendlen(s, t, ds_getlength(t), userptr);
 }
 
 static inline DynString_t* ds_copylength(DynString_t* s, const char* t, size_t len)
 {
+    void* up;
+    up = ds_getuserpointer(s);
     if(ds_getallocated(s) < len)
     {
-        s = ds_makeroomfor(s, len - ds_getlength(s));
+        s = ds_makeroomfor(s, len - ds_getlength(s), s);
         if(s == NULL)
         {
             return NULL;
@@ -1204,28 +1307,30 @@ static inline int ds_ull2str(char* s, unsigned long long v)
     return l;
 }
 
-static inline DynString_t* ds_fromlonglong(long long value)
+static inline DynString_t* ds_fromlonglong(long long value, void* userptr)
 {
     int len;
     char buf[SDS_LLSTR_SIZE];
     len = ds_ll2str(buf, value);
-    return ds_newlen(buf, len);
+    return ds_newlen(buf, len, userptr);
 }
 
 static inline DynString_t* ds_appendvprintf(DynString_t* s, const char* fmt, va_list ap)
 {
     size_t buflen;
     va_list cpy;
-    char *t;
+    void* up;
+    char* t;
     char* buf;
     char staticbuf[1024];
     buf = staticbuf;
+    up = ds_getuserptr(s);
     buflen = strlen(fmt) * 2;
     /* We try to start using a static buffer for speed.
      * If not possible we revert to heap allocation. */
     if(buflen > sizeof(staticbuf))
     {
-        buf = (char*)ds_wrapmalloc(buflen);
+        buf = (char*)ds_wrapmalloc(buflen, up);
         if(buf == NULL)
         {
             return NULL;
@@ -1247,10 +1352,10 @@ static inline DynString_t* ds_appendvprintf(DynString_t* s, const char* fmt, va_
         {
             if(buf != staticbuf)
             {
-                ds_wrapfree(buf);
+                ds_wrapfree(buf, up);
             }
             buflen *= 2;
-            buf = (char*)ds_wrapmalloc(buflen);
+            buf = (char*)ds_wrapmalloc(buflen, up);
             if(buf == NULL)
             {
                 return NULL;
@@ -1261,10 +1366,10 @@ static inline DynString_t* ds_appendvprintf(DynString_t* s, const char* fmt, va_
     }
 
     /* Finally concat the obtained string to the SDS string and return it. */
-    t = ds_append(s, buf);
+    t = ds_append(s, buf, up);
     if(buf != staticbuf)
     {
-        ds_wrapfree(buf);
+        ds_wrapfree(buf, up);
     }
     return t;
 }
@@ -1287,18 +1392,19 @@ static inline DynString_t* ds_appendfmt(DynString_t* s, char const* fmt, ...)
     long i;
     long long num;
     unsigned long long unum;
+    void* up;
     char* str;
     const char* f;
     va_list ap;
     char buf[SDS_LLSTR_SIZE + 1];
     char singlecharbuf[5];
-
+    up = ds_getuserpointer(s);
     initlen = ds_getlength(s);
     f = fmt;
     /* To avoid continuous reallocations, let's start with a buffer that
      * can hold at least two times the format string itself. It's not the
      * best heuristic but seems to work in practice. */
-    s = ds_makeroomfor(s, initlen + strlen(fmt) * 2);
+    s = ds_makeroomfor(s, initlen + strlen(fmt) * 2, up);
     va_start(ap, fmt);
     f = fmt; /* Next format specifier byte to process. */
     i = initlen; /* Position of the next byte to write to dest str. */
@@ -1307,7 +1413,7 @@ static inline DynString_t* ds_appendfmt(DynString_t* s, char const* fmt, ...)
         /* Make sure there is always space for at least 1 char. */
         if(ds_getavailable(s) == 0)
         {
-            s = ds_makeroomfor(s, 1);
+            s = ds_makeroomfor(s, 1, up);
         }
         switch(*f)
         {
@@ -1323,7 +1429,7 @@ static inline DynString_t* ds_appendfmt(DynString_t* s, char const* fmt, ...)
                             l = (next == 's') ? strlen(str) : ds_getlength(str);
                             if(ds_getavailable(s) < l)
                             {
-                                s = ds_makeroomfor(s, l);
+                                s = ds_makeroomfor(s, l, up);
                             }
                             memcpy(s + i, str, l);
                             ds_increaselength(s, l);
@@ -1346,7 +1452,7 @@ static inline DynString_t* ds_appendfmt(DynString_t* s, char const* fmt, ...)
                             l = ds_ll2str(buf, num);
                             if(ds_getavailable(s) < l)
                             {
-                                s = ds_makeroomfor(s, l);
+                                s = ds_makeroomfor(s, l, up);
                             }
                             memcpy(s + i, buf, l);
                             ds_increaselength(s, l);
@@ -1368,7 +1474,7 @@ static inline DynString_t* ds_appendfmt(DynString_t* s, char const* fmt, ...)
                             l = ds_ull2str(buf, unum);
                             if(ds_getavailable(s) < l)
                             {
-                                s = ds_makeroomfor(s, l);
+                                s = ds_makeroomfor(s, l, up);
                             }
                             memcpy(s + i, buf, l);
                             ds_increaselength(s, l);
@@ -1382,7 +1488,7 @@ static inline DynString_t* ds_appendfmt(DynString_t* s, char const* fmt, ...)
                             singlecharbuf[1] = 0;
                             if(ds_getavailable(s) < 1)
                             {
-                                s = ds_makeroomfor(s, 1);
+                                s = ds_makeroomfor(s, 1, up);
                             }
                             memcpy(s+i, singlecharbuf, 1);
                             ds_increaselength(s, 1);
@@ -1536,23 +1642,28 @@ static inline int ds_compare(const DynString_t* s1, const DynString_t* s2)
     return cmp;
 }
 
-static inline DynString_t** ds_splitlen(const char* s, ssize_t len, const char* sep, int seplen, size_t* count)
+static inline DynString_t** ds_splitlen(const char* s, ssize_t len, const char* sep, int seplen, size_t* count, void* userptr)
 {
     size_t i;
     size_t elements;
     size_t slots;
+    size_t newsz;
+    size_t prevsz;
     long j;
     long start;
+    void* up;
     DynString_t** tokens;
     DynString_t** newtokens;
     elements = 0;
     slots = 5;
     start = 0;
+    up = userptr;
     if(seplen < 1 || len < 0)
     {
         return NULL;
     }
-    tokens = (DynString_t**)ds_wrapmalloc(sizeof(DynString_t*) * slots);
+    prevsz = sizeof(DynString_t*) * slots;
+    tokens = (DynString_t**)ds_wrapmalloc(prevsz, up);
     if(tokens == NULL)
     {
         return NULL;
@@ -1568,7 +1679,9 @@ static inline DynString_t** ds_splitlen(const char* s, ssize_t len, const char* 
         if(slots < elements + 2)
         {
             slots *= 2;
-            newtokens = (DynString_t**)ds_wraprealloc(tokens, sizeof(DynString_t*) * slots);
+            newsz = sizeof(DynString_t*) * slots;
+            newtokens = (DynString_t**)ds_wraprealloc(tokens, prevsz, newsz, up);
+            prevsz = newsz;
             if(newtokens == NULL)
             {
                 goto cleanup;
@@ -1578,7 +1691,7 @@ static inline DynString_t** ds_splitlen(const char* s, ssize_t len, const char* 
         /* search the separator */
         if((seplen == 1 && *(s + j) == sep[0]) || (memcmp(s + j, sep, seplen) == 0))
         {
-            tokens[elements] = ds_newlen(s + start, j - start);
+            tokens[elements] = ds_newlen(s + start, j - start, up);
             if(tokens[elements] == NULL)
             {
                 goto cleanup;
@@ -1589,7 +1702,7 @@ static inline DynString_t** ds_splitlen(const char* s, ssize_t len, const char* 
         }
     }
     /* Add the final element. We are sure there is room in the tokens array. */
-    tokens[elements] = ds_newlen(s + start, len - start);
+    tokens[elements] = ds_newlen(s + start, len - start, up);
     if(tokens[elements] == NULL)
     {
         goto cleanup;
@@ -1602,9 +1715,9 @@ static inline DynString_t** ds_splitlen(const char* s, ssize_t len, const char* 
     {
         for(i = 0; i < elements; i++)
         {
-            ds_destroy(tokens[i]);
+            ds_destroy(tokens[i], up);
         }
-        ds_wrapfree(tokens);
+        ds_wrapfree(tokens, up);
         *count = 0;
         return NULL;
     }
@@ -1612,22 +1725,26 @@ static inline DynString_t** ds_splitlen(const char* s, ssize_t len, const char* 
 
 static inline void ds_freesplitres(DynString_t** tokens, size_t count)
 {
+    void* up;
     if(!tokens)
     {
         return;
     }
+    up = ds_getuserptr(tokens[0]);
     while(count--)
     {
-        ds_destroy(tokens[count]);
+        ds_destroy(tokens[count], up);
     }
-    ds_wrapfree(tokens);
+    ds_wrapfree(tokens, up);
 }
 
 static inline DynString_t* ds_appendrepr(DynString_t* s, const char* p, size_t len, bool withquotes)
 {
+    void* up;
+    up = ds_getuserptr(s);
     if(withquotes)
     {
-        s = ds_appendlen(s, "\"", 1);
+        s = ds_appendlen(s, "\"", 1, up);
     }
     while(len--)
     {
@@ -1641,27 +1758,27 @@ static inline DynString_t* ds_appendrepr(DynString_t* s, const char* p, size_t l
                 break;
             case '\n':
                 {
-                    s = ds_appendlen(s, "\\n", 2);
+                    s = ds_appendlen(s, "\\n", 2, up);
                 }
                 break;
             case '\r':
                 {
-                    s = ds_appendlen(s, "\\r", 2);
+                    s = ds_appendlen(s, "\\r", 2, up);
                 }
                 break;
             case '\t':
                 {
-                    s = ds_appendlen(s, "\\t", 2);
+                    s = ds_appendlen(s, "\\t", 2, up);
                 }
                 break;
             case '\a':
                 {
-                    s = ds_appendlen(s, "\\a", 2);
+                    s = ds_appendlen(s, "\\a", 2, up);
                 }
                 break;
             case '\b':
                 {
-                    s = ds_appendlen(s, "\\b", 2);
+                    s = ds_appendlen(s, "\\b", 2, up);
                 }
                 break;
             default:
@@ -1681,7 +1798,7 @@ static inline DynString_t* ds_appendrepr(DynString_t* s, const char* p, size_t l
     }
     if(withquotes)
     {
-        return ds_appendlen(s, "\"", 1);
+        return ds_appendlen(s, "\"", 1, up);
     }
     return s;
 }
@@ -1748,20 +1865,26 @@ static inline int sdsutil_hextoint(char c)
 }
 
 
-static inline DynString_t** ds_splitargs(const char* line, int* argc)
+static inline DynString_t** ds_splitargs(const char* line, int* argc, void* userptr)
 {
     int inq;
     int insq;
     int done;
+    size_t newsz;
+    size_t oldsz;
     char c;
     unsigned char byte;
     char* current;
     char** vector;
     const char* p;
+    void* up;
+    up = userptr;
     p = line;
     current = NULL;
     vector = NULL;
     *argc = 0;
+    oldsz = 0;
+    newsz = 0;
     while(1)
     {
         /* skip blanks */
@@ -1777,7 +1900,7 @@ static inline DynString_t** ds_splitargs(const char* line, int* argc)
             done = 0;
             if(current == NULL)
             {
-                current = ds_newempty();
+                current = ds_newempty(up);
             }
             while(!done)
             {
@@ -1786,7 +1909,7 @@ static inline DynString_t** ds_splitargs(const char* line, int* argc)
                     if((*p == '\\') && (*(p + 1) == 'x') && sdsutil_ishex(*(p + 2)) && sdsutil_ishex(*(p + 3)))
                     {
                         byte = (sdsutil_hextoint(*(p + 2)) * 16) + sdsutil_hextoint(*(p + 3));
-                        current = ds_appendlen(current, (char*)&byte, 1);
+                        current = ds_appendlen(current, (char*)&byte, 1, up);
                         p += 3;
                     }
                     else if((*p == '\\') && *(p + 1))
@@ -1825,7 +1948,7 @@ static inline DynString_t** ds_splitargs(const char* line, int* argc)
                                 }
                                 break;
                         }
-                        current = ds_appendlen(current, &c, 1);
+                        current = ds_appendlen(current, &c, 1, up);
                     }
                     else if(*p == '"')
                     {
@@ -1844,7 +1967,7 @@ static inline DynString_t** ds_splitargs(const char* line, int* argc)
                     }
                     else
                     {
-                        current = ds_appendlen(current, p, 1);
+                        current = ds_appendlen(current, p, 1, up);
                     }
                 }
                 else if(insq)
@@ -1852,7 +1975,7 @@ static inline DynString_t** ds_splitargs(const char* line, int* argc)
                     if(*p == '\\' && *(p + 1) == '\'')
                     {
                         p++;
-                        current = ds_appendlen(current, "'", 1);
+                        current = ds_appendlen(current, "'", 1, up);
                     }
                     else if(*p == '\'')
                     {
@@ -1871,7 +1994,7 @@ static inline DynString_t** ds_splitargs(const char* line, int* argc)
                     }
                     else
                     {
-                        current = ds_appendlen(current, p, 1);
+                        current = ds_appendlen(current, p, 1, up);
                     }
                 }
                 else
@@ -1899,7 +2022,7 @@ static inline DynString_t** ds_splitargs(const char* line, int* argc)
                             break;
                         default:
                             {
-                                current = ds_appendlen(current, p, 1);
+                                current = ds_appendlen(current, p, 1, up);
                             }
                             break;
                     }
@@ -1910,7 +2033,9 @@ static inline DynString_t** ds_splitargs(const char* line, int* argc)
                 }
             }
             /* add the token to the vector */
-            vector = (char**)ds_wraprealloc(vector, ((*argc) + 1) * sizeof(char*));
+            newsz = ((*argc) + 1) * sizeof(char*);
+            vector = (char**)ds_wraprealloc(vector, oldsz, newsz, up);
+            oldsz = newsz;
             vector[*argc] = current;
             (*argc)++;
             current = NULL;
@@ -1920,7 +2045,7 @@ static inline DynString_t** ds_splitargs(const char* line, int* argc)
             /* Even on empty input string return something not NULL. */
             if(vector == NULL)
             {
-                vector = (char**)ds_wrapmalloc(sizeof(void*));
+                vector = (char**)ds_wrapmalloc(sizeof(void*), up);
             }
             return vector;
         }
@@ -1929,12 +2054,12 @@ static inline DynString_t** ds_splitargs(const char* line, int* argc)
 err:
     while((*argc)--)
     {
-        ds_destroy(vector[*argc]);
+        ds_destroy(vector[*argc], up);
     }
-    ds_wrapfree(vector);
+    ds_wrapfree(vector, up);
     if(current)
     {
-        ds_destroy(current);
+        ds_destroy(current, up);
     }
     *argc = 0;
     return NULL;
@@ -1961,17 +2086,17 @@ static inline DynString_t* ds_mapchars(DynString_t* s, const char* from, const c
     return s;
 }
 
-static inline DynString_t* ds_join(char** argv, int argc, char* sep)
+static inline DynString_t* ds_join(char** argv, int argc, char* sep, void* userptr)
 {
     int j;
     DynString_t* join;
-    join = ds_newempty();
+    join = ds_newempty(userptr);
     for(j = 0; j < argc; j++)
     {
-        join = ds_append(join, argv[j]);
+        join = ds_append(join, argv[j], userptr);
         if(j != argc - 1)
         {
-            join = ds_append(join, sep);
+            join = ds_append(join, sep, userptr);
         }
     }
     return join;
@@ -1980,33 +2105,19 @@ static inline DynString_t* ds_join(char** argv, int argc, char* sep)
 /* Like ds_join, but joins an array of SDS strings. */
 static inline DynString_t* ds_joinsds(DynString_t** argv, int argc, const char* sep, size_t seplen)
 {
-    DynString_t* join = ds_newempty();
     int j;
-
+    void* up;
+    DynString_t* join;
+    up = ds_getuserptr(argv[0]);
+    join = ds_newempty(up);
     for(j = 0; j < argc; j++)
     {
-        join = ds_appendsds(join, argv[j]);
+        join = ds_appendsds(join, argv[j], up);
         if(j != argc - 1)
         {
-            join = ds_appendlen(join, sep, seplen);
+            join = ds_appendlen(join, sep, seplen, up);
         }
     }
     return join;
-}
-
-
-static inline void* ds_malloc(size_t size)
-{
-    return ds_wrapmalloc(size);
-}
-
-static inline void* ds_realloc(void* ptr, size_t size)
-{
-    return ds_wraprealloc(ptr, size);
-}
-
-static inline void ds_free(void* ptr)
-{
-    ds_wrapfree(ptr);
 }
 
