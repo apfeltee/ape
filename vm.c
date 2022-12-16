@@ -149,8 +149,9 @@ ApeGlobalStore_t* ape_make_globalstore(ApeContext_t* ctx, ApeGCMemory_t* mem)
     }
     memset(store, 0, sizeof(ApeGlobalStore_t));
     store->context = ctx;
-    store->symbols = ape_make_strdict(ctx, (ApeDataCallback_t)ape_symbol_copy, (ApeDataCallback_t)ape_symbol_destroy);
-    if(!store->symbols)
+    store->named = ape_make_strdict(ctx, (ApeDataCallback_t)ape_symbol_copy, (ApeDataCallback_t)ape_symbol_destroy);
+    
+    if(!store->named)
     {
         goto err;
     }
@@ -189,14 +190,14 @@ void ape_globalstore_destroy(ApeGlobalStore_t* store)
     {
         return;
     }
-    ape_strdict_destroywithitems(store->symbols);
+    ape_strdict_destroywithitems(store->named);
     ape_valarray_destroy(store->objects);
     ape_allocator_free(&store->context->alloc, store);
 }
 
 ApeSymbol_t* ape_globalstore_getsymbol(ApeGlobalStore_t* store, const char* name)
 {
-    return (ApeSymbol_t*)ape_strdict_getbyname(store->symbols, name);
+    return (ApeSymbol_t*)ape_strdict_getbyname(store->named, name);
 }
 
 bool ape_globalstore_set(ApeGlobalStore_t* store, const char* name, ApeObject_t object)
@@ -222,7 +223,7 @@ bool ape_globalstore_set(ApeGlobalStore_t* store, const char* name, ApeObject_t 
     {
         goto err;
     }
-    ok = ape_strdict_set(store->symbols, name, symbol);
+    ok = ape_strdict_set(store->named, name, symbol);
     if(!ok)
     {
         ape_symbol_destroy(symbol);
@@ -1361,7 +1362,7 @@ ApeVM_t* ape_make_vm(ApeContext_t* ctx, const ApeConfig_t* config, ApeGCMemory_t
     vm->globalobjects = ape_make_valdict(ctx, sizeof(ApeSize_t), sizeof(ApeObject_t));
     vm->stackobjects = ape_make_valdict(ctx, sizeof(ApeSize_t), sizeof(ApeObject_t));
     vm->lastframe = NULL;
-    vm->frameobjects = deqlist_create_empty();
+    vm->frameobjects = deqlist_create_empty(sizeof(ApeFrame_t));
     for(i = 0; i < APE_OPCODE_MAX; i++)
     {
         vm->overloadkeys[i] = ape_object_make_null(ctx);

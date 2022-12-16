@@ -397,7 +397,7 @@ ApeSymTable_t* ape_compiler_getsymboltable(ApeAstCompiler_t* comp)
 {
     ApeAstFileScope_t* filescope;
     filescope = (ApeAstFileScope_t*)ape_ptrarray_top(comp->filescopes);
-    fprintf(stderr, "filescope=%p\n", filescope);
+    //fprintf(stderr, "filescope=%p comp->filescopes=%d\n", filescope, ape_ptrarray_count(comp->filescopes));
     if(!filescope)
     {
         APE_ASSERT(false);
@@ -856,9 +856,9 @@ bool ape_compiler_includemodule(ApeAstCompiler_t* comp, ApeAstExpression_t* incl
             goto end;
         }
     }
-    for(i = 0; i < ape_ptrarray_count(module->symbols); i++)
+    for(i = 0; i < ape_ptrarray_count(module->modsymbols); i++)
     {
-        symbol = (ApeSymbol_t*)ape_ptrarray_get(module->symbols, i);
+        symbol = (ApeSymbol_t*)ape_ptrarray_get(module->modsymbols, i);
         ok = ape_symtable_addmodulesymbol(symtable, symbol);
         if(!ok)
         {

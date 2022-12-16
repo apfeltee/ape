@@ -1159,7 +1159,7 @@ struct ApeModule_t
 {
     ApeContext_t* context;
     char* name;
-    ApePtrArray_t* symbols;
+    ApePtrArray_t* modsymbols;
 };
 
 struct ApeAstFileScope_t
@@ -1215,7 +1215,7 @@ struct ApeAstProgram_t
 struct ApeGlobalStore_t
 {
     ApeContext_t* context;
-    ApeStrDict_t* symbols;
+    ApeStrDict_t* named;
     ApeValArray_t* objects;
 };
 

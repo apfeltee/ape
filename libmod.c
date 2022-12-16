@@ -17,8 +17,8 @@ ApeModule_t* ape_make_module(ApeContext_t* ctx, const char* name)
         ape_module_destroy(module);
         return NULL;
     }
-    module->symbols = ape_make_ptrarray(ctx);
-    if(!module->symbols)
+    module->modsymbols = ape_make_ptrarray(ctx);
+    if(!module->modsymbols)
     {
         ape_module_destroy(module);
         return NULL;
@@ -33,7 +33,7 @@ void* ape_module_destroy(ApeModule_t* module)
         return NULL;
     }
     ape_allocator_free(&module->context->alloc, module->name);
-    ape_ptrarray_destroywithitems(module->symbols, (ApeDataCallback_t)ape_symbol_destroy);
+    ape_ptrarray_destroywithitems(module->modsymbols, (ApeDataCallback_t)ape_symbol_destroy);
     ape_allocator_free(&module->context->alloc, module);
     return NULL;
 }
@@ -54,8 +54,8 @@ ApeModule_t* ape_module_copy(ApeModule_t* src)
         ape_module_destroy(copy);
         return NULL;
     }
-    copy->symbols = ape_ptrarray_copywithitems(src->symbols, (ApeDataCallback_t)ape_symbol_copy, (ApeDataCallback_t)ape_symbol_destroy);
-    if(!copy->symbols)
+    copy->modsymbols = ape_ptrarray_copywithitems(src->modsymbols, (ApeDataCallback_t)ape_symbol_copy, (ApeDataCallback_t)ape_symbol_destroy);
+    if(!copy->modsymbols)
     {
         ape_module_destroy(copy);
         return NULL;
@@ -96,7 +96,7 @@ bool ape_module_addsymbol(ApeModule_t* module, const ApeSymbol_t* symbol)
     {
         return false;
     }
-    ok = ape_ptrarray_add(module->symbols, module_symbol);
+    ok = ape_ptrarray_add(module->modsymbols, module_symbol);
     if(!ok)
     {
         ape_symbol_destroy(module_symbol);

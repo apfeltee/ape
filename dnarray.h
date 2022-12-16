@@ -105,7 +105,7 @@ static APE_INLINE intptr_t* da_grow_internal(intptr_t* arr, intptr_t count, intp
         (arr)[da_count_internal(arr) - 1] \
     )
 
-#if 0
+#if 1
     #define da_push(arr, ...) \
         ( \
             da_maybe_grow_internal((arr), APE_CONF_PLAINLIST_CAPACITY_ADD), \

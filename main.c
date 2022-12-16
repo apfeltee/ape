@@ -285,6 +285,7 @@ static bool parse_options(Options_t* opts, Flag_t* flags, int fcnt)
                     }
                     opts->memdbglogfile = flags[i].value;
                 }
+                break;
             case 'p':
                 {
                     if(flags[i].value == NULL)

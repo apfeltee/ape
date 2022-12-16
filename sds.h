@@ -1030,6 +1030,7 @@ static inline DynString_t* ds_makeroomfor(DynString_t* s, size_t addlen, void* u
     void* up;
     void* sh;
     void* newsh;
+    (void)newsz;
     up = userptr;
     oldsz = 0;
     newsz = 0;
@@ -1272,6 +1273,7 @@ static inline DynString_t* ds_appendsds(DynString_t* s, const DynString_t* t, vo
 static inline DynString_t* ds_copylength(DynString_t* s, const char* t, size_t len)
 {
     void* up;
+    (void)up;
     up = ds_getuserpointer(s);
     if(ds_getallocated(s) < len)
     {

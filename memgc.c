@@ -71,7 +71,7 @@ void poolinit(ApeContext_t* ctx, ApeGCObjPool_t* pool)
 {
     (void)ctx;
     pool->count = 0;
-    pool->datapool = deqlist_create_empty();
+    pool->datapool = deqlist_create_empty(sizeof(ApeGCObjData_t*));
 }
 
 void pooldestroy(ApeContext_t* ctx, ApeGCObjPool_t* pool)
@@ -193,7 +193,7 @@ bool ape_allocator_setdebugfile(ApeAllocator_t* alloc, const char* path)
 void ape_allocator_destroy(ApeAllocator_t* alloc)
 {
     (void)alloc;
-    fprintf(stderr, "destroying allocator: %d allocations (%d of which mapped), %d bytes total\n", 
+    fprintf(stderr, "destroying allocator: %ld allocations (%ld of which mapped), %ld bytes total\n", 
         alloc->pool->totalalloccount,
         alloc->pool->totalmapped,
         alloc->pool->totalbytes
