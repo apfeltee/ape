@@ -26,30 +26,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include <stddef.h>
-#include <stdint.h>
-#include <stdbool.h>
-
 #ifdef _MSC_VER
     #ifndef _CRT_SECURE_NO_WARNINGS
         #define _CRT_SECURE_NO_WARNINGS
     #endif /* _CRT_SECURE_NO_WARNINGS */
 #endif /* _MSC_VER */
 
-#ifdef __cplusplus
-    #define APE_EXTERNC_BEGIN \
-        extern "C"            \
-        {
-    #define APE_EXTERNC_END }
-#endif
-
 #include <stdarg.h>
-#include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <math.h>
 #include <float.h>
 #include <limits.h>
 #include <assert.h>
@@ -74,12 +63,6 @@ THE SOFTWARE.
     #endif
 #endif
 
-#define APE_VERSION_MAJOR 0
-#define APE_VERSION_MINOR 14
-#define APE_VERSION_PATCH 0
-
-#define APE_VERSION_STRING "0.14.0"
-
 #if defined(__STRICT_ANSI__)
     #define APE_CCENV_ANSIMODE 1
 #endif
@@ -96,14 +79,9 @@ THE SOFTWARE.
 
 #define APE_CONF_INVALID_VALDICT_IX UINT_MAX
 #define APE_CONF_INVALID_STRDICT_IX UINT_MAX
-#define APE_CONF_DICT_INITIAL_SIZE (2)
-#define APE_CONF_ARRAY_INITIAL_CAPACITY (64/4)
 
-#define APE_CONF_MAP_INITIAL_CAPACITY (64/4)
+#define APE_CONF_PLAINLIST_CAPACITY_ADD 1
 
-#define APE_CONF_PLAINLIST_CAPACITY_ADD 32
-
-#define APE_CONF_SIZE_MAXFRAMES (512 / 4)
 #define APE_CONF_SIZE_VM_THISSTACK (512 / 4)
 
 #define APE_CONF_SIZE_NATFN_MAXDATALEN (16 * 2)
@@ -112,19 +90,11 @@ THE SOFTWARE.
 #define APE_CONF_SIZE_ERRORS_MAXCOUNT (4)
 #define APE_CONF_SIZE_ERROR_MAXMSGLENGTH (80)
 
-
-/* decreasing these incurs higher memory use */
-#define APE_CONF_SIZE_GCMEM_POOLSIZE (512 * 4)
-#define APE_CONF_SIZE_GCMEM_POOLCOUNT ((4) + 1)
-#define APE_CONF_CONST_GCMEM_SWEEPINTERVAL (128 / 64)
-
-
 #define APE_STREQ(a, b) (strcmp((a), (b)) == 0)
 #define APE_STRNEQ(a, b, n) (strncmp((a), (b), (n)) == 0)
 #define APE_ARRAY_LEN(array) ((int)(sizeof(array) / sizeof(array[0])))
 
 #define APE_DEBUG 0
-#define APE_USE_MEMPOOL 1
 
 #if 1
     #define APE_DBLEQ(a, b) (fabs((a) - (b)) < DBL_EPSILON)
@@ -137,19 +107,12 @@ THE SOFTWARE.
 
 #define APE_ASSERT(x) assert((x))
 
-#if defined(APE_DEBUG) && (APE_DEBUG == 1)
-    #define APE_FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
-    #define APE_LOG(...) ape_log(APE_FILENAME, __LINE__, __VA_ARGS__)
-#else
-    #define APE_LOG(...) ((void)0)
-#endif
-
 /**/
 #if 0
     #define ape_object_value_type(obj) \
         (((obj).handle == NULL) ? APE_OBJECT_NULL : ((ApeObjType_t)((obj).handle->datatype)))
 #else
-    #if 0
+    #if 1
         #define ape_object_value_type(obj) \
             ( \
                 ((obj).handle == NULL) ? \
@@ -852,20 +815,28 @@ struct ApeMemPool_t
 {
     bool available;
 
+    ApeInt_t totalalloccount;
+    ApeInt_t totalmapped;
+    ApeInt_t totalbytes;
+
+    bool enabledebug;
+    bool debughndmustclose;
+    FILE* debughandle;
+
     /* actual pool count */
-    int poolcount;
+    ApeSize_t poolcount;
 
     /* pool array length (2^x ceil of ct) */
-    int poolarrlength;
+    ApeSize_t poolarrlength;
 
     /* minimum pool size */
-    int minpoolsize;
+    ApeSize_t minpoolsize;
 
     /* maximum pool size */
-    int maxpoolsize;
+    ApeSize_t maxpoolsize;
 
     /* page size, typically 4096 */
-    int pgsize;
+    ApeSize_t pgsize;
 
     /* pools */
     void **pools;

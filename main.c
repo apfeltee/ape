@@ -50,6 +50,7 @@ struct Options_t
     int n_paths;
     const char** paths;
     const char* codeline;
+    const char* memdbglogfile;
 };
 
 
@@ -223,6 +224,7 @@ static bool parse_options(Options_t* opts, Flag_t* flags, int fcnt)
     opts->alsorun = false;
     opts->printast = false;
     opts->printbytecode = false;
+    opts->memdbglogfile = NULL;
     for(i=0; i<fcnt; i++)
     {
         switch(flags[i].flag)
@@ -274,6 +276,15 @@ static bool parse_options(Options_t* opts, Flag_t* flags, int fcnt)
                     opts->printbytecode = true;
                 }
                 break;
+            case 'm':
+                {
+                    if(flags[i].value == NULL)
+                    {
+                        fprintf(stderr, "flag '-m' expects a value.\n");
+                        return false;
+                    }
+                    opts->memdbglogfile = flags[i].value;
+                }
             case 'p':
                 {
                     if(flags[i].value == NULL)
@@ -357,7 +368,7 @@ int main(int argc, char* argv[])
     ApeObject_t args_array;
     replexit = false;
     cmdfailed = false;
-    populate_flags(argc, 1, argv, "epId", &fx);
+    populate_flags(argc, 1, argv, "epIdm", &fx);
     ctx = ape_make_context();
     if(!parse_options(&opts, fx.flags, fx.fcnt))
     {
@@ -365,6 +376,10 @@ int main(int argc, char* argv[])
     }
     else
     {
+        if(opts.memdbglogfile != NULL)
+        {
+            ape_allocator_setdebugfile(&ctx->alloc, opts.memdbglogfile);
+        }
         ctx->config.runafterdump = opts.alsorun;
         ape_context_setnativefunction(ctx, "exit", exit_repl, &replexit);
         if(opts.printast)

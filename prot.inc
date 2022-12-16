@@ -420,6 +420,8 @@ void ape_mem_defaultfree(ApeContext_t* ctx, void* userptr, void *objptr);
 void *ape_allocator_alloc_debug(ApeAllocator_t *alloc, const char *str, const char *func, const char *file, int line, size_t size);
 void *ape_allocator_alloc_real(ApeAllocator_t *alloc, size_t size);
 void* ape_allocator_realloc(ApeAllocator_t* alloc, void* ptr, size_t oldsz, size_t newsz);
+bool ape_allocator_setdebughandle(ApeAllocator_t* alloc, FILE* hnd, bool mustclose);
+bool ape_allocator_setdebugfile(ApeAllocator_t* alloc, const char* path);
 void ape_allocator_free(ApeAllocator_t *alloc, void *ptr);
 ApeAllocator_t* ape_make_allocator(ApeContext_t* ctx, ApeAllocator_t* dest, ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t free_fn, void* optr);
 void ape_allocator_destroy(ApeAllocator_t* alloc);

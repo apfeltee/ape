@@ -87,46 +87,56 @@ typedef struct DynStrHead64_t DynStrHead64_t;
 
 static const char* SDS_NOINIT = "SDS_NOINIT";
 
-/* Note: DynStrHead5_t is never used, we just access the flags byte directly.
- * However is here to document the layout of type 5 SDS strings. */
-struct
-//SDS_ATTRIBUTE((__packed__))
-DynStrHead5_t
+/*
+* Note: DynStrHead5_t is never used, we just access the flags byte directly.
+* However is here to document the layout of type 5 SDS strings.
+*
+*
+* another note:
+* userptr /must/ be void* only. no size is stored, so no pointer arithmetics.
+* only a pointer is carried around, NOTHING ELSE.
+*/
+struct SDS_ATTRIBUTE((__packed__)) DynStrHead5_t
 {
     void* userptr;
-    unsigned char flags; /* 3 lsb of type, and 5 msb of string length */
+    /* 3 lsb of type, and 5 msb of string length */
+    unsigned char flags;
     char buf[];
 };
 
-struct
-//SDS_ATTRIBUTE((__packed__))
-DynStrHead8_t
+struct SDS_ATTRIBUTE((__packed__)) DynStrHead8_t
 {
     void* userptr;
-    uint8_t len; /* used */
-    uint8_t alloc; /* excluding the header and null terminator */
-    unsigned char flags; /* 3 lsb of type, 5 unused bits */
+    /* used */
+    uint8_t len;
+    /* excluding the header and null terminator */
+    uint8_t alloc;
+    /* 3 lsb of type, 5 unused bits */
+    unsigned char flags;
     char buf[];
 };
 
-struct
-//SDS_ATTRIBUTE((__packed__))
-DynStrHead16_t
+struct SDS_ATTRIBUTE((__packed__)) DynStrHead16_t
 {
     void* userptr;
-    uint16_t len; /* used */
-    uint16_t alloc; /* excluding the header and null terminator */
-    unsigned char flags; /* 3 lsb of type, 5 unused bits */
+    /* used */
+    uint16_t len;
+    /* excluding the header and null terminator */
+    uint16_t alloc;
+    /* 3 lsb of type, 5 unused bits */
+    unsigned char flags;
     char buf[];
 };
-struct
-//SDS_ATTRIBUTE((__packed__))
-DynStrHead32_t
+
+struct SDS_ATTRIBUTE((__packed__)) DynStrHead32_t
 {
     void* userptr;
-    uint32_t len; /* used */
-    uint32_t alloc; /* excluding the header and null terminator */
-    unsigned char flags; /* 3 lsb of type, 5 unused bits */
+    /* used */
+    uint32_t len;
+    /* excluding the header and null terminator */
+    uint32_t alloc;
+    /* 3 lsb of type, 5 unused bits */
+    unsigned char flags;
     char buf[];
 };
 
@@ -142,181 +152,212 @@ struct SDS_ATTRIBUTE((__packed__)) DynStrHead64_t
 /*
 * these functions are called for malloc, realloc, and free.
 */
-extern void* ds_wrapmalloc(size_t size, void* userptr);
-extern void* ds_wraprealloc(void* ptr, size_t oldsz, size_t newsz, void* userptr);
-extern void ds_wrapfree(void* ptr, void* userptr);
+extern void* ds_extmalloc(size_t size, void* userptr);
+extern void* ds_extrealloc(void* ptr, size_t oldsz, size_t newsz, void* userptr);
+extern void ds_extfree(void* ptr, void* userptr);
 
 
-/* Wrappers to the allocators used by SDS. Note that SDS will actually
- * just use the macros defined into ds_getallocated.h in order to avoid to pay
- * the overhead of function calls. Here we define these wrappers only for
- * the programs SDS is linked to, if they want to touch the SDS internals
- * even if they use a different allocator. */
+/*
+* Wrappers to the allocators used by SDS. Note that SDS will actually
+* just use the macros defined into ds_getallocated.h in order to avoid to pay
+* the overhead of function calls. Here we define these wrappers only for
+* the programs SDS is linked to, if they want to touch the SDS internals
+* even if they use a different allocator.
+*/
 
 static inline void* ds_malloc(size_t size, void* userptr)
 {
-    return ds_wrapmalloc(size, userptr);
+    return ds_extmalloc(size, userptr);
 }
 
 static inline void* ds_realloc(void* ptr, size_t oldsz, size_t newsz, void* userptr)
 {
-    return ds_wraprealloc(ptr, oldsz, newsz, userptr);
+    return ds_extrealloc(ptr, oldsz, newsz, userptr);
 }
 
 static inline void ds_free(void* ptr, void* userptr)
 {
-    ds_wrapfree(ptr, userptr);
+    ds_extfree(ptr, userptr);
 }
-
 
 /* ds_getallocated() = ds_getavailable() + ds_getlength() */
 static inline size_t ds_getallocated(const DynString_t* s);
 static inline void ds_setallocated(DynString_t* s, size_t newlen);
 
 
-/* Create a new sds string with the content specified by the 'init' pointer
- * and 'initlen'.
- * If NULL is used for 'init' the string is initialized with zero bytes.
- * If SDS_NOINIT is used, the buffer is left uninitialized;
- *
- * The string is always null-termined (all the sds strings are, always) so
- * even if you create an sds string with:
- *
- * mystring = ds_newlen("abc", 3, NULL);
- *
- * You can print the string with printf() as there is an implicit \0 at the
- * end of the string. However the string is binary safe and can contain
- * \0 characters in the middle, as the length is stored in the sds header. */
+/*
+* Create a new sds string with the content specified by the 'init' pointer
+* and 'initlen'.
+* If NULL is used for 'init' the string is initialized with zero bytes.
+* If SDS_NOINIT is used, the buffer is left uninitialized;
+*
+* The string is always null-termined (all the sds strings are, always) so
+* even if you create an sds string with:
+*
+* mystring = ds_newlen("abc", 3, NULL);
+*
+* You can print the string with printf() as there is an implicit \0 at the
+* end of the string. However the string is binary safe and can contain
+* \0 characters in the middle, as the length is stored in the sds header.
+*/
 static inline DynString_t* ds_newlen(const void* init, size_t initlen, void* userptr);
 
-/* Create an empty (zero length) sds string. Even in this case the string
- * always has an implicit null term. */
+/*
+* Create an empty (zero length) sds string. Even in this case the string
+* always has an implicit null term.
+*/
 static inline DynString_t* ds_newempty(void* userptr);
 
-/* Create a new sds string starting from a null terminated C string. */
+/*
+* Create a new sds string starting from a null terminated C string.
+*/
 static inline DynString_t* ds_new(const char* init, void* userptr);
 
-/* Duplicate an sds string. */
+/*
+* Duplicate an sds string.
+*/
 static inline DynString_t* ds_duplicate(const DynString_t* s);
 
-/* Free an sds string. No operation is performed if 's' is NULL. */
+/*
+* Free an sds string. No operation is performed if 's' is NULL.
+*/
 static inline void ds_destroy(DynString_t* s, void* userptr);
 
 
-/* Set the sds string length to the length as obtained with strlen(), so
- * considering as content only up to the first null term character.
- *
- * This function is useful when the sds string is hacked manually in some
- * way, like in the following example:
- *
- * s = ds_new("foobar", NULL);
- * s[2] = '\0';
- * ds_updatelength(s);
- * printf("%d\n", ds_getlength(s));
- *
- * The output will be "2", but if we comment out the call to ds_updatelength()
- * the output will be "6" as the string was modified but the logical length
- * remains 6 bytes. */
+/*
+* Set the sds string length to the length as obtained with strlen(), so
+* considering as content only up to the first null term character.
+*
+* This function is useful when the sds string is hacked manually in some
+* way, like in the following example:
+*
+* s = ds_new("foobar", NULL);
+* s[2] = '\0';
+* ds_updatelength(s);
+* printf("%d\n", ds_getlength(s));
+*
+* The output will be "2", but if we comment out the call to ds_updatelength()
+* the output will be "6" as the string was modified but the logical length
+* remains 6 bytes.
+*/
 static inline void ds_updatelength(DynString_t* s);
 
-
-/* Modify an sds string in-place to make it empty (zero length).
- * However all the existing buffer is not discarded but set as free space
- * so that next append operations will not require allocations up to the
- * number of bytes previously available. */
+/*
+* Modify an sds string in-place to make it empty (zero length).
+* However all the existing buffer is not discarded but set as free space
+* so that next append operations will not require allocations up to the
+* number of bytes previously available.
+*/
 static inline void ds_clear(DynString_t* s);
 
-/* Enlarge the free space at the end of the sds string so that the caller
- * is sure that after calling this function can overwrite up to addlen
- * bytes after the end of the string, plus one more byte for nul term.
- *
- * Note: this does not change the *length* of the sds string as returned
- * by ds_getlength(), but only the free buffer space we have. */
+/*
+* Enlarge the free space at the end of the sds string so that the caller
+* is sure that after calling this function can overwrite up to addlen
+* bytes after the end of the string, plus one more byte for nul term.
+*
+* Note: this does not change the *length* of the sds string as returned
+* by ds_getlength(), but only the free buffer space we have.
+*/
 static inline DynString_t* ds_makeroomfor(DynString_t* s, size_t addlen, void* userptr);
 
-
-/* Reallocate the sds string so that it has no free space at the end. The
- * contained string remains not altered, but next concatenation operations
- * will require a reallocation.
- *
- * After the call, the passed sds string is no longer valid and all the
- * references must be substituted with the new pointer returned by the call. */
+/*
+* Reallocate the sds string so that it has no free space at the end. The
+* contained string remains not altered, but next concatenation operations
+* will require a reallocation.
+*
+* After the call, the passed sds string is no longer valid and all the
+* references must be substituted with the new pointer returned by the call.
+*/
 static inline DynString_t* ds_removefreespace(DynString_t* s);
 
-/* Return the total size of the allocation of the specified sds string,
- * including:
- * 1) The sds header before the pointer.
- * 2) The string.
- * 3) The free buffer at the end if any.
- * 4) The implicit null term.
- */
+/*
+* Return the total size of the allocation of the specified sds string,
+* including:
+* 1) The sds header before the pointer.
+* 2) The string.
+* 3) The free buffer at the end if any.
+* 4) The implicit null term.
+*/
 static inline size_t ds_interngetallocsize(DynString_t* s);
 
-
-/* Return the pointer of the actual SDS allocation (normally SDS strings
- * are referenced by the start of the string buffer). */
+/*
+* Return the pointer of the actual SDS allocation (normally SDS strings
+* are referenced by the start of the string buffer).
+*/
 static inline void* ds_interngetallocptr(DynString_t* s);
 
-/* Increment the sds length and decrements the left free space at the
- * end of the string according to 'incr'. Also set the null term
- * in the new end of the string.
- *
- * This function is used in order to fix the string length after the
- * user calls ds_makeroomfor(), writes something after the end of
- * the current string, and finally needs to set the new length.
- *
- * Note: it is possible to use a negative increment in order to
- * right-trim the string.
- *
- * Usage example:
- *
- * Using ds_internincrlength() and ds_makeroomfor() it is possible to mount the
- * following schema, to cat bytes coming from the kernel to the end of an
- * sds string without copying into an intermediate buffer:
- *
- * oldlen = ds_getlength(s);
- * s = ds_makeroomfor(s, BUFFER_SIZE);
- * nread = read(fd, s+oldlen, BUFFER_SIZE);
- * ... check for nread <= 0 and handle it ...
- * ds_internincrlength(s, nread);
- */
+/*
+* Increment the sds length and decrements the left free space at the
+* end of the string according to 'incr'. Also set the null term
+* in the new end of the string.
+*
+* This function is used in order to fix the string length after the
+* user calls ds_makeroomfor(), writes something after the end of
+* the current string, and finally needs to set the new length.
+*
+* Note: it is possible to use a negative increment in order to
+* right-trim the string.
+*
+* Usage example:
+*
+* Using ds_internincrlength() and ds_makeroomfor() it is possible to mount the
+* following schema, to cat bytes coming from the kernel to the end of an
+* sds string without copying into an intermediate buffer:
+*
+* oldlen = ds_getlength(s);
+* s = ds_makeroomfor(s, BUFFER_SIZE);
+* nread = read(fd, s+oldlen, BUFFER_SIZE);
+* ... check for nread <= 0 and handle it ...
+* ds_internincrlength(s, nread);
+*/
 static inline void ds_internincrlength(DynString_t* s, ssize_t incr);
 
-/* Grow the sds to have the specified length. Bytes that were not part of
- * the original length of the sds will be set to zero.
- *
- * if the specified length is smaller than the current length, no operation
- * is performed. */
+/*
+* Grow the sds to have the specified length. Bytes that were not part of
+* the original length of the sds will be set to zero.
+*
+* if the specified length is smaller than the current length, no operation
+* is performed.
+*/
 static inline DynString_t* ds_growzero(DynString_t* s, size_t len);
 
-/* Append the specified binary-safe string pointed by 't' of 'len' bytes to the
- * end of the specified sds string 's'.
- *
- * After the call, the passed sds string is no longer valid and all the
- * references must be substituted with the new pointer returned by the call. */
+/*
+* Append the specified binary-safe string pointed by 't' of 'len' bytes to the
+* end of the specified sds string 's'.
+*
+* After the call, the passed sds string is no longer valid and all the
+* references must be substituted with the new pointer returned by the call.
+*/
 static inline DynString_t* ds_appendlen(DynString_t* s, const void* t, size_t len, void* userptr);
 
-/* Append the specified null termianted C string to the sds string 's'.
- *
- * After the call, the passed sds string is no longer valid and all the
- * references must be substituted with the new pointer returned by the call. */
+/*
+* Append the specified null termianted C string to the sds string 's'.
+*
+* After the call, the passed sds string is no longer valid and all the
+* references must be substituted with the new pointer returned by the call.
+*/
 static inline DynString_t* ds_append(DynString_t* s, const char* t, void* userptr);
 
 static inline DynString_t* ds_appendchar(DynString_t* s, char ch, void* userptr);
 
-/* Append the specified sds 't' to the existing sds 's'.
- *
- * After the call, the modified sds string is no longer valid and all the
- * references must be substituted with the new pointer returned by the call. */
+/*
+* Append the specified sds 't' to the existing sds 's'.
+*
+* After the call, the modified sds string is no longer valid and all the
+* references must be substituted with the new pointer returned by the call.
+*/
 static inline DynString_t* ds_appendsds(DynString_t* s, const DynString_t* t, void* userptr);
 
-
-/* Destructively modify the sds string 's' to hold the specified binary
- * safe string pointed by 't' of length 'len' bytes. */
+/*
+* Destructively modify the sds string 's' to hold the specified binary
+* safe string pointed by 't' of length 'len' bytes.
+*/
 static inline DynString_t* ds_copylength(DynString_t* s, const char* t, size_t len);
 
-/* Like ds_copylength() but 't' must be a null-termined string so that the length
- * of the string is obtained with strlen(). */
+/*
+* Like ds_copylength() but 't' must be a null-termined string so that the length
+* of the string is obtained with strlen().
+*/
 static inline DynString_t* ds_copy(DynString_t* s, const char* t);
 
 /*
@@ -329,7 +370,9 @@ static inline DynString_t* ds_copy(DynString_t* s, const char* t);
 */
 static inline int ds_ll2str(char* s, long long value);
 
-/* Identical ds_ll2str(), but for unsigned long long type. */
+/*
+* Identical ds_ll2str(), but for unsigned long long type.
+*/
 static inline int ds_ull2str(char* s, unsigned long long v);
 
 /*
@@ -367,150 +410,171 @@ static inline DynString_t* ds_appendprintf(DynString_t* s, const char* fmt, ...)
 static inline DynString_t* ds_appendvprintf(DynString_t* s, const char* fmt, va_list ap);
 
 /* This function is similar to ds_appendprintf, but much faster as it does
- * not rely on sprintf() family functions implemented by the libc that
- * are often very slow. Moreover directly handling the sds string as
- * new data is concatenated provides a performance improvement.
- *
- * However this function only handles an incompatible subset of printf-alike
- * format specifiers:
- *
- * %s - C String
- * %S - SDS string
- * %i - signed int
- * %I - 64 bit signed integer (long long, int64_t)
- * %u - unsigned int
- * %U - 64 bit unsigned integer (unsigned long long, uint64_t)
- * %c - character
- * %% - Verbatim "%" character.
- */
+* not rely on sprintf() family functions implemented by the libc that
+* are often very slow. Moreover directly handling the sds string as
+* new data is concatenated provides a performance improvement.
+*
+* However this function only handles an incompatible subset of printf-alike
+* format specifiers:
+*
+* %s - C String
+* %S - SDS string
+* %i - signed int
+* %I - 64 bit signed integer (long long, int64_t)
+* %u - unsigned int
+* %U - 64 bit unsigned integer (unsigned long long, uint64_t)
+* %c - character
+* %% - Verbatim "%" character.
+*/
 static inline DynString_t* ds_appendfmt(DynString_t* s, char const* fmt, ...);
 
-/* Remove the part of the string from left and from right composed just of
- * contiguous characters found in 'cset', that is a null terminted C string.
- *
- * After the call, the modified sds string is no longer valid and all the
- * references must be substituted with the new pointer returned by the call.
- *
- * Example:
- *
- * s = ds_new("AA...AA.a.aa.aHelloWorld     :::", NULL);
- * s = ds_trim(s,"Aa. :");
- * printf("%s\n", s);
- *
- * Output will be just "HelloWorld".
- */
+/*
+* Remove the part of the string from left and from right composed just of
+* contiguous characters found in 'cset', that is a null terminted C string.
+*
+* After the call, the modified sds string is no longer valid and all the
+* references must be substituted with the new pointer returned by the call.
+*
+* Example:
+*
+* s = ds_new("AA...AA.a.aa.aHelloWorld     :::", NULL);
+* s = ds_trim(s,"Aa. :");
+* printf("%s\n", s);
+*
+* Output will be just "HelloWorld".
+*/
 static inline DynString_t* ds_trim(DynString_t* s, const char* cset);
 
-/* Turn the string into a smaller (or equal) string containing only the
- * substring specified by the 'start' and 'end' indexes.
- *
- * start and end can be negative, where -1 means the last character of the
- * string, -2 the penultimate character, and so forth.
- *
- * The interval is inclusive, so the start and end characters will be part
- * of the resulting string.
- *
- * The string is modified in-place.
- *
- * Example:
- *
- * s = ds_new("Hello World", NULL);
- * ds_range(s,1,-1); => "ello World"
- */
+/*
+* Turn the string into a smaller (or equal) string containing only the
+* substring specified by the 'start' and 'end' indexes.
+*
+* start and end can be negative, where -1 means the last character of the
+* string, -2 the penultimate character, and so forth.
+*
+* The interval is inclusive, so the start and end characters will be part
+* of the resulting string.
+*
+* The string is modified in-place.
+*
+* Example:
+*
+* s = ds_new("Hello World", NULL);
+* ds_range(s,1,-1); => "ello World"
+*/
 static inline void ds_range(DynString_t* s, ssize_t start, ssize_t end);
 
-/* Apply toupper() to every character of the sds string 's'. */
+/*
+* Apply toupper() to every character of the sds string 's'.
+*/
 static inline void ds_tolower(DynString_t* s);
 
-/* Apply tolower() to every character of the sds string 's'. */
+/*
+* Apply tolower() to every character of the sds string 's'.
+*/
 static inline void ds_toupper(DynString_t* s);
 
-/* Compare two sds strings s1 and s2 with memcmp().
- *
- * Return value:
- *
- *     positive if s1 > s2.
- *     negative if s1 < s2.
- *     0 if s1 and s2 are exactly the same binary string.
- *
- * If two strings share exactly the same prefix, but one of the two has
- * additional characters, the longer string is considered to be greater than
- * the smaller one. */
+/*
+* Compare two sds strings s1 and s2 with memcmp().
+*
+* Return value:
+*
+*     positive if s1 > s2.
+*     negative if s1 < s2.
+*     0 if s1 and s2 are exactly the same binary string.
+*
+* If two strings share exactly the same prefix, but one of the two has
+* additional characters, the longer string is considered to be greater than
+* the smaller one.
+*/
 static inline int ds_compare(const DynString_t* s1, const DynString_t* s2);
 
-/* Split 's' with separator in 'sep'. An array
- * of sds strings is returned. *count will be set
- * by reference to the number of tokens returned.
- *
- * On out of memory, zero length string, zero length
- * separator, NULL is returned.
- *
- * Note that 'sep' is able to split a string using
- * a multi-character separator. For example
- * sdssplit("foo_-_bar","_-_"); will return two
- * elements "foo" and "bar".
- *
- * This version of the function is binary-safe but
- * requires length arguments. sdssplit() is just the
- * same function but for zero-terminated strings.
- */
+/*
+* Split 's' with separator in 'sep'. An array
+* of sds strings is returned. *count will be set
+* by reference to the number of tokens returned.
+*
+* On out of memory, zero length string, zero length
+* separator, NULL is returned.
+*
+* Note that 'sep' is able to split a string using
+* a multi-character separator. For example
+* sdssplit("foo_-_bar","_-_"); will return two
+* elements "foo" and "bar".
+*
+* This version of the function is binary-safe but
+* requires length arguments. sdssplit() is just the
+* same function but for zero-terminated strings.
+*/
 static inline DynString_t* *ds_splitlen(const char* s, ssize_t len, const char* sep, int seplen, size_t* count, void* userptr);
 
-/* Free the result returned by ds_splitlen(), or do nothing if 'tokens' is NULL. */
+/*
+* Free the result returned by ds_splitlen(), or do nothing if 'tokens' is NULL.
+*/
 static inline void ds_freesplitres(DynString_t* *tokens, size_t count);
 
-
-/* Append to the sds string "s" an escaped string representation where
- * all the non-printable characters (tested with isprint()) are turned into
- * escapes in the form "\n\r\a...." or "\x<hex-number>".
- *
- * After the call, the modified sds string is no longer valid and all the
- * references must be substituted with the new pointer returned by the call. */
+/*
+* Append to the sds string "s" an escaped string representation where
+* all the non-printable characters (tested with isprint()) are turned into
+* escapes in the form "\n\r\a...." or "\x<hex-number>".
+*
+* After the call, the modified sds string is no longer valid and all the
+* references must be substituted with the new pointer returned by the call.
+*/
 static inline DynString_t* ds_appendrepr(DynString_t* s, const char* p, size_t len, bool withquotes);
 
-/* Helper function for ds_splitargs() that returns non zero if 'c'
- * is a valid hex digit. */
+/*
+* Helper function for ds_splitargs() that returns non zero if 'c'
+* is a valid hex digit.
+*/
 static inline int sdsutil_ishex(char c);
 
-/* Helper function for ds_splitargs() that converts a hex digit into an
- * integer from 0 to 15 */
+/*
+* Helper function for ds_splitargs() that converts a hex digit into an
+* integer from 0 to 15
+*/
 static inline int sdsutil_hextoint(char c);
 
-/* Split a line into arguments, where every argument can be in the
- * following programming-language REPL-alike form:
- *
- * foo bar "newline are supported\n" and "\xff\x00otherstuff"
- *
- * The number of arguments is stored into *argc, and an array
- * of sds is returned.
- *
- * The caller should free the resulting array of sds strings with
- * ds_freesplitres().
- *
- * Note that ds_appendrepr() is able to convert back a string into
- * a quoted string in the same format ds_splitargs() is able to parse.
- *
- * The function returns the allocated tokens on success, even when the
- * input string is empty, or NULL if the input contains unbalanced
- * quotes or closed quotes followed by non space characters
- * as in: "foo"bar or "foo'
- */
+/*
+* Split a line into arguments, where every argument can be in the
+* following programming-language REPL-alike form:
+*
+* foo bar "newline are supported\n" and "\xff\x00otherstuff"
+*
+* The number of arguments is stored into *argc, and an array
+* of sds is returned.
+*
+* The caller should free the resulting array of sds strings with
+* ds_freesplitres().
+*
+* Note that ds_appendrepr() is able to convert back a string into
+* a quoted string in the same format ds_splitargs() is able to parse.
+*
+* The function returns the allocated tokens on success, even when the
+* input string is empty, or NULL if the input contains unbalanced
+* quotes or closed quotes followed by non space characters
+* as in: "foo"bar or "foo'
+*/
 static inline DynString_t* *ds_splitargs(const char* line, int* argc, void* userptr);
 
-/* Modify the string substituting all the occurrences of the set of
- * characters specified in the 'from' string to the corresponding character
- * in the 'to' array.
- *
- * For instance: ds_mapchars(mystring, "ho", "01", 2)
- * will have the effect of turning the string "hello" into "0ell1".
- *
- * The function returns the sds string pointer, that is always the same
- * as the input pointer since no resize is needed. */
+/*
+* Modify the string substituting all the occurrences of the set of
+* characters specified in the 'from' string to the corresponding character
+* in the 'to' array.
+*
+* For instance: ds_mapchars(mystring, "ho", "01", 2)
+* will have the effect of turning the string "hello" into "0ell1".
+*
+* The function returns the sds string pointer, that is always the same
+* as the input pointer since no resize is needed.
+*/
 static inline DynString_t* ds_mapchars(DynString_t* s, const char* from, const char* to, size_t setlen);
 
 
-/* Join an array of C strings using the specified separator (also a C string).
- * Returns the result as an sds string. */
+/*
+* Join an array of C strings using the specified separator (also a C string).
+* Returns the result as an sds string.
+*/
 static inline DynString_t* ds_join(char* *argv, int argc, char* sep, void* userptr);
 static inline DynString_t* ds_joinsds(DynString_t* *argv, int argc, const char* sep, size_t seplen);
 
@@ -843,7 +907,7 @@ static inline DynString_t* ds_newlen(const void* init, size_t initlen, void* use
         type = SDS_TYPE_8;
     }
     hdrlen = ds_getheadersize(type);
-    sh = ds_wrapmalloc(hdrlen + initlen + 1, userptr);
+    sh = ds_extmalloc(hdrlen + initlen + 1, userptr);
     if(sh == NULL)
     {
         return NULL;
@@ -937,7 +1001,7 @@ static inline void ds_destroy(DynString_t* s, void* userptr)
     {
         return;
     }
-    ds_wrapfree((char*)s - ds_getheadersize(s[-1]), userptr);
+    ds_extfree((char*)s - ds_getheadersize(s[-1]), userptr);
 }
 
 static inline void ds_updatelength(DynString_t* s)
@@ -1000,7 +1064,7 @@ static inline DynString_t* ds_makeroomfor(DynString_t* s, size_t addlen, void* u
     hdrlen = ds_getheadersize(type);
     if(oldtype == type)
     {
-        newsh = ds_wraprealloc(sh, oldsz, hdrlen + newlen + 1, up);
+        newsh = ds_extrealloc(sh, oldsz, hdrlen + newlen + 0, up);
         if(newsh == NULL)
         {
             return NULL;
@@ -1011,13 +1075,13 @@ static inline DynString_t* ds_makeroomfor(DynString_t* s, size_t addlen, void* u
     {
         /* Since the header size changes, need to move the string forward,
          * and can't use realloc */
-        newsh = ds_wrapmalloc(hdrlen + newlen + 1, up);
+        newsh = ds_extmalloc(hdrlen + newlen + 1, up);
         if(newsh == NULL)
         {
             return NULL;
         }
         memcpy((char*)newsh + hdrlen, s, len + 1);
-        ds_wrapfree(sh, up);
+        ds_extfree(sh, up);
         s = (char*)newsh + hdrlen;
         s[-1] = type;
         ds_setlength(s, len);
@@ -1061,7 +1125,7 @@ static inline DynString_t* ds_removefreespace(DynString_t* s)
     if(oldtype == type || type > SDS_TYPE_8)
     {
         oldsz = ds_getallocated(sh);
-        newsh = ds_wraprealloc(sh, oldsz, oldhdrlen + len + 1, up);
+        newsh = ds_extrealloc(sh, oldsz, oldhdrlen + len + 1, up);
         if(newsh == NULL)
         {
             return NULL;
@@ -1070,13 +1134,13 @@ static inline DynString_t* ds_removefreespace(DynString_t* s)
     }
     else
     {
-        newsh = ds_wrapmalloc(hdrlen + len + 1, up);
+        newsh = ds_extmalloc(hdrlen + len + 1, up);
         if(newsh == NULL)
         {
             return NULL;
         }
         memcpy((char*)newsh + hdrlen, s, len + 1);
-        ds_wrapfree(sh, up);
+        ds_extfree(sh, up);
         s = (char*)newsh + hdrlen;
         s[-1] = type;
         ds_setlength(s, len);
@@ -1179,7 +1243,7 @@ static inline DynString_t* ds_appendlen(DynString_t* s, const void* t, size_t le
     size_t curlen;
     up = userptr;
     curlen = ds_getlength(s);
-    s = ds_makeroomfor(s, len, up);
+    s = ds_makeroomfor(s, len+1, up);
     if(s == NULL)
     {
         return NULL;
@@ -1330,7 +1394,7 @@ static inline DynString_t* ds_appendvprintf(DynString_t* s, const char* fmt, va_
      * If not possible we revert to heap allocation. */
     if(buflen > sizeof(staticbuf))
     {
-        buf = (char*)ds_wrapmalloc(buflen, up);
+        buf = (char*)ds_extmalloc(buflen, up);
         if(buf == NULL)
         {
             return NULL;
@@ -1352,10 +1416,10 @@ static inline DynString_t* ds_appendvprintf(DynString_t* s, const char* fmt, va_
         {
             if(buf != staticbuf)
             {
-                ds_wrapfree(buf, up);
+                ds_extfree(buf, up);
             }
             buflen *= 2;
-            buf = (char*)ds_wrapmalloc(buflen, up);
+            buf = (char*)ds_extmalloc(buflen, up);
             if(buf == NULL)
             {
                 return NULL;
@@ -1369,7 +1433,7 @@ static inline DynString_t* ds_appendvprintf(DynString_t* s, const char* fmt, va_
     t = ds_append(s, buf, up);
     if(buf != staticbuf)
     {
-        ds_wrapfree(buf, up);
+        ds_extfree(buf, up);
     }
     return t;
 }
@@ -1663,7 +1727,7 @@ static inline DynString_t** ds_splitlen(const char* s, ssize_t len, const char* 
         return NULL;
     }
     prevsz = sizeof(DynString_t*) * slots;
-    tokens = (DynString_t**)ds_wrapmalloc(prevsz, up);
+    tokens = (DynString_t**)ds_extmalloc(prevsz, up);
     if(tokens == NULL)
     {
         return NULL;
@@ -1680,7 +1744,7 @@ static inline DynString_t** ds_splitlen(const char* s, ssize_t len, const char* 
         {
             slots *= 2;
             newsz = sizeof(DynString_t*) * slots;
-            newtokens = (DynString_t**)ds_wraprealloc(tokens, prevsz, newsz, up);
+            newtokens = (DynString_t**)ds_extrealloc(tokens, prevsz, newsz, up);
             prevsz = newsz;
             if(newtokens == NULL)
             {
@@ -1717,7 +1781,7 @@ static inline DynString_t** ds_splitlen(const char* s, ssize_t len, const char* 
         {
             ds_destroy(tokens[i], up);
         }
-        ds_wrapfree(tokens, up);
+        ds_extfree(tokens, up);
         *count = 0;
         return NULL;
     }
@@ -1735,7 +1799,7 @@ static inline void ds_freesplitres(DynString_t** tokens, size_t count)
     {
         ds_destroy(tokens[count], up);
     }
-    ds_wrapfree(tokens, up);
+    ds_extfree(tokens, up);
 }
 
 static inline DynString_t* ds_appendrepr(DynString_t* s, const char* p, size_t len, bool withquotes)
@@ -2034,7 +2098,7 @@ static inline DynString_t** ds_splitargs(const char* line, int* argc, void* user
             }
             /* add the token to the vector */
             newsz = ((*argc) + 1) * sizeof(char*);
-            vector = (char**)ds_wraprealloc(vector, oldsz, newsz, up);
+            vector = (char**)ds_extrealloc(vector, oldsz, newsz, up);
             oldsz = newsz;
             vector[*argc] = current;
             (*argc)++;
@@ -2045,7 +2109,7 @@ static inline DynString_t** ds_splitargs(const char* line, int* argc, void* user
             /* Even on empty input string return something not NULL. */
             if(vector == NULL)
             {
-                vector = (char**)ds_wrapmalloc(sizeof(void*), up);
+                vector = (char**)ds_extmalloc(sizeof(void*), up);
             }
             return vector;
         }
@@ -2056,7 +2120,7 @@ err:
     {
         ds_destroy(vector[*argc], up);
     }
-    ds_wrapfree(vector, up);
+    ds_extfree(vector, up);
     if(current)
     {
         ds_destroy(current, up);

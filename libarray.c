@@ -1,6 +1,8 @@
 
 #include "inline.h"
 
+#define APE_CONF_ARRAY_INITIAL_CAPACITY (64/4)
+
 ApeValArray_t* ape_make_valarray_actual(ApeContext_t* ctx, ApeSize_t elsz)
 {
     return ape_make_valarraycapacity(ctx, APE_CONF_ARRAY_INITIAL_CAPACITY, elsz);

@@ -8,6 +8,11 @@
 
 #include "inline.h"
 
+/* decreasing these incurs higher memory use */
+#define APE_CONF_SIZE_GCMEM_POOLSIZE (512 * 4)
+#define APE_CONF_SIZE_GCMEM_POOLCOUNT ((4) + 1)
+#define APE_CONF_CONST_GCMEM_SWEEPINTERVAL (128 / 64)
+
 #define APE_ACTUAL_POOLSIZE (APE_CONF_SIZE_GCMEM_POOLSIZE)
 
 #define APE_CONF_SIZE_MEMPOOL_INITIAL (1024/4)
@@ -38,27 +43,27 @@ struct ApeGCMemory_t
 
 static const ApePosition_t g_posinvalid = { NULL, -1, -1 };
 
-void* ds_wrapmalloc(size_t size, void* userptr)
+void* ds_extmalloc(size_t size, void* userptr)
 {
     ApeContext_t* ctx;
     ctx = (ApeContext_t*)userptr;
-    //fprintf(stderr, "ds_wrapmalloc: userptr=%p\n", userptr);
+    //fprintf(stderr, "ds_extmalloc: userptr=%p\n", userptr);
     return ape_allocator_alloc(&ctx->alloc, size);
 }
 
-void* ds_wraprealloc(void* ptr, size_t oldsz, size_t newsz, void* userptr)
+void* ds_extrealloc(void* ptr, size_t oldsz, size_t newsz, void* userptr)
 {
     ApeContext_t* ctx;
     ctx = (ApeContext_t*)userptr;
-    //fprintf(stderr, "ds_wraprealloc: userptr=%p\n", userptr);    
+    //fprintf(stderr, "ds_extrealloc: userptr=%p\n", userptr);    
     return ape_allocator_realloc(&ctx->alloc, ptr, oldsz, newsz);
 }
 
-void ds_wrapfree(void* ptr, void* userptr)
+void ds_extfree(void* ptr, void* userptr)
 {
     ApeContext_t* ctx;
     ctx = (ApeContext_t*)userptr;
-    //fprintf(stderr, "ds_wrapfree: userptr=%p\n", userptr);
+    //fprintf(stderr, "ds_extfree: userptr=%p\n", userptr);
     return ape_allocator_free(&ctx->alloc, ptr);
 }
 
@@ -175,9 +180,25 @@ ApeAllocator_t* ape_make_allocator(ApeContext_t* ctx, ApeAllocator_t* dest, ApeM
     return dest;
 }
 
+bool ape_allocator_setdebughandle(ApeAllocator_t* alloc, FILE* hnd, bool mustclose)
+{
+    return ape_mempool_setdebughandle(alloc->pool, hnd, mustclose);
+}
+
+bool ape_allocator_setdebugfile(ApeAllocator_t* alloc, const char* path)
+{
+    return ape_mempool_setdebugfile(alloc->pool, path);
+}
+
+
 void ape_allocator_destroy(ApeAllocator_t* alloc)
 {
     (void)alloc;
+    fprintf(stderr, "destroying allocator: %d allocations (%d of which mapped), %d bytes total\n", 
+        alloc->pool->totalalloccount,
+        alloc->pool->totalmapped,
+        alloc->pool->totalbytes
+    );
     ape_mempool_destroy(alloc->pool);
 }
 

@@ -2,6 +2,7 @@
 #include <inttypes.h>
 #include "inline.h"
 
+#define APE_CONF_MAP_INITIAL_CAPACITY (64/4)
 
 static APE_INLINE ApeGCObjData_t* ape_object_make_primitive(ApeContext_t* ctx, ApeObjType_t type)
 {

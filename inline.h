@@ -32,6 +32,12 @@
     #endif
 #endif
 
+#define APE_LIKELY(x) \
+    __builtin_expect(!!(x), 1)
+
+#define APE_UNLIKELY(x) \
+    __builtin_expect(!!(x), 0)
+
 //#if defined(APE_DEBUG)
 #if 0
     #define ape_allocator_alloc(alc, sz) \
@@ -41,22 +47,13 @@
 #endif
 
 
-/* Turn on debugging traces */
-#ifndef MPOOL_DEBUG
-    #define MPOOL_DEBUG 0
-#endif
+extern void* ds_extmalloc(size_t size, void* userptr);
+extern void* ds_extrealloc(void* ptr, size_t oldsz, size_t newsz, void* userptr);
+extern void ds_extfree(void* ptr, void* userptr);
 
-/* Allow overriding malloc functions. */
-#ifndef MPOOL_MALLOC
-    #define MPOOL_MALLOC(sz) malloc(sz)
-    #define MPOOL_REALLOC(p, sz) realloc(p, sz)
-    #define MPOOL_FREE(p, sz) free(p)
-#endif
-
-extern void* ds_wrapmalloc(size_t size, void* userptr);
-extern void* ds_wraprealloc(void* ptr, size_t oldsz, size_t newsz, void* userptr);
-extern void ds_wrapfree(void* ptr, void* userptr);
-
+/*
+* must include *after* decl of ds_ext*, because they depend on it
+*/
 #include "dnarray.h"
 #include "aadeque.h"
 #include "sds.h"
@@ -66,10 +63,15 @@ extern void ds_wrapfree(void* ptr, void* userptr);
 * initialize a memory pool for allocations between 2^min2 and 2^max2, inclusive.
 * (Larger allocations will be directly allocated and freed via mmap / munmap.)
 */
-ApeMemPool_t* ape_mempool_init(int min2, int max2);
+ApeMemPool_t* ape_mempool_init(ApeSize_t min2, ApeSize_t max2);
+
+
+bool ape_mempool_setdebughandle(ApeMemPool_t* mp, FILE* handle, bool mustclose);
+
+bool ape_mempool_setdebugfile(ApeMemPool_t* mp, const char* path);
 
 /* Allocate SZ bytes. */
-void* ape_mempool_alloc(ApeMemPool_t* mp, int sz);
+void* ape_mempool_alloc(ApeMemPool_t* mp, ApeSize_t sz);
 
 /* would release a pointer when mmap (or alternatives) are not available */
 void ape_mempool_free(ApeMemPool_t* mp, void* p);
@@ -78,13 +80,13 @@ void ape_mempool_free(ApeMemPool_t* mp, void* p);
 * mmap a new memory pool of TOTAL_SZ bytes, then build an internal
 * freelist of SZ-byte cells, with the head at (result)[0].
 */
-void** ape_mempool_newpool(unsigned int sz, unsigned int total_sz);
+void** ape_mempool_newpool(ApeMemPool_t* mp, ApeSize_t sz, ApeSize_t total_sz);
 
 /* return pointer P (SZ bytes in size) to the appropriate pool. */
-void ape_mempool_repool(ApeMemPool_t* mp, void *p, int sz);
+void ape_mempool_repool(ApeMemPool_t* mp, void *p, ApeSize_t sz);
 
 /* resize P from OLD_SZ to NEW_SZ, copying content. */
-void *ape_mempool_realloc(ApeMemPool_t* mp, void *p, int old_sz, int new_sz);
+void *ape_mempool_realloc(ApeMemPool_t* mp, void *p, ApeSize_t old_sz, ApeSize_t new_sz);
 
 /* releases and destroys the pool. */
 void ape_mempool_destroy(ApeMemPool_t* mp);
@@ -120,15 +122,22 @@ static APE_INLINE int ape_util_doubletoint(double n)
 
 static APE_INLINE int ape_util_numbertoint32(double n)
 {
+    /* magic. no idea. */
     double two32 = 4294967296.0;
     double two31 = 2147483648.0;
-
     if(!isfinite(n) || n == 0)
     {
         return 0;
     }
     n = fmod(n, two32);
-    n = n >= 0 ? floor(n) : ceil(n) + two32;
+    if(n >= 0)
+    {
+        n = floor(n);
+    }
+    else
+    {
+        n = ceil(n) + two32;
+    }
     if(n >= two31)
     {
         return n - two32;

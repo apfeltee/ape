@@ -1,6 +1,8 @@
 
 #include "inline.h"
 
+#define APE_CONF_DICT_INITIAL_SIZE (2)
+
 ApeValDict_t* ape_make_valdict_actual(ApeContext_t* ctx, ApeSize_t ksz, ApeSize_t vsz)
 {
     return ape_make_valdictcapacity(ctx, APE_CONF_DICT_INITIAL_SIZE, ksz, vsz);

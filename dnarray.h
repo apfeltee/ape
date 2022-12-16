@@ -5,12 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef _MSC_VER
-    #define JK_DYNARRAY_TYPEOF(...) intptr_t*
-#else
-    #define JK_DYNARRAY_TYPEOF(...) __typeof__(__VA_ARGS__)
-#endif
-
 // ifexpr ? thenexpr : elseexpr
 #define _da_if(...) (__VA_ARGS__) ?
 #define _da_then(...) (__VA_ARGS__) :
