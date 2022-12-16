@@ -121,22 +121,22 @@ ApeAstCompScope_t* ape_make_compscope(ApeContext_t* ctx, ApeAstCompScope_t* oute
     memset(scope, 0, sizeof(ApeAstCompScope_t));
     scope->context = ctx;
     scope->outer = outer;
-    scope->bytecode = ape_make_valarray(ctx, ApeUShort_t);
+    scope->bytecode = ape_make_valarray(ctx, sizeof(ApeUShort_t));
     if(!scope->bytecode)
     {
         goto err;
     }
-    scope->srcpositions = ape_make_valarray(ctx, ApePosition_t);
+    scope->srcpositions = ape_make_valarray(ctx, sizeof(ApePosition_t));
     if(!scope->srcpositions)
     {
         goto err;
     }
-    scope->breakipstack = ape_make_valarray(ctx, ApeInt_t);
+    scope->breakipstack = ape_make_valarray(ctx, sizeof(ApeInt_t));
     if(!scope->breakipstack)
     {
         goto err;
     }
-    scope->continueipstack = ape_make_valarray(ctx, int);
+    scope->continueipstack = ape_make_valarray(ctx, sizeof(int));
     if(!scope->continueipstack)
     {
         goto err;
@@ -194,7 +194,7 @@ ApeAstCompResult_t* ape_make_compresult(ApeContext_t* ctx, ApeUShort_t* bytecode
 void ape_compresult_destroy(ApeAstCompResult_t* res)
 {
     ApeContext_t* ctx;
-    if(!res)
+    if(res == NULL)
     {
         return;
     }
@@ -437,12 +437,12 @@ bool ape_compiler_init(ApeAstCompiler_t* comp, ApeContext_t* ctx, const ApeConfi
     {
         goto err;
     }
-    comp->constants = ape_make_valarray(ctx, ApeObject_t);
+    comp->constants = ape_make_valarray(ctx, sizeof(ApeObject_t));
     if(!comp->constants)
     {
         goto err;
     }
-    comp->srcpositionsstack = ape_make_valarray(ctx, ApePosition_t);
+    comp->srcpositionsstack = ape_make_valarray(ctx, sizeof(ApePosition_t));
     if(!comp->srcpositionsstack)
     {
         goto err;
@@ -972,7 +972,7 @@ static bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpressi
         case APE_EXPR_IFELSE:
             {
                 ifstmt = &stmt->exifstmt;
-                jumptoendips = ape_make_valarray(comp->context, ApeInt_t);
+                jumptoendips = ape_make_valarray(comp->context, sizeof(ApeInt_t));
                 if(!jumptoendips)
                 {
                     goto statementiferror;

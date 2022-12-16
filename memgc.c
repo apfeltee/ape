@@ -115,12 +115,6 @@ void ape_mem_defaultfree(ApeContext_t* ctx, void* userptr, void* objptr)
     ape_allocator_free(&ctx->custom_allocator, objptr);
 }
 
-void* ape_allocator_alloc_debug(ApeAllocator_t* alloc, const char* str, const char* func, const char* file, int line, size_t size)
-{
-    fprintf(stderr, "%d bytes allocd in %s:%d:%s: %s\n", (int)size, file, line, func, str);
-    return ape_allocator_alloc_real(alloc, size);
-}
-
 void* wrap_alloc(ApeAllocator_t* alloc, size_t size)
 {
     if(alloc != NULL)
@@ -146,13 +140,18 @@ void wrap_free(ApeAllocator_t* alloc, void* ptr)
     free(ptr);    
 }
 
-void* ape_allocator_alloc_real(ApeAllocator_t* alloc, size_t size)
+void* ape_allocator_alloc_real(ApeAllocator_t* alloc, const char* str, const char* func, const char* file, int line, ApeInt_t size)
 {
     if(!alloc->ready)
     {
         fprintf(stderr, "not ready, must initialize\n");
         alloc->pool = ape_mempool_init(APE_CONF_SIZE_MEMPOOL_INITIAL, APE_CONF_SIZE_MEMPOOL_MAX);
         alloc->ready = true;
+    }
+    ape_mempool_debugprintf(alloc->pool, "ape_allocator_alloc: %zu [%s:%d:%s] %s\n", size, file, line, func, str);
+    if(size == 0)
+    {
+        return NULL;
     }
     return ape_mempool_alloc(alloc->pool, size);
 }
@@ -225,7 +224,7 @@ ApeGCMemory_t* ape_make_gcmem(ApeContext_t* ctx)
     {
         goto error;
     }
-    mem->objects_not_gced = ape_make_valarray(ctx, ApeObject_t);
+    mem->objects_not_gced = ape_make_valarray(ctx, sizeof(ApeObject_t));
     if(!mem->objects_not_gced)
     {
         goto error;
@@ -541,7 +540,7 @@ void ape_gcmem_markobject(ApeObject_t obj)
             break;
         case APE_OBJECT_SCRIPTFUNCTION:
             {
-                function = ape_object_value_asfunction(obj);
+                function = ape_object_value_asscriptfunction(obj);
                 for(i = 0; i < function->numfreevals; i++)
                 {
                     free_val = ape_object_function_getfreeval(obj, i);

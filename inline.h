@@ -38,14 +38,6 @@
 #define APE_UNLIKELY(x) \
     __builtin_expect(!!(x), 0)
 
-//#if defined(APE_DEBUG)
-#if 0
-    #define ape_allocator_alloc(alc, sz) \
-        ape_allocator_alloc_debug(alc, #sz, __FUNCTION__, __FILE__, __LINE__, sz)
-#else
-    #define ape_allocator_alloc(alc, sz) ape_allocator_alloc_real(alc, sz)
-#endif
-
 
 extern void* ds_extmalloc(size_t size, void* userptr);
 extern void* ds_extrealloc(void* ptr, size_t oldsz, size_t newsz, void* userptr);
@@ -69,6 +61,8 @@ ApeMemPool_t* ape_mempool_init(ApeSize_t min2, ApeSize_t max2);
 bool ape_mempool_setdebughandle(ApeMemPool_t* mp, FILE* handle, bool mustclose);
 
 bool ape_mempool_setdebugfile(ApeMemPool_t* mp, const char* path);
+void ape_mempool_debugprintv(ApeMemPool_t* mp, const char* fmt, va_list va);
+void ape_mempool_debugprintf(ApeMemPool_t* mp, const char* fmt, ...);
 
 /* Allocate SZ bytes. */
 void* ape_mempool_alloc(ApeMemPool_t* mp, ApeSize_t sz);

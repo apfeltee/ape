@@ -222,7 +222,7 @@ bool ape_context_setnativefunction(ApeContext_t *ctx, const char *name, ApeWrapp
 void ape_context_resetstate(ApeContext_t *ctx);
 void ape_context_setdefaultconfig(ApeContext_t *ctx);
 /* libmap.c */
-ApeValDict_t *ape_make_valdict_actual(ApeContext_t *ctx, ApeSize_t ksz, ApeSize_t vsz);
+ApeValDict_t *ape_make_valdict(ApeContext_t *ctx, ApeSize_t ksz, ApeSize_t vsz);
 ApeValDict_t *ape_make_valdictcapacity(ApeContext_t *ctx, ApeSize_t min_capacity, ApeSize_t ksz, ApeSize_t vsz);
 bool ape_valdict_init(ApeContext_t* ctx, ApeValDict_t *dict, ApeSize_t ksz, ApeSize_t vsz, ApeSize_t initial_capacity);
 void ape_valdict_deinit(ApeValDict_t *dict);
@@ -417,8 +417,8 @@ void ape_compiler_setcompscope(ApeAstCompiler_t *comp, ApeAstCompScope_t *scope)
 /* mem.c */
 void *ape_mem_defaultmalloc(ApeContext_t* ctx, void *userptr, size_t size);
 void ape_mem_defaultfree(ApeContext_t* ctx, void* userptr, void *objptr);
-void *ape_allocator_alloc_debug(ApeAllocator_t *alloc, const char *str, const char *func, const char *file, int line, size_t size);
-void *ape_allocator_alloc_real(ApeAllocator_t *alloc, size_t size);
+
+void* ape_allocator_alloc_real(ApeAllocator_t* alloc, const char* str, const char* func, const char* file, int line, ApeInt_t size);
 void* ape_allocator_realloc(ApeAllocator_t* alloc, void* ptr, size_t oldsz, size_t newsz);
 bool ape_allocator_setdebughandle(ApeAllocator_t* alloc, FILE* hnd, bool mustclose);
 bool ape_allocator_setdebugfile(ApeAllocator_t* alloc, const char* path);
@@ -449,7 +449,7 @@ bool ape_lexer_previous_token(ApeAstLexer_t *lex);
 ApeAstToken_t ape_lexer_internalnexttoken(ApeAstLexer_t *lex);
 bool ape_lexer_expectcurrent(ApeAstLexer_t *lex, ApeAstTokType_t type);
 /* libarray.c */
-ApeValArray_t *ape_make_valarray_actual(ApeContext_t *ctx, ApeSize_t elsz);
+ApeValArray_t *ape_make_valarray(ApeContext_t *ctx, ApeSize_t elsz);
 ApeValArray_t *ape_make_valarraycapacity(ApeContext_t *ctx, ApeSize_t capacity, ApeSize_t elsz);
 bool ape_valarray_initcapacity(ApeValArray_t *arr, ApeContext_t *ctx, ApeSize_t capacity, ApeSize_t elsz);
 void ape_valarray_deinit(ApeValArray_t *arr);

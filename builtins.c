@@ -2,6 +2,18 @@
 #include <stdarg.h>
 #include "inline.h"
 
+#define make_fn_data(ctx, name, fnc, dataptr, datasize) \
+    ape_object_make_nativefuncmemory(ctx, name, fnc, dataptr, datasize)
+
+#define make_fn(ctx, name, fnc) \
+    make_fn_data(ctx, name, fnc, NULL, 0)
+
+#define make_fn_entry_data(ctx, map, name, fnc, dataptr, datasize) \
+    ape_object_map_setnamedvalue(ctx, map, name, make_fn(ctx, name, fnc))
+
+#define make_fn_entry(ctx, map, name, fnc) \
+    make_fn_entry_data(ctx, map, name, fnc, NULL, 0)
+
 static ApeObject_t cfn_object_length(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     ApeSize_t len;

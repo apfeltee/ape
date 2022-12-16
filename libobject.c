@@ -183,6 +183,7 @@ ApeObject_t ape_object_make_mapcapacity(ApeContext_t* ctx, unsigned capacity)
 
 ApeObject_t ape_object_make_function(ApeContext_t* ctx, const char* name, ApeAstCompResult_t* cres, bool wdata, ApeInt_t nloc, ApeInt_t nargs, ApeSize_t fvcount)
 {
+    ApeSize_t actualfvcount;
     ApeGCObjData_t* data;
     data = ape_gcmem_allocobjdata(ctx->mem, APE_OBJECT_SCRIPTFUNCTION);
     if(!data)
@@ -205,9 +206,15 @@ ApeObject_t ape_object_make_function(ApeContext_t* ctx, const char* name, ApeAst
     data->valscriptfunc.owns_data = wdata;
     data->valscriptfunc.numlocals = nloc;
     data->valscriptfunc.numargs = nargs;
-    if(((ApeInt_t)fvcount) >= 0)
+    if(((ApeInt_t)fvcount) > 0)
     {
-        data->valscriptfunc.freevals = (ApeObject_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeObject_t) * fvcount);
+        actualfvcount = fvcount;
+        if(fvcount == 0)
+        {
+            actualfvcount = 1;
+        }
+        //fprintf(stderr, "ape_object_make_function: sizeof(ApeObject_t)=%d actualfvcount=%d rs=%d\n", sizeof(ApeObject_t), actualfvcount, sizeof(ApeObject_t)*actualfvcount);
+        data->valscriptfunc.freevals = (ApeObject_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeObject_t) * actualfvcount);
         if(!data->valscriptfunc.freevals)
         {
             return ape_object_make_null(ctx);
@@ -463,7 +470,7 @@ void ape_tostring_object(ApeWriter_t* buf, ApeObject_t obj, bool quote_str)
             break;
         case APE_OBJECT_SCRIPTFUNCTION:
             {
-                compfunc = ape_object_value_asfunction(obj);
+                compfunc = ape_object_value_asscriptfunction(obj);
                 fname = ape_object_function_getname(obj);
                 #if 0
                     ape_writer_appendf(buf, "CompiledFunction: %s ", fname);
@@ -845,7 +852,7 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
 
         case APE_OBJECT_SCRIPTFUNCTION:
             {
-                function = ape_object_value_asfunction(obj);
+                function = ape_object_value_asscriptfunction(obj);
                 bytecode_copy = NULL;
                 src_positions_copy = NULL;
                 comp_res_copy = NULL;
@@ -881,7 +888,7 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
                 {
                     return ape_object_make_null(ctx);
                 }
-                function_copy = ape_object_value_asfunction(copy);
+                function_copy = ape_object_value_asscriptfunction(copy);
                 function_copy->freevals = (ApeObject_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeObject_t) * function->numfreevals);
                 if(!function_copy->freevals)
                 {
@@ -982,7 +989,7 @@ ApeObject_t ape_object_value_copydeep(ApeContext_t* ctx, ApeObject_t obj)
 {
     ApeObject_t res;
     ApeValDict_t* copies;
-    copies = ape_make_valdict(ctx, ApeObject_t, ApeObject_t);
+    copies = ape_make_valdict(ctx, sizeof(ApeObject_t), sizeof(ApeObject_t));
     if(!copies)
     {
         return ape_object_make_null(ctx);

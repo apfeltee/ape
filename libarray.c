@@ -3,7 +3,7 @@
 
 #define APE_CONF_ARRAY_INITIAL_CAPACITY (64/4)
 
-ApeValArray_t* ape_make_valarray_actual(ApeContext_t* ctx, ApeSize_t elsz)
+ApeValArray_t* ape_make_valarray(ApeContext_t* ctx, ApeSize_t elsz)
 {
     return ape_make_valarraycapacity(ctx, APE_CONF_ARRAY_INITIAL_CAPACITY, elsz);
 }
@@ -108,7 +108,20 @@ ApeValArray_t* ape_valarray_copy(const ApeValArray_t* arr)
 bool ape_valarray_add(ApeValArray_t* arr, const void* value)
 {
     ApeSize_t newcap;
+    ApeSize_t toalloc;
+    ApeSize_t movesize;
     unsigned char* newdata;
+    newcap = 0;
+    if(arr->capacity > 0)
+    {
+        newcap = (arr->capacity) * 2;
+    }
+    else
+    {
+        newcap = 1;
+    }
+    toalloc = (newcap * arr->elemsize);
+    movesize = arr->count * arr->elemsize;
     if(arr->count >= arr->capacity)
     {
         APE_ASSERT(!arr->lock_capacity);
@@ -116,13 +129,12 @@ bool ape_valarray_add(ApeValArray_t* arr, const void* value)
         {
             return false;
         }
-        newcap = arr->capacity > 0 ? arr->capacity * 2 : 1;
-        newdata = (unsigned char*)ape_allocator_alloc(&arr->context->alloc, newcap * arr->elemsize);
+        newdata = (unsigned char*)ape_allocator_alloc(&arr->context->alloc, toalloc);
         if(!newdata)
         {
             return false;
         }
-        memcpy(newdata, arr->arraydata, arr->count * arr->elemsize);
+        memcpy(newdata, arr->arraydata, movesize);
         ape_allocator_free(&arr->context->alloc, arr->allocdata);
         arr->allocdata = newdata;
         arr->arraydata = arr->allocdata;
@@ -130,7 +142,7 @@ bool ape_valarray_add(ApeValArray_t* arr, const void* value)
     }
     if(value)
     {
-        memcpy(arr->arraydata + (arr->count * arr->elemsize), value, arr->elemsize);
+        memcpy(arr->arraydata + movesize, value, arr->elemsize);
     }
     arr->count++;
     return true;

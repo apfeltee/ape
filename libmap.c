@@ -3,7 +3,7 @@
 
 #define APE_CONF_DICT_INITIAL_SIZE (2)
 
-ApeValDict_t* ape_make_valdict_actual(ApeContext_t* ctx, ApeSize_t ksz, ApeSize_t vsz)
+ApeValDict_t* ape_make_valdict(ApeContext_t* ctx, ApeSize_t ksz, ApeSize_t vsz)
 {
     return ape_make_valdictcapacity(ctx, APE_CONF_DICT_INITIAL_SIZE, ksz, vsz);
 }
@@ -15,6 +15,10 @@ ApeValDict_t* ape_make_valdictcapacity(ApeContext_t* ctx, ApeSize_t min_capacity
     ApeSize_t capacity;
     dict = (ApeValDict_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeValDict_t));
     capacity = ape_util_upperpoweroftwo(min_capacity * 2);
+    if(capacity == 0)
+    {
+        capacity = 1;
+    }
     if(!dict)
     {
         return NULL;
@@ -41,9 +45,11 @@ bool ape_valdict_init(ApeContext_t* ctx, ApeValDict_t* dict, ApeSize_t ksz, ApeS
     dict->hashes = NULL;
     dict->count = 0;
     dict->cellcap = initial_capacity;
-    dict->itemcap = (ApeSize_t)(initial_capacity * 0.7f);
+    //dict->itemcap = (ApeSize_t)(initial_capacity * 0.7f);
+    dict->itemcap = (ApeSize_t)(initial_capacity);
     dict->fnequalkeys = NULL;
     dict->fnhashkey = NULL;
+    //fprintf(stderr, "ape_valdict_init: dict->cellcap=%d dict->itemcap=%d initial_capacity=%d\n", dict->cellcap, dict->itemcap, initial_capacity);
     dict->cells = (unsigned int*)ape_allocator_alloc(&ctx->alloc, dict->cellcap * sizeof(*dict->cells));
     dict->keys = (void**)ape_allocator_alloc(&ctx->alloc, dict->itemcap * ksz);
     dict->values = (void**)ape_allocator_alloc(&ctx->alloc, dict->itemcap * vsz);

@@ -41,12 +41,13 @@ static ApeAstTokType_t ape_lexer_lookupident(const char* ident, ApeSize_t len)
         #if 0
         { "global", TOKEN_KWGLOBAL },
         #endif
+        {NULL, (ApeAstTokType_t)0},
     };
 
-    for(i = 0; i < APE_ARRAY_LEN(keywords); i++)
+    for(i = 0; keywords[i].value != NULL; i++)
     {
         kwlen = strlen(keywords[i].value);
-        if(kwlen == len && APE_STRNEQ(ident, keywords[i].value, len))
+        if(kwlen == len && (strncmp(ident, keywords[i].value, len) == 0))
         {
             return keywords[i].type;
         }

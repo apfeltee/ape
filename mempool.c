@@ -44,7 +44,7 @@
 #endif
 
 #if defined(APE_MEMPOOL_HAVEMMAP) || defined(APE_MEMPOOL_HAVEVIRTALLOC)
-    #define APE_MEMPOOL_ISAVAILABLE
+    //#define APE_MEMPOOL_ISAVAILABLE
 #endif
 
 #if defined(APE_MEMPOOL_HAVEMMAP)
@@ -99,6 +99,26 @@ static unsigned int iceil2(unsigned int x)
     return x + 1;
 }
 
+void ape_mempool_debugprintv(ApeMemPool_t* mp, const char* fmt, va_list va)
+{
+    if(APE_UNLIKELY(mp->enabledebug))
+    {
+        vfprintf(mp->debughandle, fmt, va);
+        fflush(mp->debughandle);
+    }
+}
+
+void ape_mempool_debugprintf(ApeMemPool_t* mp, const char* fmt, ...)
+{
+    va_list va;
+    if(APE_UNLIKELY(mp->enabledebug))
+    {
+        va_start(va, fmt);
+        ape_mempool_debugprintv(mp, fmt, va);
+        va_end(va);
+    }
+}
+
 /* mmap a new memory pool of TOTAL_SZ bytes, then build an internal
  * freelist of SZ-byte cells, with the head at (result)[0].
  * Returns NULL on error. */
@@ -124,8 +144,7 @@ void** ape_mempool_newpool(ApeMemPool_t* mp, ApeSize_t sz, ApeSize_t total_sz)
     lim = (total_sz / sz);
     if(APE_UNLIKELY(mp->enabledebug))
     {
-        fprintf(mp->debughandle, "mempool_newpool sz: %zu lim: %d => %lu %p\n", sz, lim, lim * sz, p);
-        fflush(mp->debughandle);
+        ape_mempool_debugprintf(mp, "mempool_newpool sz: %zu lim: %d => %lu %p\n", sz, lim, lim * sz, p);
     }
     for(i = 0; i < lim; i++)
     {
@@ -138,8 +157,7 @@ void** ape_mempool_newpool(ApeMemPool_t* mp, ApeSize_t sz, ApeSize_t total_sz)
         last = pool[o];
         if(APE_UNLIKELY(mp->enabledebug))
         {
-            fprintf(mp->debughandle, "  %d (%d / 0x%04x) -> %p = %p\n", i, o, o, &pool[o], pool[o]);
-            fflush(mp->debughandle);
+            ape_mempool_debugprintf(mp, "  %d (%d / 0x%04x) -> %p = %p\n", i, o, o, &pool[o], pool[o]);
         }
     }
     pool[o] = NULL;
@@ -157,8 +175,7 @@ static int add_pool(ApeMemPool_t* mp, void* p, int sz)
     assert(sz > 0);
     if(APE_UNLIKELY(mp->enabledebug))
     {
-        fprintf(mp->debughandle, "mpool_add_pool (%zu / %zu) @ %p, sz %d\n", mp->poolcount, mp->poolarrlength, p, sz);
-        fflush(mp->debughandle);
+        ape_mempool_debugprintf(mp, "mpool_add_pool (%zu / %zu) @ %p, sz %d\n", mp->poolcount, mp->poolarrlength, p, sz);
     }
     if(mp->poolcount == mp->poolarrlength)
     {
@@ -228,8 +245,7 @@ ApeMemPool_t* ape_mempool_initdebughandle(int min2, int max2, FILE* hnd, bool mu
     mp->psizes = sizes;
     if(APE_UNLIKELY(mp->enabledebug))
     {
-        fprintf(mp->debughandle, "mempool_init for cells %d - %d bytes\n", 1 << min2, 1 << max2);
-        fflush(mp->debughandle);
+        ape_mempool_debugprintf(mp, "mempool_init for cells %d - %d bytes\n", 1 << min2, 1 << max2);
     }
     mp->minpoolsize = 1 << min2;
     mp->maxpoolsize = 1 << max2;
@@ -255,13 +271,12 @@ void ape_mempool_destroy(ApeMemPool_t* mp)
     assert(mp);
     if(APE_UNLIKELY(mp->enabledebug))
     {
-        fprintf(mp->debughandle, "%zu/%zu pools, freeing...\n", mp->poolcount, mp->poolarrlength);
-        fprintf(mp->debughandle, "statistics: %zu allocations (%zu of which mapped), %zu bytes total\n", 
+        ape_mempool_debugprintf(mp, "%zu/%zu pools, freeing...\n", mp->poolcount, mp->poolarrlength);
+        ape_mempool_debugprintf(mp, "statistics: %zu allocations (%zu of which mapped), %zu bytes total\n", 
             mp->totalalloccount,
             mp->totalmapped,
             mp->totalbytes
         );
-        fflush(mp->debughandle);
     }
     for(i = 0; i < mp->poolcount; i++)
     {
@@ -273,14 +288,13 @@ void ape_mempool_destroy(ApeMemPool_t* mp)
             sz = sz >= pgsz ? sz : pgsz;
             if(APE_UNLIKELY(mp->enabledebug))
             {
-                fprintf(mp->debughandle, "mempool_destroy %ld, sz %ld (%p)\n", i, sz, mp->pools[i]);
-                fflush(mp->debughandle);
+                ape_mempool_debugprintf(mp, "mempool_destroy %ld, sz %ld (%p)\n", i, sz, mp->pools[i]);
             }
             if(mp->available)
             {
                 if(wrap_munmap(mp->pools[i], sz) == -1)
                 {
-                    fprintf(mp->debughandle, "munmap error while unmapping %lu bytes at %p\n", sz, mp->pools[i]);
+                    ape_mempool_debugprintf(mp, "munmap error while unmapping %lu bytes at %p\n", sz, mp->pools[i]);
                 }
             }
         }
@@ -341,8 +355,7 @@ void* ape_mempool_alloc(ApeMemPool_t* mp, ApeSize_t sz)
     {
         if(APE_UNLIKELY(mp->enabledebug))
         {
-            fprintf(mp->debughandle, "fallback: alloc %zu bytes\n", sz);
-            fflush(mp->debughandle);
+            ape_mempool_debugprintf(mp, "fallback: alloc %zu bytes\n", sz);
         }
         return MPOOL_MALLOC(sz);
     }
@@ -357,8 +370,7 @@ void* ape_mempool_alloc(ApeMemPool_t* mp, ApeSize_t sz)
         }
         if(APE_UNLIKELY(mp->enabledebug))
         {
-            fprintf(mp->debughandle, "mempool_alloc mmap %zu bytes @ %p\n", sz, cur);
-            fflush(mp->debughandle);
+            ape_mempool_debugprintf(mp, "mempool_alloc mmap %zu bytes @ %p\n", sz, cur);
         }
         mp->totalmapped++;
         return cur;
@@ -393,8 +405,7 @@ void* ape_mempool_alloc(ApeMemPool_t* mp, ApeSize_t sz)
         /* if at end, attach to a new page */
         if(APE_UNLIKELY(mp->enabledebug))
         {
-            fprintf(mp->debughandle, "mempool_alloc adding pool w/ cell size %ld\n", szceil);
-            fflush(mp->debughandle);
+            ape_mempool_debugprintf(mp, "mempool_alloc adding pool w/ cell size %ld\n", szceil);
         }
         np = ape_mempool_newpool(mp, szceil, mp->pgsize);
         if(np == NULL)
@@ -411,8 +422,7 @@ void* ape_mempool_alloc(ApeMemPool_t* mp, ApeSize_t sz)
     assert(*cur > (void*)4096);
     if(APE_UNLIKELY(mp->enabledebug))
     {
-        fprintf(mp->debughandle, "mempool_alloc pool %zu bytes @ %p (list %ld, szceil %ld )\n", sz, (void*)cur, i, szceil);
-        fflush(mp->debughandle);
+        ape_mempool_debugprintf(mp, "mempool_alloc pool %zu bytes @ %p (list %ld, szceil %ld )\n", sz, (void*)cur, i, szceil);
     }
     mp->heads[i] = *cur; /* set head to next head */
     return cur;
@@ -424,8 +434,7 @@ void ape_mempool_free(ApeMemPool_t* mp, void* p)
     {
         if(APE_UNLIKELY(mp->enabledebug))
         {
-            fprintf(mp->debughandle, "fallback: freeing %p\n", p);
-            fflush(mp->debughandle);
+            ape_mempool_debugprintf(mp, "fallback: freeing %p\n", p);
         }
         MPOOL_FREE(p, 0);
     }
@@ -450,8 +459,7 @@ void ape_mempool_repool(ApeMemPool_t* mp, void* p, ApeSize_t sz)
     {
         if(APE_UNLIKELY(mp->enabledebug))
         {
-            fprintf(mp->debughandle, "mempool_repool munmap sz %zu @ %p\n", sz, p);
-            fflush(mp->debughandle);
+            ape_mempool_debugprintf(mp, "mempool_repool munmap sz %zu @ %p\n", sz, p);
         }
         if(mp->available)
         {
@@ -470,8 +478,7 @@ void ape_mempool_repool(ApeMemPool_t* mp, void* p, ApeSize_t sz)
     mp->heads[i] = ip;
     if(APE_UNLIKELY(mp->enabledebug))
     {
-        fprintf(mp->debughandle, "mempool_repool list %ld, %zu bytes (ceil %ld): %p\n", i, sz, szceil, ip);
-        fflush(mp->debughandle);
+        ape_mempool_debugprintf(mp, "mempool_repool list %ld, %zu bytes (ceil %ld): %p\n", i, sz, szceil, ip);
     }
 }
 
@@ -486,8 +493,7 @@ void* ape_mempool_realloc(ApeMemPool_t* mp, void* p, ApeSize_t old_sz, ApeSize_t
     {
         if(APE_UNLIKELY(mp->enabledebug))
         {
-            fprintf(mp->debughandle, "fallback: realloc %p from %zu to %zu bytes\n", p, old_sz, new_sz);
-            fflush(mp->debughandle);
+            ape_mempool_debugprintf(mp, "fallback: realloc %p from %zu to %zu bytes\n", p, old_sz, new_sz);
         }
         return MPOOL_REALLOC(p, new_sz);
     }

@@ -11,7 +11,7 @@ ApeTraceback_t* ape_make_traceback(ApeContext_t* ctx)
     }
     memset(traceback, 0, sizeof(ApeTraceback_t));
     traceback->context = ctx;
-    traceback->items = ape_make_valarray(ctx, ApeTracebackItem_t);
+    traceback->items = ape_make_valarray(ctx, sizeof(ApeTracebackItem_t));
     if(!traceback->items)
     {
         ape_traceback_destroy(traceback);

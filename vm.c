@@ -137,6 +137,7 @@ void ape_vm_adderror(ApeVM_t* vm, ApeErrorType_t etype, const char* fmt, ...)
 ApeGlobalStore_t* ape_make_globalstore(ApeContext_t* ctx, ApeGCMemory_t* mem)
 {
     ApeSize_t i;
+    ApeSize_t bcount;
     bool ok;
     const char* name;
     ApeObject_t builtin;
@@ -153,14 +154,15 @@ ApeGlobalStore_t* ape_make_globalstore(ApeContext_t* ctx, ApeGCMemory_t* mem)
     {
         goto err;
     }
-    store->objects = ape_make_valarray(ctx, ApeObject_t);
+    store->objects = ape_make_valarray(ctx, sizeof(ApeObject_t));
     if(!store->objects)
     {
         goto err;
     }
     if(mem)
     {
-        for(i = 0; i < ape_builtins_count(); i++)
+        bcount = ape_builtins_count();
+        for(i = 0; i < bcount; i++)
         {
             name = ape_builtins_getname(i);
             builtin = ape_object_make_nativefuncmemory(ctx, name, ape_builtins_getfunc(i), NULL, 0);
@@ -977,7 +979,7 @@ void ape_vm_pushstack(ApeVM_t* vm, ApeObject_t obj)
     if(vm->currentframe)
     {
         ApeFrame_t* frame = vm->currentframe;
-        ApeScriptFunction_t* current_function = ape_object_value_asfunction(frame->function);
+        ApeScriptFunction_t* current_function = ape_object_value_asscriptfunction(frame->function);
         int nl = current_function->numlocals;
         APE_ASSERT(vm->stackptr >= (frame->basepointer + nl));
     }
@@ -1002,7 +1004,7 @@ ApeObject_t ape_vm_popstack(ApeVM_t* vm)
     if(vm->currentframe)
     {
         ApeFrame_t* frame = vm->currentframe;
-        ApeScriptFunction_t* current_function = ape_object_value_asfunction(frame->function);
+        ApeScriptFunction_t* current_function = ape_object_value_asscriptfunction(frame->function);
         int nl = current_function->numlocals;
         APE_ASSERT((vm->stackptr - 1) >= (frame->basepointer + nl));
     }
@@ -1170,7 +1172,7 @@ bool ape_vm_callobjectargs(ApeVM_t* vm, ApeObject_t callee, ApeInt_t nargs, ApeO
     calleetype = ape_object_value_type(callee);
     if(calleetype == APE_OBJECT_SCRIPTFUNCTION)
     {
-        scriptcallee = ape_object_value_asfunction(callee);
+        scriptcallee = ape_object_value_asscriptfunction(callee);
         #if 0
         if(nargs != -1)
         {
@@ -1356,8 +1358,8 @@ ApeVM_t* ape_make_vm(ApeContext_t* ctx, const ApeConfig_t* config, ApeGCMemory_t
     vm->countframes = 0;
     vm->lastpopped = ape_object_make_null(ctx);
     vm->running = false;
-    vm->globalobjects = ape_make_valdict(ctx, ApeSize_t, ApeObject_t);
-    vm->stackobjects = ape_make_valdict(ctx, ApeSize_t, ApeObject_t);
+    vm->globalobjects = ape_make_valdict(ctx, sizeof(ApeSize_t), sizeof(ApeObject_t));
+    vm->stackobjects = ape_make_valdict(ctx, sizeof(ApeSize_t), sizeof(ApeObject_t));
     vm->lastframe = NULL;
     vm->frameobjects = deqlist_create_empty();
     for(i = 0; i < APE_OPCODE_MAX; i++)
@@ -1438,7 +1440,7 @@ bool ape_frame_init(ApeFrame_t* frame, ApeObject_t function_obj, int bptr)
     {
         return false;
     }
-    function = ape_object_value_asfunction(function_obj);
+    function = ape_object_value_asscriptfunction(function_obj);
     frame->function = function_obj;
     frame->ip = 0;
     frame->basepointer = bptr;
@@ -1509,7 +1511,7 @@ bool ape_vm_pushframe(ApeVM_t* vm, ApeFrame_t frame)
     vm->lastframe = pf;
     vm->currentframe = (ApeFrame_t*)deqlist_get(vm->frameobjects, vm->countframes);
     vm->countframes++;
-    fn = ape_object_value_asfunction(frame.function);
+    fn = ape_object_value_asscriptfunction(frame.function);
     ape_vm_setstackpointer(vm, frame.basepointer + fn->numlocals);
     return true;
 }
@@ -2011,7 +2013,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
     }
     #endif
     /* naming is hard */
-    function_function = ape_object_value_asfunction(function);
+    function_function = ape_object_value_asscriptfunction(function);
     ok = false;
     ok = ape_frame_init(&new_frame, function, vm->stackptr - function_function->numargs);
     if(!ok)
@@ -2527,7 +2529,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                                           "%s is not a function", type_name);
                         goto err;
                     }
-                    constfunction = ape_object_value_asfunction(*constant);
+                    constfunction = ape_object_value_asscriptfunction(*constant);
                     function_obj = ape_object_make_function(vm->context, ape_object_function_getname(*constant), constfunction->compiledcode,
                                            false, constfunction->numlocals, constfunction->numargs, num_free);
                     if(ape_object_value_isnull(function_obj))
