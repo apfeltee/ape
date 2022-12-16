@@ -135,8 +135,7 @@ ApeSize_t ape_valarray_size(ApeValArray_t* arr)
 ApeValArray_t* ape_valarray_copy(ApeValArray_t* arr)
 {
     ApeValArray_t* copy;
-    //copy = (ApeValArray_t*)ape_allocator_alloc(&arr->context->alloc, sizeof(ApeValArray_t));
-    copy = ape_make_valarraycapacity(arr->context, 0, arr->elemsize);
+    copy = (ApeValArray_t*)ape_allocator_alloc(&arr->context->alloc, sizeof(ApeValArray_t));
     if(!copy)
     {
         return NULL;
@@ -179,25 +178,30 @@ bool ape_valarray_add(ApeValArray_t* arr, void* value)
         ApeSize_t newcap;
         ApeSize_t toalloc;
         ApeSize_t movesize;
+        ApeSize_t elmsz;
+        ApeSize_t acnt;
+        (void)initcap;
         unsigned char* newdata;
-        newcap = 0;
+        elmsz = arr->elemsize;
         oldcap = arr->capacity;
-        initcap = arr->capacity;
-        if(initcap > 0)
+        acnt = arr->count;
+        newcap = 0;
+        initcap = oldcap;
+        if(oldcap > 0)
         {
-            newcap = (arr->capacity) * 2;
-            //newcap = (((arr->capacity) + (arr->elemsize * 2)) + 1);
+            newcap = (oldcap * 2);
+            //newcap = ((oldcap + (elmsz * 2)) + 1);
         }
         else
         {
             newcap = 1;
         }
-        toalloc = (newcap * arr->elemsize);
-        //toalloc = ((newcap + (arr->elemsize * 2)) + 1);
-        movesize = arr->count * arr->elemsize;
+        toalloc = (newcap * elmsz);
+        //toalloc = ((newcap + (elmsz * 2)) + 1);
+        movesize = acnt * elmsz;
         //movesize = newcap;
 
-        if(arr->count >= arr->capacity)
+        if(acnt >= oldcap)
         {
             APE_ASSERT(!arr->lock_capacity);
             if(arr->lock_capacity)
@@ -210,7 +214,11 @@ bool ape_valarray_add(ApeValArray_t* arr, void* value)
                 return false;
             }
 
-
+            if(arr->arraydata == NULL)
+            {
+                arr->arraydata = newdata;
+            }
+            else
             {
                 //void *memmove(void *dest, const void *src, size_t n);
                 memcpy(newdata, arr->arraydata, movesize);
@@ -224,8 +232,7 @@ bool ape_valarray_add(ApeValArray_t* arr, void* value)
         }
         if(value)
         {
-            fprintf(stderr, "valarray_add: memcpy: movesize=%ld newcap=%d toalloc=%d\n", movesize, newcap, toalloc);
-            memcpy(arr->arraydata + movesize, value, arr->elemsize);
+            memcpy(arr->arraydata + movesize, value, elmsz);
         }
         arr->count++;
     #endif
@@ -234,12 +241,13 @@ bool ape_valarray_add(ApeValArray_t* arr, void* value)
 
 bool ape_valarray_push(ApeValArray_t* arr, void* value)
 {
-    return ape_valarray_add(arr, &value);
+    return ape_valarray_add(arr, value);
 }
 
 bool ape_valarray_removeat(ApeValArray_t* arr, ApeSize_t ix)
 {
     ApeSize_t cnt;
+    (void)cnt;
     cnt = ape_valarray_count(arr);
 
     //fprintf(stderr, "ape_valarray_removeat: cnt=%ld ix=%ld\n", cnt, ix);
@@ -336,7 +344,7 @@ void* ape_valarray_get(ApeValArray_t* arr, ApeSize_t ix)
 {
     #if defined(USE_DNARRAY) && (USE_DNARRAY == 1)
         void* p = deqlist_get(arr->arraydata, ix);
-        fprintf(stderr, "ape_valarray_get(ix=%d) = %p\n", ix, p);
+        //fprintf(stderr, "ape_valarray_get(ix=%d) = %p\n", ix, p);
         return p;
     #else
         ApeSize_t offset;
