@@ -815,22 +815,7 @@ struct ApeStrDict_t
     ApeDataCallback_t fnstrdestroy;
 };
 
-struct ApeValArray_t
-{
-    ApeContext_t* context;
-    unsigned char* arraydata;
-    unsigned char* allocdata;
-    ApeSize_t count;
-    ApeSize_t capacity;
-    ApeSize_t elemsize;
-    bool lock_capacity;
-};
 
-struct ApePtrArray_t
-{
-    ApeContext_t* context;
-    ApeValArray_t arr;
-};
 
 struct ApeWriter_t
 {

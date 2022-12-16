@@ -230,7 +230,7 @@ bool ape_globalstore_set(ApeGlobalStore_t* store, const char* name, ApeObject_t 
     }
     return true;
 err:
-    ape_valarray_pop(store->objects, NULL);
+    ape_valarray_pop(store->objects);
     return false;
 }
 

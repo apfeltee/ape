@@ -3,26 +3,7 @@
 
 #define APE_CONF_ARRAY_INITIAL_CAPACITY (64/4)
 
-struct ApeValArray_t
-{
-    ApeContext_t* context;
-    ApeSize_t elemsize;
-    unsigned char* arraydata;
-    #if 1
-    unsigned char* allocdata;
-    ApeSize_t count;
-    ApeSize_t capacity;
-    bool lock_capacity;
-    #endif
-};
-
-struct ApePtrArray_t
-{
-    ApeContext_t* context;
-    ApeValArray_t arr;
-};
-
-ApeValArray_t* ape_make_valarray(ApeContext_t* ctx, ApeSize_t elsz)
+ApeValArray_t* ape_make_valarray_actual(ApeContext_t* ctx, ApeSize_t elsz)
 {
     return ape_make_valarraycapacity(ctx, APE_CONF_ARRAY_INITIAL_CAPACITY, elsz);
 }
@@ -127,20 +108,7 @@ ApeValArray_t* ape_valarray_copy(const ApeValArray_t* arr)
 bool ape_valarray_add(ApeValArray_t* arr, const void* value)
 {
     ApeSize_t newcap;
-    ApeSize_t toalloc;
-    ApeSize_t movesize;
     unsigned char* newdata;
-    newcap = 0;
-    if(arr->capacity > 0)
-    {
-        newcap = (arr->capacity) * 2;
-    }
-    else
-    {
-        newcap = 1;
-    }
-    toalloc = (newcap * arr->elemsize);
-    movesize = arr->count * arr->elemsize;
     if(arr->count >= arr->capacity)
     {
         APE_ASSERT(!arr->lock_capacity);
@@ -148,12 +116,13 @@ bool ape_valarray_add(ApeValArray_t* arr, const void* value)
         {
             return false;
         }
-        newdata = (unsigned char*)ape_allocator_alloc(&arr->context->alloc, toalloc);
+        newcap = arr->capacity > 0 ? arr->capacity * 2 : 1;
+        newdata = (unsigned char*)ape_allocator_alloc(&arr->context->alloc, newcap * arr->elemsize);
         if(!newdata)
         {
             return false;
         }
-        memcpy(newdata, arr->arraydata, movesize);
+        memcpy(newdata, arr->arraydata, arr->count * arr->elemsize);
         ape_allocator_free(&arr->context->alloc, arr->allocdata);
         arr->allocdata = newdata;
         arr->arraydata = arr->allocdata;
@@ -161,7 +130,7 @@ bool ape_valarray_add(ApeValArray_t* arr, const void* value)
     }
     if(value)
     {
-        memcpy(arr->arraydata + movesize, value, arr->elemsize);
+        memcpy(arr->arraydata + (arr->count * arr->elemsize), value, arr->elemsize);
     }
     arr->count++;
     return true;
@@ -216,6 +185,7 @@ void ape_valarray_orphandata(ApeValArray_t* arr)
     ape_valarray_initcapacity(arr, arr->context, 0, arr->elemsize);
 }
 
+
 ApeSize_t ape_valarray_count(const ApeValArray_t* arr)
 {
     if(!arr)
@@ -224,16 +194,6 @@ ApeSize_t ape_valarray_count(const ApeValArray_t* arr)
     }
     return arr->count;
 }
-
-ApeSize_t ape_valarray_capacity(const ApeValArray_t* arr)
-{
-    if(!arr)
-    {
-        return 0;
-    }
-    return arr->capacity;
-}
-
 
 ApeSize_t ape_ptrarray_count(const ApePtrArray_t* arr)
 {
@@ -269,41 +229,20 @@ void* ape_valarray_get(ApeValArray_t* arr, ApeSize_t ix)
     return arr->arraydata + offset;
 }
 
-void* ape_valarray_pop(ApeValArray_t* arr)
+bool ape_valarray_pop(ApeValArray_t* arr, void* out_value)
 {
     void* res;
-    res = NULL;
-    #if 1
-        if(arr->count <= 0)
-        {
-            return NULL;
-        }
-        res = (void*)ape_valarray_get(arr, arr->count - 1);
-        ape_valarray_removeat(arr, arr->count - 1);
-        return res;
-    #else
-        if(ape_valarray_count(arr->arraydata) == 0)
-        {
-            return NULL;
-        }
-        res = da_pop(arr->arraydata);
-        return res;
-    #endif
-}
-
-bool ape_valarray_popinto(ApeValArray_t* arr, void* out_value)
-{
-    void* res;
-    res = ape_valarray_pop(arr);
-    if(res != NULL)
+    if(arr->count <= 0)
     {
-        if(out_value)
-        {
-            memcpy(out_value, res, arr->elemsize);
-        }
-        return true;
+        return false;
     }
-    return false;
+    if(out_value)
+    {
+        res = (void*)ape_valarray_get(arr, arr->count - 1);
+        memcpy(out_value, res, arr->elemsize);
+    }
+    ape_valarray_removeat(arr, arr->count - 1);
+    return true;
 }
 
 void* ape_valarray_top(ApeValArray_t* arr)
@@ -372,7 +311,7 @@ ApePtrArray_t* ape_ptrarray_copywithitems(ApePtrArray_t* arr, ApeDataCallback_t 
     void* item;
     void* item_copy;
     ApePtrArray_t* arr_copy;
-    arr_copy = ape_make_ptrarraycapacity(arr->context, ape_valarray_capacity(&arr->arr));
+    arr_copy = ape_make_ptrarraycapacity(arr->context, arr->arr.capacity);
     if(!arr_copy)
     {
         return NULL;
@@ -518,7 +457,7 @@ bool ape_object_array_popvalue(ApeObject_t object, ApeObject_t* dest)
     ApeValArray_t* array;
     APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_ARRAY);
     array = ape_object_array_getarray(object);
-    return ape_valarray_popinto(array, dest);
+    return ape_valarray_pop(array, dest);
 }
 
 ApeSize_t ape_object_array_getlength(ApeObject_t object)

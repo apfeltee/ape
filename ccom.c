@@ -397,6 +397,7 @@ ApeSymTable_t* ape_compiler_getsymboltable(ApeAstCompiler_t* comp)
 {
     ApeAstFileScope_t* filescope;
     filescope = (ApeAstFileScope_t*)ape_ptrarray_top(comp->filescopes);
+    fprintf(stderr, "filescope=%p\n", filescope);
     if(!filescope)
     {
         APE_ASSERT(false);
@@ -1226,7 +1227,7 @@ static bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpressi
                 {
                     return false;
                 }
-                ape_valarray_pop(comp->srcpositionsstack, NULL);
+                ape_valarray_pop(comp->srcpositionsstack);
                 ok = ape_compiler_readsym(comp, indexsymbol);
                 if(!ok)
                 {
@@ -1487,7 +1488,7 @@ static bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpressi
             }
             break;
     }
-    ape_valarray_pop(comp->srcpositionsstack, NULL);
+    ape_valarray_pop(comp->srcpositionsstack);
     return true;
 }
 
@@ -2082,7 +2083,7 @@ static bool ape_compiler_compileexpression(ApeAstCompiler_t* comp, ApeAstExpress
                         goto error;
                     }
                 }
-                ape_valarray_pop(comp->srcpositionsstack, NULL);
+                ape_valarray_pop(comp->srcpositionsstack);
             }
             break;
         case APE_EXPR_LOGICAL:
@@ -2164,7 +2165,7 @@ static bool ape_compiler_compileexpression(ApeAstCompiler_t* comp, ApeAstExpress
 error:
     res = false;
 end:
-    ape_valarray_pop(comp->srcpositionsstack, NULL);
+    ape_valarray_pop(comp->srcpositionsstack);
     ape_ast_destroy_expr(exproptimized);
     return res;
 }
@@ -2329,7 +2330,7 @@ static void ape_compiler_popbreakip(ApeAstCompiler_t* comp)
         APE_ASSERT(false);
         return;
     }
-    ape_valarray_pop(compscope->breakipstack, NULL);
+    ape_valarray_pop(compscope->breakipstack);
 }
 
 static ApeInt_t ape_compiler_getbreakip(ApeAstCompiler_t* comp)
@@ -2369,7 +2370,7 @@ static void ape_compiler_popcontip(ApeAstCompiler_t* comp)
         APE_ASSERT(false);
         return;
     }
-    ape_valarray_pop(compscope->continueipstack, NULL);
+    ape_valarray_pop(compscope->continueipstack);
 }
 
 static ApeInt_t ape_compiler_getcontip(ApeAstCompiler_t* comp)

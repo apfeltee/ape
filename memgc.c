@@ -151,7 +151,7 @@ void* ape_allocator_alloc_real(ApeAllocator_t* alloc, const char* str, const cha
     ape_mempool_debugprintf(alloc->pool, "ape_allocator_alloc: %zu [%s:%d:%s] %s\n", size, file, line, func, str);
     if(size == 0)
     {
-        return NULL;
+        //return NULL;
     }
     return ape_mempool_alloc(alloc->pool, size);
 }

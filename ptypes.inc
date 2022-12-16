@@ -52,7 +52,6 @@
     typsz(ApeOpcodeDef_t);
     typsz(ApePosition_t);
     typsz(ApePseudoClass_t);
-    typsz(ApePtrArray_t);
     typsz(ApeScriptFunction_t);
     typsz(ApeStrDict_t);
     typsz(ApeSymTable_t);
@@ -61,6 +60,5 @@
     typsz(ApeTracebackItem_t);
     typsz(ApeTraceback_t);
     typsz(ApeVM_t);
-    typsz(ApeValArray_t);
     typsz(ApeValDict_t);
     typsz(ApeWriter_t);

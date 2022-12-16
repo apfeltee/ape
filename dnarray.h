@@ -38,7 +38,7 @@ static APE_INLINE intptr_t* da_grow_internal(intptr_t* arr, intptr_t count, intp
 
 
 #define da_need_to_grow_internal(arr, n) \
-    (!(arr) || (da_count_internal(arr) + (n)) >= da_capacity_internal(arr))
+    ((!(arr)) || (da_count_internal(arr) + (n)) >= da_capacity_internal(arr))
 
 #define da_maybe_grow_internal(arr, n) \
     ( \
@@ -96,6 +96,9 @@ static APE_INLINE intptr_t* da_grow_internal(intptr_t* arr, intptr_t count, intp
 
 #define da_get(arr, idx) \
     (arr)[(idx)]
+
+#define da_set(arr, idx, val) \
+    (arr)[idx] = val
 
 #define da_last(arr) \
     ( \
@@ -197,7 +200,11 @@ static APE_INLINE intptr_t* da_grow_internal(intptr_t* arr, intptr_t count, intp
     intptr_t* res;
     intptr_t* ptr;
     res = NULL;
-    acount = JK_DYNARRAY_MAX(2 * da_count(arr), da_count(arr) + count);
+    acount = 0;
+    if(arr != NULL)
+    {
+        acount = JK_DYNARRAY_MAX(2 * da_count(arr), da_count(arr) + count);
+    }
     asize = 2 * sizeof(intptr_t) + acount * tsize;
     if(arr)
     {

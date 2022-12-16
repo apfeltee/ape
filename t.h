@@ -3,25 +3,6 @@
 
 #define APE_CONF_ARRAY_INITIAL_CAPACITY (64/4)
 
-struct ApeValArray_t
-{
-    ApeContext_t* context;
-    ApeSize_t elemsize;
-    unsigned char* arraydata;
-    #if 1
-    unsigned char* allocdata;
-    ApeSize_t count;
-    ApeSize_t capacity;
-    bool lock_capacity;
-    #endif
-};
-
-struct ApePtrArray_t
-{
-    ApeContext_t* context;
-    ApeValArray_t arr;
-};
-
 ApeValArray_t* ape_make_valarray(ApeContext_t* ctx, ApeSize_t elsz)
 {
     return ape_make_valarraycapacity(ctx, APE_CONF_ARRAY_INITIAL_CAPACITY, elsz);
@@ -36,7 +17,11 @@ ApeValArray_t* ape_make_valarraycapacity(ApeContext_t* ctx, ApeSize_t capacity, 
     {
         return NULL;
     }
+    //memset(arr, 0, sizeof(ApeValArray_t));
     arr->context = ctx;
+    arr->context = ctx;
+    arr->elemsize = elsz;
+    arr->arraydata = NULL;
     ok = ape_valarray_initcapacity(arr, ctx, capacity, elsz);
     if(!ok)
     {
@@ -48,26 +33,28 @@ ApeValArray_t* ape_make_valarraycapacity(ApeContext_t* ctx, ApeSize_t capacity, 
 
 bool ape_valarray_initcapacity(ApeValArray_t* arr, ApeContext_t* ctx, ApeSize_t capacity, ApeSize_t elsz)
 {
-    arr->context = ctx;
-    if(capacity > 0)
-    {
-        arr->allocdata = (unsigned char*)ape_allocator_alloc(&ctx->alloc, capacity * elsz);
-        memset(arr->allocdata, 0, capacity * elsz);
-        arr->arraydata = arr->allocdata;
-        if(!arr->allocdata)
+    #if 1
+        if(capacity > 0)
         {
-            return false;
+            arr->allocdata = (unsigned char*)ape_allocator_alloc(&ctx->alloc, capacity * elsz);
+            memset(arr->allocdata, 0, capacity * elsz);
+            arr->arraydata = arr->allocdata;
+            if(!arr->allocdata)
+            {
+                return false;
+            }
         }
-    }
-    else
-    {
-        arr->allocdata = NULL;
-        arr->arraydata = NULL;
-    }
-    arr->capacity = capacity;
-    arr->count = 0;
-    arr->elemsize = elsz;
-    arr->lock_capacity = false;
+        else
+        {
+            arr->allocdata = NULL;
+            arr->arraydata = NULL;
+        }
+        arr->capacity = capacity;
+        arr->count = 0;
+        arr->lock_capacity = false;
+    #else
+        arr->arraydata = da_make(arr->arraydata, capacity+(elsz)+1, elsz);
+    #endif
     return true;
 }
 
@@ -75,7 +62,11 @@ void ape_valarray_deinit(ApeValArray_t* arr)
 {
     if(arr)
     {
-        ape_allocator_free(&arr->context->alloc, arr->allocdata);
+        #if 1
+            ape_allocator_free(&arr->context->alloc, arr->allocdata);
+        #else
+            da_destroy(arr->arraydata);
+        #endif
     }
 }
 
@@ -94,76 +85,84 @@ void ape_valarray_destroy(ApeValArray_t* arr)
 ApeValArray_t* ape_valarray_copy(const ApeValArray_t* arr)
 {
     ApeValArray_t* copy;
-    copy = (ApeValArray_t*)ape_allocator_alloc(&arr->context->alloc, sizeof(ApeValArray_t));
+    copy = ape_make_valarray(arr->context, arr->elemsize);
     if(!copy)
     {
         return NULL;
     }
-    copy->context = arr->context;
-    copy->capacity = arr->capacity;
-    copy->count = arr->count;
-    copy->elemsize = arr->elemsize;
-    copy->lock_capacity = arr->lock_capacity;
-    if(arr->allocdata)
-    {
-        copy->allocdata = (unsigned char*)ape_allocator_alloc(&arr->context->alloc, arr->capacity * arr->elemsize);
-        if(!copy->allocdata)
+    #if 1
+        copy->capacity = arr->capacity;
+        copy->count = arr->count;
+        copy->lock_capacity = arr->lock_capacity;
+        if(arr->allocdata)
         {
-            ape_allocator_free(&arr->context->alloc, copy);
-            return NULL;
+            copy->allocdata = (unsigned char*)ape_allocator_alloc(&arr->context->alloc, arr->capacity * arr->elemsize);
+            if(!copy->allocdata)
+            {
+                ape_allocator_free(&arr->context->alloc, copy);
+                return NULL;
+            }
+            copy->arraydata = copy->allocdata;
+            memcpy(copy->allocdata, arr->arraydata, arr->capacity * arr->elemsize);
         }
-        copy->arraydata = copy->allocdata;
-        memcpy(copy->allocdata, arr->arraydata, arr->capacity * arr->elemsize);
-    }
-    else
-    {
-        copy->allocdata = NULL;
-        copy->arraydata = NULL;
-    }
-
+        else
+        {
+            copy->allocdata = NULL;
+            copy->arraydata = NULL;
+        }
+    #else
+        //void *memcpy(void *dest, const void *src, size_t n);
+        memcpy(copy->arraydata, arr->arraydata, da_capacity(arr->arraydata) * arr->elemsize);
+    #endif
     return copy;
 }
 
 bool ape_valarray_add(ApeValArray_t* arr, const void* value)
 {
-    ApeSize_t newcap;
-    ApeSize_t toalloc;
-    ApeSize_t movesize;
-    unsigned char* newdata;
-    newcap = 0;
-    if(arr->capacity > 0)
-    {
-        newcap = (arr->capacity) * 2;
-    }
-    else
-    {
-        newcap = 1;
-    }
-    toalloc = (newcap * arr->elemsize);
-    movesize = arr->count * arr->elemsize;
-    if(arr->count >= arr->capacity)
-    {
-        APE_ASSERT(!arr->lock_capacity);
-        if(arr->lock_capacity)
+    #if 1
+
+        ApeSize_t newcap;
+        ApeSize_t toalloc;
+        ApeSize_t movesize;
+        unsigned char* newdata;
+        newcap = 0;
+        if(arr->capacity > 0)
         {
-            return false;
+            newcap = (arr->capacity) * 2;
         }
-        newdata = (unsigned char*)ape_allocator_alloc(&arr->context->alloc, toalloc);
-        if(!newdata)
+        else
         {
-            return false;
+            newcap = 1;
         }
-        memcpy(newdata, arr->arraydata, movesize);
-        ape_allocator_free(&arr->context->alloc, arr->allocdata);
-        arr->allocdata = newdata;
-        arr->arraydata = arr->allocdata;
-        arr->capacity = newcap;
-    }
-    if(value)
-    {
-        memcpy(arr->arraydata + movesize, value, arr->elemsize);
-    }
-    arr->count++;
+        toalloc = (newcap * arr->elemsize);
+        movesize = arr->count * arr->elemsize;
+        if(arr->count >= arr->capacity)
+        {
+            APE_ASSERT(!arr->lock_capacity);
+            if(arr->lock_capacity)
+            {
+                return false;
+            }
+            newdata = (unsigned char*)ape_allocator_alloc(&arr->context->alloc, toalloc);
+            if(!newdata)
+            {
+                return false;
+            }
+            memcpy(newdata, arr->arraydata, movesize);
+            ape_allocator_free(&arr->context->alloc, arr->allocdata);
+            arr->allocdata = newdata;
+            arr->arraydata = arr->allocdata;
+            arr->capacity = newcap;
+        }
+        if(value)
+        {
+            memcpy(arr->arraydata + movesize, value, arr->elemsize);
+        }
+        arr->count++;
+
+    #else
+        da_push(arr->arraydata, value);
+    #endif
     return true;
 }
 
@@ -174,36 +173,42 @@ bool ape_valarray_push(ApeValArray_t* arr, const void* value)
 
 bool ape_valarray_removeat(ApeValArray_t* arr, ApeSize_t ix)
 {
-    ApeSize_t to_move_bytes;
-    void* dest;
-    void* src;
-    if(ix >= arr->count)
-    {
-        return false;
-    }
-    if(ix == 0)
-    {
-        arr->arraydata += arr->elemsize;
-        arr->capacity--;
+    #if 1
+        ApeSize_t to_move_bytes;
+        void* dest;
+        void* src;
+        if(ix >= arr->count)
+        {
+            return false;
+        }
+        if(ix == 0)
+        {
+            arr->arraydata += arr->elemsize;
+            arr->capacity--;
+            arr->count--;
+            return true;
+        }
+        if(ix == (arr->count - 1))
+        {
+            arr->count--;
+            return true;
+        }
+        to_move_bytes = (arr->count - 1 - ix) * arr->elemsize;
+        dest = arr->arraydata + (ix * arr->elemsize);
+        src = arr->arraydata + ((ix + 1) * arr->elemsize);
+        memmove(dest, src, to_move_bytes);
         arr->count--;
-        return true;
-    }
-    if(ix == (arr->count - 1))
-    {
-        arr->count--;
-        return true;
-    }
-    to_move_bytes = (arr->count - 1 - ix) * arr->elemsize;
-    dest = arr->arraydata + (ix * arr->elemsize);
-    src = arr->arraydata + ((ix + 1) * arr->elemsize);
-    memmove(dest, src, to_move_bytes);
-    arr->count--;
+    #endif
     return true;
 }
 
 void ape_valarray_clear(ApeValArray_t* arr)
 {
-    arr->count = 0;
+    #if 1
+        arr->count = 0;
+    #else
+        da_clear(arr->arraydata);
+    #endif
 }
 
 void* ape_valarray_data(ApeValArray_t* arr)
@@ -222,8 +227,13 @@ ApeSize_t ape_valarray_count(const ApeValArray_t* arr)
     {
         return 0;
     }
-    return arr->count;
+    #if 1
+        return arr->count;
+    #else
+        return da_count(arr->arraydata);
+    #endif
 }
+
 
 ApeSize_t ape_valarray_capacity(const ApeValArray_t* arr)
 {
@@ -231,7 +241,11 @@ ApeSize_t ape_valarray_capacity(const ApeValArray_t* arr)
     {
         return 0;
     }
-    return arr->capacity;
+    #if 1
+        return arr->count;
+    #else
+        return da_capacity(arr->arraydata);
+    #endif
 }
 
 
@@ -241,32 +255,44 @@ ApeSize_t ape_ptrarray_count(const ApePtrArray_t* arr)
     {
         return 0;
     }
-    return ape_valarray_count(&arr->arr);
+    return ape_valarray_count(arr->arr);
 }
 
 bool ape_valarray_set(ApeValArray_t* arr, ApeSize_t ix, void* value)
 {
-    ApeSize_t offset;
-    if(ix >= arr->count)
-    {
-        APE_ASSERT(false);
-        return false;
-    }
-    offset = ix * arr->elemsize;
-    memmove(arr->arraydata + offset, value, arr->elemsize);
+    #if 1
+        ApeSize_t offset;
+        if(ix >= arr->count)
+        {
+            APE_ASSERT(false);
+            return false;
+        }
+        offset = ix * arr->elemsize;
+        memmove(arr->arraydata + offset, value, arr->elemsize);
+    #else
+        da_set(arr->arraydata, ix, value);
+    #endif
     return true;
 }
 
 void* ape_valarray_get(ApeValArray_t* arr, ApeSize_t ix)
 {
-    ApeSize_t offset;
-    if(ix >= arr->count)
-    {
-        APE_ASSERT(false);
-        return NULL;
-    }
-    offset = ix * arr->elemsize;
-    return arr->arraydata + offset;
+    #if 1
+        ApeSize_t offset;
+        if(ix >= arr->count)
+        {
+            APE_ASSERT(false);
+            return NULL;
+        }
+        offset = ix * arr->elemsize;
+        return arr->arraydata + offset;
+    #else
+        if(ix >= da_count(arr->arraydata))
+        {
+            return NULL;
+        }
+        return da_get(arr->arraydata, ix);
+    #endif
 }
 
 void* ape_valarray_pop(ApeValArray_t* arr)
@@ -308,17 +334,21 @@ bool ape_valarray_popinto(ApeValArray_t* arr, void* out_value)
 
 void* ape_valarray_top(ApeValArray_t* arr)
 {
-    if(arr->count <= 0)
+    fprintf(stderr, "ape_valarray_top: da_count(arr->arraydata)=%d\n", da_count(arr->arraydata));
+    if(ape_valarray_count(arr) == 0)
     {
         return NULL;
     }
-    return (void*)ape_valarray_get(arr, arr->count - 1);
+    if(ape_valarray_count(arr) == 1)
+    {
+        return (void*)ape_valarray_get(arr, 0);
+    }
+    return (void*)ape_valarray_get(arr, ape_valarray_count(arr) - 1);
 }
-
 
 ApePtrArray_t* ape_make_ptrarray(ApeContext_t* ctx)
 {
-    return ape_make_ptrarraycapacity(ctx, 0);
+    return ape_make_ptrarraycapacity(ctx, 1);
 }
 
 ApePtrArray_t* ape_make_ptrarraycapacity(ApeContext_t* ctx, ApeSize_t capacity)
@@ -330,13 +360,16 @@ ApePtrArray_t* ape_make_ptrarraycapacity(ApeContext_t* ctx, ApeSize_t capacity)
     {
         return NULL;
     }
+    memset(ptrarr, 0, sizeof(ApePtrArray_t));
     ptrarr->context = ctx;
-    ok = ape_valarray_initcapacity(&ptrarr->arr, ctx, capacity, sizeof(void*));
+    ptrarr->arr = ape_make_valarray(ctx, sizeof(void*));
+    /*
     if(!ok)
     {
         ape_allocator_free(&ctx->alloc, ptrarr);
         return NULL;
     }
+    */
     return ptrarr;
 }
 
@@ -346,7 +379,7 @@ void ape_ptrarray_destroy(ApePtrArray_t* arr)
     {
         return;
     }
-    ape_valarray_deinit(&arr->arr);
+    ape_valarray_destroy(arr->arr);
     ape_allocator_free(&arr->context->alloc, arr);
 }
 
@@ -372,7 +405,7 @@ ApePtrArray_t* ape_ptrarray_copywithitems(ApePtrArray_t* arr, ApeDataCallback_t 
     void* item;
     void* item_copy;
     ApePtrArray_t* arr_copy;
-    arr_copy = ape_make_ptrarraycapacity(arr->context, ape_valarray_capacity(&arr->arr));
+    arr_copy = ape_make_ptrarraycapacity(arr->context, ape_valarray_capacity(arr->arr));
     if(!arr_copy)
     {
         return NULL;
@@ -401,34 +434,24 @@ err:
 
 void* ape_ptrarray_pop(ApePtrArray_t* arr)
 {
-    ApeSize_t ix;
     void* res;
-    ix = ape_ptrarray_count(arr) - 1;
-    res = ape_ptrarray_get(arr, ix);
-    ape_ptrarray_removeat(arr, ix);
-    return res;
+    return ape_valarray_pop(arr->arr);
 }
 
 void* ape_ptrarray_top(ApePtrArray_t* arr)
 {
-    ApeSize_t count;
-    count = ape_ptrarray_count(arr);
-    if(count == 0)
-    {
-        return NULL;
-    }
-    return ape_ptrarray_get(arr, count - 1);
+    return ape_valarray_top(arr->arr);
 }
 
 bool ape_ptrarray_add(ApePtrArray_t* arr, void* ptr)
 {
-    return ape_valarray_add(&arr->arr, &ptr);
+    return ape_valarray_add(arr->arr, &ptr);
 }
 
 void* ape_ptrarray_get(ApePtrArray_t* arr, ApeSize_t ix)
 {
     void* res;
-    res = ape_valarray_get(&arr->arr, ix);
+    res = ape_valarray_get(arr->arr, ix);
     if(!res)
     {
         return NULL;
@@ -443,12 +466,12 @@ bool ape_ptrarray_push(ApePtrArray_t* arr, void* ptr)
 
 bool ape_ptrarray_removeat(ApePtrArray_t* arr, ApeSize_t ix)
 {
-    return ape_valarray_removeat(&arr->arr, ix);
+    return ape_valarray_removeat(arr->arr, ix);
 }
 
 void ape_ptrarray_clear(ApePtrArray_t* arr)
 {
-    ape_valarray_clear(&arr->arr);
+    ape_valarray_clear(arr->arr);
 }
 
 void ape_ptrarray_clearanddestroyitems(ApePtrArray_t* arr, ApeDataCallback_t destroy_fn)
@@ -514,7 +537,6 @@ bool ape_object_array_pushvalue(ApeObject_t object, ApeObject_t val)
 
 bool ape_object_array_popvalue(ApeObject_t object, ApeObject_t* dest)
 {
-
     ApeValArray_t* array;
     APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_ARRAY);
     array = ape_object_array_getarray(object);
