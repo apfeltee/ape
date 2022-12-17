@@ -660,10 +660,17 @@ bool ape_compiler_pushsymtable(ApeAstCompiler_t* comp, ApeInt_t globaloffset)
     ApeAstFileScope_t* filescope;
     ApeSymTable_t* currenttable;
     filescope = (ApeAstFileScope_t*)ape_ptrarray_top(comp->filescopes);
+    fprintf(stderr, "pushsymtable: filescopes=%ld\n", ape_ptrarray_count(comp->filescopes));
     if(!filescope)
     {
-        APE_ASSERT(false);
-        return false;
+        #if 1
+            APE_ASSERT(false);
+            return false;
+        #else
+            ApeAstCompFile_t* file = ape_make_compfile(comp->context, "none");
+            filescope = ape_compiler_makefilescope(comp, file);
+            ape_ptrarray_push(comp->filescopes, &filescope);
+        #endif
     }
     currenttable = filescope->symtable;
     filescope->symtable = ape_make_symtable(comp->context, currenttable, comp->globalstore, globaloffset);
