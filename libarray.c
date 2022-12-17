@@ -196,11 +196,11 @@ bool ape_valarray_set(ApeValArray_t* arr, ApeSize_t ix, void* value)
             APE_ASSERT(false);
             return false;
         }
-        #if defined(USE_DNARRAY) && (USE_DNARRAY == 1)
-            memmove(&arr->arraydata[ix], value, arr->elemsize);
-        #else
+        #if 1
             offset = ix * arr->elemsize;    
             memmove(arr->arraydata + offset, value, arr->elemsize);
+        #else
+            memmove(&arr->arraydata[arr->count + arr->elemsize + ix], value, arr->elemsize);
         #endif
     #endif
     return true;
@@ -224,7 +224,7 @@ void* ape_valarray_get(ApeValArray_t* arr, ApeSize_t ix)
     #endif
 }
 
-bool ape_valarray_add(ApeValArray_t* arr, void* value)
+bool ape_valarray_push(ApeValArray_t* arr, void* value)
 {
     #if defined(USE_DNARRAY) && (USE_DNARRAY == 1)
         deqlist_push(&arr->arraydata, value);
@@ -233,7 +233,7 @@ bool ape_valarray_add(ApeValArray_t* arr, void* value)
         ApeSize_t oldcap;
         ApeSize_t newcap;
         ApeSize_t toalloc;
-        ApeSize_t movesize;
+
         ApeSize_t elmsz;
         ApeSize_t acnt;
         (void)initcap;
@@ -245,17 +245,19 @@ bool ape_valarray_add(ApeValArray_t* arr, void* value)
         initcap = oldcap;
         if(oldcap > 0)
         {
+
             newcap = (oldcap * 2);
-            //newcap = (oldcap + ((elmsz * 2) + 1));
+            //newcap = (oldcap + ((elmsz * 8) + 1));
+            
         }
         else
         {
             newcap = 1;
         }
         toalloc = (newcap * elmsz);
-        //toalloc = (newcap + ((elmsz * 2) + 1));
-        movesize = acnt * elmsz;
-        //movesize = (newcap + elmsz)+1;
+
+
+        //fprintf(stderr, "valarray_add: toalloc=%d\n", toalloc);
 
         if(acnt >= oldcap)
         {
@@ -280,8 +282,6 @@ bool ape_valarray_add(ApeValArray_t* arr, void* value)
                 //void *memmove(void *dest, const void *src, size_t n);
                 //void *memcpy(void *dest, const void *src, size_t n);
                 */
-                //memcpy(newdata, arr->arraydata, movesize);
-                //memmove(arr->arraydata, newdata, movesize);
                 memmove(newdata, arr->arraydata, acnt*elmsz);
             }
 
@@ -293,17 +293,12 @@ bool ape_valarray_add(ApeValArray_t* arr, void* value)
         arr->count++;
         if(value)
         {
-            memcpy(arr->arraydata + movesize, value, elmsz);
+            //memcpy(arr->arraydata + ((acnt-0) * elmsz), value, elmsz);
             //arr->arraydata[arr->count] = value;
-            //ape_valarray_set(arr, arr->count-1, value);
+            ape_valarray_set(arr, arr->count-1, value);
         }
     #endif
     return true;
-}
-
-bool ape_valarray_push(ApeValArray_t* arr, void* value)
-{
-    return ape_valarray_add(arr, value);
 }
 
 bool ape_valarray_removeat(ApeValArray_t* arr, ApeSize_t ix)
@@ -357,7 +352,12 @@ void ape_valarray_clear(ApeValArray_t* arr)
 
 void* ape_valarray_data(ApeValArray_t* arr)
 {
-    return arr->arraydata;
+    //assert(0);
+    #if defined(USE_DNARRAY) && (USE_DNARRAY == 1)
+        return arr->arraydata->elemdata;
+    #else
+        return arr->arraydata;
+    #endif
 }
 
 void ape_valarray_orphandata(ApeValArray_t* arr)
@@ -497,7 +497,7 @@ ApePtrArray_t* ape_ptrarray_copywithitems(ApePtrArray_t* arr, ApeDataCallback_t 
         {
             goto err;
         }
-        ok = ape_ptrarray_add(arr_copy, item_copy);
+        ok = ape_ptrarray_push(arr_copy, &item_copy);
         if(!ok)
         {
             goto err;
@@ -539,9 +539,9 @@ void* ape_ptrarray_top(ApePtrArray_t* arr)
 
 }
 
-bool ape_ptrarray_add(ApePtrArray_t* arr, void* ptr)
+bool ape_ptrarray_push(ApePtrArray_t* arr, void* ptr)
 {
-    return ape_valarray_add(arr->arr, &ptr);
+    return ape_valarray_push(arr->arr, ptr);
 }
 
 void* ape_ptrarray_get(ApePtrArray_t* arr, ApeSize_t ix)
@@ -557,11 +557,6 @@ void* ape_ptrarray_get(ApePtrArray_t* arr, ApeSize_t ix)
     #else
         return *(void**)res;
     #endif
-}
-
-bool ape_ptrarray_push(ApePtrArray_t* arr, void* ptr)
-{
-    return ape_ptrarray_add(arr, ptr);
 }
 
 bool ape_ptrarray_removeat(ApePtrArray_t* arr, ApeSize_t ix)
@@ -632,7 +627,7 @@ bool ape_object_array_pushvalue(ApeObject_t object, ApeObject_t val)
     ApeValArray_t* array;
     APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_ARRAY);
     array = ape_object_array_getarray(object);
-    return ape_valarray_add(array, &val);
+    return ape_valarray_push(array, &val);
 }
 
 bool ape_object_array_popvalue(ApeObject_t object, ApeObject_t* dest)

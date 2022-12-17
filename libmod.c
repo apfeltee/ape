@@ -96,7 +96,7 @@ bool ape_module_addsymbol(ApeModule_t* module, const ApeSymbol_t* symbol)
     {
         return false;
     }
-    ok = ape_ptrarray_add(module->modsymbols, module_symbol);
+    ok = ape_ptrarray_push(module->modsymbols, &module_symbol);
     if(!ok)
     {
         ape_symbol_destroy(module_symbol);

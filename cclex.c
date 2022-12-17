@@ -755,7 +755,7 @@ static bool ape_lexer_addline(ApeAstLexer_t* lex, int offset)
         lex->failed = true;
         return false;
     }
-    ok = ape_ptrarray_add(lex->file->lines, line);
+    ok = ape_ptrarray_push(lex->file->lines, &line);
     if(!ok)
     {
         lex->failed = true;

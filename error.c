@@ -47,7 +47,7 @@ bool ape_traceback_append(ApeTraceback_t* traceback, const char* function_name, 
         return false;
     }
     item.pos = pos;
-    ok = ape_valarray_add(traceback->items, &item);
+    ok = ape_valarray_push(traceback->items, &item);
     if(!ok)
     {
         ape_allocator_free(&traceback->context->alloc, item.function_name);

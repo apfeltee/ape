@@ -241,7 +241,7 @@ ApePtrArray_t * ape_util_splitstring(ApeContext_t* ctx, const char* str, const c
         {
             goto err;
         }
-        ok = ape_ptrarray_add(res, line);
+        ok = ape_ptrarray_push(res, &line);
         if(!ok)
         {
             ape_allocator_free(&ctx->alloc, line);
@@ -255,7 +255,7 @@ ApePtrArray_t * ape_util_splitstring(ApeContext_t* ctx, const char* str, const c
     {
         goto err;
     }
-    ok = ape_ptrarray_add(res, rest);
+    ok = ape_ptrarray_push(res, &rest);
     if(!ok)
     {
         goto err;

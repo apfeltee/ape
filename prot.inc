@@ -455,7 +455,6 @@ bool ape_valarray_initcapacity(ApeValArray_t *arr, ApeContext_t *ctx, ApeSize_t 
 void ape_valarray_deinit(ApeValArray_t *arr);
 void ape_valarray_destroy(ApeValArray_t *arr);
 ApeValArray_t *ape_valarray_copy(ApeValArray_t *arr);
-bool ape_valarray_add(ApeValArray_t *arr, void *value);
 bool ape_valarray_push(ApeValArray_t *arr, void *value);
 bool ape_valarray_removeat(ApeValArray_t *arr, ApeSize_t ix);
 void ape_valarray_clear(ApeValArray_t *arr);
@@ -475,9 +474,8 @@ ApePtrArray_t *ape_ptrarray_copywithitems(ApePtrArray_t *arr, ApeDataCallback_t 
 ApeSize_t ape_ptrarray_count(ApePtrArray_t *arr);
 void *ape_ptrarray_pop(ApePtrArray_t *arr);
 void *ape_ptrarray_top(ApePtrArray_t *arr);
-bool ape_ptrarray_add(ApePtrArray_t *arr, void *ptr);
+bool ape_ptrarray_push(ApePtrArray_t *arr, void* ptr);
 void *ape_ptrarray_get(ApePtrArray_t *arr, ApeSize_t ix);
-bool ape_ptrarray_push(ApePtrArray_t *arr, void *ptr);
 bool ape_ptrarray_removeat(ApePtrArray_t *arr, ApeSize_t ix);
 void ape_ptrarray_clear(ApePtrArray_t *arr);
 void ape_ptrarray_clearanddestroyitems(ApePtrArray_t *arr, ApeDataCallback_t destroy_fn);

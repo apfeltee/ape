@@ -52,7 +52,7 @@ ApePseudoClass_t* ape_context_make_pseudoclass(ApeContext_t* ctx, ApeStrDict_t* 
     ApePseudoClass_t* psc;
     stag = ape_object_value_typename(typ);
     psc = ape_make_pseudoclass(ctx, dictref, classname);
-    ape_ptrarray_push(ctx->pseudoclasses, psc);
+    ape_ptrarray_push(ctx->pseudoclasses, &psc);
     ok = ape_strdict_set(ctx->classmapping, stag, psc);
     if(!ok)
     {

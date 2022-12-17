@@ -142,6 +142,7 @@ void wrap_free(ApeAllocator_t* alloc, void* ptr)
 
 void* ape_allocator_alloc_real(ApeAllocator_t* alloc, const char* str, const char* func, const char* file, int line, ApeInt_t size)
 {
+    void* rt;
     if(!alloc->ready)
     {
         fprintf(stderr, "not ready, must initialize\n");
@@ -153,7 +154,12 @@ void* ape_allocator_alloc_real(ApeAllocator_t* alloc, const char* str, const cha
     {
         //return NULL;
     }
-    return ape_mempool_alloc(alloc->pool, size);
+    rt = ape_mempool_alloc(alloc->pool, size);
+    if(rt == NULL)
+    {
+        fprintf(stderr, "FAILED to allocate %ld bytes\n", size);
+    }
+    return rt;
 }
 
 void ape_allocator_free(ApeAllocator_t* alloc, void* ptr)

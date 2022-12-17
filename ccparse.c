@@ -116,7 +116,7 @@ ApePtrArray_t * ape_parser_parseall(ApeAstParser_t* parser, const char* input, A
         {
             goto err;
         }
-        ok = ape_ptrarray_add(statements, stmt);
+        ok = ape_ptrarray_push(statements, &stmt);
         if(!ok)
         {
             ape_ast_destroy_expr(stmt);
@@ -1484,7 +1484,7 @@ ApeAstExpression_t* ape_parser_parseifstmt(ApeAstParser_t* p)
     {
         goto err;
     }
-    ok = ape_ptrarray_add(cases, cond);
+    ok = ape_ptrarray_push(cases, &cond);
     if(!ok)
     {
         ape_ast_destroy_ifcase(cond);
@@ -1521,7 +1521,7 @@ ApeAstExpression_t* ape_parser_parseifstmt(ApeAstParser_t* p)
             {
                 goto err;
             }
-            ok = ape_ptrarray_add(cases, elif);
+            ok = ape_ptrarray_push(cases, &elif);
             if(!ok)
             {
                 ape_ast_destroy_ifcase(elif);
@@ -1977,7 +1977,7 @@ ApeAstBlockExpr_t* ape_parser_parsecodeblock(ApeAstParser_t* p)
         {
             goto err;
         }
-        ok = ape_ptrarray_add(statements, stmt);
+        ok = ape_ptrarray_push(statements, &stmt);
         if(!ok)
         {
             ape_ast_destroy_expr(stmt);
@@ -2291,7 +2291,7 @@ ApeAstExpression_t* ape_parser_parseliteralmap(ApeAstParser_t* p)
                     break;
             }
         }
-        ok = ape_ptrarray_add(keys, key);
+        ok = ape_ptrarray_push(keys, &key);
         if(!ok)
         {
             ape_ast_destroy_expr(key);
@@ -2307,7 +2307,7 @@ ApeAstExpression_t* ape_parser_parseliteralmap(ApeAstParser_t* p)
         {
             goto err;
         }
-        ok = ape_ptrarray_add(values, value);
+        ok = ape_ptrarray_push(values, &value);
         if(!ok)
         {
             ape_ast_destroy_expr(value);
@@ -2455,7 +2455,7 @@ bool ape_parser_parsefuncparams(ApeAstParser_t* p, ApePtrArray_t * outparams)
     {
         return false;
     }
-    ok = ape_ptrarray_add(outparams, ident);
+    ok = ape_ptrarray_push(outparams, &ident);
     if(!ok)
     {
         ape_ast_destroy_ident(ident);
@@ -2474,7 +2474,7 @@ bool ape_parser_parsefuncparams(ApeAstParser_t* p, ApePtrArray_t * outparams)
         {
             return false;
         }
-        ok = ape_ptrarray_add(outparams, ident);
+        ok = ape_ptrarray_push(outparams, &ident);
         if(!ok)
         {
             ape_ast_destroy_ident(ident);
@@ -2532,7 +2532,7 @@ ApePtrArray_t* ape_parser_parseexprlist(ApeAstParser_t* p, ApeAstTokType_t start
     {
         goto err;
     }
-    ok = ape_ptrarray_add(res, argexpr);
+    ok = ape_ptrarray_push(res, &argexpr);
     if(!ok)
     {
         ape_ast_destroy_expr(argexpr);
@@ -2550,7 +2550,7 @@ ApePtrArray_t* ape_parser_parseexprlist(ApeAstParser_t* p, ApeAstTokType_t start
         {
             goto err;
         }
-        ok = ape_ptrarray_add(res, argexpr);
+        ok = ape_ptrarray_push(res, &argexpr);
         if(!ok)
         {
             ape_ast_destroy_expr(argexpr);
@@ -3100,7 +3100,7 @@ ApeAstExpression_t* ape_ast_wrapexprinfunccall(ApeContext_t* ctx, ApeAstExpressi
         ape_ast_destroy_expr(functionidentexpr);
         return NULL;
     }
-    ok = ape_ptrarray_add(args, expr);
+    ok = ape_ptrarray_push(args, &expr);
     if(!ok)
     {
         ape_ptrarray_destroy(args);

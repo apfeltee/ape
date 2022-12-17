@@ -358,7 +358,7 @@ ApeAstCompResult_t* ape_compiler_compilefile(ApeAstCompiler_t* comp, const char*
     {
         goto err;
     }
-    ok = ape_ptrarray_add(comp->files, file);
+    ok = ape_ptrarray_push(comp->files, &file);
     if(!ok)
     {
         ape_compfile_destroy(file);
@@ -583,7 +583,7 @@ bool ape_compiler_initshallowcopy(ApeAstCompiler_t* copy, ApeAstCompiler_t* src)
         {
             goto err;
         }
-        ok = ape_ptrarray_add(copyloadedmodulenames, loadednamecopy);
+        ok = ape_ptrarray_push(copyloadedmodulenames, &loadednamecopy);
         if(!ok)
         {
             ape_allocator_free(&copy->context->alloc, loadednamecopy);
@@ -615,7 +615,7 @@ static ApeInt_t ape_compiler_emit(ApeAstCompiler_t* comp, ApeOpByte_t op, ApeSiz
         srcpos = (ApePosition_t*)ape_valarray_top(comp->srcpositionsstack);
         APE_ASSERT(srcpos->line >= 0);
         APE_ASSERT(srcpos->column >= 0);
-        ok = ape_valarray_add(ape_compiler_getsrcpositions(comp), srcpos);
+        ok = ape_valarray_push(ape_compiler_getsrcpositions(comp), srcpos);
         if(!ok)
         {
             return -1;
@@ -872,7 +872,7 @@ bool ape_compiler_includemodule(ApeAstCompiler_t* comp, ApeAstExpression_t* incl
         result = false;
         goto end;
     }
-    ok = ape_ptrarray_add(filescope->loadedmodulenames, namecopy);
+    ok = ape_ptrarray_push(filescope->loadedmodulenames, &namecopy);
     if(!ok)
     {
         ape_allocator_free(&comp->context->alloc, namecopy);
@@ -996,7 +996,7 @@ static bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpressi
                     if(i < (ape_ptrarray_count(ifstmt->cases) - 1) || ifstmt->alternative)
                     {
                         jumptoendip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte_t)(0xbeef)));
-                        ok = ape_valarray_add(jumptoendips, &jumptoendip);
+                        ok = ape_valarray_push(jumptoendips, &jumptoendip);
                         if(!ok)
                         {
                             goto statementiferror;
@@ -2217,7 +2217,7 @@ static ApeInt_t ape_compiler_addconstant(ApeAstCompiler_t* comp, ApeObject_t obj
 {
     bool ok;
     ApeInt_t pos;
-    ok = ape_valarray_add(comp->constants, &obj);
+    ok = ape_valarray_push(comp->constants, &obj);
     if(!ok)
     {
         return -1;
@@ -2466,7 +2466,7 @@ bool ape_compiler_pushfilescope(ApeAstCompiler_t* comp, const char* filepath)
     {
         return false;
     }
-    ok = ape_ptrarray_add(comp->files, file);
+    ok = ape_ptrarray_push(comp->files, &file);
     if(!ok)
     {
         ape_compfile_destroy(file);
@@ -2477,7 +2477,7 @@ bool ape_compiler_pushfilescope(ApeAstCompiler_t* comp, const char* filepath)
     {
         return false;
     }
-    ok = ape_ptrarray_push(comp->filescopes, filescope);
+    ok = ape_ptrarray_push(comp->filescopes, &filescope);
     if(!ok)
     {
         ape_compiler_destroyfilescope(filescope);
