@@ -204,6 +204,37 @@ void ape_compresult_destroy(ApeAstCompResult_t* res)
     ape_allocator_free(&ctx->alloc, res);
 }
 
+
+void ape_compiler_setsymtable(ApeAstCompiler_t* comp, ApeSymTable_t* table)
+{
+    ApeAstFileScope_t* filescope;
+    filescope = (ApeAstFileScope_t*)ape_ptrarray_top(comp->filescopes);
+    if(!filescope)
+    {
+        APE_ASSERT(false);
+        return;
+    }
+    filescope->symtable = table;
+}
+
+ApeValArray_t* ape_compiler_getconstants(ApeAstCompiler_t* comp)
+{
+    return comp->constants;
+}
+
+ApeSymTable_t* ape_compiler_getsymboltable(ApeAstCompiler_t* comp)
+{
+    ApeAstFileScope_t* filescope;
+    filescope = (ApeAstFileScope_t*)ape_ptrarray_top(comp->filescopes);
+    //fprintf(stderr, "filescope=%p comp->filescopes=%d\n", filescope, ape_ptrarray_count(comp->filescopes));
+    if(!filescope)
+    {
+        APE_ASSERT(false);
+        return NULL;
+    }
+    return filescope->symtable;
+}
+
 ApeSymbol_t* ape_compiler_definesym(ApeAstCompiler_t* comp, ApePosition_t pos, const char* name, bool assignable, bool canshadow)
 {
     ApeSymTable_t* symtable;
@@ -391,36 +422,6 @@ ApeAstCompResult_t* ape_compiler_compilefile(ApeAstCompiler_t* comp, const char*
 err:
     ape_allocator_free(&comp->context->alloc, code);
     return NULL;
-}
-
-ApeSymTable_t* ape_compiler_getsymboltable(ApeAstCompiler_t* comp)
-{
-    ApeAstFileScope_t* filescope;
-    filescope = (ApeAstFileScope_t*)ape_ptrarray_top(comp->filescopes);
-    //fprintf(stderr, "filescope=%p comp->filescopes=%d\n", filescope, ape_ptrarray_count(comp->filescopes));
-    if(!filescope)
-    {
-        APE_ASSERT(false);
-        return NULL;
-    }
-    return filescope->symtable;
-}
-
-void ape_compiler_setsymtable(ApeAstCompiler_t* comp, ApeSymTable_t* table)
-{
-    ApeAstFileScope_t* filescope;
-    filescope = (ApeAstFileScope_t*)ape_ptrarray_top(comp->filescopes);
-    if(!filescope)
-    {
-        APE_ASSERT(false);
-        return;
-    }
-    filescope->symtable = table;
-}
-
-ApeValArray_t* ape_compiler_getconstants(ApeAstCompiler_t* comp)
-{
-    return comp->constants;
 }
 
 bool ape_compiler_init(ApeAstCompiler_t* comp, ApeContext_t* ctx, const ApeConfig_t* cfg, ApeGCMemory_t* mem, ApeErrorList_t* el, ApePtrArray_t* fl, ApeGlobalStore_t* gs)
