@@ -44,7 +44,7 @@
 #endif
 
 #if defined(APE_MEMPOOL_HAVEMMAP) || defined(APE_MEMPOOL_HAVEVIRTALLOC)
-    //#define APE_MEMPOOL_ISAVAILABLE
+    #define APE_MEMPOOL_ISAVAILABLE
 #endif
 
 #if defined(APE_MEMPOOL_HAVEMMAP)
@@ -334,8 +334,6 @@ bool ape_mempool_setdebugfile(ApeMemPool_t* mp, const char* path)
     }
     return ape_mempool_setdebughandle(mp, hnd, true);
 }
-
-
 
 /* Allocate memory out of the relevant memory pool.
  * If larger than maxpoolsize, just mmap it. If pool is full, mmap a new one and

@@ -1,0 +1,5 @@
+
+- make functions use context first, not allocator
+- types need renaming
+- remove redundant functions
+- try to use aadeque in arrays?

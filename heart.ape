@@ -1,0 +1,21 @@
+
+var i = 1.5
+while(i > -1.5)
+{
+    var x = -1.5
+    while(x < 1.5)
+    {
+        var y = x * x + i * i - 1
+        if((((y * y) * y) - ((((x * x) * i) * i) * i)) < 0)
+        {
+            print("*")
+        }
+        else
+        {
+            print(" ")
+        }
+        x += 0.05
+    }
+    i -= 0.1
+    println()
+}
