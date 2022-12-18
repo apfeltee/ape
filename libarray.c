@@ -233,7 +233,7 @@ bool ape_valarray_set(ApeValArray_t* arr, ApeSize_t ix, void* value)
             //offset = (cnt + ix) + elmsz;
             offset = ix * arr->elemsize;    
 
-            fprintf(stderr, "ape_valarray_set: capacity=%ld offset=%ld\n", arr->capacity, offset);
+            //fprintf(stderr, "ape_valarray_set: capacity=%ld offset=%ld\n", arr->capacity, offset);
 
             memmove(arr->arraydata + offset, value, arr->elemsize);
             //memcpy(arr->arraydata + ((cnt-ix) * elmsz), value, elmsz);
@@ -265,7 +265,7 @@ bool ape_valarray_canappend(ApeValArray_t* arr)
         needed = ((hereidx) * (elmsz * 2));
         if(needed <= cap)
         {
-            fprintf(stderr, "ape_valarray_push: can fit: acnt=%ld needed=%ld hereidx=%ld capacity=%ld\n", acnt, needed, hereidx, cap);
+            //fprintf(stderr, "ape_valarray_push: can fit: acnt=%ld needed=%ld hereidx=%ld capacity=%ld\n", acnt, needed, hereidx, cap);
             return true;
         }
     }
@@ -322,7 +322,7 @@ bool ape_valarray_push(ApeValArray_t* arr, void* value)
         //toalloc = oldcap + (elmsz * 2);
         //toalloc = newcap * 2;
 
-        fprintf(stderr, "valarray_push: newcap=%ld toalloc=%ld\n", newcap, toalloc);
+        //fprintf(stderr, "valarray_push: newcap=%ld toalloc=%ld\n", newcap, toalloc);
 
         if(acnt >= oldcap)
         {
@@ -347,7 +347,7 @@ bool ape_valarray_push(ApeValArray_t* arr, void* value)
                 {
                     offset = (acnt * elmsz);
                     //offset = (oldcap + elmsz);
-                    fprintf(stderr, "memmove: oldcap=%ld acnt=%ld elmsz=%ld offset=%ld\n", oldcap, acnt, elmsz, offset);
+                    //fprintf(stderr, "memmove: oldcap=%ld acnt=%ld elmsz=%ld offset=%ld\n", oldcap, acnt, elmsz, offset);
                     /*
                     //void *memmove(void *dest, const void *src, size_t n);
                     //void *memcpy(void *dest, const void *src, size_t n);
@@ -635,7 +635,7 @@ void* ape_ptrarray_get(ApePtrArray_t* arr, ApeSize_t ix)
     {
         return NULL;
     }
-    fprintf(stderr, "ape_ptrarray_get: ix=%ld p=%p\n", ix, res);
+    //fprintf(stderr, "ape_ptrarray_get: ix=%ld p=%p\n", ix, res);
     #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
         return *(void**)res;
     #else

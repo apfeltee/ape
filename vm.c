@@ -2217,12 +2217,13 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
             case APE_OPCODE_MKNUMBER:
                 {
                     /* FIXME: why does ape_util_uinttofloat break things here? */
-                    val = ape_frame_readuint64(vm->currentframe);
-                    #if 0
+                    uint64_t val = ape_frame_readuint64(vm->currentframe);
+                    #if 1
                     valdouble = ape_util_uinttofloat(val);
                     #else
                     valdouble = val;
                     #endif
+                    //fprintf(stderr, "valdouble=%g\n", valdouble);
                     objval = ape_object_make_number(vm->context, valdouble);
                     //objval.handle->datatype = APE_OBJECT_NUMBER;
                     ape_vm_pushstack(vm, objval);

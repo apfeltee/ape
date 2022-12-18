@@ -6,6 +6,30 @@
 #endif
 #include "inline.h"
 
+ApeFloat_t ape_util_uinttofloat(ApeUInt_t val)
+{
+    //return val;
+    union
+    {
+        ApeUInt_t fltcast_uint64;
+        ApeFloat_t fltcast_double;
+    } temp;
+    temp.fltcast_uint64 = val;
+    return temp.fltcast_double;
+}
+
+ApeUInt_t ape_util_floattouint(ApeFloat_t val)
+{
+    //return val;
+    union
+    {
+        ApeUInt_t fltcast_uint64;
+        ApeFloat_t fltcast_double;
+    } temp;
+    temp.fltcast_double = val;
+    return temp.fltcast_uint64;
+}
+
 char* ape_util_stringfmt(ApeContext_t* ctx, const char* format, ...)
 {
     int to_write;

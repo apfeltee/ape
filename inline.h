@@ -145,29 +145,9 @@ static APE_INLINE unsigned int ape_util_numbertouint32(double n)
 }
 
 /* fixme */
-static APE_INLINE ApeUInt_t ape_util_floattouint(ApeFloat_t val)
-{
-    return val;
-    union
-    {
-        ApeUInt_t fltcast_uint64;
-        ApeFloat_t fltcast_double;
-    } temp;
-    temp.fltcast_double = val;
-    return temp.fltcast_uint64;
-}
+ApeUInt_t ape_util_floattouint(ApeFloat_t val);
+ApeFloat_t ape_util_uinttofloat(ApeUInt_t val);
 
-static APE_INLINE ApeFloat_t ape_util_uinttofloat(ApeUInt_t val)
-{
-    return val;
-    union
-    {
-        ApeUInt_t fltcast_uint64;
-        ApeFloat_t fltcast_double;
-    } temp;
-    temp.fltcast_uint64 = val;
-    return temp.fltcast_double;
-}
 
 static APE_INLINE void* ape_valdict_getkeyat(const ApeValDict_t* dict, ApeSize_t ix)
 {
