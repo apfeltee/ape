@@ -224,9 +224,15 @@ ApeValArray_t* ape_compiler_getconstants(ApeAstCompiler_t* comp)
 
 ApeSymTable_t* ape_compiler_getsymboltable(ApeAstCompiler_t* comp)
 {
+    ApeSize_t l;
     ApeAstFileScope_t* filescope;
-    filescope = (ApeAstFileScope_t*)ape_ptrarray_top(comp->filescopes);
-    //fprintf(stderr, "filescope=%p comp->filescopes=%d\n", filescope, ape_ptrarray_count(comp->filescopes));
+    filescope = NULL;
+    if((l = ape_ptrarray_count(comp->filescopes)) > 0)
+    {
+        //filescope = (ApeAstFileScope_t*)ape_ptrarray_top(comp->filescopes);
+        filescope = (ApeAstFileScope_t*)ape_ptrarray_get(comp->filescopes, l - 1);
+    }
+    fprintf(stderr, "filescope=%p comp->filescopes=%d\n", filescope, ape_ptrarray_count(comp->filescopes));
     if(!filescope)
     {
         APE_ASSERT(false);
@@ -237,7 +243,7 @@ ApeSymTable_t* ape_compiler_getsymboltable(ApeAstCompiler_t* comp)
 
 ApeSymbol_t* ape_compiler_definesym(ApeAstCompiler_t* comp, ApePosition_t pos, const char* name, bool assignable, bool canshadow)
 {
-    ApeSymTable_t* symtable;
+    ApeSymTable_t* symtable =NULL;
     ApeSymbol_t* currentsymbol;
     ApeSymbol_t* symbol;
     symtable = ape_compiler_getsymboltable(comp);
@@ -325,10 +331,13 @@ ApeAstCompResult_t* ape_compiler_compilesource(ApeAstCompiler_t* comp, const cha
     ApeAstCompScope_t* compscope;
     ApeAstCompResult_t* res;
     compscope = ape_compiler_getcompscope(comp);
+    //fprintf(stderr, "ape_valarray_count(comp->srcpositionsstack)=%d\n", ape_valarray_count(comp->srcpositionsstack));
+    /*
     APE_ASSERT(ape_valarray_count(comp->srcpositionsstack) == 0);
     APE_ASSERT(ape_valarray_count(compscope->bytecode) == 0);
     APE_ASSERT(ape_valarray_count(compscope->breakipstack) == 0);
     APE_ASSERT(ape_valarray_count(compscope->continueipstack) == 0);
+    */
     ape_valarray_clear(comp->srcpositionsstack);
     ape_valarray_clear(compscope->bytecode);
     ape_valarray_clear(compscope->srcpositions);

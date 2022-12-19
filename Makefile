@@ -8,11 +8,11 @@ WFLAGS = -Wunused -Wunused-macros -Wunused-local-typedefs
 #EXTRAFLAGS = -fsanitize=address
 
 ## don't ever remove '-Wall -Wextra' - it's the bare minimum!
-CC = gcc  -Wall -Wextra $(EXTRAFLAGS) $(WFLAGS)
+CC = clang  -Wall -Wextra $(EXTRAFLAGS) $(WFLAGS)
 
 ## only ever increase -O when in release. -O0 disables inlining entirely, which is needed for debugging.
 #CFLAGS = $(INCFLAGS) -Ofast -march=native -flto -ffast-math -funroll-loops
-CFLAGS = $(INCFLAGS) -O0 -g3 -ggdb3
+CFLAGS = $(INCFLAGS) -O0 -g3 -ggdb 
 LDFLAGS = -flto -ldl -lm  -lreadline -lpthread
 target = run
 

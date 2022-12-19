@@ -164,6 +164,7 @@ void* ape_allocator_alloc_real(ApeAllocator_t* alloc, const char* str, const cha
 
 void ape_allocator_free(ApeAllocator_t* alloc, void* ptr)
 {
+    return;
     /* nothing to do */
     ape_mempool_free(alloc->pool, ptr);
 }

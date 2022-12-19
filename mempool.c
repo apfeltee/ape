@@ -44,7 +44,7 @@
 #endif
 
 #if defined(APE_MEMPOOL_HAVEMMAP) || defined(APE_MEMPOOL_HAVEVIRTALLOC)
-    #define APE_MEMPOOL_ISAVAILABLE
+    //#define APE_MEMPOOL_ISAVAILABLE
 #endif
 
 #if defined(APE_MEMPOOL_HAVEMMAP)

@@ -32,12 +32,16 @@
     #endif
 #endif
 
-#define APE_LIKELY(x) \
-    __builtin_expect(!!(x), 1)
+#if defined(__GNUC__)
+    #define APE_LIKELY(x) \
+        __builtin_expect(!!(x), 1)
 
-#define APE_UNLIKELY(x) \
-    __builtin_expect(!!(x), 0)
-
+    #define APE_UNLIKELY(x) \
+        __builtin_expect(!!(x), 0)
+#else
+    #define APE_LIKELY(x) x
+    #define APE_UNLIKELY(x) x
+#endif
 
 extern void* ds_extmalloc(size_t size, void* userptr);
 extern void* ds_extrealloc(void* ptr, size_t oldsz, size_t newsz, void* userptr);

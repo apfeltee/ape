@@ -1125,7 +1125,7 @@ static inline DynString_t* ds_removefreespace(DynString_t* s)
      * reallocate the string to use the different header type. */
     if(oldtype == type || type > SDS_TYPE_8)
     {
-        oldsz = ds_getallocated(sh);
+        oldsz = ds_getallocated((const DynString_t*)sh);
         newsh = ds_extrealloc(sh, oldsz, oldhdrlen + len + 1, up);
         if(newsh == NULL)
         {

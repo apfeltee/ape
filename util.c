@@ -4,6 +4,7 @@
 * no touchy, unless you know what you're getting yourself into.
 */
 
+#undef _XOPEN_SOURCE
 #define _XOPEN_SOURCE 500
 #include <time.h>
 #if defined(__linux__)
