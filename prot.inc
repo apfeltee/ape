@@ -65,9 +65,9 @@ const ApeSymbol_t *ape_symtable_getmoduleglobalsymbolat(const ApeSymTable_t *tab
 ApeAstBlockScope_t *ape_make_blockscope(ApeContext_t *ctx, int offset);
 void *ape_blockscope_destroy(ApeAstBlockScope_t *scope);
 ApeAstBlockScope_t *ape_blockscope_copy(ApeAstBlockScope_t *scope);
-bool ape_vm_setsymbol(ApeSymTable_t *table, ApeSymbol_t *symbol);
-int ape_vm_nextsymbolindex(ApeSymTable_t *table);
-int ape_vm_countnumdefs(ApeSymTable_t *table);
+bool ape_symtable_setsymbol(ApeSymTable_t *table, ApeSymbol_t *symbol);
+int ape_symtable_nextsymbolindex(ApeSymTable_t *table);
+int ape_symtable_count(ApeSymTable_t *table);
 int ape_make_code(ApeOpByte_t op, ApeSize_t operands_count, ApeOpByte_t *operands, ApeValArray_t *res);
 bool ape_frame_init(ApeFrame_t *frame, ApeObject_t function_obj, int bptr);
 ApeOpcodeValue_t ape_frame_readopcode(ApeFrame_t *frame);

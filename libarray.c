@@ -3,7 +3,7 @@
 
 #define APE_CONF_ARRAY_INITIAL_CAPACITY (64/4)
 
-#define VALARRAY_USE_DNARRAY 0
+#define VALARRAY_USE_DNARRAY 1
 
 struct ApeValArray_t
 {
@@ -302,6 +302,7 @@ bool ape_valarray_push(ApeValArray_t* arr, void* value)
 
     #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
         deqlist_push(&arr->arraydata, *(void**)value);
+        ape_valarray_set(arr, cnt, value);
     #else
         bool ok;
         ApeSize_t initcap;

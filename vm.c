@@ -34,9 +34,6 @@ THE SOFTWARE.
 static const ApePosition_t g_vmpriv_srcposinvalid = { NULL, -1, -1 };
 
 
-bool ape_vm_setsymbol(ApeSymTable_t *table, ApeSymbol_t *symbol);
-int ape_vm_nextsymbolindex(ApeSymTable_t *table);
-int ape_vm_countnumdefs(ApeSymTable_t *table);
 void ape_vm_setstackpointer(ApeVM_t *vm, int new_sp);
 bool ape_vm_tryoverloadoperator(ApeVM_t *vm, ApeObject_t left, ApeObject_t right, ApeOpByte_t op, bool *out_overload_found);
 
@@ -307,43 +304,6 @@ ApeAstBlockScope_t* ape_blockscope_copy(ApeAstBlockScope_t* scope)
     }
     return copy;
 }
-
-bool ape_vm_setsymbol(ApeSymTable_t* table, ApeSymbol_t* symbol)
-{
-    ApeAstBlockScope_t* topscope;
-    ApeSymbol_t* existing;
-    topscope = (ApeAstBlockScope_t*)ape_ptrarray_top(table->blockscopes);
-    existing= (ApeSymbol_t*)ape_strdict_getbyname(topscope->store, symbol->name);
-    if(existing)
-    {
-        ape_symbol_destroy(existing);
-    }
-    return ape_strdict_set(topscope->store, symbol->name, symbol);
-}
-
-int ape_vm_nextsymbolindex(ApeSymTable_t* table)
-{
-    int ix;
-    ApeAstBlockScope_t* topscope;
-    topscope = (ApeAstBlockScope_t*)ape_ptrarray_top(table->blockscopes);
-    ix = topscope->offset + topscope->numdefinitions;
-    return ix;
-}
-
-int ape_vm_countnumdefs(ApeSymTable_t* table)
-{
-    ApeInt_t i;
-    int count;
-    ApeAstBlockScope_t* scope;
-    count = 0;
-    for(i = (ApeInt_t)ape_ptrarray_count(table->blockscopes) - 1; i >= 0; i--)
-    {
-        scope = (ApeAstBlockScope_t*)ape_ptrarray_get(table->blockscopes, i);
-        count += scope->numdefinitions;
-    }
-    return count;
-}
-
 
 
 #define APPEND_BYTE(n)                           \
