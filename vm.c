@@ -183,13 +183,15 @@ err:
 
 void ape_globalstore_destroy(ApeGlobalStore_t* store)
 {
+    ApeContext_t* ctx;
     if(!store)
     {
         return;
     }
-    ape_strdict_destroywithitems(store->named);
+    ctx = store->context;
+    ape_strdict_destroywithitems(ctx, store->named);
     ape_valarray_destroy(store->objects);
-    ape_allocator_free(&store->context->alloc, store);
+    ape_allocator_free(&ctx->alloc, store);
 }
 
 ApeSymbol_t* ape_globalstore_getsymbol(ApeGlobalStore_t* store, const char* name)
@@ -223,7 +225,7 @@ bool ape_globalstore_set(ApeGlobalStore_t* store, const char* name, ApeObject_t 
     ok = ape_strdict_set(store->named, name, symbol);
     if(!ok)
     {
-        ape_symbol_destroy(symbol);
+        ape_symbol_destroy(store->context, symbol);
         goto err;
     }
     return true;
@@ -252,57 +254,6 @@ ApeObject_t* ape_globalstore_getobjectdata(ApeGlobalStore_t* store)
 ApeSize_t ape_globalstore_getobjectcount(ApeGlobalStore_t* store)
 {
     return ape_valarray_count(store->objects);
-}
-
-#include "symtab.h"
-
-ApeAstBlockScope_t* ape_make_blockscope(ApeContext_t* ctx, int offset)
-{
-    ApeAstBlockScope_t* new_scope;
-    new_scope = (ApeAstBlockScope_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstBlockScope_t));
-    if(!new_scope)
-    {
-        return NULL;
-    }
-    memset(new_scope, 0, sizeof(ApeAstBlockScope_t));
-    new_scope->context = ctx;
-    new_scope->store = ape_make_strdict(ctx, (ApeDataCallback_t)ape_symbol_copy, (ApeDataCallback_t)ape_symbol_destroy);
-    if(!new_scope->store)
-    {
-        ape_blockscope_destroy(new_scope);
-        return NULL;
-    }
-    new_scope->numdefinitions = 0;
-    new_scope->offset = offset;
-    return new_scope;
-}
-
-void* ape_blockscope_destroy(ApeAstBlockScope_t* scope)
-{
-    ape_strdict_destroywithitems(scope->store);
-    ape_allocator_free(&scope->context->alloc, scope);
-    return NULL;
-}
-
-ApeAstBlockScope_t* ape_blockscope_copy(ApeAstBlockScope_t* scope)
-{
-    ApeAstBlockScope_t* copy;
-    copy = (ApeAstBlockScope_t*)ape_allocator_alloc(&scope->context->alloc, sizeof(ApeAstBlockScope_t));
-    if(!copy)
-    {
-        return NULL;
-    }
-    memset(copy, 0, sizeof(ApeAstBlockScope_t));
-    copy->context = scope->context;
-    copy->numdefinitions = scope->numdefinitions;
-    copy->offset = scope->offset;
-    copy->store = ape_strdict_copywithitems(scope->store);
-    if(!copy->store)
-    {
-        ape_blockscope_destroy(copy);
-        return NULL;
-    }
-    return copy;
 }
 
 
@@ -432,9 +383,12 @@ ApeUShort_t ape_frame_readuint8(ApeFrame_t* frame)
 
 ApePosition_t ape_frame_srcposition(const ApeFrame_t* frame)
 {
-    if(frame->srcpositions)
+    if(frame != NULL)
     {
-        return frame->srcpositions[frame->srcip];
+        if(frame->srcpositions != NULL)
+        {
+            return frame->srcpositions[frame->srcip];
+        }
     }
     return g_vmpriv_srcposinvalid;
 }

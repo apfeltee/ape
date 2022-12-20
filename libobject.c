@@ -634,7 +634,7 @@ void ape_object_data_deinit(ApeContext_t* ctx, ApeGCObjData_t* data)
             {
                 if(data->valextern.fndestroy)
                 {
-                    data->valextern.fndestroy(data->valextern.data);
+                    data->valextern.fndestroy(ctx, data->valextern.data);
                 }
             }
             break;
@@ -1100,7 +1100,7 @@ ApeObject_t ape_object_value_copyflat(ApeContext_t* ctx, ApeObject_t obj)
                 data_copy = NULL;
                 if(external->fncopy)
                 {
-                    data_copy = external->fncopy(external->data);
+                    data_copy = external->fncopy(ctx, external->data);
                 }
                 else
                 {

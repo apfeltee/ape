@@ -1103,7 +1103,7 @@ void ape_builtins_setup_namespace(ApeVM_t* vm, const char* nsname, ApeNativeItem
     sym = ape_compiler_definesym(vm->context->compiler, posinvalid, nsname, false, false);
     if(!sym)
     {
-        ape_vm_adderror(vm, APE_ERROR_RUNTIME, "failed to declare namespace '%s' in compiler");
+        //ape_vm_adderror(vm, APE_ERROR_RUNTIME, "failed to declare namespace '%s' in compiler");
     }
     map = ape_object_make_map(vm->context);
     for(i=0; fnarray[i].name != NULL; i++)

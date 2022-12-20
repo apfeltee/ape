@@ -12,10 +12,8 @@ ApePseudoClass_t* ape_make_pseudoclass(ApeContext_t* ctx, ApeStrDict_t* dictref,
     return psc;
 }
 
-void* ape_pseudoclass_destroy(ApePseudoClass_t* psc)
+void* ape_pseudoclass_destroy(ApeContext_t* ctx, ApePseudoClass_t* psc)
 {
-    ApeContext_t* ctx;
-    ctx = psc->context;
     ape_allocator_free(&ctx->alloc, psc);
     psc = NULL;
     return NULL;

@@ -164,16 +164,18 @@ void* ape_allocator_alloc_real(ApeAllocator_t* alloc, const char* str, const cha
 
 void ape_allocator_free(ApeAllocator_t* alloc, void* ptr)
 {
-    return;
-    /* nothing to do */
-    ape_mempool_free(alloc->pool, ptr);
+    if(ptr != NULL)
+    {
+        /* nothing to do */
+        ape_mempool_free(alloc->pool, ptr);
+        ptr = NULL;
+    }
 }
 
 void* ape_allocator_realloc(ApeAllocator_t* alloc, void* ptr, size_t oldsz, size_t newsz)
 {
     return ape_mempool_realloc(alloc->pool, ptr, oldsz, newsz);
 }
-
 
 ApeAllocator_t* ape_make_allocator(ApeContext_t* ctx, ApeAllocator_t* dest, ApeMemAllocFunc_t malloc_fn, ApeMemFreeFunc_t free_fn, void* optr)
 {
@@ -195,7 +197,6 @@ bool ape_allocator_setdebugfile(ApeAllocator_t* alloc, const char* path)
 {
     return ape_mempool_setdebugfile(alloc->pool, path);
 }
-
 
 void ape_allocator_destroy(ApeAllocator_t* alloc)
 {

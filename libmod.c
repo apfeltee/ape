@@ -14,31 +14,31 @@ ApeModule_t* ape_make_module(ApeContext_t* ctx, const char* name)
     module->name = ape_util_strdup(ctx, name);
     if(!module->name)
     {
-        ape_module_destroy(module);
+        ape_module_destroy(ctx, module);
         return NULL;
     }
     module->modsymbols = ape_make_ptrarray(ctx);
     if(!module->modsymbols)
     {
-        ape_module_destroy(module);
+        ape_module_destroy(ctx, module);
         return NULL;
     }
     return module;
 }
 
-void* ape_module_destroy(ApeModule_t* module)
+void* ape_module_destroy(ApeContext_t* ctx, ApeModule_t* module)
 {
     if(!module)
     {
         return NULL;
     }
-    ape_allocator_free(&module->context->alloc, module->name);
-    ape_ptrarray_destroywithitems(module->modsymbols, (ApeDataCallback_t)ape_symbol_destroy);
-    ape_allocator_free(&module->context->alloc, module);
+    ape_allocator_free(&ctx->alloc, module->name);
+    ape_ptrarray_destroywithitems(ctx, module->modsymbols, (ApeDataCallback_t)ape_symbol_destroy);
+    ape_allocator_free(&ctx->alloc, module);
     return NULL;
 }
 
-ApeModule_t* ape_module_copy(ApeModule_t* src)
+ApeModule_t* ape_module_copy(ApeContext_t* ctx, ApeModule_t* src)
 {
     ApeModule_t* copy;
     copy = (ApeModule_t*)ape_allocator_alloc(&src->context->alloc, sizeof(ApeModule_t));
@@ -51,13 +51,13 @@ ApeModule_t* ape_module_copy(ApeModule_t* src)
     copy->name = ape_util_strdup(src->context, src->name);
     if(!copy->name)
     {
-        ape_module_destroy(copy);
+        ape_module_destroy(ctx, copy);
         return NULL;
     }
-    copy->modsymbols = ape_ptrarray_copywithitems(src->modsymbols, (ApeDataCallback_t)ape_symbol_copy, (ApeDataCallback_t)ape_symbol_destroy);
+    copy->modsymbols = ape_ptrarray_copywithitems(ctx, src->modsymbols, (ApeDataCallback_t)ape_symbol_copy, (ApeDataCallback_t)ape_symbol_destroy);
     if(!copy->modsymbols)
     {
-        ape_module_destroy(copy);
+        ape_module_destroy(ctx, copy);
         return NULL;
     }
     return copy;
@@ -99,7 +99,7 @@ bool ape_module_addsymbol(ApeModule_t* module, const ApeSymbol_t* symbol)
     ok = ape_ptrarray_push(module->modsymbols, &module_symbol);
     if(!ok)
     {
-        ape_symbol_destroy(module_symbol);
+        ape_symbol_destroy(module->context, module_symbol);
         return false;
     }
     return true;

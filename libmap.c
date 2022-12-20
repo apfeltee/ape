@@ -106,7 +106,7 @@ void ape_valdict_destroy(ApeValDict_t* dict)
     ape_allocator_free(&ctx->alloc, dict);
 }
 
-void ape_valdict_destroywithitems(ApeValDict_t* dict)
+void ape_valdict_destroywithitems(ApeContext_t* ctx, ApeValDict_t* dict)
 {
     ApeSize_t i;
     void** vp;
@@ -119,7 +119,7 @@ void ape_valdict_destroywithitems(ApeValDict_t* dict)
         vp = (void**)(dict->values);
         for(i = 0; i < dict->count; i++)
         {
-            dict->fnvaldestroy(vp[i]);
+            dict->fnvaldestroy(ctx, vp[i]);
         }
     }
     ape_valdict_destroy(dict);
@@ -315,21 +315,19 @@ void ape_valdict_setdeletefunc(ApeValDict_t* dict, ApeDataCallback_t fn)
     dict->fnvaldestroy = fn;
 }
 
-ApeValDict_t* ape_valdict_copywithitems(ApeValDict_t* dict)
+ApeValDict_t* ape_valdict_copywithitems(ApeContext_t* ctx, ApeValDict_t* dict)
 {
     ApeSize_t i;
     bool ok;
     const char* key;
     void* item;
     void* item_copy;
-    ApeContext_t* ctx;
     ApeValDict_t* vcopy;
     ok = false;
     if(!dict->fnvalcopy || !dict->fnvaldestroy)
     {
         return NULL;
     }
-    ctx = dict->context;
     vcopy = ape_make_valdict(ctx, dict->keysize, dict->valsize);
     vcopy->context = ctx;
     ape_valdict_setcopyfunc(vcopy, (ApeDataCallback_t)dict->fnvalcopy);
@@ -342,17 +340,17 @@ ApeValDict_t* ape_valdict_copywithitems(ApeValDict_t* dict)
     {
         key = (const char*)ape_valdict_getkeyat(dict, i);
         item = ape_valdict_getvalueat(dict, i);
-        item_copy = vcopy->fnvalcopy(item);
+        item_copy = vcopy->fnvalcopy(ctx, item);
         if(item && !item_copy)
         {
-            ape_valdict_destroywithitems(vcopy);
+            ape_valdict_destroywithitems(ctx, vcopy);
             return NULL;
         }
         ok = ape_valdict_set(vcopy, (void*)key, item_copy);
         if(!ok)
         {
-            vcopy->fnvaldestroy(item_copy);
-            ape_valdict_destroywithitems(vcopy);
+            vcopy->fnvaldestroy(ctx, item_copy);
+            ape_valdict_destroywithitems(ctx, vcopy);
             return NULL;
         }
     }
@@ -454,7 +452,7 @@ void ape_strdict_destroy(ApeStrDict_t* dict)
     ape_allocator_free(&ctx->alloc, dict);
 }
 
-void ape_strdict_destroywithitems(ApeStrDict_t* dict)
+void ape_strdict_destroywithitems(ApeContext_t* ctx, ApeStrDict_t* dict)
 {
     ApeSize_t i;
     if(!dict)
@@ -465,13 +463,13 @@ void ape_strdict_destroywithitems(ApeStrDict_t* dict)
     {
         for(i = 0; i < dict->count; i++)
         {
-            dict->fnstrdestroy(dict->values[i]);
+            dict->fnstrdestroy(ctx, dict->values[i]);
         }
     }
     ape_strdict_destroy(dict);
 }
 
-ApeStrDict_t* ape_strdict_copywithitems(ApeStrDict_t* dict)
+ApeStrDict_t* ape_strdict_copywithitems(ApeContext_t* ctx, ApeStrDict_t* dict)
 {
     ApeSize_t i;
     bool ok;
@@ -479,13 +477,11 @@ ApeStrDict_t* ape_strdict_copywithitems(ApeStrDict_t* dict)
     void* item;
     void* item_copy;
     ApeStrDict_t* copy;
-    ApeContext_t* ctx;
     ok = false;
     if(!dict->fnstrcopy || !dict->fnstrdestroy)
     {
         return NULL;
     }
-    ctx = dict->context;
     copy = ape_make_strdict(ctx, (ApeDataCallback_t)dict->fnstrcopy, (ApeDataCallback_t)dict->fnstrdestroy);
     if(!copy)
     {
@@ -496,17 +492,17 @@ ApeStrDict_t* ape_strdict_copywithitems(ApeStrDict_t* dict)
     {
         key = ape_strdict_getkeyat(dict, i);
         item = ape_strdict_getvalueat(dict, i);
-        item_copy = copy->fnstrcopy(item);
+        item_copy = copy->fnstrcopy(ctx, item);
         if(item && !item_copy)
         {
-            ape_strdict_destroywithitems(copy);
+            ape_strdict_destroywithitems(ctx, copy);
             return NULL;
         }
         ok = ape_strdict_set(copy, key, item_copy);
         if(!ok)
         {
-            copy->fnstrdestroy(item_copy);
-            ape_strdict_destroywithitems(copy);
+            copy->fnstrdestroy(ctx, item_copy);
+            ape_strdict_destroywithitems(ctx, copy);
             return NULL;
         }
     }

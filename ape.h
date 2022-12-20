@@ -626,7 +626,7 @@ typedef void* (*ApeMemAllocFunc_t)(ApeContext_t*, void*, size_t);
 typedef void (*ApeMemFreeFunc_t)(ApeContext_t*, void*, void*);
 typedef unsigned long (*ApeDataHashFunc_t)(const void*);
 typedef bool (*ApeDataEqualsFunc_t)(const void*, const void*);
-typedef void* (*ApeDataCallback_t)(void*);
+typedef void* (*ApeDataCallback_t)(ApeContext_t*, void*);
 
 
 typedef ApeAstExpression_t* (*ApeRightAssocParseFNCallback_t)(ApeAstParser_t* p);

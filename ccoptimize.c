@@ -172,8 +172,8 @@ ApeAstExpression_t* ape_optimizer_optinfixexpr(ApeAstExpression_t* expr)
         res = ape_ast_make_literalstringexpr(expr->context, rtstr, rtlen, true);
         ape_writer_destroy(buf);
     }
-    ape_ast_destroy_expr(leftopt);
-    ape_ast_destroy_expr(rightopt);
+    ape_ast_destroy_expr(expr->context, leftopt);
+    ape_ast_destroy_expr(expr->context, rightopt);
     if(res)
     {
         res->pos = expr->pos;
@@ -201,7 +201,7 @@ ApeAstExpression_t* ape_optimizer_optprefixexpr(ApeAstExpression_t* expr)
     {
         res = ape_ast_make_literalboolexpr(expr->context, !rightexpr->exliteralbool);
     }
-    ape_ast_destroy_expr(rightopt);
+    ape_ast_destroy_expr(expr->context, rightopt);
     if(res)
     {
         res->pos = expr->pos;

@@ -93,8 +93,8 @@ void ape_context_deinit(ApeContext_t* ctx)
     ape_globalstore_destroy(ctx->globalstore);
     ape_gcmem_destroy(ctx->mem);
     ape_strdict_destroy(ctx->classmapping);
-    ape_ptrarray_destroywithitems(ctx->pseudoclasses, (ApeDataCallback_t)ape_pseudoclass_destroy);
-    ape_ptrarray_destroywithitems(ctx->files, (ApeDataCallback_t)ape_compfile_destroy);
+    ape_ptrarray_destroywithitems(ctx, ctx->pseudoclasses, (ApeDataCallback_t)ape_pseudoclass_destroy);
+    ape_ptrarray_destroywithitems(ctx, ctx->files, (ApeDataCallback_t)ape_compfile_destroy);
     ape_errorlist_destroy(&ctx->errors);
 }
 

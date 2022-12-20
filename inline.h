@@ -51,6 +51,7 @@ extern void ds_extfree(void* ptr, void* userptr);
 * must include *after* decl of ds_ext*, because they depend on it
 */
 #include "dnarray.h"
+#include "dvec.h"
 #include "aadeque.h"
 #include "sds.h"
 
