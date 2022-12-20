@@ -455,6 +455,7 @@ void ape_strdict_destroy(ApeStrDict_t* dict)
 void ape_strdict_destroywithitems(ApeContext_t* ctx, ApeStrDict_t* dict)
 {
     ApeSize_t i;
+    dict->context = ctx;
     if(!dict)
     {
         return;

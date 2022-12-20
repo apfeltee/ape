@@ -181,8 +181,14 @@ ApeAstBlockScope_t* ape_make_blockscope(ApeContext_t* ctx, int offset)
 
 void* ape_blockscope_destroy(ApeContext_t* ctx, ApeAstBlockScope_t* scope)
 {
-    ape_strdict_destroywithitems(ctx, scope->store);
-    ape_allocator_free(&ctx->alloc, scope);
+    if(scope != NULL)
+    {
+        if(scope->store != NULL)
+        {
+            ape_strdict_destroywithitems(ctx, scope->store);
+        }
+        ape_allocator_free(&ctx->alloc, scope);
+    }
     return NULL;
 }
 
@@ -202,7 +208,7 @@ ApeAstBlockScope_t* ape_blockscope_copy(ApeContext_t* ctx, ApeAstBlockScope_t* s
     copy->context = ctx;
     copy->numdefinitions = scope->numdefinitions;
     copy->offset = scope->offset;
-    //if(copy->store != NULL)
+    if(copy->store != NULL)
     {
         copy->store = ape_strdict_copywithitems(ctx, scope->store);
         if(!copy->store)

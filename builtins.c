@@ -1095,6 +1095,7 @@ static ApeNativeItem_t g_core_globalfuncs[] =
 
 void ape_builtins_setup_namespace(ApeVM_t* vm, const char* nsname, ApeNativeItem_t* fnarray)
 {
+    return;
     ApeSize_t i;
     ApeObject_t map;
     ApeSymbol_t* sym;

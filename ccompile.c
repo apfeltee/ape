@@ -46,8 +46,9 @@ ApeSymTable_t* ape_compiler_getsymboltable(ApeAstCompiler_t* comp)
     filescope = NULL;
     if((l = ape_ptrarray_count(comp->filescopes)) > 0)
     {
-        //filescope = (ApeAstFileScope_t*)ape_ptrarray_top(comp->filescopes);
-        filescope = (ApeAstFileScope_t*)ape_ptrarray_get(comp->filescopes, l - 1);
+        //filescope = *(ApeAstFileScope_t**)ape_ptrarray_top(comp->filescopes);
+        filescope = (ApeAstFileScope_t*)ape_ptrarray_top(comp->filescopes);
+        //filescope = (ApeAstFileScope_t*)ape_ptrarray_get(comp->filescopes, l - 1);
     }
     //fprintf(stderr, "filescope=%p comp->filescopes=%d\n", filescope, ape_ptrarray_count(comp->filescopes));
     if(!filescope)
