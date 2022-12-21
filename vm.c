@@ -1384,23 +1384,53 @@ bool ape_vm_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValu
                 }
                 break;
             case APE_OPCODE_LEFTSHIFT:
+                /*
                 {
-                    ApeInt_t rightval = ape_object_value_asfixednumber(right);
-                    ApeInt_t leftval = ape_object_value_asfixednumber(left);
-                    int uleft = (leftval);
-                    unsigned int uright = (rightval);
-                    resfixed = (uleft << (uright & 0x1F));
-                    isfixed = true;
+                    int uleft = ape_util_numbertoint32(leftval);
+                    unsigned int uright = ape_util_numbertouint32(rightval);
+                    bigres = (uleft << (uright & 0x1F));
+                }
+                */
+                {
+                    #if 1
+                        ApeFloat_t rightval = ape_object_value_asnumber(right);
+                        ApeFloat_t leftval = ape_object_value_asnumber(left);
+                        int uleft = ape_util_numbertoint32(leftval);
+                        unsigned int uright = ape_util_numbertouint32(rightval);
+                    
+                    #else
+                        ApeInt_t rightval = ape_object_value_asfixednumber(right);
+                        ApeInt_t leftval = ape_object_value_asfixednumber(left);
+                        int uleft = (leftval);
+                        unsigned int uright = (rightval);
+                    #endif
+                    resfloat = (uleft << (uright & 0x1F));
+                    isfixed = false;
                 }
                 break;
             case APE_OPCODE_RIGHTSHIFT:
+                /*
                 {
-                    ApeInt_t rightval = ape_object_value_asfixednumber(right);
-                    ApeInt_t leftval = ape_object_value_asfixednumber(left);
-                    int uleft = (leftval);
-                    unsigned int uright = (rightval);
-                    resfixed = (uleft >> (uright & 0x1F));
-                    isfixed = true;
+                    int uleft = ape_util_numbertoint32(leftval);
+                    unsigned int uright = ape_util_numbertouint32(rightval);
+                    bigres = (uleft >> (uright & 0x1F));
+                }
+                */
+                {
+                    #if 1
+                        ApeFloat_t rightval = ape_object_value_asnumber(right);
+                        ApeFloat_t leftval = ape_object_value_asnumber(left);
+                        int uleft = ape_util_numbertoint32(leftval);
+                        unsigned int uright = ape_util_numbertouint32(rightval);
+                    #else
+                        ApeInt_t rightval = ape_object_value_asfixednumber(right);
+                        ApeInt_t leftval = ape_object_value_asfixednumber(left);
+                        int uleft = (leftval);
+                        unsigned int uright = (rightval);
+                    #endif
+                    resfloat = (uleft >> (uright & 0x1F));
+                    isfixed = false;
+
                 }
                 break;
             default:
@@ -1638,6 +1668,12 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                     {
                         goto err;
                     }
+                    /**
+                    * TODO:NOTE:WARNING:
+                    * objres absolutely positively MUST be a floating point, even though
+                    * it seems unnecessary. no idea why this would break comparison,
+                    * but it does. so, no touchy.
+                    */
                     if(!isoverloaded)
                     {
                         comparison_res = ape_object_value_compare(left, right, &ok);
