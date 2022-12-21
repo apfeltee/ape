@@ -129,6 +129,14 @@ static ApeObject_t objfn_string_substr(ApeVM_t* vm, void* data, ApeSize_t argc, 
     {
         end = ape_object_value_asnumber(args[1]);
     }
+    if(begin < 0)
+    {
+        begin = len + begin;
+        if(begin < 0)
+        {
+            begin = 0;
+        }
+    }
     /* fixme: this is actually incorrect */
     if((begin >= len))
     {
@@ -548,7 +556,7 @@ void ape_builtins_install_string(ApeVM_t* vm)
         {"index", true, objfn_string_indexof},
         {"substr", true, objfn_string_substr},
         {"substring", true, objfn_string_substr},
-
+        {"slice", true, objfn_string_substr},
         /* js-isms */
         {"charAt", true, objfn_string_charat},
         {"charCodeAt", true, objfn_string_byteat},

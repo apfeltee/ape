@@ -112,68 +112,6 @@ static ApeObject_t cfn_object_rest(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
     return res;
 }
 
-static ApeObject_t cfn_reverse(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
-{
-    bool ok;
-    char ch;
-    char* resbuf;
-    const char* str;
-    ApeObject_t obj;
-    ApeObject_t arg;
-    ApeObject_t res;
-    ApeObjType_t type;
-    ApeSize_t i;
-    ApeSize_t len;
-    (void)data;
-    ApeArgCheck_t check;
-    ape_args_init(vm, &check, "reverse", argc, args);
-    if(!ape_args_check(&check, 0, APE_OBJECT_ARRAY | APE_OBJECT_STRING))
-    {
-        return ape_object_make_null(vm->context);
-    }
-    arg = args[0];
-    type = ape_object_value_type(arg);
-    if(type == APE_OBJECT_ARRAY)
-    {
-        len = ape_object_array_getlength(arg);
-        ApeObject_t res = ape_object_make_arraycapacity(vm->context, len);
-        if(ape_object_value_isnull(res))
-        {
-            return ape_object_make_null(vm->context);
-        }
-        for(i = 0; i < len; i++)
-        {
-            obj = ape_object_array_getvalue(arg, i);
-            ok = ape_object_array_setat(res, len - i - 1, obj);
-            if(!ok)
-            {
-                return ape_object_make_null(vm->context);
-            }
-        }
-        return res;
-    }
-    else if(type == APE_OBJECT_STRING)
-    {
-        str = ape_object_string_getdata(arg);
-        len = ape_object_string_getlength(arg);
-        res = ape_object_make_string(vm->context, "");
-        if(ape_object_value_isnull(res))
-        {
-            return ape_object_make_null(vm->context);
-        }
-        resbuf = ape_object_string_getmutable(res);
-        for(i = len-1; i !=0; i--)
-        {
-            //resbuf[len - i - 1] = str[i];
-            ch = str[i];
-            ape_object_string_append(vm->context, res, &ch, 1);
-        }
-        //resbuf[len] = '\0';
-        return res;
-    }
-    return ape_object_make_null(vm->context);
-}
-
 static ApeObject_t cfn_array(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     bool ok;
@@ -230,26 +168,6 @@ static ApeObject_t cfn_array(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
         return res;
     }
     return ape_object_make_null(vm->context);
-}
-
-static ApeObject_t cfn_object_append(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
-{
-    bool ok;
-    ApeSize_t len;
-    (void)data;
-    ApeArgCheck_t check;
-    ape_args_init(vm, &check, "reverse", argc, args);
-    if(!ape_args_check(&check, 0, APE_OBJECT_ARRAY | APE_OBJECT_STRING) && !ape_args_check(&check, 1, APE_OBJECT_ANY))
-    {
-        return ape_object_make_null(vm->context);
-    }
-    ok = ape_object_array_pushvalue(args[0], args[1]);
-    if(!ok)
-    {
-        return ape_object_make_null(vm->context);
-    }
-    len = ape_object_array_getlength(args[0]);
-    return ape_object_make_number(vm->context, len);
 }
 
 static ApeObject_t cfn_println(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
@@ -765,93 +683,6 @@ static ApeObject_t cfn_random(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
     return ape_object_make_null(vm->context);
 }
 
-static ApeObject_t cfn_object_slice(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
-{
-    bool ok;
-    char c;
-    char* resbuf;
-    const char* str;
-    const char* typestr;
-    ApeInt_t i;
-    ApeInt_t len;
-    ApeInt_t index;
-    ApeInt_t reslen;
-    ApeObject_t res;
-    ApeObject_t item;
-    ApeObjType_t argtype;
-    (void)data;
-    ApeArgCheck_t check;
-    ape_args_init(vm, &check, "Object.slice", argc, args);
-    if(!ape_args_check(&check, 0, APE_OBJECT_STRING | APE_OBJECT_ARRAY | APE_OBJECT_NUMBER))
-    {
-        return ape_object_make_null(vm->context);        
-    }
-    argtype = ape_object_value_type(args[0]);
-    index = (ApeInt_t)ape_object_value_asnumber(args[1]);
-    if(argtype == APE_OBJECT_ARRAY)
-    {
-        len = ape_object_array_getlength(args[0]);
-        if(index < 0)
-        {
-            index = len + index;
-            if(index < 0)
-            {
-                index = 0;
-            }
-        }
-        res = ape_object_make_arraycapacity(vm->context, len - index);
-        if(ape_object_value_isnull(res))
-        {
-            return ape_object_make_null(vm->context);
-        }
-        for(i = index; i < len; i++)
-        {
-            item = ape_object_array_getvalue(args[0], i);
-            ok = ape_object_array_pushvalue(res, item);
-            if(!ok)
-            {
-                return ape_object_make_null(vm->context);
-            }
-        }
-        return res;
-    }
-    else if(argtype == APE_OBJECT_STRING)
-    {
-        str = ape_object_string_getdata(args[0]);
-        len = (ApeSize_t)ape_object_string_getlength(args[0]);
-        if(index < 0)
-        {
-            index = len + index;
-            if(index < 0)
-            {
-                return ape_object_make_string(vm->context, "");
-            }
-        }
-        if(index >= len)
-        {
-            return ape_object_make_string(vm->context, "");
-        }
-        reslen = len - index;
-        res = ape_object_make_stringcapacity(vm->context, reslen);
-        if(ape_object_value_isnull(res))
-        {
-            return ape_object_make_null(vm->context);
-        }
-        resbuf = ape_object_string_getmutable(res);
-        memset(resbuf, 0, reslen + 1);
-        for(i = index; i < len; i++)
-        {
-            c = str[i];
-            resbuf[i - index] = c;
-        }
-        ape_object_string_setlength(res, reslen);
-        return res;
-    }
-    typestr = ape_object_value_typename(argtype);
-    ape_vm_adderror(vm, APE_ERROR_RUNTIME, "invalid argument 0 passed to slice, got %s instead", typestr);
-    return ape_object_make_null(vm->context);
-    
-}
 
 static ApeObject_t cfn_object_isstring(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
@@ -1069,22 +900,16 @@ static ApeNativeItem_t g_core_globalfuncs[] =
     * at least for now, anyway.
     */
     { "tostring", cfn_tostring },
-
     { "to_num", cfn_toint },
     { "toint", cfn_toint },
-
-
     { "range", cfn_range },
     { "concat", cfn_concat },
-
-    { "reverse", cfn_reverse },
     { "array", cfn_array },
     { "error", cfn_error },
     { "crash", cfn_crash },
     { "assert", cfn_assert },
     { "random_seed", cfn_random_seed },
     { "random", cfn_random },
-    { "slice", cfn_object_slice },
 
     { "eval", cfn_object_eval },
     /* Math */
@@ -1148,7 +973,7 @@ void ape_builtins_install_object(ApeVM_t* vm)
         { "first", cfn_object_first },
         { "last", cfn_object_last },
         { "rest", cfn_object_rest },
-        { "append", cfn_object_append },
+
         { "remove", cfn_object_removekey },
         { "removeat", cfn_object_removeat },
         { "keys", cfn_object_objkeys },

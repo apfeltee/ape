@@ -334,8 +334,8 @@ check("abc".reverse(), "cba")
 check("abcd".reverse(), "dcba")
 
 // this is broken
-//check(slice("abc", 1), "bc")
-//check(slice("abc", -1), "c")
+check("abc".slice(1), "bc")
+check("abc".slice(-1), "c")
 
 check(concat("abc", "def"), "abcdef")
 
