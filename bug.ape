@@ -10,4 +10,4 @@ function fun() {
     }
     return res(1, 2, 3)
 }
-println(fun())
+println(reverse(fun()))

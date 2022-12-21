@@ -156,20 +156,19 @@ static ApeObject_t cfn_reverse(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObjec
     {
         str = ape_object_string_getdata(arg);
         len = ape_object_string_getlength(arg);
-        res = ape_object_make_stringcapacity(vm->context, len);
+        res = ape_object_make_string(vm->context, "");
         if(ape_object_value_isnull(res))
         {
             return ape_object_make_null(vm->context);
         }
         resbuf = ape_object_string_getmutable(res);
-        for(i = len; i > 0; i--)
+        for(i = len-1; i !=0; i--)
         {
             //resbuf[len - i - 1] = str[i];
             ch = str[i];
-            resbuf = ds_appendchar(resbuf, ch, vm->context);
+            ape_object_string_append(vm->context, res, &ch, 1);
         }
         //resbuf[len] = '\0';
-        ape_object_string_setlength(res, len);
         return res;
     }
     return ape_object_make_null(vm->context);
@@ -1095,7 +1094,6 @@ static ApeNativeItem_t g_core_globalfuncs[] =
 
 void ape_builtins_setup_namespace(ApeVM_t* vm, const char* nsname, ApeNativeItem_t* fnarray)
 {
-    return;
     ApeSize_t i;
     ApeObject_t map;
     ApeSymbol_t* sym;

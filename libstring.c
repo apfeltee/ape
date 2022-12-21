@@ -404,6 +404,34 @@ static ApeObject_t objfn_string_format(ApeVM_t* vm, void* data, ApeSize_t argc, 
     return ape_builtins_stringformat(vm->context, inpstr, inplen, argc, args);
 }
 
+static ApeObject_t objfn_string_reverse(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+{
+    char ch;
+    ApeInt_t i;
+    const char* inpstr;
+    ApeSize_t inplen;
+    ApeObject_t self;
+    ApeObject_t res;
+    (void)data;
+    self = ape_vm_popthisstack(vm);
+    inpstr = ape_object_string_getdata(self);
+    inplen = ape_object_string_getlength(self);
+    res = ape_object_make_string(vm->context, "");
+    i = inplen-1;
+    while(true)
+    {
+        ch = inpstr[i];
+        ape_object_string_append(vm->context, res, &ch, 1);
+        i--;
+        if(i < 0)
+        {
+            break;
+        }
+    }
+    return res;
+}
+
+
 static ApeObject_t cfn_string_chr(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
     char c;
@@ -528,7 +556,7 @@ void ape_builtins_install_string(ApeVM_t* vm)
 
         /* utilities */
         {"format", true, objfn_string_format},
-
+        {"reverse", true, objfn_string_reverse},
         /* TODO: implement me! */
         #if 0
         /* {"", true, objfn_string_}, */

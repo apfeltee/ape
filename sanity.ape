@@ -256,5 +256,7 @@ _check_result = ("a" + "b" == "ab"); println(`checking (${"\"a\" + \"b\""} ${"==
         assert(str[i] == "x")
     }
 }
-
+_check_result = ("abc".reverse() == "cba"); println(`checking (${"\"abc\".reverse()"} ${"=="} ${"cba"}) = ${_check_result}`); assert(_check_result);
+_check_result = ("abcd".reverse() == "dcba"); println(`checking (${"\"abcd\".reverse()"} ${"=="} ${"dcba"}) = ${_check_result}`); assert(_check_result);
+_check_result = (concat("abc", "def") == "abcdef"); println(`checking (${"concat(\"abc\", \"def\")"} ${"=="} ${"abcdef"}) = ${_check_result}`); assert(_check_result);
 println("all is well")

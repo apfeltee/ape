@@ -3,18 +3,16 @@
 
 #define APE_CONF_ARRAY_INITIAL_CAPACITY (64/4)
 
-#define VALARRAY_USE_DNARRAY 1
+#define VALARRAY_USE_DNARRAY 0
 
-#define DEBUG 1
+#define NEW_ALLOC_SCHEME 0
+ 
+#define DEBUG 0
 
-#if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
-    #define TYPESZ_MULT 2
-#else
-    #define TYPESZ_MULT 1
-#endif
 
-static ApeSize_t g_arrident = 0;
+
 static ApeSize_t g_callcount = 0;
+static ApeSize_t g_arrayident = 0;
 
 struct ApeValArray_t
 {
@@ -25,6 +23,7 @@ struct ApeValArray_t
     #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
         DequeList_t* arraydata;
     #else
+        unsigned char* start;
         unsigned char* arraydata;
         unsigned char* allocdata;
         ApeSize_t count;
@@ -59,7 +58,7 @@ static inline void debugmsgv(ApeValArray_t* self, const char* name, const char* 
         cap = self->capacity;
         cnt = self->count;
     #endif
-    fprintf(stderr, "-- %04ld: in <%06ld:elemsize=%ld count=%ld capacity=%ld> %s:", g_callcount, self->ident, elemsz, cnt, cap, name);
+    fprintf(stderr, "--%04ld: in <%ld:elemsize=%ld count=%ld capacity=%ld> %s:", g_callcount, self->ident, elemsz, cnt, cap, name);
     vfprintf(stderr, fmt, va);
     fprintf(stderr, "\n");
     g_callcount++;
@@ -87,10 +86,12 @@ ApeValArray_t* ape_make_valarraycapacity(ApeContext_t* ctx, ApeSize_t capacity, 
     {
         return NULL;
     }
-    arr->ident = g_arrident++;
+    arr->ident = g_arrayident;
     arr->context = ctx;
-    arr->elemsize = elsz * TYPESZ_MULT;
-    ok = ape_valarray_initcapacity(arr, ctx, capacity, elsz);
+    arr->elemsize = elsz;
+    arr->start = 0;
+    g_arrayident++;
+    ok = ape_valarray_initcapacity(arr, ctx, capacity);
     if(!ok)
     {
         ape_allocator_free(&ctx->alloc, arr);
@@ -99,16 +100,20 @@ ApeValArray_t* ape_make_valarraycapacity(ApeContext_t* ctx, ApeSize_t capacity, 
     return arr;
 }
 
-bool ape_valarray_initcapacity(ApeValArray_t* arr, ApeContext_t* ctx, ApeSize_t capacity, ApeSize_t elsz)
+bool ape_valarray_initcapacity(ApeValArray_t* arr, ApeContext_t* ctx, ApeSize_t capacity)
 {
     arr->context = ctx;
+    if(capacity == 0)
+    {
+        capacity = arr->elemsize * 1;
+    }
     #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
-        arr->arraydata = deqlist_create(elsz*TYPESZ_MULT, (capacity)*4);
+        arr->arraydata = deqlist_create(arr->elemsize, capacity);
     #else
         if(capacity > 0)
         {
-            arr->allocdata = (unsigned char*)ape_allocator_alloc(&ctx->alloc, capacity * elsz);
-            memset(arr->allocdata, 0, capacity * elsz);
+            arr->allocdata = (unsigned char*)ape_allocator_alloc(&ctx->alloc, capacity * arr->elemsize);
+            memset(arr->allocdata, 0, capacity * arr->elemsize);
             arr->arraydata = arr->allocdata;
             if(!arr->allocdata)
             {
@@ -125,7 +130,7 @@ bool ape_valarray_initcapacity(ApeValArray_t* arr, ApeContext_t* ctx, ApeSize_t 
         arr->lock_capacity = false;
     #endif
     #if defined(DEBUG) && (DEBUG == 1)
-        debugmsg(arr, "ape_valarray_initcapacity", "capacity=%ld elsz=%ld", capacity, elsz);
+        debugmsg(arr, "ape_valarray_initcapacity", "capacity=%ld elsz=%ld", capacity, arr->elemsize);
     #endif
 
     return true;
@@ -227,11 +232,9 @@ bool ape_valarray_canappend(ApeValArray_t* arr)
 
 bool ape_valarray_push(ApeValArray_t* arr, void* value)
 {
+    ApeContext_t* ctx;
     ApeSize_t cnt;
-    if(value == NULL)
-    {
-        return false;
-    }
+    ctx = arr->context;
     cnt = ape_valarray_count(arr);
     if(cnt > 0)
     {
@@ -242,12 +245,8 @@ bool ape_valarray_push(ApeValArray_t* arr, void* value)
     #endif
     #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
         #if 1
-            #if 1
-                deqlist_push(&arr->arraydata, *(void**)value);
-            #else
-                deqlist_push(&arr->arraydata, value);
-            #endif
-            //deqlist_set(arr->arraydata, cnt, &value);
+            deqlist_push(&arr->arraydata, *(void**)value);
+            deqlist_set(arr->arraydata, cnt, *(void**)value);
         #else
             deqlist_push(&arr->arraydata, value);
             deqlist_set(arr->arraydata, cnt, value);
@@ -272,31 +271,66 @@ bool ape_valarray_push(ApeValArray_t* arr, void* value)
             if(ape_valarray_canappend(arr))
             {
                 ok = true;
-                //fprintf(stderr, "ape_valarray_push: acnt=%d, hereidx=%d oldcap=%d\n", acnt, hereidx, oldcap);
                 ok = ape_valarray_set(arr, acnt-1, value);
-                //memcpy(arr->arraydata + ((acnt-0) * elmsz), value, elmsz);
                 arr->count++;
                 return ok;
             }
         #endif
-        if(oldcap > 0)
-        {
-            newcap = (oldcap * 2);            
-        }
-        else
-        {
-            newcap = elmsz+1;
-            //newcap = elmsz * 2;
-        }
-        toalloc = (newcap * elmsz);
-        if(acnt >= oldcap)
+
+        #if defined(NEW_ALLOC_SCHEME) && (NEW_ALLOC_SCHEME == 1)
+            ApeSize_t items = arr->count;
+            newcap = arr->capacity;
+            if(newcap < 16)
+            {
+                /* Allocate new arr twice as much as current. */
+                newcap = newcap * 2;
+            }
+            else
+            {
+                /* Allocate new arr half as much as current. */
+                newcap += newcap / 2;
+            }
+            if(newcap < items)
+            {
+                newcap = items;
+            }
+            toalloc = newcap * arr->elemsize;
+        #else
+            if(oldcap > 0)
+            {
+                newcap = (oldcap * 2);            
+            }
+            else
+            {
+                newcap = elmsz+1;
+            }
+            toalloc = (newcap * elmsz);
+        #endif
+
+
+
+
+        bool isabove;
+
+            isabove = (acnt >= oldcap);
+            //isabove = (toalloc > (oldcap * elmsz));
+            //isabove = ((newcap * elmsz) > (oldcap * elmsz));
+            //isabove = (((acnt + 1) * newcap) > (oldcap * elmsz));
+            //isabove = ((newcap) >= ((oldcap * elmsz) + elmsz));
+    
+
+        //fprintf(stderr, "valarray_push:isabove: newcap=%ld oldcap=%ld elmsz=%ld isabove=%d\n", newcap, oldcap, elmsz, isabove);
+
+
+
+        if(isabove)
         {
             APE_ASSERT(!arr->lock_capacity);
             if(arr->lock_capacity)
             {
                 return false;
             }
-            newdata = (unsigned char*)ape_allocator_alloc(&arr->context->alloc, toalloc+1);
+            newdata = (unsigned char*)ape_allocator_alloc(&ctx->alloc, toalloc+1);
             memset(newdata, 0, toalloc+1);
             if(!newdata)
             {
@@ -308,10 +342,9 @@ bool ape_valarray_push(ApeValArray_t* arr, void* value)
             }
             else
             {
-                offset = (acnt * elmsz);
                 memmove(newdata, arr->arraydata, acnt*elmsz);
             }
-            ape_allocator_free(&arr->context->alloc, arr->allocdata);
+            ape_allocator_free(&ctx->alloc, arr->allocdata);
             arr->allocdata = newdata;
             arr->arraydata = arr->allocdata;
             arr->capacity = newcap;
@@ -322,33 +355,45 @@ bool ape_valarray_push(ApeValArray_t* arr, void* value)
             ape_valarray_set(arr, arr->count-1, value);
         }
     #endif
+
+
     return true;
 }
 
 void* ape_valarray_get(ApeValArray_t* arr, ApeSize_t ix)
 {
-    void* p;
+    void* raw;
     void* tmp;
+    void* rtp;
     if(ix >= ape_valarray_count(arr))
     {
         APE_ASSERT(false);
         return NULL;
     }
-
     #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
-        p = deqlist_get(arr->arraydata, ix);
-        #if 0
-            p = *(void**)p;
-        #endif
+        raw = deqlist_get(arr->arraydata, ix);
+        if(raw != NULL)
+        {
+            #if 0
+                tmp = *(void**)raw;
+            #else
+                tmp = raw;
+            #endif
+        }
+        else
+        {
+            tmp = raw;
+        }
+        rtp = tmp;
     #else
         ApeSize_t offset;
         offset = ix * arr->elemsize;
-        p =  arr->arraydata + offset;
+        rtp =  arr->arraydata + offset;
     #endif
     #if defined(DEBUG) && (DEBUG == 1)
-        debugmsg(arr, "ape_valarray_get", "ix=%ld p=%p", ix, p);
+        debugmsg(arr, "ape_valarray_get", "ix=%ld rtp=%p", ix, rtp);
     #endif
-    return p;
+    return rtp;
 }
 
 bool ape_valarray_set(ApeValArray_t* arr, ApeSize_t ix, void* value)
@@ -357,7 +402,7 @@ bool ape_valarray_set(ApeValArray_t* arr, ApeSize_t ix, void* value)
         debugmsg(arr, "ape_valarray_set", "ix=%ld p=%p", ix, value);
     #endif
     #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
-        #if 1
+        #if 0
             deqlist_set(arr->arraydata, ix, *(void**)value);
         #else
             deqlist_set(arr->arraydata, ix, value);            
@@ -404,7 +449,7 @@ void* ape_valarray_pop(ApeValArray_t* arr)
     res = (void*)ape_valarray_get(arr, cnt - 1);
 
     #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
-        res =
+        //res =
         deqlist_pop(&arr->arraydata);
         #if 0
             res = *(void**)res;
@@ -466,13 +511,25 @@ ApeValArray_t* ape_valarray_copy(ApeContext_t* ctx, ApeValArray_t* arr)
     {
         return NULL;
     }
+    copy->context = arr->context;
+    copy->elemsize = elemsz;
     #if defined(DEBUG) && (DEBUG == 1)
         debugmsg(arr, "ape_valarray_copy", "%s", "");
     #endif
     for(i=0; i<ape_valarray_count(arr); i++)
     {
         p = ape_valarray_get(arr, i);
-        ape_valarray_push(copy, p);
+        if(p != NULL)
+        {
+            ape_valarray_push(copy, p);
+            #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
+                #if 0
+                    deqlist_set(copy->arraydata, i, *(void**)p);
+                #else
+                    deqlist_set(copy->arraydata, i, p);                
+                #endif
+            #endif
+        }
     }
     return copy;
 }
@@ -547,7 +604,7 @@ void* ape_valarray_data(ApeValArray_t* arr)
 
 void ape_valarray_orphandata(ApeValArray_t* arr)
 {
-    ape_valarray_initcapacity(arr, arr->context, 0, arr->elemsize);
+    ape_valarray_initcapacity(arr, arr->context, 0);
 }
 
 
@@ -646,8 +703,14 @@ ApePtrArray_t* ape_ptrarray_copywithitems(ApeContext_t* ctx, ApePtrArray_t* arr,
         }
         else
         {
+        #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
+            //curritem = deqlist_get(arr->arr->arraydata, i);
             copieditem = copyfn(ctx, curritem);
+        #else
+            copieditem = copyfn(ctx, curritem);
+        #endif
         }
+    
         if(curritem && !copieditem)
         {
             goto err;
@@ -717,7 +780,12 @@ void* ape_ptrarray_get(ApePtrArray_t* arr, ApeSize_t ix)
     {
         return NULL;
     }
-    return res;
+    //fprintf(stderr, "ape_ptrarray_get: ix=%ld p=%p\n", ix, res);
+    #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
+        return res;
+    #else
+        return *(void**)res;
+    #endif
 }
 
 bool ape_ptrarray_removeat(ApePtrArray_t* arr, ApeSize_t ix)
