@@ -21,24 +21,21 @@ static APE_INLINE ApeGCObjData_t* ape_object_make_primitive(ApeContext_t* ctx, A
     return data;
 }
 
-ApeObject_t ape_object_make_floatnumber(ApeContext_t* ctx, ApeFloat_t val)
+ApeObject_t ape_object_make_number(ApeContext_t* ctx, ApeFloat_t val)
 {
     (void)ctx;
-    ApeObject_t rt;
-    rt.handle = NULL;
-    rt.type = APE_OBJECT_FLOATNUMBER;
-    rt.valfloatnum = val;
-    return rt;
-}
-
-ApeObject_t ape_object_make_fixednumber(ApeContext_t* ctx, ApeInt_t val)
-{
-    (void)ctx;
-    ApeObject_t rt;
-    rt.handle = NULL;
-    rt.type = APE_OBJECT_FIXEDNUMBER;
-    rt.valfixednum = val;
-    return rt;
+    #if 0
+        ApeGCObjData_t* data;
+        data = ape_object_make_primitive(ctx, APE_OBJECT_NUMBER);
+        data->valnum = val;
+        return object_make_from_data(ctx, data->datatype, data);
+    #else
+        ApeObject_t rt;
+        rt.handle = NULL;
+        rt.type = APE_OBJECT_NUMBER;
+        rt.valnum = val;
+        return rt;
+    #endif
 }
 
 ApeObject_t ape_object_make_bool(ApeContext_t* ctx, bool val)
@@ -283,8 +280,7 @@ bool ape_object_value_ishashable(ApeObject_t obj)
                 return true;
             }
             break;
-        case APE_OBJECT_FLOATNUMBER:
-        case APE_OBJECT_FIXEDNUMBER:
+        case APE_OBJECT_NUMBER:
             {
                 return true;
             }
@@ -427,14 +423,9 @@ void ape_tostring_object(ApeWriter_t* buf, ApeObject_t obj, bool quote_str)
                 ape_writer_append(buf, "NONE");
             }
             break;
-        case APE_OBJECT_FIXEDNUMBER:
+        case APE_OBJECT_NUMBER:
             {
-                ape_writer_appendf(buf, "%" PRIi64, ape_object_value_asfixednumber(obj));
-            }
-            break;
-        case APE_OBJECT_FLOATNUMBER:
-            {
-                fltnum = ape_object_value_asfloatnumber(obj);
+                fltnum = ape_object_value_asnumber(obj);
                 #if 1
                 if(fltnum == ((ApeInt_t)fltnum))
                 {
@@ -567,10 +558,8 @@ const char* ape_object_value_typename(const ApeObjType_t type)
             return "NONE";
         case APE_OBJECT_FREED:
             return "NONE";
-        case APE_OBJECT_FIXEDNUMBER:
-            return "FIXEDNUMBER";
-        case APE_OBJECT_FLOATNUMBER:
-            return "FLOATNUMBER";
+        case APE_OBJECT_NUMBER:
+            return "NUMBER";
         case APE_OBJECT_BOOL:
             return "BOOL";
         case APE_OBJECT_STRING:
@@ -691,8 +680,7 @@ char* ape_object_value_typeunionname(ApeContext_t* ctx, const ApeObjType_t type)
         return NULL;
     }
     in_between = false;
-    CHECK_TYPE(APE_OBJECT_FLOATNUMBER);
-    CHECK_TYPE(APE_OBJECT_FIXEDNUMBER);
+    CHECK_TYPE(APE_OBJECT_NUMBER);
     CHECK_TYPE(APE_OBJECT_BOOL);
     CHECK_TYPE(APE_OBJECT_STRING);
     CHECK_TYPE(APE_OBJECT_NULL);
@@ -845,8 +833,7 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
                 copy = ape_object_make_null(ctx);
             }
             break;
-        case APE_OBJECT_FLOATNUMBER:
-        case APE_OBJECT_FIXEDNUMBER:
+        case APE_OBJECT_NUMBER:
         case APE_OBJECT_BOOL:
         case APE_OBJECT_NULL:
         case APE_OBJECT_NATIVEFUNCTION:
@@ -1038,14 +1025,9 @@ ApeObject_t ape_object_value_copyflat(ApeContext_t* ctx, ApeObject_t obj)
                 copy = ape_object_make_null(ctx);
             }
             break;
-        case APE_OBJECT_FIXEDNUMBER:
+        case APE_OBJECT_NUMBER:
             {
-                copy = ape_object_make_fixednumber(ctx, ape_object_value_asfixednumber(obj));
-            }
-            break;
-        case APE_OBJECT_FLOATNUMBER:
-            {
-                copy = ape_object_make_floatnumber(ctx, ape_object_value_asfloatnumber(obj));
+                copy = ape_object_make_number(ctx, ape_object_value_asnumber(obj));
             }
             break;
         case APE_OBJECT_BOOL:
@@ -1055,8 +1037,8 @@ ApeObject_t ape_object_value_copyflat(ApeContext_t* ctx, ApeObject_t obj)
             break;
         case APE_OBJECT_NULL:
             {
-                //copy = ape_object_make_floatnumber(ctx, ape_object_value_asnumber(obj));
-                copy = ape_object_make_fixednumber(ctx, 0);
+                //copy = ape_object_make_number(ctx, ape_object_value_asnumber(obj));
+                copy = ape_object_make_number(ctx, 0);
             }
             break;
         case APE_OBJECT_SCRIPTFUNCTION:
@@ -1151,8 +1133,7 @@ unsigned long ape_object_value_hash(ApeObject_t* obj_ptr)
     type = ape_object_value_type(obj);
     switch(type)
     {
-        case APE_OBJECT_FIXEDNUMBER:
-        case APE_OBJECT_FLOATNUMBER:
+        case APE_OBJECT_NUMBER:
             {
                 val = ape_object_value_asnumber(obj);
                 return ape_util_hashfloat(val);
@@ -1179,7 +1160,7 @@ unsigned long ape_object_value_hash(ApeObject_t* obj_ptr)
 
 ApeFloat_t ape_object_value_asnumerica(ApeObject_t obj, ApeObjType_t t)
 {
-    if(ape_object_type_isnumber(t))
+    if(t == APE_OBJECT_NUMBER)
     {
         return ape_object_value_asnumber(obj);
     }
@@ -1201,6 +1182,7 @@ ApeFloat_t ape_object_value_asnumeric(ApeObject_t obj)
 
 ApeFloat_t ape_object_value_compare(ApeObject_t a, ApeObject_t b, bool* out_ok)
 {
+    bool isnumeric;
     int a_len;
     int b_len;
     unsigned long a_hash;
@@ -1209,6 +1191,8 @@ ApeFloat_t ape_object_value_compare(ApeObject_t a, ApeObject_t b, bool* out_ok)
     intptr_t b_data_val;
     const char* a_string;
     const char* b_string;
+    ApeFloat_t leftval;
+    ApeFloat_t rightval;
     ApeObjType_t a_type;
     ApeObjType_t b_type;
     if((a.handle != NULL) && (b.handle != NULL))
@@ -1221,32 +1205,15 @@ ApeFloat_t ape_object_value_compare(ApeObject_t a, ApeObject_t b, bool* out_ok)
     *out_ok = true;
     a_type = ape_object_value_type(a);
     b_type = ape_object_value_type(b);
-    if(ape_object_type_isnumeric(a_type) && ape_object_type_isnumeric(b_type))
+    isnumeric = (
+        (a_type == APE_OBJECT_NUMBER || a_type == APE_OBJECT_BOOL || a_type == APE_OBJECT_NULL) &&
+        (b_type == APE_OBJECT_NUMBER || b_type == APE_OBJECT_BOOL || b_type == APE_OBJECT_NULL)
+    );
+    if(isnumeric)
     {
-        #if 1
-            #if 0
-                ApeFloat_t leftval = ape_object_value_asnumerica(a, a_type);
-                ApeFloat_t rightval = ape_object_value_asnumerica(b, b_type);
-            #else
-                ApeFloat_t leftval = ape_object_value_asnumber(a);
-                ApeFloat_t rightval = ape_object_value_asnumber(b);
-
-            #endif
-            return leftval - rightval;
-        #else
-            if(ape_object_value_isfixednumber(a) && ape_object_value_isfixednumber(b))
-            {
-                return (ape_object_value_asfixednumber(a) - ape_object_value_asfixednumber(b));
-            }
-            else if(ape_object_value_isfloatnumber(a) && ape_object_value_isfloatnumber(b))
-            {
-                return (ape_object_value_asfloatnumber(a) - ape_object_value_asfloatnumber(b));
-            }
-            else
-            {
-                return (ape_object_value_asnumerica(a, a_type) - ape_object_value_asnumerica(b, b_type));
-            }
-        #endif
+        leftval = ape_object_value_asnumerica(a, a_type);
+        rightval = ape_object_value_asnumerica(b, b_type);
+        return leftval - rightval;
     }
     else if(a_type == b_type && a_type == APE_OBJECT_STRING)
     {
@@ -1295,3 +1262,5 @@ bool ape_object_value_equals(ApeObject_t a, ApeObject_t b)
     res = ape_object_value_compare(a, b, &ok);
     return APE_DBLEQ(res, 0);
 }
+
+

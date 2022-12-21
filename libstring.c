@@ -102,7 +102,7 @@ static ApeObject_t objfn_string_length(ApeVM_t* vm, void* data, ApeSize_t argc, 
     /* fixme: value is passed incorrectly? */
     self = ape_vm_popthisstack(vm);
     len = ape_object_string_getlength(self);
-    return ape_object_make_number(vm->context, len);
+    return ape_object_make_floatnumber(vm->context, len);
 }
 
 static ApeObject_t objfn_string_substr(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
@@ -117,7 +117,7 @@ static ApeObject_t objfn_string_substr(ApeVM_t* vm, void* data, ApeSize_t argc, 
     (void)data;
     self = ape_vm_popthisstack(vm);
     ape_args_init(vm, &check, "substr", argc, args);
-    if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER))
+    if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC))
     {
         return ape_object_make_null(vm->context);        
     }
@@ -125,7 +125,7 @@ static ApeObject_t objfn_string_substr(ApeVM_t* vm, void* data, ApeSize_t argc, 
     len = ape_object_string_getlength(self);
     begin = ape_object_value_asnumber(args[0]);
     end = len;
-    if(ape_args_checkoptional(&check, 1, APE_OBJECT_NUMBER, true))
+    if(ape_args_checkoptional(&check, 1, APE_OBJECT_NUMERIC, true))
     {
         end = ape_object_value_asnumber(args[1]);
     }
@@ -213,7 +213,7 @@ static ApeObject_t objfn_string_indexof(ApeVM_t* vm, void* data, ApeSize_t argc,
     (void)data;
     self = ape_vm_popthisstack(vm);
     ape_args_init(vm, &check, "index", argc, args);
-    if(!ape_args_check(&check, 0, APE_OBJECT_STRING | APE_OBJECT_NUMBER))
+    if(!ape_args_check(&check, 0, APE_OBJECT_STRING | APE_OBJECT_NUMERIC))
     {
         return ape_object_make_null(vm->context);
     }
@@ -227,26 +227,26 @@ static ApeObject_t objfn_string_indexof(ApeVM_t* vm, void* data, ApeSize_t argc,
         findlen = ape_object_string_getlength(args[0]);
         if(findlen == 0)
         {
-            return ape_object_make_number(vm->context, -1);
+            return ape_object_make_floatnumber(vm->context, -1);
         }
         findme = findstr[0];
     }
-    else if(styp == APE_OBJECT_NUMBER)
+    else if(ape_object_type_isnumber(styp))
     {
         findme = ape_object_value_asnumber(args[0]);
         if(findme == -1)
         {
-            return ape_object_make_number(vm->context, -1);
+            return ape_object_make_floatnumber(vm->context, -1);
         }
     }
     for(i=0; i<inplen; i++)
     {
         if(inpstr[i] == findme)
         {
-            return ape_object_make_number(vm->context, i);
+            return ape_object_make_floatnumber(vm->context, i);
         }
     }
-    return ape_object_make_number(vm->context, -1);
+    return ape_object_make_floatnumber(vm->context, -1);
 }
 
 
@@ -261,7 +261,7 @@ static ApeObject_t objfn_string_charat(ApeVM_t* vm, void* data, ApeSize_t argc, 
     (void)data;
     (void)inplen;
     ape_args_init(vm, &check, "charAt", argc, args);
-    if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER))
+    if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC))
     {
         return ape_object_make_null(vm->context);
     }
@@ -285,7 +285,7 @@ static ApeObject_t objfn_string_byteat(ApeVM_t* vm, void* data, ApeSize_t argc, 
     (void)data;
     (void)inplen;
     ape_args_init(vm, &check, "charAt", argc, args);
-    if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER))
+    if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC))
     {
         return ape_object_make_null(vm->context);
     }
@@ -294,7 +294,7 @@ static ApeObject_t objfn_string_byteat(ApeVM_t* vm, void* data, ApeSize_t argc, 
     inpstr = ape_object_string_getdata(self);
     inplen = ape_object_string_getlength(self);
     ch = inpstr[idx];
-    return ape_object_make_number(vm->context, ch);
+    return ape_object_make_floatnumber(vm->context, ch);
 }
 
 ApeObject_t ape_builtins_stringformat(ApeContext_t* ctx, const char* fmt, ApeSize_t fmtlen, ApeSize_t argc, ApeObject_t* args)
@@ -338,7 +338,7 @@ ApeObject_t ape_builtins_stringformat(ApeContext_t* ctx, const char* fmt, ApeSiz
                 case 'i':
                     {
                         i++;
-                        if(!ape_args_check(&check, idx, APE_OBJECT_NUMBER))
+                        if(!ape_args_check(&check, idx, APE_OBJECT_NUMERIC))
                         {
                             return ape_object_make_null(ctx);
                         }
@@ -349,7 +349,7 @@ ApeObject_t ape_builtins_stringformat(ApeContext_t* ctx, const char* fmt, ApeSiz
                 case 'c':
                     {
                         i++;
-                        if(!ape_args_check(&check, idx, APE_OBJECT_NUMBER))
+                        if(!ape_args_check(&check, idx, APE_OBJECT_NUMERIC))
                         {
                             return ape_object_make_null(ctx);
                         }
@@ -448,7 +448,7 @@ static ApeObject_t cfn_string_chr(ApeVM_t* vm, void* data, ApeSize_t argc, ApeOb
     (void)data;
     ApeArgCheck_t check;
     ape_args_init(vm, &check, "chr", argc, args);
-    if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER))
+    if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC))
     {
         return ape_object_make_null(vm->context);
     }
@@ -471,10 +471,10 @@ static ApeObject_t cfn_string_ord(ApeVM_t* vm, void* data, ApeSize_t argc, ApeOb
     }
     if(ape_object_value_isnull(args[0]))
     {
-        return ape_object_make_number(vm->context, 0);
+        return ape_object_make_floatnumber(vm->context, 0);
     }
     str = ape_object_string_getdata(args[0]);
-    return ape_object_make_number(vm->context, str[0]);
+    return ape_object_make_floatnumber(vm->context, str[0]);
 }
 
 static ApeObject_t cfn_string_join(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)

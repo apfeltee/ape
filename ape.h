@@ -134,17 +134,33 @@ THE SOFTWARE.
 /*
 * is this object a number?
 */
+#define ape_object_type_isnumber(t) \
+    ( \
+        (t == APE_OBJECT_FIXEDNUMBER) || \
+        (t == APE_OBJECT_FLOATNUMBER) \
+    )
 #define ape_object_value_isnumber(o) \
-    ape_object_value_istype(o, APE_OBJECT_NUMBER)
+    ape_object_type_isnumber(ape_object_value_type(o))
 
 /*
 * is this object number-like?
 */
-#define ape_object_value_isnumeric(o) \
+#define ape_object_type_isnumeric(t) \
     ( \
-        ape_object_value_istype(o, APE_OBJECT_NUMBER) || \
-        ape_object_value_istype(o, APE_OBJECT_BOOL) \
+        ((t) == APE_OBJECT_FIXEDNUMBER) || \
+        ((t) == APE_OBJECT_FLOATNUMBER) || \
+        ((t) == APE_OBJECT_BOOL) \
     )
+
+#define ape_object_value_isnumeric(o) \
+    (ape_object_type_isnumeric(ape_object_value_type(o)))
+
+#define ape_object_value_isfixednumber(o) \
+    (ape_object_value_type(o) == APE_OBJECT_FIXEDNUMBER)
+
+#define ape_object_value_isfloatnumber(o) \
+    (ape_object_value_type(o) == APE_OBJECT_FLOATNUMBER)
+    
 
 /*
 * is this object null?
@@ -170,6 +186,43 @@ THE SOFTWARE.
         ape_object_value_istype(o, APE_OBJECT_SCRIPTFUNCTION) \
     )
 
+
+#define _ape_if(x) (x) ?
+#define _ape_then(x) (x) :
+#define _ape_else(x) (x)
+
+
+/*
+* get boolean value from this object
+*/
+#define ape_object_value_asbool(obj) \
+    ((obj).valbool)
+
+/*
+* get number value from this object
+*/
+
+#define ape_object_value_asfixednumber(obj) \
+    ((obj).valfixednum)
+
+#define ape_object_value_asfloatnumber(obj) \
+    ((obj).valfloatnum)
+
+#define ape_object_value_asnumber(obj) \
+    ( \
+        _ape_if(ape_object_value_type(obj) == APE_OBJECT_FLOATNUMBER) \
+        _ape_then(ape_object_value_asfloatnumber(obj)) \
+        _ape_else( \
+            _ape_if(ape_object_value_type(obj) == APE_OBJECT_FIXEDNUMBER) \
+            _ape_then(ape_object_value_asfixednumber(obj)) \
+            _ape_else( \
+                _ape_if(ape_object_value_type(obj) == APE_OBJECT_BOOL) \
+                _ape_then((obj).valbool) \
+                _ape_else(0) \
+            ) \
+        ) \
+    )
+
 /*
 * get internal GC data from this object. may be NULL!
 */
@@ -182,18 +235,6 @@ THE SOFTWARE.
 */
 #define ape_object_value_isallocated(o) \
     (true)
-
-/*
-* get number value from this object
-*/
-#define ape_object_value_asnumber(obj) \
-    ((obj).valnum)
-
-/*
-* get boolean value from this object
-*/
-#define ape_object_value_asbool(obj) \
-    ((obj).valbool)
 
 /*
 * get script function value from this object
@@ -249,16 +290,18 @@ enum ApeObjType_t
 {
     APE_OBJECT_NONE = 0,
     APE_OBJECT_ERROR = 1 << 0,
-    APE_OBJECT_NUMBER = 1 << 1,
-    APE_OBJECT_BOOL = 1 << 2,
-    APE_OBJECT_STRING = 1 << 3,
-    APE_OBJECT_NULL = 1 << 4,
-    APE_OBJECT_NATIVEFUNCTION = 1 << 5,
-    APE_OBJECT_ARRAY = 1 << 6,
-    APE_OBJECT_MAP = 1 << 7,
-    APE_OBJECT_SCRIPTFUNCTION = 1 << 8,
-    APE_OBJECT_EXTERNAL = 1 << 9,
-    APE_OBJECT_FREED = 1 << 10,
+    APE_OBJECT_FLOATNUMBER = 1 << 1,
+    APE_OBJECT_FIXEDNUMBER = 1 << 2,
+    APE_OBJECT_NUMERIC = APE_OBJECT_FLOATNUMBER | APE_OBJECT_FIXEDNUMBER,
+    APE_OBJECT_BOOL = 1 << 3,
+    APE_OBJECT_STRING = 1 << 4,
+    APE_OBJECT_NULL = 1 << 5,
+    APE_OBJECT_NATIVEFUNCTION = 1 << 6,
+    APE_OBJECT_ARRAY = 1 << 7,
+    APE_OBJECT_MAP = 1 << 8,
+    APE_OBJECT_SCRIPTFUNCTION = 1 << 9,
+    APE_OBJECT_EXTERNAL = 1 << 10,
+    APE_OBJECT_FREED = 1 << 11,
     /* for checking types with & */
     APE_OBJECT_ANY = 0xffff,
 };
@@ -738,7 +781,8 @@ struct ApeObject_t
     union
     {
         bool valbool;
-        ApeFloat_t valnum;
+        ApeInt_t valfixednum;
+        ApeFloat_t valfloatnum;
         /* technically redundant, but regrettably needed for some tools. always NULL. */
         void* valnull;
     };

@@ -8,8 +8,9 @@ var testtbl = [
 ["55 ^ 48", 7],
 ];
 
-for(t in testtbl)
+for(var i=0; i<testtbl.length; i++)
 {
+    var t = testtbl[i];
     var src = t[0];
     var exp = t[1];
     var rt = eval(src);

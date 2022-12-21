@@ -901,7 +901,7 @@ static ApeObject_t objfn_array_length(ApeVM_t* vm, void* data, ApeSize_t argc, A
     (void)argc;
     (void)args;
     self = ape_vm_popthisstack(vm);
-    return ape_object_make_number(vm->context, ape_object_array_getlength(self));
+    return ape_object_make_floatnumber(vm->context, ape_object_array_getlength(self));
 }
 
 static ApeObject_t objfn_array_push(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
@@ -984,7 +984,7 @@ static ApeObject_t objfn_array_fill(ApeVM_t* vm, void* data, ApeSize_t argc, Ape
     (void)args;
     (void)len;
     ape_args_init(vm, &check, "fill", argc, args);
-    if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER))
+    if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC))
     {
         return ape_object_make_null(vm->context);  
     }
@@ -1120,14 +1120,14 @@ static ApeObject_t objfn_array_slice(ApeVM_t* vm, void* data, ApeSize_t argc, Ap
     (void)data;
     self = ape_vm_popthisstack(vm);
     ape_args_init(vm, &check, "slice", argc, args);
-    if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER))
+    if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC))
     {
         return ape_object_make_null(vm->context);        
     }
     len = ape_object_array_getlength(self);
     ibegin = (ApeInt_t)ape_object_value_asnumber(args[0]);
     iend = len;
-    if(ape_args_checkoptional(&check, 1, APE_OBJECT_NUMBER, true))
+    if(ape_args_checkoptional(&check, 1, APE_OBJECT_NUMERIC, true))
     {
         iend = (ApeInt_t)ape_object_value_asnumber(args[1]);
         if(iend > len)

@@ -773,7 +773,7 @@ bool ape_object_map_setnamednumber(ApeContext_t* ctx, ApeObject_t obj, const cha
 {
     ApeGCObjData_t* data;
     data = ape_object_value_allocated_data(obj);
-    ApeObject_t number_object = ape_object_make_number(ctx, number);
+    ApeObject_t number_object = ape_object_make_floatnumber(ctx, number);
     return ape_object_map_setnamedvalue(ctx, obj, key, number_object);
 }
 

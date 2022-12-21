@@ -1227,7 +1227,7 @@ bool ape_vm_getindex(ApeVM_t* vm, ApeObject_t left, ApeObject_t index, ApeObjTyp
     objres = ape_object_make_null(vm->context);
     if(lefttype == APE_OBJECT_ARRAY)
     {
-        if(indextype != APE_OBJECT_NUMBER)
+        if(!ape_object_type_isnumeric(indextype))
         {
             lefttypename = ape_object_value_typename(lefttype);
             indextypename = ape_object_value_typename(indextype);
@@ -1267,93 +1267,140 @@ bool ape_vm_getindex(ApeVM_t* vm, ApeObject_t left, ApeObject_t index, ApeObjTyp
 bool ape_vm_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValue_t opcode)
 {
     bool ok;
+    bool isfixed;
     bool overloadfound;
     const char* lefttypename;
     const char* righttypename;
     const char* opcode_name;
-    ApeFloat_t bigres;
-    ApeFloat_t leftval;
-    ApeFloat_t rightval;
+    ApeFloat_t resfloat;
+    ApeInt_t resfixed;
     ApeInt_t leftint;
     ApeInt_t rightint;
     ApeObjType_t lefttype;
     ApeObjType_t righttype;
+    isfixed = false;
     /* NULL to 0 coercion */
     if(ape_object_value_isnumeric(left) && ape_object_value_isnull(right))
     {
-        right = ape_object_make_number(vm->context, 0);
+        if(ape_object_value_isfixednumber(left))
+        {
+            right = ape_object_make_fixednumber(vm->context, 0);
+        }
+        else
+        {
+            right = ape_object_make_floatnumber(vm->context, 0);
+        }
     }
     if(ape_object_value_isnumeric(right) && ape_object_value_isnull(left))
     {
-        left = ape_object_make_number(vm->context, 0);
+        if(ape_object_value_isfixednumber(right))
+        {
+            left = ape_object_make_fixednumber(vm->context, 0);
+        }
+        else
+        {
+            left = ape_object_make_floatnumber(vm->context, 0);
+        }
     }
     lefttype = ape_object_value_type(left);
     righttype = ape_object_value_type(right);
     if(ape_object_value_isnumeric(left) && ape_object_value_isnumeric(right))
     {
-        rightval = ape_object_value_asnumber(right);
-        leftval = ape_object_value_asnumber(left);
-        leftint = ape_util_numbertoint32(leftval);
-        rightint = ape_util_numbertoint32(rightval);
-        bigres = 0;
+        resfloat = 0;
+        resfixed = 0;
+        //fprintf(stderr, "ape_vm_math: right.type=%s left.type=%s\n", ape_object_value_typename(right.type), ape_object_value_typename(left.type));
         switch(opcode)
         {
             case APE_OPCODE_ADD:
                 {
-                    bigres = leftval + rightval;
+                    ApeFloat_t rightval = ape_object_value_asnumber(right);
+                    ApeFloat_t leftval = ape_object_value_asnumber(left);        
+                    resfloat = leftval + rightval;
                 }
                 break;
             case APE_OPCODE_SUB:
                 {
-                    bigres = leftval - rightval;
+                    ApeFloat_t rightval = ape_object_value_asnumber(right);
+                    ApeFloat_t leftval = ape_object_value_asnumber(left);
+                    resfloat = leftval - rightval;
                 }
                 break;
             case APE_OPCODE_MUL:
                 {
-                    bigres = leftval * rightval;
+                    ApeFloat_t rightval = ape_object_value_asnumber(right);
+                    ApeFloat_t leftval = ape_object_value_asnumber(left);
+                    resfloat = leftval * rightval;
                 }
                 break;
             case APE_OPCODE_DIV:
                 {
-                    bigres = leftval / rightval;
+                    ApeFloat_t rightval = ape_object_value_asnumber(right);
+                    ApeFloat_t leftval = ape_object_value_asnumber(left);
+                    resfloat = leftval / rightval;
                 }
                 break;
             case APE_OPCODE_MOD:
                 {
+                    ApeFloat_t rightval = ape_object_value_asnumber(right);
+                    ApeFloat_t leftval = ape_object_value_asnumber(left);
+                    leftint = ape_util_numbertoint32(leftval);
+                    rightint = ape_util_numbertoint32(rightval);                    
                     #if 0
-                    bigres = fmod(leftval, rightval);
+                    resfloat = fmod(leftval, rightval);
                     #else
-                    bigres = (leftint % rightint);
+                    resfloat = (leftint % rightint);
                     #endif
                 }
                 break;
             case APE_OPCODE_BITOR:
                 {
-                    bigres = (ApeFloat_t)(leftint | rightint);
+                    ApeInt_t rightval = ape_object_value_asfixednumber(right);
+                    ApeInt_t leftval = ape_object_value_asfixednumber(left);
+                    leftint = (leftval);
+                    rightint = (rightval);
+                    //fprintf(stderr, "BITOR: rightval=%ld leftval=%ld leftint=%ld rightint=%ld\n", rightval, leftval, leftint, rightint);
+                    resfixed = (leftint | rightint);
+                    isfixed = true;
                 }
                 break;
             case APE_OPCODE_BITXOR:
                 {
-                    bigres = (ApeFloat_t)(leftint ^ rightint);
+                    ApeInt_t rightval = ape_object_value_asfixednumber(right);
+                    ApeInt_t leftval = ape_object_value_asfixednumber(left);
+                    leftint = leftval;
+                    rightint = rightval;
+                    resfixed = (leftint ^ rightint);
+                    isfixed = true;
                 }
                 break;
             case APE_OPCODE_BITAND:
                 {
-                    bigres = (ApeFloat_t)(leftint & rightint);
+                    ApeInt_t rightval = ape_object_value_asfixednumber(right);
+                    ApeInt_t leftval = ape_object_value_asfixednumber(left);
+                    leftint = (leftval);
+                    rightint = (rightval);
+                    resfixed = (ApeInt_t)(leftint & rightint);
+                    isfixed = true;
                 }
                 break;
             case APE_OPCODE_LEFTSHIFT:
                 {
-                    int uleft = ape_util_numbertoint32(leftval);
-                    unsigned int uright = ape_util_numbertouint32(rightval);
-                    bigres = (uleft << (uright & 0x1F));
+                    ApeInt_t rightval = ape_object_value_asfixednumber(right);
+                    ApeInt_t leftval = ape_object_value_asfixednumber(left);
+                    int uleft = (leftval);
+                    unsigned int uright = (rightval);
+                    resfixed = (uleft << (uright & 0x1F));
+                    isfixed = true;
                 }
                 break;
             case APE_OPCODE_RIGHTSHIFT:
                 {
-                    int uleft = ape_util_numbertoint32(leftval);
-                    unsigned int uright = ape_util_numbertouint32(rightval);
-                    bigres = (uleft >> (uright & 0x1F));
+                    ApeInt_t rightval = ape_object_value_asfixednumber(right);
+                    ApeInt_t leftval = ape_object_value_asfixednumber(left);
+                    int uleft = (leftval);
+                    unsigned int uright = (rightval);
+                    resfixed = (uleft >> (uright & 0x1F));
+                    isfixed = true;
                 }
                 break;
             default:
@@ -1362,7 +1409,14 @@ bool ape_vm_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValu
                 }
                 break;
         }
-        ape_vm_pushstack(vm, ape_object_make_number(vm->context, bigres));
+        if(isfixed)
+        {
+            ape_vm_pushstack(vm, ape_object_make_fixednumber(vm->context, resfixed));
+        }
+        else
+        {
+            ape_vm_pushstack(vm, ape_object_make_floatnumber(vm->context, resfloat));
+        }
     }
     else if(lefttype == APE_OBJECT_STRING /*&& ((righttype == APE_OBJECT_STRING) || (righttype == APE_OBJECT_NUMBER))*/ && opcode == APE_OPCODE_ADD)
     {
@@ -1592,7 +1646,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                         if(opcode == APE_OPCODE_COMPAREEQUAL)
                         #endif
                         {
-                            objres = ape_object_make_number(vm->context, comparison_res);
+                            objres = ape_object_make_floatnumber(vm->context, comparison_res);
                             ape_vm_pushstack(vm, objres);
                         }
                         else
@@ -1613,22 +1667,50 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
             case APE_OPCODE_GREATEREQUAL:
                 {
                     value = ape_vm_popstack(vm);
-                    comparison_res = ape_object_value_asnumber(value);
+                    comparison_res = ape_object_value_asfixednumber(value);
                     resval = false;
+                    //fprintf(stderr, "comparison: value.type=%s n=%d\n", ape_object_value_typename(ape_object_value_type(value)), ape_object_value_asfixednumber(value));
                     switch(opcode)
                     {
                         case APE_OPCODE_ISEQUAL:
-                            resval = APE_DBLEQ(comparison_res, 0);
+                            {
+                                if(ape_object_value_isfixednumber(value))
+                                {
+                                    resval = (comparison_res == 0);
+                                }
+                                else
+                                {
+                                    resval = APE_DBLEQ(comparison_res, 0);
+                                }
+                            }
                             break;
                         case APE_OPCODE_NOTEQUAL:
-                            resval = !APE_DBLEQ(comparison_res, 0);
+                            {
+                                if(ape_object_value_isfixednumber(value))
+                                {
+                                    resval = !(comparison_res == 0);
+                                }
+                                else
+                                {
+                                    resval = !APE_DBLEQ(comparison_res, 0);
+                                }
+                            }
                             break;
                         case APE_OPCODE_GREATERTHAN:
-                            resval = comparison_res > 0;
+                            {
+                                resval = comparison_res > 0;
+                            }
                             break;
                         case APE_OPCODE_GREATEREQUAL:
                             {
-                                resval = comparison_res > 0 || APE_DBLEQ(comparison_res, 0);
+                                if(ape_object_value_isfixednumber(value))
+                                {
+                                    resval = ((comparison_res > 0) || (comparison_res == 0));
+                                }
+                                else
+                                {
+                                    resval = comparison_res > 0 || APE_DBLEQ(comparison_res, 0);
+                                }
                             }
                             break;
                         default:
@@ -1645,10 +1727,18 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                 {
                     operand = ape_vm_popstack(vm);
                     operand_type = ape_object_value_type(operand);
-                    if(operand_type == APE_OBJECT_NUMBER)
+                    if(ape_object_type_isnumeric(operand_type))
                     {
-                        val = ape_object_value_asnumber(operand);
-                        objres = ape_object_make_number(vm->context, -val);
+                        if(ape_object_value_isfixednumber(operand))
+                        {
+                            ApeInt_t vi = ape_object_value_asfixednumber(operand);
+                            objres = ape_object_make_fixednumber(vm->context, -vi);
+                        }
+                        else
+                        {
+                            ApeFloat_t vi = ape_object_value_asfloatnumber(operand);
+                            objres = ape_object_make_floatnumber(vm->context, -vi);
+                        }
                         ape_vm_pushstack(vm, objres);
                     }
                     else
@@ -1880,7 +1970,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                         goto err;
                     }
                     objres = ape_object_make_null(vm->context);
-                    if(indextype != APE_OBJECT_NUMBER)
+                    if(!ape_object_type_isnumeric(indextype))
                     {
                         lefttypename = ape_object_value_typename(lefttype);
                         indextypename = ape_object_value_typename(indextype);
@@ -2061,7 +2151,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                     }
                     if(lefttype == APE_OBJECT_ARRAY)
                     {
-                        if(indextype != APE_OBJECT_NUMBER)
+                        if(!ape_object_type_isnumeric(indextype))
                         {
                             lefttypename = ape_object_value_typename(lefttype);
                             indextypename = ape_object_value_typename(indextype);
@@ -2125,7 +2215,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                                           "cannot get length of %s", type_name);
                         goto err;
                     }
-                    ape_vm_pushstack(vm, ape_object_make_number(vm->context, len));
+                    ape_vm_pushstack(vm, ape_object_make_fixednumber(vm->context, len));
                 }
                 break;
             case APE_OPCODE_MKNUMBER:
@@ -2138,7 +2228,14 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                     valdouble = val;
                     #endif
                     //fprintf(stderr, "valdouble=%g\n", valdouble);
-                    objval = ape_object_make_number(vm->context, valdouble);
+                    if(((ApeInt_t)valdouble) == valdouble)
+                    {
+                        objval = ape_object_make_fixednumber(vm->context, valdouble);
+                    }
+                    else
+                    {
+                        objval = ape_object_make_floatnumber(vm->context, valdouble);
+                    }
                     //objval.handle->datatype = APE_OBJECT_NUMBER;
                     ape_vm_pushstack(vm, objval);
                 }

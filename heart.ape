@@ -6,7 +6,11 @@ while(i > -1.5)
     while(x < 1.5)
     {
         var y = x * x + i * i - 1
-        if((((y * y) * y) - ((((x * x) * i) * i) * i)) < 0)
+        //println(`y=${y}`)
+        var a = (((y * y) * y) - ((((x * x) * i) * i) * i));
+        var cmp = (a < 0);
+        //println(`cmp(${a} < 0)=${cmp}`);
+        if(cmp)
         {
             print("*")
         }

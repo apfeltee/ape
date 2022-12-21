@@ -25,7 +25,8 @@ void ape_mempool_free(ApeMemPool_t *mp, void *p);
 void ape_mempool_repool(ApeMemPool_t *mp, void *p, ApeSize_t sz);
 void *ape_mempool_realloc(ApeMemPool_t *mp, void *p, ApeSize_t old_sz, ApeSize_t new_sz);
 /* libobject.c */
-ApeObject_t ape_object_make_number(ApeContext_t *ctx, ApeFloat_t val);
+ApeObject_t ape_object_make_floatnumber(ApeContext_t *ctx, ApeFloat_t val);
+ApeObject_t ape_object_make_fixednumber(ApeContext_t *ctx, ApeInt_t val);
 ApeObject_t ape_object_make_bool(ApeContext_t *ctx, bool val);
 ApeObject_t ape_object_make_null(ApeContext_t *ctx);
 ApeObject_t ape_object_make_string(ApeContext_t *ctx, const char *string);

@@ -65,7 +65,7 @@ static ApeObject_t cfn_file_write(ApeVM_t* vm, void* data, ApeSize_t argc, ApeOb
 
     ApeSize_t written = (ApeSize_t)config->fileio.iowriter.fnwritefile(config->fileio.iowriter.context, path, string, string_len);
 
-    return ape_object_make_number(vm->context, written);
+    return ape_object_make_floatnumber(vm->context, written);
 }
 
 static ApeObject_t cfn_file_read(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
@@ -172,7 +172,7 @@ static ApeObject_t timespec_to_map(ApeVM_t* vm, struct timespec ts)
     for_field(ctx, f, val, ape_object_map_setnamedstring, ape_object_make_string)
 
 #define for_field_number(ctx, f, val) \
-    for_field(ctx, f, val, ape_object_map_setnamednumber, ape_object_make_number)
+    for_field(ctx, f, val, ape_object_map_setnamednumber, ape_object_make_floatnumber)
 
 static ApeObject_t cfn_file_stat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {

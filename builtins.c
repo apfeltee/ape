@@ -31,17 +31,17 @@ static ApeObject_t cfn_object_length(ApeVM_t* vm, void* data, ApeSize_t argc, Ap
     if(type == APE_OBJECT_STRING)
     {
         len = ape_object_string_getlength(arg);
-        return ape_object_make_number(vm->context, len);
+        return ape_object_make_floatnumber(vm->context, len);
     }
     else if(type == APE_OBJECT_ARRAY)
     {
         len = ape_object_array_getlength(arg);
-        return ape_object_make_number(vm->context, len);
+        return ape_object_make_floatnumber(vm->context, len);
     }
     else if(type == APE_OBJECT_MAP)
     {
         len = ape_object_map_getlength(arg);
-        return ape_object_make_number(vm->context, len);
+        return ape_object_make_floatnumber(vm->context, len);
     }
     return ape_object_make_null(vm->context);
 }
@@ -124,7 +124,7 @@ static ApeObject_t cfn_array(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     ape_args_init(vm, &check, "array", argc, args);
     if(argc == 1)
     {
-        if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER))
+        if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC))
         {
             return ape_object_make_null(vm->context);
         }
@@ -147,7 +147,7 @@ static ApeObject_t cfn_array(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     }
     else if(argc == 2)
     {
-        if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER) && !ape_args_check(&check, 1, APE_OBJECT_ANY))
+        if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC) && !ape_args_check(&check, 1, APE_OBJECT_ANY))
         {
             return ape_object_make_null(vm->context);
         }
@@ -249,7 +249,7 @@ static ApeObject_t cfn_toint(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     (void)data;
     ApeArgCheck_t check;
     ape_args_init(vm, &check, "toint", argc, args);
-    if(!ape_args_check(&check, 0, APE_OBJECT_STRING | APE_OBJECT_NUMBER | APE_OBJECT_BOOL | APE_OBJECT_NULL))
+    if(!ape_args_check(&check, 0, APE_OBJECT_STRING | APE_OBJECT_NUMERIC | APE_OBJECT_BOOL | APE_OBJECT_NULL))
     {
         return ape_object_make_null(vm->context);
     }
@@ -287,7 +287,7 @@ static ApeObject_t cfn_toint(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     {
         goto err;
     }
-    return ape_object_make_number(vm->context, result);
+    return ape_object_make_floatnumber(vm->context, result);
 err:
     ape_vm_adderror(vm, APE_ERROR_RUNTIME, "cannot convert '%s' to number", strv);
     return ape_object_make_null(vm->context);
@@ -311,10 +311,10 @@ static ApeObject_t cfn_range(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     for(i = 0; i < (ApeInt_t)argc; i++)
     {
         type = ape_object_value_type(args[i]);
-        if(type != APE_OBJECT_NUMBER)
+        if(!ape_object_type_isnumber(type))
         {
             typestr = ape_object_value_typename(type);
-            expected_str = ape_object_value_typename(APE_OBJECT_NUMBER);
+            expected_str = ape_object_value_typename(APE_OBJECT_NUMERIC);
             ape_vm_adderror(vm, APE_ERROR_RUNTIME, "invalid argument %d passed to range, got %s instead of %s", i, typestr, expected_str);
             return ape_object_make_null(vm->context);
         }
@@ -354,7 +354,7 @@ static ApeObject_t cfn_range(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_
     }
     for(i = start; i < end; i += step)
     {
-        item = ape_object_make_number(vm->context, i);
+        item = ape_object_make_floatnumber(vm->context, i);
         ok = ape_object_array_pushvalue(res, item);
         if(!ok)
         {
@@ -495,7 +495,7 @@ static ApeObject_t cfn_concat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
                 return ape_object_make_null(vm->context);
             }
         }
-        return ape_object_make_number(vm->context, ape_object_array_getlength(args[0]));
+        return ape_object_make_floatnumber(vm->context, ape_object_array_getlength(args[0]));
     }
     else if(type == APE_OBJECT_STRING)
     {
@@ -567,7 +567,7 @@ static ApeObject_t cfn_object_removeat(ApeVM_t* vm, void* data, ApeSize_t argc, 
     (void)data;
     ApeArgCheck_t check;
     ape_args_init(vm, &check, "removeat", argc, args);
-    if(!ape_args_check(&check, 0, APE_OBJECT_ARRAY) && !ape_args_check(&check, 1, APE_OBJECT_NUMBER))
+    if(!ape_args_check(&check, 0, APE_OBJECT_ARRAY) && !ape_args_check(&check, 1, APE_OBJECT_NUMERIC))
     {
         return ape_object_make_null(vm->context);
     }
@@ -639,7 +639,7 @@ static ApeObject_t cfn_random_seed(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
     (void)data;
     ApeArgCheck_t check;
     ape_args_init(vm, &check, "seed", argc, args);
-    if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER))
+    if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC))
     {
         return ape_object_make_null(vm->context);
     }
@@ -660,11 +660,11 @@ static ApeObject_t cfn_random(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
     res = (ApeFloat_t)rand() / RAND_MAX;
     if(argc == 0)
     {
-        return ape_object_make_number(vm->context, res);
+        return ape_object_make_floatnumber(vm->context, res);
     }
     else if(argc == 2)
     {
-        if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER) && !ape_args_check(&check, 1, APE_OBJECT_NUMBER))
+        if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC) && !ape_args_check(&check, 1, APE_OBJECT_NUMERIC))
         {
             return ape_object_make_null(vm->context);
         }
@@ -677,7 +677,7 @@ static ApeObject_t cfn_random(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
         }
         range = maxv - minv;
         res = minv + (res * range);
-        return ape_object_make_number(vm->context, res);
+        return ape_object_make_floatnumber(vm->context, res);
     }
     ape_vm_adderror(vm, APE_ERROR_RUNTIME, "invalid number or arguments");
     return ape_object_make_null(vm->context);
@@ -729,7 +729,7 @@ static ApeObject_t cfn_object_isnumber(ApeVM_t* vm, void* data, ApeSize_t argc, 
     {
         return ape_object_make_null(vm->context);        
     }
-    return ape_object_make_bool(vm->context, ape_object_value_type(args[0]) == APE_OBJECT_NUMBER);
+    return ape_object_make_bool(vm->context, ape_object_type_isnumber(ape_object_value_type(args[0])));
 }
 
 static ApeObject_t cfn_object_isbool(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
@@ -810,12 +810,12 @@ static ApeObject_t cfn_bitnot(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject
     ApeArgCheck_t check;
     (void)data;
     ape_args_init(vm, &check, "bitnot", argc, args);
-    if(!ape_args_check(&check, 0, APE_OBJECT_NUMBER))
+    if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC))
     {
         return ape_object_make_null(vm->context);        
     }
-    val = ape_object_value_asnumber(args[0]);
-    return ape_object_make_number(vm->context, ~val);
+    val = ape_object_value_asfixednumber(args[0]);
+    return ape_object_make_fixednumber(vm->context, ~val);
 }
 
 
@@ -867,7 +867,7 @@ static ApeObject_t cfn_vm_stack(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObje
     (void)args;
     if(argc > 0)
     {
-        if(ape_object_value_type(args[0]) != APE_OBJECT_NUMBER)
+        if(!ape_object_type_isnumber(ape_object_value_type(args[0])))
         {
             ape_vm_adderror(vm, APE_ERROR_RUNTIME, "stack() optional argument must be a number");
             return ape_object_make_null(vm->context);
