@@ -9,15 +9,7 @@
 #include <string.h>
 
 /* allocation macros, tweakable */
-#ifndef DEQUELIST_ALLOC
-    #define DEQUELIST_ALLOC(size) malloc(size)
-#endif
-#ifndef DEQUELIST_REALLOC
-    #define DEQUELIST_REALLOC(ptr, size, oldsize) realloc(ptr, size)
-#endif
-#ifndef DEQUELIST_FREE
-    #define DEQUELIST_FREE(ptr, size) free(ptr)
-#endif
+
 #ifndef DEQUELIST_OOM
     #define DEQUELIST_OOM() exit(-1)
 #endif
@@ -38,6 +30,7 @@ typedef struct DequeList_t DequeList_t;
 /* The deque type, optionally prefixed user-defined extra members */
 struct DequeList_t
 {
+    ApeContext_t* context;
 #ifdef DEQUELIST_HEADER
     DEQUELIST_HEADER
 #endif
@@ -49,8 +42,9 @@ struct DequeList_t
 };
 /* aadeque.h */
 
-static  DequeList_t *deqlist_create(DequeSize_t elemsize, unsigned int len);
-static  DequeList_t *deqlist_create_empty(DequeSize_t elemsize);
+
+static  DequeList_t *deqlist_create(ApeContext_t* ctx, DequeSize_t elemsize, unsigned int len);
+static  DequeList_t *deqlist_create_empty(ApeContext_t* ctx, DequeSize_t elemsize);
 static  void deqlist_destroy(DequeList_t *a);
 
 static  size_t deqlist_sizeof(DequeSize_t elemsize, DequeSize_t cap);
@@ -62,7 +56,7 @@ static  void *deqlist_get(DequeList_t *a, unsigned int i);
 static  void deqlist_set(DequeList_t *a, unsigned int i, void *value);
 static  void deqlist_clear(DequeList_t *a, unsigned int i, unsigned int n);
 static  DequeList_t *deqlist_clone(DequeList_t *a);
-static  DequeList_t *deqlist_from_array(void **array, DequeSize_t elemsize, DequeSize_t n);
+static  DequeList_t *deqlist_from_array(ApeContext_t* ctx, void **array, DequeSize_t elemsize, DequeSize_t n);
 static  int deqlist_eq_array(DequeList_t *a, void **array, unsigned int n);
 static  DequeList_t *deqlist_reserve(DequeList_t *a, unsigned int n);
 static  DequeList_t *deqlist_compact_to(DequeList_t *a, unsigned int mincap);
@@ -108,7 +102,7 @@ static inline DequeSize_t deqlist_idx(DequeList_t* a, DequeSize_t i)
 /*
  * Creates an array of length len with undefined values.
  */
-static inline DequeList_t* deqlist_create(DequeSize_t elemsize, DequeSize_t len)
+static inline DequeList_t* deqlist_create(ApeContext_t* ctx, DequeSize_t elemsize, DequeSize_t len)
 {
     DequeSize_t cap = len;//DEQUELIST_MIN_CAPACITY;
     DequeList_t*     a;
@@ -118,11 +112,12 @@ static inline DequeList_t* deqlist_create(DequeSize_t elemsize, DequeSize_t len)
     {
         cap = DEQUELIST_MIN_CAPACITY;
     }
-    a = (DequeList_t*)DEQUELIST_ALLOC(deqlist_sizeof(elemsize, cap));
+    a = (DequeList_t*)ape_allocator_alloc(&ctx->alloc, deqlist_sizeof(elemsize, cap));
     if(!a)
     {
         DEQUELIST_OOM();
     }
+    a->context = ctx;
     a->elemsize = elemsize;
     a->length = len;
     a->offsetfirst = 0;
@@ -133,9 +128,9 @@ static inline DequeList_t* deqlist_create(DequeSize_t elemsize, DequeSize_t len)
 /*
  * Creates an empty array.
  */
-static inline DequeList_t* deqlist_create_empty(DequeSize_t elemsize)
+static inline DequeList_t* deqlist_create_empty(ApeContext_t* ctx, DequeSize_t elemsize)
 {
-    return deqlist_create(elemsize, 0);
+    return deqlist_create(ctx, elemsize, 0);
 }
 
 /*
@@ -143,7 +138,7 @@ static inline DequeList_t* deqlist_create_empty(DequeSize_t elemsize)
 */
 static inline void deqlist_destroy(DequeList_t* a)
 {
-    DEQUELIST_FREE(a, deqlist_sizeof(a->elemsize, a->capacity));
+    ape_allocator_free(&a->context->alloc, a /*, deqlist_sizeof(a->elemsize, a->capacity)*/);
 }
 
 /*
@@ -228,7 +223,7 @@ static inline DequeList_t* deqlist_clone(DequeList_t* a)
     size_t sz;
     void* clone;
     sz = deqlist_sizeof(a->elemsize, a->capacity);
-    clone = DEQUELIST_ALLOC(sz);
+    clone = ape_allocator_alloc(&a->context->alloc, sz);
     if(!clone)
     {
         DEQUELIST_OOM();
@@ -239,10 +234,10 @@ static inline DequeList_t* deqlist_clone(DequeList_t* a)
 /*
  * Create an struct aadeque from the n values pointed to by array.
  */
-static inline DequeList_t* deqlist_from_array(DequeValue_t* array, DequeSize_t elemsize, DequeSize_t n)
+static inline DequeList_t* deqlist_from_array(ApeContext_t* ctx, DequeValue_t* array, DequeSize_t elemsize, DequeSize_t n)
 {
     DequeList_t* a;
-    a = deqlist_create(elemsize, n);
+    a = deqlist_create(ctx, elemsize, n);
     memcpy(a->elemdata, array, a->elemsize * n);
     return a;
 }
@@ -290,7 +285,7 @@ static inline DequeList_t* deqlist_reserve(DequeList_t* a, DequeSize_t n)
             a->capacity = a->capacity << 1;
         } while(a->capacity < a->length + n);
         /* allocate more mem */
-        a = (DequeList_t*)DEQUELIST_REALLOC(a, deqlist_sizeof(a->elemsize, a->capacity), deqlist_sizeof(a->elemsize, oldcap));
+        a = (DequeList_t*)ape_allocator_realloc(&a->context->alloc, a, deqlist_sizeof(a->elemsize, oldcap), deqlist_sizeof(a->elemsize, a->capacity));
         if(!a)
         {
             DEQUELIST_OOM();
@@ -395,7 +390,7 @@ static inline DequeList_t* deqlist_compact_to(DequeList_t* a, DequeSize_t mincap
             */
         }
         /* Free the unused, second half, between cap and oldcap. */
-        a = (DequeList_t*)DEQUELIST_REALLOC(a, deqlist_sizeof(a->elemsize, a->capacity), deqlist_sizeof(a->elemsize, oldcap));
+        a = (DequeList_t*)ape_allocator_realloc(&a->context->alloc, a, deqlist_sizeof(a->elemsize, oldcap), deqlist_sizeof(a->elemsize, a->capacity));
         if(!a)
         {
             DEQUELIST_OOM();
@@ -596,7 +591,7 @@ static inline DequeList_t* deqlist_slice(DequeList_t* a, DequeSize_t offset, Deq
     DequeSize_t i;
     DequeValue_t x;
     DequeList_t* b;
-    b = deqlist_create(a->elemsize, length);
+    b = deqlist_create(a->context, a->elemsize, length);
     /* TODO: use memcpy instead of the loop */
     for(i = 0; i < length; i++)
     {

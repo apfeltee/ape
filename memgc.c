@@ -71,7 +71,7 @@ void poolinit(ApeContext_t* ctx, ApeGCObjPool_t* pool)
 {
     (void)ctx;
     pool->count = 0;
-    pool->datapool = deqlist_create_empty(sizeof(ApeGCObjData_t*));
+    pool->datapool = deqlist_create_empty(ctx, sizeof(ApeGCObjData_t*));
 }
 
 void pooldestroy(ApeContext_t* ctx, ApeGCObjPool_t* pool)
@@ -115,31 +115,6 @@ void ape_mem_defaultfree(ApeContext_t* ctx, void* userptr, void* objptr)
     ape_allocator_free(&ctx->custom_allocator, objptr);
 }
 
-void* wrap_alloc(ApeAllocator_t* alloc, size_t size)
-{
-    if(alloc != NULL)
-    {
-        if(alloc->fnmalloc != NULL)
-        {
-            return alloc->fnmalloc(alloc->context, alloc->optr, size);
-        }
-    }
-    return (malloc)(size);
-}
-
-void wrap_free(ApeAllocator_t* alloc, void* ptr)
-{
-    if(alloc != NULL)
-    {
-        if(alloc->fnfree != NULL)
-        {
-            alloc->fnfree(alloc->context, alloc->optr, ptr);
-            return;
-        }
-    }
-    free(ptr);    
-}
-
 void* ape_allocator_alloc_real(ApeAllocator_t* alloc, const char* str, const char* func, const char* file, int line, ApeInt_t size)
 {
     void* rt;
@@ -149,7 +124,10 @@ void* ape_allocator_alloc_real(ApeAllocator_t* alloc, const char* str, const cha
         alloc->pool = ape_mempool_init(APE_CONF_SIZE_MEMPOOL_INITIAL, APE_CONF_SIZE_MEMPOOL_MAX);
         alloc->ready = true;
     }
-    ape_mempool_debugprintf(alloc->pool, "ape_allocator_alloc: %zu [%s:%d:%s] %s\n", size, file, line, func, str);
+    //if(APE_UNLIKELY(alloc->pool->enabledebug))
+    {
+        ape_mempool_debugprintf(alloc->pool, "ape_allocator_alloc: %zu [%s:%d:%s] %s\n", size, file, line, func, str);
+    }
     if(size == 0)
     {
         //return NULL;
@@ -157,7 +135,7 @@ void* ape_allocator_alloc_real(ApeAllocator_t* alloc, const char* str, const cha
     rt = ape_mempool_alloc(alloc->pool, size);
     if(rt == NULL)
     {
-        fprintf(stderr, "FAILED to allocate %ld bytes\n", size);
+        fprintf(stderr, "internal error: FAILED to allocate %ld bytes\n", size);
     }
     return rt;
 }
@@ -283,7 +261,6 @@ void ape_gcmem_destroy(ApeGCMemory_t* mem)
     {
         pool = &mem->pools[i];
         for(j = 0; j < (pool->count + 0); j++)
-        //for(j=0; j<deqlist_size(pool->datapool); j++)
         {
             data = poolget(pool, j);
             fprintf(stderr, "deinit: type=%s\n", ape_object_value_typename(data->datatype));
@@ -294,7 +271,6 @@ void ape_gcmem_destroy(ApeGCMemory_t* mem)
         memset(pool, 0, sizeof(ApeGCObjPool_t));
     }
     for(i = 0; i < mem->data_only_pool.count; i++)
-    //for(i=0; i<deqlist_size(mem->data_only_pool.datapool); i++)
     {
         ape_allocator_free(mem->alloc, poolget(&mem->data_only_pool, i));
     }
@@ -458,6 +434,11 @@ void ape_gcmem_markobjlist(ApeObject_t* objects, ApeSize_t count)
     for(i = 0; i < count; i++)
     {
         obj = objects[i];
+        /*
+        * APE_OBJECT_NONE is a special value that is only ever
+        * set whenever $obj was not initialized correctly.
+        * thanks, undefined behavior! so nice of you.
+        */
         if(obj.type != APE_OBJECT_NONE)
         {
             if(obj.handle)
@@ -497,35 +478,35 @@ void ape_gcmem_markobject(ApeObject_t obj)
     switch(data->datatype)
     {
         case APE_OBJECT_MAP:
-        {
-            len = ape_object_map_getlength(obj);
-            for(i = 0; i < len; i++)
             {
-                key = ape_object_map_getkeyat(obj, i);
-                if(ape_object_value_isallocated(key))
+                len = ape_object_map_getlength(obj);
+                for(i = 0; i < len; i++)
                 {
+                    key = ape_object_map_getkeyat(obj, i);
+                    if(ape_object_value_isallocated(key))
+                    {
 
-                    key_data = ape_object_value_allocated_data(key);
-                    if(!key_data->gcmark)
-                    {
-                        ape_gcmem_markobject(key);
-                    }
-                }
-                val = ape_object_map_getvalueat(obj, i);
-                if(ape_object_value_isallocated(val))
-                {
-                    val_data = ape_object_value_allocated_data(val);
-                    if(val_data != NULL)
-                    {
-                        if(!val_data->gcmark)
+                        key_data = ape_object_value_allocated_data(key);
+                        if(!key_data->gcmark)
                         {
-                            ape_gcmem_markobject(val);
+                            ape_gcmem_markobject(key);
+                        }
+                    }
+                    val = ape_object_map_getvalueat(obj, i);
+                    if(ape_object_value_isallocated(val))
+                    {
+                        val_data = ape_object_value_allocated_data(val);
+                        if(val_data != NULL)
+                        {
+                            if(!val_data->gcmark)
+                            {
+                                ape_gcmem_markobject(val);
+                            }
                         }
                     }
                 }
             }
             break;
-        }
         case APE_OBJECT_ARRAY:
             {
                 len = ape_object_array_getlength(obj);

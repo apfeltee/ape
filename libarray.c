@@ -105,10 +105,11 @@ bool ape_valarray_initcapacity(ApeValArray_t* arr, ApeContext_t* ctx, ApeSize_t 
     arr->context = ctx;
     if(capacity == 0)
     {
-        capacity = arr->elemsize * 1;
+        //capacity = arr->elemsize * 8;
+        capacity = 1;
     }
     #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
-        arr->arraydata = deqlist_create(arr->elemsize, capacity);
+        arr->arraydata = deqlist_create(ctx, arr->elemsize, capacity);
     #else
         if(capacity > 0)
         {
@@ -256,6 +257,7 @@ bool ape_valarray_push(ApeValArray_t* arr, void* value)
         ApeSize_t initcap;
         ApeSize_t oldcap;
         ApeSize_t newcap;
+        ApeSize_t prevalloc;
         ApeSize_t toalloc;
         ApeSize_t elmsz;
         ApeSize_t acnt;
@@ -277,75 +279,40 @@ bool ape_valarray_push(ApeValArray_t* arr, void* value)
             }
         #endif
 
-        #if defined(NEW_ALLOC_SCHEME) && (NEW_ALLOC_SCHEME == 1)
-            ApeSize_t items = arr->count;
-            newcap = arr->capacity;
-            if(newcap < 16)
-            {
-                /* Allocate new arr twice as much as current. */
-                newcap = newcap * 2;
-            }
-            else
-            {
-                /* Allocate new arr half as much as current. */
-                newcap += newcap / 2;
-            }
-            if(newcap < items)
-            {
-                newcap = items;
-            }
-            toalloc = newcap * arr->elemsize;
-        #else
-            if(oldcap > 0)
-            {
-                newcap = (oldcap * 2);            
-            }
-            else
-            {
-                newcap = elmsz+1;
-            }
-            toalloc = (newcap * elmsz);
-        #endif
-
-
-
-
-        bool isabove;
-
-            isabove = (acnt >= oldcap);
-            //isabove = (toalloc > (oldcap * elmsz));
-            //isabove = ((newcap * elmsz) > (oldcap * elmsz));
-            //isabove = (((acnt + 1) * newcap) > (oldcap * elmsz));
-            //isabove = ((newcap) >= ((oldcap * elmsz) + elmsz));
-    
-
-        //fprintf(stderr, "valarray_push:isabove: newcap=%ld oldcap=%ld elmsz=%ld isabove=%d\n", newcap, oldcap, elmsz, isabove);
-
-
-
-        if(isabove)
+        if(arr->capacity < (arr->count + 1))
         {
-            APE_ASSERT(!arr->lock_capacity);
-            if(arr->lock_capacity)
-            {
-                return false;
-            }
-            newdata = (unsigned char*)ape_allocator_alloc(&ctx->alloc, toalloc+1);
-            memset(newdata, 0, toalloc+1);
-            if(!newdata)
-            {
-                return false;
-            }
-            if(arr->arraydata == NULL)
-            {
-                arr->arraydata = newdata;
-            }
-            else
-            {
-                memmove(newdata, arr->arraydata, acnt*elmsz);
-            }
-            ape_allocator_free(&ctx->alloc, arr->allocdata);
-            arr->allocdata = newdata;
+            #if defined(NEW_ALLOC_SCHEME) && (NEW_ALLOC_SCHEME == 1)
+                ApeSize_t items = arr->count;
+                newcap = arr->capacity;
+                if(newcap < 16)
+                {
+                    /* Allocate new arr twice as much as current. */
+                    newcap = newcap * 2;
+                }
+                else
+                {
+                    /* Allocate new arr half as much as current. */
+                    newcap += newcap / 2;
+                }
+                if(newcap < items)
+                {
+                    newcap = items;
+                }
+                toalloc = newcap * elmsz;
+                prevalloc = oldcap * elmsz;
+            #else
+                if(oldcap > 0)
+                {
+                    newcap = (oldcap * 2);            
+                }
+                else
+                {
+                    newcap = elmsz+1;
+                }
+                toalloc = (newcap * elmsz);
+                prevalloc = oldcap * elmsz;
+            #endif
+            arr->allocdata = ape_allocator_realloc(&arr->context->alloc, arr->allocdata, prevalloc, toalloc);
             arr->arraydata = arr->allocdata;
             arr->capacity = newcap;
         }
@@ -387,8 +354,12 @@ void* ape_valarray_get(ApeValArray_t* arr, ApeSize_t ix)
         rtp = tmp;
     #else
         ApeSize_t offset;
-        offset = ix * arr->elemsize;
-        rtp =  arr->arraydata + offset;
+        offset = (ix * arr->elemsize);
+        if(ix == 0)
+        {
+            offset = 0;
+        }
+        rtp = &arr->arraydata[offset];
     #endif
     #if defined(DEBUG) && (DEBUG == 1)
         debugmsg(arr, "ape_valarray_get", "ix=%ld rtp=%p", ix, rtp);
@@ -408,11 +379,9 @@ bool ape_valarray_set(ApeValArray_t* arr, ApeSize_t ix, void* value)
             deqlist_set(arr->arraydata, ix, value);            
         #endif
     #else
-        ApeSize_t cap;
         ApeSize_t cnt;
         ApeSize_t elmsz;
         ApeSize_t offset;
-        cap = arr->capacity;
         elmsz = arr->elemsize;
         cnt = ape_valarray_count(arr);
         if(((ix > 0) && (cnt > 0)) && (ix >= cnt))
@@ -420,13 +389,12 @@ bool ape_valarray_set(ApeValArray_t* arr, ApeSize_t ix, void* value)
             APE_ASSERT(false);
             return false;
         }
-        #if 1
-            offset = ix * cnt;
-            offset = ix * arr->elemsize;    
-            memmove(arr->arraydata + offset, value, arr->elemsize);
-        #else
-            memcpy(&arr->arraydata[(cnt + ix) + elmsz], value, arr->elemsize);
-        #endif
+        offset = ix * arr->elemsize;
+        if(ix == 0)
+        {
+            offset = 0;
+        }
+        memmove(arr->arraydata + offset, value, arr->elemsize);
     #endif
     return true;
 }

@@ -839,7 +839,7 @@ ApeVM_t* ape_make_vm(ApeContext_t* ctx, const ApeConfig_t* config, ApeGCMemory_t
     vm->globalobjects = ape_make_valdict(ctx, sizeof(ApeSize_t), sizeof(ApeObject_t));
     vm->stackobjects = ape_make_valdict(ctx, sizeof(ApeSize_t), sizeof(ApeObject_t));
     vm->lastframe = NULL;
-    vm->frameobjects = deqlist_create_empty(sizeof(ApeFrame_t));
+    vm->frameobjects = deqlist_create_empty(ctx, sizeof(ApeFrame_t));
     for(i = 0; i < APE_OPCODE_MAX; i++)
     {
         vm->overloadkeys[i] = ape_object_make_null(ctx);
@@ -1404,8 +1404,8 @@ bool ape_vm_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValu
                         int uleft = (leftval);
                         unsigned int uright = (rightval);
                     #endif
-                    resfloat = (uleft << (uright & 0x1F));
-                    isfixed = false;
+                    resfixed = (uleft << (uright & 0x1F));
+                    isfixed = true;
                 }
                 break;
             case APE_OPCODE_RIGHTSHIFT:
@@ -1428,8 +1428,8 @@ bool ape_vm_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValu
                         int uleft = (leftval);
                         unsigned int uright = (rightval);
                     #endif
-                    resfloat = (uleft >> (uright & 0x1F));
-                    isfixed = false;
+                    resfixed = (uleft >> (uright & 0x1F));
+                    isfixed = true;
 
                 }
                 break;

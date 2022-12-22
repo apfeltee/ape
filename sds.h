@@ -1041,7 +1041,7 @@ static inline DynString_t* ds_makeroomfor(DynString_t* s, size_t addlen, void* u
     {
         return s;
     }
-    oldsz = ds_getallocated(s);
+    oldsz = ds_getallocated(s)+ds_getheadersize(oldtype);
     len = ds_getlength(s);
     sh = (char*)s - ds_getheadersize(oldtype);
     newlen = (len + addlen);

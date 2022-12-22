@@ -482,29 +482,42 @@ void ape_mempool_repool(ApeMemPool_t* mp, void* p, ApeSize_t sz)
 
 /* Reallocate data, growing or shrinking and copying the contents.
  * Returns NULL on reallocation error. */
-void* ape_mempool_realloc(ApeMemPool_t* mp, void* p, ApeSize_t old_sz, ApeSize_t new_sz)
+void* ape_mempool_realloc(ApeMemPool_t* mp, void* oldptr, ApeSize_t old_sz, ApeSize_t new_sz)
 {
-    void* r;
+    void* newptr;
     mp->totalalloccount++;
     mp->totalbytes += new_sz;
     if(!mp->available)
     {
         if(APE_UNLIKELY(mp->enabledebug))
         {
-            ape_mempool_debugprintf(mp, "fallback: realloc %p from %zu to %zu bytes\n", p, old_sz, new_sz);
+            ape_mempool_debugprintf(mp, "fallback: realloc %p from %zu to %zu bytes\n", oldptr, old_sz, new_sz);
         }
-        return MPOOL_REALLOC(p, new_sz);
+        return MPOOL_REALLOC(oldptr, new_sz);
     }
-    r = ape_mempool_alloc(mp, new_sz);
-    if(r == NULL)
+    newptr = ape_mempool_alloc(mp, new_sz);
+    if(newptr == NULL)
     {
         return NULL;
     }
-    #if 0
-        memcpy(r, p, old_sz);
+    memset(newptr, 0, new_sz);
+    /*
+        void *memcpy(void *dest, const void *src, size_t n);
+        The memcpy() function copies n bytes from memory area src to memory area dest.
+        The memory areas must not overlap.  Use memmove(3) if the memory areas do overlap.
+        -----------------
+        void *memmove(void *dest, const void *src, size_t n);
+        The memmove() function copies n bytes from memory area src to memory area dest.
+        The memory areas may overlap: copying takes place as though the bytes in src are first
+        copied into a temporary array that does not overlap src or dest, and the bytes are then
+        copied from the temporary array to dest.
+    */
+    //fprintf(stderr, "ape_mempool_realloc: old_sz=%ld, new_sz=%ld oldptr=%p newptr=%p\n", old_sz, new_sz, oldptr, newptr);
+    #if 1
+        memcpy(newptr, oldptr, old_sz);
     #else
-        memcpy(r, p, new_sz);
+        memmove(newptr, oldptr, old_sz);
     #endif
-    ape_mempool_repool(mp, p, old_sz);
-    return r;
+    ape_mempool_repool(mp, oldptr, old_sz);
+    return newptr;
 }
