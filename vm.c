@@ -1651,13 +1651,13 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                     */
                     if(!isoverloaded)
                     {
+                        bool fallback = true;
                         comparison_res = ape_object_value_compare(left, right, &ok);
                         if(ok || opcode == APE_OPCODE_COMPAREEQUAL)
-                        #if 0
-                        if(opcode == APE_OPCODE_COMPAREEQUAL)
-                        #endif
                         {
-                            objres = ape_object_make_floatnumber(vm->context, comparison_res);
+                            {
+                                objres = ape_object_make_floatnumber(vm->context, comparison_res);
+                            }
                             ape_vm_pushstack(vm, objres);
                         }
                         else
@@ -1684,7 +1684,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                     switch(opcode)
                     {
                         case APE_OPCODE_ISEQUAL:
-                            {
+                            {                                
                                 if(ape_object_value_isfixednumber(value))
                                 {
                                     resval = (comparison_res == 0);

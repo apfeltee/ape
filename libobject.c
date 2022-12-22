@@ -1221,6 +1221,21 @@ ApeFloat_t ape_object_value_compare(ApeObject_t a, ApeObject_t b, bool* out_ok)
     *out_ok = true;
     a_type = ape_object_value_type(a);
     b_type = ape_object_value_type(b);
+    /* (null == null)*/
+    if(ape_object_value_isnull(a) && ape_object_value_isnull(b))
+    {
+        return 0;
+    }
+    /* (val == null) - only null is null */
+    if(!ape_object_value_isnull(a) && ape_object_value_isnull(b))
+    {
+        return -1;
+    }
+    /* (null == val) - only null is null, again */
+    if(ape_object_value_isnull(a) && !ape_object_value_isnull(b))
+    {
+        return -1;
+    }
     if(ape_object_type_isnumeric(a_type) && ape_object_type_isnumeric(b_type))
     {
         #if 1
