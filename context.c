@@ -110,6 +110,7 @@ void ape_context_debugvalue(ApeContext_t* ctx, const char* name, ApeObject_t val
     const char* tnameobj;
     const char* tnamedata;
     const char* finaltype;
+    (void)finaltype;
     tnameobj = ape_object_value_typename(val.type);
     tnamedata = ape_object_value_typename(val.handle->datatype);    
     extobj = ape_object_value_typeunionname(ctx, val.type);
@@ -152,23 +153,9 @@ void ape_context_debugvalue(ApeContext_t* ctx, const char* name, ApeObject_t val
 
 bool ape_context_settimeout(ApeContext_t* ctx, ApeFloat_t max_execution_time_ms)
 {
-    if(!ape_util_timersupported())
-    {
-        ctx->config.max_execution_time_ms = 0;
-        ctx->config.max_execution_time_set = false;
-        return false;
-    }
-    if(max_execution_time_ms >= 0)
-    {
-        ctx->config.max_execution_time_ms = max_execution_time_ms;
-        ctx->config.max_execution_time_set = true;
-    }
-    else
-    {
-        ctx->config.max_execution_time_ms = 0;
-        ctx->config.max_execution_time_set = false;
-    }
-    return true;
+    ctx->config.max_execution_time_ms = max_execution_time_ms;
+    ctx->config.max_execution_time_set = false;
+    return false;
 }
 
 void ape_context_setstdoutwrite(ApeContext_t* ctx, ApeIOStdoutWriteFunc_t stdout_write, void* context)

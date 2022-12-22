@@ -31,9 +31,6 @@ function unshiftright(a, b)
     return na; 
 }
 
-// hex output format. 0 - lowercase; 1 - uppercase
-var hexcase = 0;
-
 // base-64 pad character. "=" for strict RFC compliance
 var b64pad  = "";
 
@@ -176,16 +173,17 @@ function binb2str(bin)
 // Convert an array of big-endian words to a hex string.
 function binb2hex(binarray)
 {
-    var hex_tab = hexcase ? "0123456789ABCDEF" : "0123456789abcdef";
-    var str = "";
+    var hex_tab = "0123456789abcdef";
+    var str = [];
     for(var i = 0; i < binarray.length * 4; i++)
     {
         var c1 = hex_tab.charAt((binarray[i>>2] >> ((3 - i%4)*8+4)) & 0xF);
         var c2 = hex_tab.charAt((binarray[i>>2] >> ((3 - i%4)*8  )) & 0xF);
-        str += c1;
-        str += c2;
+        str.push(c1);
+        str.push(c2);
     }
-    return str;
+    println(`str=${str}`)
+    return str.join();
 }
 
 // Convert an array of big-endian words to a base-64 string

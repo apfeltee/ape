@@ -149,62 +149,6 @@ char* ape_util_stringfmt(ApeContext_t* ctx, const char* format, ...)
     return res;
 }
 
-bool ape_util_timersupported()
-{
-#if defined(APE_POSIX) || defined(APE_EMSCRIPTEN) || defined(APE_WINDOWS)
-    return true;
-#else
-    return false;
-#endif
-}
-
-ApeTimer_t ape_util_timerstart()
-{
-    ApeTimer_t timer;
-    memset(&timer, 0, sizeof(ApeTimer_t));
-    #if 0
-        #if defined(APE_POSIX)
-            /* At some point it should be replaced with more accurate per-platform timers */
-            struct timeval start_time;
-            gettimeofday(&start_time, NULL);
-            timer.start_offset = start_time.tv_sec;
-            timer.start_time_ms = start_time.tv_usec / 1000.0;
-        #elif defined(APE_WINDOWS)
-            LARGE_INTEGER li;
-            /* not sure what to do if it fails */
-            QueryPerformanceFrequency(&li);
-            timer.pc_frequency = (ApeFloat_t)(li.QuadPart) / 1000.0;
-            QueryPerformanceCounter(&li);
-            timer.start_time_ms = li.QuadPart / timer.pc_frequency;
-        #elif defined(APE_EMSCRIPTEN)
-            timer.start_time_ms = emscripten_get_now();
-        #endif
-    #endif
-    return timer;
-}
-
-ApeFloat_t ape_util_timergetelapsed(const ApeTimer_t* timer)
-{
-    (void)timer;
-    #if 0
-        #if defined(APE_POSIX)
-            struct timeval current_time;
-            gettimeofday(&current_time, NULL);
-            int time_s = (int)((ApeInt_t)current_time.tv_sec - timer->start_offset);
-            ApeFloat_t current_time_ms = (time_s * 1000) + (current_time.tv_usec / 1000.0);
-            return current_time_ms - timer->start_time_ms;
-        #elif defined(APE_WINDOWS)
-            LARGE_INTEGER li;
-            QueryPerformanceCounter(&li);
-            ApeFloat_t current_time_ms = li.QuadPart / timer->pc_frequency;
-            return current_time_ms - timer->start_time_ms;
-        #elif defined(APE_EMSCRIPTEN)
-            ApeFloat_t current_time_ms = emscripten_get_now();
-            return current_time_ms - timer->start_time_ms;
-        #endif
-    #endif
-    return 0;
-}
 
 char* ape_util_strndup(ApeContext_t* ctx, const char* string, size_t n)
 {

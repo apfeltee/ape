@@ -1341,15 +1341,23 @@ bool ape_vm_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValu
                 break;
             case APE_OPCODE_MOD:
                 {
-                    ApeFloat_t rightval = ape_object_value_asnumber(right);
-                    ApeFloat_t leftval = ape_object_value_asnumber(left);
-                    leftint = ape_util_numbertoint32(leftval);
-                    rightint = ape_util_numbertoint32(rightval);                    
-                    #if 0
-                    resfloat = fmod(leftval, rightval);
-                    #else
-                    resfloat = (leftint % rightint);
-                    #endif
+                    if(ape_object_value_isfloatnumber(left))
+                    {
+                        ApeFloat_t rightval = ape_object_value_asnumber(right);
+                        ApeFloat_t leftval = ape_object_value_asnumber(left);
+                        leftint = ape_util_numbertoint32(leftval);
+                        rightint = ape_util_numbertoint32(rightval);                    
+
+                        resfloat = fmod(leftval, rightval);
+                        isfixed = false;
+                    }
+                    else
+                    {
+                        ApeInt_t rightval = ape_object_value_asfixednumber(right);
+                        ApeInt_t leftval = ape_object_value_asfixednumber(left);
+                        resfixed = (leftval % rightval);
+                        isfixed = true;
+                    }
                 }
                 break;
             case APE_OPCODE_BITOR:
@@ -1365,8 +1373,8 @@ bool ape_vm_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValu
                 break;
             case APE_OPCODE_BITXOR:
                 {
-                    ApeInt_t rightval = ape_object_value_asfixednumber(right);
-                    ApeInt_t leftval = ape_object_value_asfixednumber(left);
+                    ApeInt_t rightval = ape_object_value_asnumber(right);
+                    ApeInt_t leftval = ape_object_value_asnumber(left);
                     leftint = leftval;
                     rightint = rightval;
                     resfixed = (leftint ^ rightint);
@@ -1375,8 +1383,8 @@ bool ape_vm_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValu
                 break;
             case APE_OPCODE_BITAND:
                 {
-                    ApeInt_t rightval = ape_object_value_asfixednumber(right);
-                    ApeInt_t leftval = ape_object_value_asfixednumber(left);
+                    ApeInt_t rightval = ape_object_value_asnumber(right);
+                    ApeInt_t leftval = ape_object_value_asnumber(left);
                     leftint = (leftval);
                     rightint = (rightval);
                     resfixed = (ApeInt_t)(leftint & rightint);
@@ -1392,18 +1400,10 @@ bool ape_vm_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValu
                 }
                 */
                 {
-                    #if 1
-                        ApeFloat_t rightval = ape_object_value_asnumber(right);
-                        ApeFloat_t leftval = ape_object_value_asnumber(left);
-                        int uleft = ape_util_numbertoint32(leftval);
-                        unsigned int uright = ape_util_numbertouint32(rightval);
-                    
-                    #else
-                        ApeInt_t rightval = ape_object_value_asfixednumber(right);
-                        ApeInt_t leftval = ape_object_value_asfixednumber(left);
-                        int uleft = (leftval);
-                        unsigned int uright = (rightval);
-                    #endif
+                    ApeFloat_t rightval = ape_object_value_asnumber(right);
+                    ApeFloat_t leftval = ape_object_value_asnumber(left);
+                    int uleft = ape_util_numbertoint32(leftval);
+                    unsigned int uright = ape_util_numbertouint32(rightval);
                     resfixed = (uleft << (uright & 0x1F));
                     isfixed = true;
                 }
@@ -1417,20 +1417,12 @@ bool ape_vm_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValu
                 }
                 */
                 {
-                    #if 1
-                        ApeFloat_t rightval = ape_object_value_asnumber(right);
-                        ApeFloat_t leftval = ape_object_value_asnumber(left);
-                        int uleft = ape_util_numbertoint32(leftval);
-                        unsigned int uright = ape_util_numbertouint32(rightval);
-                    #else
-                        ApeInt_t rightval = ape_object_value_asfixednumber(right);
-                        ApeInt_t leftval = ape_object_value_asfixednumber(left);
-                        int uleft = (leftval);
-                        unsigned int uright = (rightval);
-                    #endif
+                    ApeFloat_t rightval = ape_object_value_asnumber(right);
+                    ApeFloat_t leftval = ape_object_value_asnumber(left);
+                    int uleft = ape_util_numbertoint32(leftval);
+                    unsigned int uright = ape_util_numbertouint32(rightval);
                     resfixed = (uleft >> (uright & 0x1F));
                     isfixed = true;
-
                 }
                 break;
             default:
@@ -1490,7 +1482,6 @@ bool ape_vm_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeValu
 */
 bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * constants)
 {
-    bool checktime;
     bool isoverloaded;
     bool ok;
     bool overloadfound;
@@ -1519,8 +1510,6 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
     ApeUInt_t recip;
     ApeInt_t val;
     ApeInt_t pos;
-    unsigned time_check_counter;
-    unsigned time_check_interval;
 
     ApeUShort_t free_ix;
     ApeUShort_t nargs;
@@ -1562,7 +1551,6 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
     ApeObject_t* items;
     ApeObject_t* kv_pairs;
     ApeOpcodeValue_t opcode;
-    ApeTimer_t timer;
     ApeFrame_t* frame;
     ApeError_t* err;
     ApeFrame_t new_frame;
@@ -1590,20 +1578,7 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
     }
     vm->running = true;
     vm->lastpopped = ape_object_make_null(vm->context);
-    checktime = false;
     maxexecms = 0;
-    if(vm->config)
-    {
-        checktime = vm->config->max_execution_time_set;
-        maxexecms = vm->config->max_execution_time_ms;
-    }
-    time_check_interval = 1000;
-    time_check_counter = 0;
-    memset(&timer, 0, sizeof(ApeTimer_t));
-    if(checktime)
-    {
-        timer = ape_util_timerstart();
-    }
     while(vm->currentframe->ip < (ApeInt_t)vm->currentframe->bcsize)
     {
         opcode = ape_frame_readopcode(vm->currentframe);
@@ -2294,21 +2269,6 @@ bool ape_vm_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t * c
                     goto err;
                 }
                 break;
-        }
-        if(checktime)
-        {
-            time_check_counter++;
-            if(time_check_counter > time_check_interval)
-            {
-                elapsed_ms = (int)ape_util_timergetelapsed(&timer);
-                if(elapsed_ms > maxexecms)
-                {
-                    ape_errorlist_addformat(vm->errors, APE_ERROR_TIMEOUT, ape_frame_srcposition(vm->currentframe),
-                                      "execution took more than %1.17g ms", maxexecms);
-                    goto err;
-                }
-                time_check_counter = 0;
-            }
         }
     err:
         if(ape_errorlist_count(vm->errors) > 0)

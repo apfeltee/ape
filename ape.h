@@ -572,7 +572,6 @@ typedef struct /**/ ApeAstProgram_t ApeAstProgram_t;
 typedef struct /**/ ApeVM_t ApeVM_t;
 typedef struct /**/ ApeConfig_t ApeConfig_t;
 typedef struct /**/ ApePosition_t ApePosition_t;
-typedef struct /**/ ApeTimer_t ApeTimer_t;
 typedef struct /**/ ApeAllocator_t ApeAllocator_t;
 typedef struct /**/ ApeError_t ApeError_t;
 typedef struct /**/ ApeErrorList_t ApeErrorList_t;
@@ -812,16 +811,6 @@ struct ApePosition_t
     const ApeAstCompFile_t* file;
     int line;
     int column;
-};
-
-struct ApeTimer_t
-{
-#if defined(APE_POSIX)
-    ApeInt_t start_offset;
-#elif defined(APE_WINDOWS)
-    double pc_frequency;
-#endif
-    double start_time_ms;
 };
 
 

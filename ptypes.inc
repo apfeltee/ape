@@ -56,7 +56,6 @@
     typsz(ApeStrDict_t);
     typsz(ApeSymTable_t);
     typsz(ApeSymbol_t);
-    typsz(ApeTimer_t);
     typsz(ApeTracebackItem_t);
     typsz(ApeTraceback_t);
     typsz(ApeVM_t);
