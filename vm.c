@@ -1011,6 +1011,7 @@ bool ape_vm_framepush(ApeVM_t* vm, ApeFrame_t frame)
 bool ape_vm_framepop(ApeVM_t* vm)
 {
     ApeFrame_t* popped;
+    (void)popped;
     ape_vm_setstackpointer(vm, vm->currentframe->basepointer - 1);
     if(vm->countframes <= 0)
     {

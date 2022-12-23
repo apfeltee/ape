@@ -158,18 +158,21 @@ bool ape_context_settimeout(ApeContext_t* ctx, ApeFloat_t max_execution_time_ms)
     return false;
 }
 
-void ape_context_setstdoutwrite(ApeContext_t* ctx, ApeIOStdoutWriteFunc_t stdout_write, void* context)
+void ape_context_setstdoutwrite(ApeContext_t* ctx, ApeIOStdoutWriteFunc_t stdout_write, void* ptr)
 {
+    (void)ptr;
     ctx->config.stdio.write = stdout_write;
 }
 
-void ape_context_setfilewrite(ApeContext_t* ctx, ApeIOWriteFunc_t file_write, void* context)
+void ape_context_setfilewrite(ApeContext_t* ctx, ApeIOWriteFunc_t file_write, void* ptr)
 {
+    (void)ptr;
     ctx->config.fileio.fnwritefile = file_write;
 }
 
-void ape_context_setfileread(ApeContext_t* ctx, ApeIOReadFunc_t file_read, void* context)
+void ape_context_setfileread(ApeContext_t* ctx, ApeIOReadFunc_t file_read, void* ptr)
 {
+    (void)ptr;
     ctx->config.fileio.fnreadfile = file_read;
 }
 
@@ -193,7 +196,7 @@ void ape_context_dumpbytecode(ApeContext_t* ctx, ApeAstCompResult_t* cres)
     ape_writer_destroy(strbuf);
 }
 
-ApeObject_t ape_context_executesource(ApeContext_t* ctx, const char* code, bool alsoreset)
+ApeObject_t ape_context_executesource(ApeContext_t* ctx, const char* code, size_t clen, bool alsoreset)
 {
     bool ok;
     ApeObject_t objres;
@@ -202,7 +205,7 @@ ApeObject_t ape_context_executesource(ApeContext_t* ctx, const char* code, bool 
     {
         ape_context_resetstate(ctx);
     }
-    cres = ape_compiler_compilesource(ctx->compiler, code);
+    cres = ape_compiler_compilesource(ctx->compiler, code, clen);
     if(!cres || ape_errorlist_count(&ctx->errors) > 0)
     {
         goto err;

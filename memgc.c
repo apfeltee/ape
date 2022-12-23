@@ -315,9 +315,10 @@ ApeGCObjData_t* ape_gcmem_allocobjdata(ApeGCMemory_t* mem, ApeObjType_t type)
 
 bool ape_gcmem_canputinpool(ApeGCMemory_t* mem, ApeGCObjData_t* data)
 {
-    ApeObject_t obj;
+    //ApeObject_t obj;
     ApeGCObjPool_t* pool;
-    obj = object_make_from_data(mem->context, (ApeObjType_t)data->datatype, data);
+    //(void)obj;
+    //obj = object_make_from_data(mem->context, (ApeObjType_t)data->datatype, data);
     /* this is to ensure that large objects won't be kept in pool indefinitely */
     switch(data->datatype)
     {

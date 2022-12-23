@@ -50,7 +50,7 @@ static ApeObject_t cfn_file_write(ApeVM_t* vm, void* data, ApeSize_t argc, ApeOb
     ApeSize_t slen;
     ApeSize_t written;
     ApeSize_t thismuch;
-    ApeConfig_t* config;
+    const ApeConfig_t* config;
     ApeArgCheck_t check;
     (void)data;
     havethismuch = false;
@@ -97,7 +97,7 @@ static ApeObject_t cfn_file_read(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObj
     char* contents;
     const char* path;
     long int thismuch;
-    ApeConfig_t* config;
+    const ApeConfig_t* config;
     ApeArgCheck_t check;
     thismuch = -1;
     (void)data;
@@ -285,8 +285,6 @@ static ApeObject_t cfn_file_stat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObj
 
 static ApeObject_t cfn_dir_readdir(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
-    bool isdir;
-    bool isfile;
     const char* path;
     DIR* hnd;
     struct dirent* dent;

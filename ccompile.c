@@ -117,14 +117,14 @@ void ape_compiler_destroy(ApeAstCompiler_t* comp)
     ape_allocator_free(&ctx->alloc, comp);
 }
 
-bool ape_compiler_compilecode(ApeAstCompiler_t* comp, const char* code)
+bool ape_compiler_compilecode(ApeAstCompiler_t* comp, const char* code, size_t csize)
 {
     bool ok;
     ApeAstFileScope_t* filescope;
     ApePtrArray_t* statements;
     filescope = (ApeAstFileScope_t*)ape_ptrarray_top(comp->filescopes);
     APE_ASSERT(filescope);
-    statements = ape_parser_parseall(filescope->parser, code, filescope->file);
+    statements = ape_parser_parseall(filescope->parser, code, csize, filescope->file);
     if(!statements)
     {
         /* errors are added by parser */
@@ -145,7 +145,7 @@ bool ape_compiler_compilecode(ApeAstCompiler_t* comp, const char* code)
     return ok;
 }
 
-ApeAstCompResult_t* ape_compiler_compilesource(ApeAstCompiler_t* comp, const char* code)
+ApeAstCompResult_t* ape_compiler_compilesource(ApeAstCompiler_t* comp, const char* code, size_t csize)
 {
     bool ok;
     ApeAstCompiler_t compshallowcopy;
@@ -169,7 +169,7 @@ ApeAstCompResult_t* ape_compiler_compilesource(ApeAstCompiler_t* comp, const cha
     {
         return NULL;
     }
-    ok = ape_compiler_compilecode(comp, code);
+    ok = ape_compiler_compilecode(comp, code, csize);
     if(!ok)
     {
         goto err;
@@ -236,7 +236,7 @@ ApeAstCompResult_t* ape_compiler_compilefile(ApeAstCompiler_t* comp, const char*
     /* todo: push file scope instead? */
     prevfile = filescope->file;
     filescope->file = file;
-    res = ape_compiler_compilesource(comp, code);
+    res = ape_compiler_compilesource(comp, code, clen);
     if(!res)
     {
         if(comp->context->config.runafterdump)
@@ -674,7 +674,7 @@ bool ape_compiler_includemodule(ApeAstCompiler_t* comp, ApeAstExpression_t* incl
             result = false;
             goto end;
         }
-        ok = ape_compiler_compilecode(comp, code);
+        ok = ape_compiler_compilecode(comp, code, clen);
         if(!ok)
         {
             ape_module_destroy(comp->context, module);

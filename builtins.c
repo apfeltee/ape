@@ -826,7 +826,6 @@ static ApeObject_t cfn_object_eval(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
     ApeObject_t rt;
     ApeArgCheck_t check;
     (void)data;
-    (void)slen;
     (void)data;
     ape_args_init(vm, &check, "eval", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_STRING))
@@ -835,7 +834,7 @@ static ApeObject_t cfn_object_eval(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
     }
     str = ape_object_string_getdata(args[0]);
     slen = ape_object_string_getlength(args[0]);
-    rt = ape_context_executesource(vm->context, str, false);
+    rt = ape_context_executesource(vm->context, str, slen, false);
     return rt;
 }
 

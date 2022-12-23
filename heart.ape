@@ -1,4 +1,6 @@
 
+// tests floating-point correctness
+// cross-check via node (./noderun.sh)
 var i = 1.5
 while(i > -1.5)
 {

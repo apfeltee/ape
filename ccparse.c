@@ -86,7 +86,7 @@ void ape_parser_destroy(ApeAstParser_t* parser)
     ape_allocator_free(&parser->context->alloc, parser);
 }
 
-ApePtrArray_t * ape_parser_parseall(ApeAstParser_t* parser, const char* input, ApeAstCompFile_t* file)
+ApePtrArray_t * ape_parser_parseall(ApeAstParser_t* parser, const char* input, size_t inlen, ApeAstCompFile_t* file)
 {
     bool ok;
     ApeContext_t* ctx;
@@ -94,7 +94,7 @@ ApePtrArray_t * ape_parser_parseall(ApeAstParser_t* parser, const char* input, A
     ApeAstExpression_t* stmt;
     parser->depth = 0;
     ctx = parser->context;
-    ok = ape_lexer_init(&parser->lexer, parser->context, parser->errors, input, file);
+    ok = ape_lexer_init(&parser->lexer, parser->context, parser->errors, input, inlen, file);
     if(!ok)
     {
         return NULL;
@@ -1314,10 +1314,10 @@ void* ape_ast_destroy_ident(ApeContext_t* ctx, ApeAstIdentExpr_t* ident)
     {
         return NULL;
     }
-    ape_allocator_free(&ident->context->alloc, ident->value);
+    ape_allocator_free(&ctx->alloc, ident->value);
     ident->value = NULL;
     ident->pos = g_prspriv_srcposinvalid;
-    ape_allocator_free(&ident->context->alloc, ident);
+    ape_allocator_free(&ctx->alloc, ident);
     return NULL;
 }
 

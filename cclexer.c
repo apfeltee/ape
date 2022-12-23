@@ -76,12 +76,12 @@ char* ape_lexer_tokendupliteral(ApeContext_t* ctx, const ApeAstToken_t* tok)
     return ape_util_strndup(ctx, tok->literal, tok->len);
 }
 
-bool ape_lexer_init(ApeAstLexer_t* lex, ApeContext_t* ctx, ApeErrorList_t* errs, const char* input, ApeAstCompFile_t* file)
+bool ape_lexer_init(ApeAstLexer_t* lex, ApeContext_t* ctx, ApeErrorList_t* errs, const char* input, size_t inlen, ApeAstCompFile_t* file)
 {
     lex->context = ctx;
     lex->errors = errs;
     lex->input = input;
-    lex->inputlen = (int)strlen(input);
+    lex->inputlen = inlen;
     lex->position = 0;
     lex->nextposition = 0;
     lex->ch = '\0';

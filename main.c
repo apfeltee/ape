@@ -171,8 +171,9 @@ static void do_repl(ApeContext_t* ctx)
         {
             continue;
         }
+        len = strlen(line);
         add_history(line);
-        res = ape_context_executesource(ctx, line, true);
+        res = ape_context_executesource(ctx, line, len, true);
         if (ape_context_haserrors(ctx))
         {
             print_errors(ctx);
@@ -426,7 +427,7 @@ int main(int argc, char* argv[])
             ape_context_setglobal(ctx, "args", args_array);
             if(opts.codeline)
             {
-                ape_context_executesource(ctx, opts.codeline, true);
+                ape_context_executesource(ctx, opts.codeline, strlen(opts.codeline), true);
             }
             else
             {

@@ -261,9 +261,7 @@ bool ape_valarray_push(ApeValArray_t* arr, void* value)
         ApeSize_t toalloc;
         ApeSize_t elmsz;
         ApeSize_t acnt;
-        ApeSize_t offset;
         (void)initcap;
-        unsigned char* newdata;
         elmsz = arr->elemsize;
         oldcap = arr->capacity;
         acnt = arr->count;
@@ -312,7 +310,7 @@ bool ape_valarray_push(ApeValArray_t* arr, void* value)
                 toalloc = (newcap * elmsz);
                 prevalloc = oldcap * elmsz;
             #endif
-            arr->allocdata = ape_allocator_realloc(&arr->context->alloc, arr->allocdata, prevalloc, toalloc);
+            arr->allocdata = ape_allocator_realloc(&ctx->alloc, arr->allocdata, prevalloc, toalloc);
             arr->arraydata = arr->allocdata;
             arr->capacity = newcap;
         }
@@ -332,6 +330,8 @@ void* ape_valarray_get(ApeValArray_t* arr, ApeSize_t ix)
     void* raw;
     void* tmp;
     void* rtp;
+    (void)raw;
+    (void)tmp;
     if(ix >= ape_valarray_count(arr))
     {
         APE_ASSERT(false);
@@ -389,12 +389,12 @@ bool ape_valarray_set(ApeValArray_t* arr, ApeSize_t ix, void* value)
             APE_ASSERT(false);
             return false;
         }
-        offset = ix * arr->elemsize;
+        offset = ix * elmsz;
         if(ix == 0)
         {
             offset = 0;
         }
-        memmove(arr->arraydata + offset, value, arr->elemsize);
+        memmove(arr->arraydata + offset, value, elmsz);
     #endif
     return true;
 }

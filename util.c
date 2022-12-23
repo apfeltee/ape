@@ -272,7 +272,7 @@ char* ape_util_default_readhandle(ApeContext_t* ctx, FILE* hnd, long int wanteda
     {
         readthismuch = wantedamount;
     }
-    if((wantedamount != -1) && (wantedamount < readthismuch))
+    if((wantedamount != -1) && (wantedamount < (long int)readthismuch))
     {
         readthismuch = wantedamount;
     }
@@ -307,6 +307,7 @@ char* ape_util_default_readfile(ApeContext_t* ctx, const char* filename, long in
     FILE* fh;
     if((fh = fopen(filename, "rb")) == NULL)
     {
+        ape_vm_adderror(ctx->vm, APE_ERROR_RUNTIME, "failed to open '%s' for reading", filename);
         return NULL;
     }
     b = ape_util_default_readhandle(ctx, fh, thismuch, dlen);
@@ -322,6 +323,7 @@ size_t ape_util_default_writefile(ApeContext_t* ctx, const char* path, const cha
     fp = fopen(path, "w");
     if(!fp)
     {
+        ape_vm_adderror(ctx->vm, APE_ERROR_RUNTIME, "failed to open '%s' for writing", path);
         return 0;
     }
     written = fwrite(string, 1, string_size, fp);
@@ -360,6 +362,7 @@ ApePtrArray_t * ape_util_splitstring(ApeContext_t* ctx, const char* str, const c
         line = ape_util_strndup(ctx, line_start, len);
         if(!line)
         {
+            ape_vm_adderror(ctx->vm, APE_ERROR_RUNTIME, "splitstring: failed to copy string");
             goto err;
         }
         ok = ape_ptrarray_push(res, &line);

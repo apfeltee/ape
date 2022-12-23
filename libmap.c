@@ -791,35 +791,42 @@ bool ape_object_map_setnamedvalue(ApeContext_t* ctx, ApeObject_t obj, const char
     return ape_object_map_setvalue(obj, key_object, value);
 }
 
-bool ape_object_map_setnamedstring(ApeContext_t* ctx, ApeObject_t obj, const char* key, const char* string)
+bool ape_object_map_setnamedstringlen(ApeContext_t* ctx, ApeObject_t obj, const char* key, const char* string, size_t len)
 {
-    ApeGCMemory_t* mem = ape_object_value_getmem(obj);
+    ApeObject_t strobj;
+    ApeGCMemory_t* mem;
+    mem = ape_object_value_getmem(obj);
     if(!mem)
     {
         return false;
     }
-    ApeObject_t string_object = ape_object_make_string(ctx, string);
-    if(ape_object_value_isnull(string_object))
+    strobj = ape_object_make_stringlen(ctx, string, len);
+    if(ape_object_value_isnull(strobj))
     {
         return false;
     }
-    return ape_object_map_setnamedvalue(ctx, obj, key, string_object);
+    return ape_object_map_setnamedvalue(ctx, obj, key, strobj);
 }
+
+
+bool ape_object_map_setnamedstring(ApeContext_t* ctx, ApeObject_t obj, const char* key, const char* string)
+{
+    return ape_object_map_setnamedstringlen(ctx, obj, key, string, strlen(string));
+}
+
 
 bool ape_object_map_setnamednumber(ApeContext_t* ctx, ApeObject_t obj, const char* key, ApeFloat_t number)
 {
-    ApeGCObjData_t* data;
-    data = ape_object_value_allocated_data(obj);
-    ApeObject_t number_object = ape_object_make_floatnumber(ctx, number);
-    return ape_object_map_setnamedvalue(ctx, obj, key, number_object);
+    ApeObject_t numobj;
+    numobj = ape_object_make_floatnumber(ctx, number);
+    return ape_object_map_setnamedvalue(ctx, obj, key, numobj);
 }
 
 bool ape_object_map_setnamedbool(ApeContext_t* ctx, ApeObject_t obj, const char* key, bool value)
 {
-    ApeGCObjData_t* data;
-    data = ape_object_value_allocated_data(obj);
-    ApeObject_t bool_object = ape_object_make_bool(ctx, value);
-    return ape_object_map_setnamedvalue(ctx, obj, key, bool_object);
+    ApeObject_t boolobj;
+    boolobj = ape_object_make_bool(ctx, value);
+    return ape_object_map_setnamedvalue(ctx, obj, key, boolobj);
 }
 
 
