@@ -66,7 +66,7 @@ static ApeObject_t cfn_file_write(ApeVM_t* vm, void* data, ApeSize_t argc, ApeOb
         thismuch = ape_object_value_asnumber(args[2]);
     }
     config = vm->config;
-    if(!config->fileio.iowriter.fnwritefile)
+    if(!config->fileio.fnwritefile)
     {
         return ape_object_make_null(vm->context);
     }
@@ -82,26 +82,24 @@ static ApeObject_t cfn_file_write(ApeVM_t* vm, void* data, ApeSize_t argc, ApeOb
     }
     if(havethismuch)
     {
-        written = (ApeSize_t)config->fileio.iowriter.fnwritefile(vm->context, path, string, thismuch);
+        written = (ApeSize_t)config->fileio.fnwritefile(vm->context, path, string, thismuch);
     }
     else
     {
-        written = (ApeSize_t)config->fileio.iowriter.fnwritefile(vm->context, path, string, slen);
+        written = (ApeSize_t)config->fileio.fnwritefile(vm->context, path, string, slen);
     }
     return ape_object_make_floatnumber(vm->context, written);
 }
 
 static ApeObject_t cfn_file_read(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
-    bool havethismuch;
     size_t len;
     char* contents;
     const char* path;
-    ApeSize_t thismuch;
+    long int thismuch;
     ApeConfig_t* config;
     ApeArgCheck_t check;
-    havethismuch = false;
-    thismuch = 0;
+    thismuch = -1;
     (void)data;
     ape_args_init(vm, &check, "read", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_STRING))
@@ -110,22 +108,22 @@ static ApeObject_t cfn_file_read(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObj
     }
     if(ape_args_checkoptional(&check, 1, APE_OBJECT_NUMERIC, false))
     {
-        havethismuch = true;
         thismuch = ape_object_value_asnumber(args[1]);
     }
     config = vm->config;
-    if(!config->fileio.ioreader.fnreadfile)
+    if(!config->fileio.fnreadfile)
     {
         return ape_object_make_null(vm->context);
     }
     path = ape_object_string_getdata(args[0]);
-    contents = config->fileio.ioreader.fnreadfile(config->fileio.ioreader.context, path, &len);
+    fprintf(stderr, "thismuch=%ld\n", thismuch);
+    contents = config->fileio.fnreadfile(vm->context, path, thismuch, &len);
     if(!contents)
     {
         return ape_object_make_null(vm->context);
     }
     ApeObject_t res = ape_object_make_stringlen(vm->context, contents, len);
-    ape_allocator_free(vm->alloc, contents);
+    ape_allocator_free(&vm->context->alloc, contents);
     return res;
 }
 

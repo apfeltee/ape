@@ -160,20 +160,17 @@ bool ape_context_settimeout(ApeContext_t* ctx, ApeFloat_t max_execution_time_ms)
 
 void ape_context_setstdoutwrite(ApeContext_t* ctx, ApeIOStdoutWriteFunc_t stdout_write, void* context)
 {
-    ctx->config.stdio.write.write = stdout_write;
-    ctx->config.stdio.write.context = context;
+    ctx->config.stdio.write = stdout_write;
 }
 
 void ape_context_setfilewrite(ApeContext_t* ctx, ApeIOWriteFunc_t file_write, void* context)
 {
-    ctx->config.fileio.iowriter.fnwritefile = file_write;
-    ctx->config.fileio.iowriter.context = context;
+    ctx->config.fileio.fnwritefile = file_write;
 }
 
 void ape_context_setfileread(ApeContext_t* ctx, ApeIOReadFunc_t file_read, void* context)
 {
-    ctx->config.fileio.ioreader.fnreadfile = file_read;
-    ctx->config.fileio.ioreader.context = context;
+    ctx->config.fileio.fnreadfile = file_read;
 }
 
 void ape_context_dumpast(ApeContext_t* ctx, ApePtrArray_t* statements)

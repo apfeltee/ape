@@ -27,7 +27,6 @@ struct ApeGCObjPool_t
 struct ApeGCMemory_t
 {
     ApeContext_t* context;
-    ApeAllocator_t* alloc;
     ApeSize_t allocations_since_sweep;
 
     //ApeGCObjData_t** frontobjects;
@@ -199,7 +198,6 @@ ApeGCMemory_t* ape_make_gcmem(ApeContext_t* ctx)
     }
     memset(mem, 0, sizeof(ApeGCMemory_t));
     mem->context = ctx;
-    mem->alloc = &ctx->alloc;
     mem->frontobjects = da_make(mem->frontobjects, APE_CONF_PLAINLIST_CAPACITY_ADD, sizeof(ApeGCObjData_t*));
     if(!mem->frontobjects)
     {
@@ -254,7 +252,7 @@ void ape_gcmem_destroy(ApeGCMemory_t* mem)
     {
         obj = (ApeGCObjData_t*)da_get(mem->frontobjects, i);
         ape_object_data_deinit(mem->context, obj);
-        ape_allocator_free(mem->alloc, obj);
+        ape_allocator_free(&mem->context->alloc, obj);
     }
     da_destroy(mem->frontobjects);
     for(i = 0; i < APE_CONF_SIZE_GCMEM_POOLCOUNT; i++)
@@ -265,17 +263,17 @@ void ape_gcmem_destroy(ApeGCMemory_t* mem)
             data = poolget(pool, j);
             fprintf(stderr, "deinit: type=%s\n", ape_object_value_typename(data->datatype));
             ape_object_data_deinit(mem->context, data);
-            ape_allocator_free(mem->alloc, data);
+            ape_allocator_free(&mem->context->alloc, data);
         }
         pooldestroy(mem->context, pool);
         memset(pool, 0, sizeof(ApeGCObjPool_t));
     }
     for(i = 0; i < mem->data_only_pool.count; i++)
     {
-        ape_allocator_free(mem->alloc, poolget(&mem->data_only_pool, i));
+        ape_allocator_free(&mem->context->alloc, poolget(&mem->data_only_pool, i));
     }
     pooldestroy(mem->context, &mem->data_only_pool);
-    ape_allocator_free(mem->alloc, mem);
+    ape_allocator_free(&mem->context->alloc, mem);
 }
 
 ApeGCObjData_t* ape_gcmem_allocobjdata(ApeGCMemory_t* mem, ApeObjType_t type)
@@ -291,7 +289,7 @@ ApeGCObjData_t* ape_gcmem_allocobjdata(ApeGCMemory_t* mem, ApeObjType_t type)
     }
     else
     {
-        data = (ApeGCObjData_t*)ape_allocator_alloc(mem->alloc, sizeof(ApeGCObjData_t));
+        data = (ApeGCObjData_t*)ape_allocator_alloc(&mem->context->alloc, sizeof(ApeGCObjData_t));
         if(data == NULL)
         {
             return NULL;
@@ -598,7 +596,7 @@ void ape_gcmem_sweep(ApeGCMemory_t* mem)
                     }
                     else
                     {
-                        ape_allocator_free(mem->alloc, data);
+                        ape_allocator_free(&mem->context->alloc, data);
                     }
                 }
             }

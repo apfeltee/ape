@@ -205,12 +205,12 @@ ApeAstCompResult_t* ape_compiler_compilefile(ApeAstCompiler_t* comp, const char*
     file = NULL;
     res = NULL;
     /* todo: read code function */
-    if(!comp->config->fileio.ioreader.fnreadfile)
+    if(!comp->config->fileio.fnreadfile)
     {
         ape_errorlist_add(comp->errors, APE_ERROR_COMPILATION, g_ccpriv_srcposinvalid, "file read function not configured");
         goto err;
     }
-    code = comp->config->fileio.ioreader.fnreadfile(comp->config->fileio.ioreader.context, path, &clen);
+    code = comp->config->fileio.fnreadfile(comp->context, path, -1, &clen);
     if(!code)
     {
         ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, g_ccpriv_srcposinvalid, "reading file '%s' failed", path);
@@ -647,14 +647,14 @@ bool ape_compiler_includemodule(ApeAstCompiler_t* comp, ApeAstExpression_t* incl
     if(!module)
     {
         /* todo: create new module function */
-        if(!comp->config->fileio.ioreader.fnreadfile)
+        if(!comp->config->fileio.fnreadfile)
         {
             ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, includestmt->pos,
                               "cannot include file '%s', file read function not configured", filepath);
             result = false;
             goto end;
         }
-        code = comp->config->fileio.ioreader.fnreadfile(comp->config->fileio.ioreader.context, filepath, &clen);
+        code = comp->config->fileio.fnreadfile(comp->context, filepath, -1, &clen);
         if(!code)
         {
             ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, includestmt->pos, "reading file '%s' failed", filepath);

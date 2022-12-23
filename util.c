@@ -216,36 +216,71 @@ unsigned int ape_util_upperpoweroftwo(unsigned int v)
 }
 
 
-char* ape_util_default_readhandle(ApeContext_t* ctx, FILE* hnd, size_t* dlen)
+char* ape_util_default_readhandle(ApeContext_t* ctx, FILE* hnd, long int wantedamount, size_t* dlen)
 {
-    long rawtold;
+    bool mustseek;
+    long int rawtold;
     /*
     * the value returned by ftell() may not necessarily be the same as
     * the amount that can be read.
     * since we only ever read a maximum of $toldlen, there will
     * be no memory trashing.
     */
-    size_t toldlen;
+    long int toldlen;
+    size_t readthismuch;
     size_t actuallen;
     char* buf;
-    if(fseek(hnd, 0, SEEK_END) == -1)
+    mustseek = false;
+    toldlen = -1;
+    readthismuch = 0;
+    if(wantedamount == -1)
     {
-        return NULL;
+        mustseek = true;
     }
-    if((rawtold = ftell(hnd)) == -1)
+    if(wantedamount > 0)
     {
-        return NULL;
+        toldlen = wantedamount;
     }
-    toldlen = rawtold;
-    if(fseek(hnd, 0, SEEK_SET) == -1)
+    if(fseek(hnd, 0, SEEK_END) != -1)
     {
-        return NULL;
+        mustseek = true;
     }
-    buf = (char*)ape_allocator_alloc(&ctx->alloc, toldlen + 1);
-    memset(buf, 0, toldlen+1);
+    else
+    {
+        if(wantedamount == -1)
+        {
+            ape_vm_adderror(ctx->vm, APE_ERROR_RUNTIME, "failed to seek to end of file");
+            return NULL;
+        }
+    }
+    if(mustseek)
+    {
+        if((rawtold = ftell(hnd)) == -1)
+        {
+            ape_vm_adderror(ctx->vm, APE_ERROR_RUNTIME, "failed to tell() file handle");
+            return NULL;
+        }
+        toldlen = rawtold;
+        if(fseek(hnd, 0, SEEK_SET) == -1)
+        {
+            ape_vm_adderror(ctx->vm, APE_ERROR_RUNTIME, "failed to seek to start of file");
+            return NULL;
+        }
+        readthismuch = toldlen;
+    }
+    else
+    {
+        readthismuch = wantedamount;
+    }
+    if((wantedamount != -1) && (wantedamount < readthismuch))
+    {
+        readthismuch = wantedamount;
+    }
+    buf = (char*)ape_allocator_alloc(&ctx->alloc, readthismuch + 1);
+    memset(buf, 0, readthismuch+1);
     if(buf != NULL)
     {
-        actuallen = fread(buf, sizeof(char), toldlen, hnd);
+        actuallen = fread(buf, sizeof(char), readthismuch, hnd);
         /*
         // optionally, read remainder:
         size_t tmplen;
@@ -266,7 +301,7 @@ char* ape_util_default_readhandle(ApeContext_t* ctx, FILE* hnd, size_t* dlen)
     return NULL;
 }
 
-char* ape_util_default_readfile(ApeContext_t* ctx, const char* filename, size_t* dlen)
+char* ape_util_default_readfile(ApeContext_t* ctx, const char* filename, long int thismuch, size_t* dlen)
 {
     char* b;
     FILE* fh;
@@ -274,7 +309,7 @@ char* ape_util_default_readfile(ApeContext_t* ctx, const char* filename, size_t*
     {
         return NULL;
     }
-    b = ape_util_default_readhandle(ctx, fh, dlen);
+    b = ape_util_default_readhandle(ctx, fh, thismuch, dlen);
     fclose(fh);
     return b;
 }

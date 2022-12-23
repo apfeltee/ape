@@ -233,7 +233,7 @@ static ApeObject_t objfn_string_split(ApeVM_t* vm, void* data, ApeSize_t argc, A
         {
             itm = (char*)ape_ptrarray_get(parr, i);
             ape_object_array_pushvalue(arr, ape_object_make_string(vm->context, itm));
-            ape_allocator_free(vm->alloc, (void*)itm);
+            ape_allocator_free(&vm->context->alloc, (void*)itm);
         }
         ape_ptrarray_destroy(parr);
     }

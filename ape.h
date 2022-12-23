@@ -663,9 +663,9 @@ typedef ApeObject_t (*ApeWrappedNativeFunc_t)(ApeContext_t*, void*, ApeSize_t, A
 typedef ApeObject_t (*ApeNativeFuncPtr_t)(ApeVM_t*, void*, ApeSize_t, ApeObject_t*);
 
 typedef size_t (*ApeIOStdoutWriteFunc_t)(ApeContext_t*, const void*, size_t);
-typedef char* (*ApeIOReadFunc_t)(ApeContext_t*, const char*, size_t*);
+typedef char* (*ApeIOReadFunc_t)(ApeContext_t*, const char*, long int, size_t*);
 typedef size_t (*ApeIOWriteFunc_t)(ApeContext_t*, const char*, const char*, size_t);
-typedef size_t (*ApeIOFlushFunc_t)(ApeContext_t* context, const char*, const char*, size_t);
+typedef size_t (*ApeIOFlushFunc_t)(ApeContext_t*, const char*, const char*, size_t);
 
 typedef size_t (*ApeWriterWriteFunc_t)(ApeContext_t*, void*, const char*, size_t);
 typedef void (*ApeWriterFlushFunc_t)(ApeContext_t*, void*);
@@ -1286,7 +1286,6 @@ struct ApeFrame_t
 struct ApeVM_t
 {
     ApeContext_t* context;
-    ApeAllocator_t* alloc;
     const ApeConfig_t* config;
     ApeGCMemory_t* mem;
     ApeErrorList_t* errors;
@@ -1316,26 +1315,13 @@ struct ApeConfig_t
 {
     struct
     {
-        struct
-        {
-            ApeIOStdoutWriteFunc_t write;
-            void* context;
-        } write;
+        ApeIOStdoutWriteFunc_t write;
     } stdio;
 
     struct
     {
-        struct
-        {
-            ApeIOReadFunc_t fnreadfile;
-            void* context;
-        } ioreader;
-
-        struct
-        {
-            ApeIOWriteFunc_t fnwritefile;
-            void* context;
-        } iowriter;
+        ApeIOReadFunc_t fnreadfile;
+        ApeIOWriteFunc_t fnwritefile;
     } fileio;
 
     /* allows redefinition of symbols */
@@ -1479,7 +1465,7 @@ static APE_INLINE void ape_args_raisetyperror(ApeArgCheck_t* check, ApeSize_t ix
     typestr = ape_object_value_typename(ape_object_value_type(check->args[ix]));
     extypestr = ape_object_value_typeunionname(check->vm->context, (ApeObjType_t)typ);
     ape_vm_adderror(check->vm, APE_ERROR_RUNTIME, "invalid arguments: function '%s' expects argument #%d to be a %s, but got %s instead", check->name, ix, extypestr, typestr);
-    ape_allocator_free(check->vm->alloc, extypestr);
+    ape_allocator_free(&check->vm->context->alloc, extypestr);
 }
 
 static APE_INLINE bool ape_args_checkoptional(ApeArgCheck_t* check, ApeSize_t ix, int typ, bool raisetyperror)
