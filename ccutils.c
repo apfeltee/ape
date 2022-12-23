@@ -54,12 +54,12 @@ void* ape_compfile_destroy(ApeContext_t* ctx, ApeAstCompFile_t* file)
     for(i = 0; i < ape_ptrarray_count(file->lines); i++)
     {
         item = (void*)ape_ptrarray_get(file->lines, i);
-        ape_allocator_free(&file->context->alloc, item);
+        ape_allocator_free(&ctx->alloc, item);
     }
     ape_ptrarray_destroy(file->lines);
-    ape_allocator_free(&file->context->alloc, file->dirpath);
-    ape_allocator_free(&file->context->alloc, file->path);
-    ape_allocator_free(&file->context->alloc, file);
+    ape_allocator_free(&ctx->alloc, file->dirpath);
+    ape_allocator_free(&ctx->alloc, file->path);
+    ape_allocator_free(&ctx->alloc, file);
     return NULL;
 }
 

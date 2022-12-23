@@ -44,55 +44,87 @@
 
 static ApeObject_t cfn_file_write(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
-    (void)data;
+    bool havethismuch;
+    const char* string;
+    const char* path;
+    ApeSize_t slen;
+    ApeSize_t written;
+    ApeSize_t thismuch;
+    ApeConfig_t* config;
     ApeArgCheck_t check;
+    (void)data;
+    havethismuch = false;
+    thismuch = 0;
     ape_args_init(vm, &check, "write", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_STRING) && !ape_args_check(&check, 1, APE_OBJECT_STRING))
     {
         return ape_object_make_null(vm->context);
     }
-
-    const ApeConfig_t* config = vm->config;
-
+    if(ape_args_checkoptional(&check, 2, APE_OBJECT_NUMERIC, false))
+    {
+        havethismuch = true;
+        thismuch = ape_object_value_asnumber(args[2]);
+    }
+    config = vm->config;
     if(!config->fileio.iowriter.fnwritefile)
     {
         return ape_object_make_null(vm->context);
     }
-
-    const char* path = ape_object_string_getdata(args[0]);
-    const char* string = ape_object_string_getdata(args[1]);
-    ApeSize_t string_len = ape_object_string_getlength(args[1]);
-
-    ApeSize_t written = (ApeSize_t)config->fileio.iowriter.fnwritefile(config->fileio.iowriter.context, path, string, string_len);
-
+    path = ape_object_string_getdata(args[0]);
+    string = ape_object_string_getdata(args[1]);
+    slen = ape_object_string_getlength(args[1]);
+    if(havethismuch)
+    {
+        if(thismuch >= slen)
+        {
+            havethismuch = false;
+        }
+    }
+    if(havethismuch)
+    {
+        written = (ApeSize_t)config->fileio.iowriter.fnwritefile(vm->context, path, string, thismuch);
+    }
+    else
+    {
+        written = (ApeSize_t)config->fileio.iowriter.fnwritefile(vm->context, path, string, slen);
+    }
     return ape_object_make_floatnumber(vm->context, written);
 }
 
 static ApeObject_t cfn_file_read(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
 {
-    (void)data;
+    bool havethismuch;
+    size_t len;
+    char* contents;
+    const char* path;
+    ApeSize_t thismuch;
+    ApeConfig_t* config;
     ApeArgCheck_t check;
+    havethismuch = false;
+    thismuch = 0;
+    (void)data;
     ape_args_init(vm, &check, "read", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_STRING))
     {
         return ape_object_make_null(vm->context);
     }
-
-    const ApeConfig_t* config = vm->config;
-
+    if(ape_args_checkoptional(&check, 1, APE_OBJECT_NUMERIC, false))
+    {
+        havethismuch = true;
+        thismuch = ape_object_value_asnumber(args[1]);
+    }
+    config = vm->config;
     if(!config->fileio.ioreader.fnreadfile)
     {
         return ape_object_make_null(vm->context);
     }
-
-    const char* path = ape_object_string_getdata(args[0]);
-
-    char* contents = config->fileio.ioreader.fnreadfile(config->fileio.ioreader.context, path);
+    path = ape_object_string_getdata(args[0]);
+    contents = config->fileio.ioreader.fnreadfile(config->fileio.ioreader.context, path, &len);
     if(!contents)
     {
         return ape_object_make_null(vm->context);
     }
-    ApeObject_t res = ape_object_make_string(vm->context, contents);
+    ApeObject_t res = ape_object_make_stringlen(vm->context, contents, len);
     ape_allocator_free(vm->alloc, contents);
     return res;
 }

@@ -11,9 +11,12 @@ struct ApeTempU64Array_t
     ApeOpByte_t data[2];
 };
 
-#define NARGS_SEQ(_1,_2,_3,_4,_5,_6,_7,_8,_9,N,...) N
-#define NARGS(...) NARGS_SEQ(__VA_ARGS__, 9, 8, 7, 6, 5, 4, 3, 2, 1)
+#if 0
+    #define NARGS_SEQ(_1,_2,_3,_4,_5,_6,_7,_8,_9,N,...) N
+    #define NARGS(...) NARGS_SEQ(__VA_ARGS__, 9, 8, 7, 6, 5, 4, 3, 2, 1)
+#endif
 
+/* have not yet found a better way to do this in c++ ... */
 #if defined(__cplusplus)
     #define make_u64_array(...) (std::vector<ApeOpByte_t>{__VA_ARGS__}).data()
 #else
@@ -191,11 +194,13 @@ err:
 ApeAstCompResult_t* ape_compiler_compilefile(ApeAstCompiler_t* comp, const char* path)
 {
     bool ok;
+    size_t clen;
     char* code;
     ApeAstCompFile_t* file;
     ApeAstCompResult_t* res;
     ApeAstFileScope_t* filescope;
     ApeAstCompFile_t* prevfile;
+    (void)clen;
     code = NULL;
     file = NULL;
     res = NULL;
@@ -205,7 +210,7 @@ ApeAstCompResult_t* ape_compiler_compilefile(ApeAstCompiler_t* comp, const char*
         ape_errorlist_add(comp->errors, APE_ERROR_COMPILATION, g_ccpriv_srcposinvalid, "file read function not configured");
         goto err;
     }
-    code = comp->config->fileio.ioreader.fnreadfile(comp->config->fileio.ioreader.context, path);
+    code = comp->config->fileio.ioreader.fnreadfile(comp->config->fileio.ioreader.context, path, &clen);
     if(!code)
     {
         ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, g_ccpriv_srcposinvalid, "reading file '%s' failed", path);
@@ -561,6 +566,7 @@ bool ape_compiler_includemodule(ApeAstCompiler_t* comp, ApeAstExpression_t* incl
     ApeSize_t i;
     bool ok;
     bool result;
+    size_t clen;
     char* filepath;
     char* code;
     char* namecopy;
@@ -575,6 +581,7 @@ bool ape_compiler_includemodule(ApeAstCompiler_t* comp, ApeAstExpression_t* incl
     ApeModule_t* module;
     ApeSymTable_t* st;
     ApeSymbol_t* symbol;
+    (void)clen;
     result = false;
     filepath = NULL;
     code = NULL;
@@ -647,7 +654,7 @@ bool ape_compiler_includemodule(ApeAstCompiler_t* comp, ApeAstExpression_t* incl
             result = false;
             goto end;
         }
-        code = comp->config->fileio.ioreader.fnreadfile(comp->config->fileio.ioreader.context, filepath);
+        code = comp->config->fileio.ioreader.fnreadfile(comp->config->fileio.ioreader.context, filepath, &clen);
         if(!code)
         {
             ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, includestmt->pos, "reading file '%s' failed", filepath);

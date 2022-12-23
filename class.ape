@@ -1,0 +1,22 @@
+
+function Person(name, age)
+{
+    return {
+        name: name
+        age: age
+        setname: function(n)
+        {
+            this.name = n
+            println(`setname: n=${n} state=${this}`)
+        }
+    }
+}
+
+p = Person("john doe", 98)
+p.setname("jane doe")
+println(p.name)
+
+
+rec = [1, 2, 3]
+rec.push(rec)
+println(rec)

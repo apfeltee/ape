@@ -28,6 +28,47 @@ char* ape_object_string_getmutable(ApeObject_t object)
     return ape_object_string_getinternalobjdata(data);
 }
 
+ApeObject_t ape_object_make_string(ApeContext_t* ctx, const char* string)
+{
+    return ape_object_make_stringlen(ctx, string, strlen(string));
+}
+
+ApeObject_t ape_object_make_stringlen(ApeContext_t* ctx, const char* string, ApeSize_t len)
+{
+    bool ok;
+    ApeObject_t res;
+    res = ape_object_make_stringcapacity(ctx, len);
+    if(ape_object_value_isnull(res))
+    {
+        return res;
+    }
+    ok = ape_object_string_append(ctx, res, string, len);
+    if(!ok)
+    {
+        return ape_object_make_null(ctx);
+    }
+    return res;
+}
+
+ApeObject_t ape_object_make_stringcapacity(ApeContext_t* ctx, ApeSize_t capacity)
+{
+    bool ok;
+    ApeGCObjData_t* data;
+    data = ape_object_make_objdata(ctx, APE_OBJECT_STRING);
+    if(!data)
+    {
+        return ape_object_make_null(ctx);
+    }
+    data->valstring.hash = 0;
+    data->valstring.valalloc = NULL;
+    ok = ape_object_string_reservecapacity(ctx, data, capacity);
+    if(!ok)
+    {
+        return ape_object_make_null(ctx);
+    }
+    return object_make_from_data(ctx, APE_OBJECT_STRING, data);
+}
+
 bool ape_object_string_reservecapacity(ApeContext_t* ctx, ApeGCObjData_t *data, ApeSize_t capacity)
 {
     (void)ctx;
@@ -100,7 +141,7 @@ static ApeObject_t objfn_string_length(ApeVM_t* vm, void* data, ApeSize_t argc, 
     (void)argc;
     (void)args;
     /* fixme: value is passed incorrectly? */
-    self = ape_vm_popthisstack(vm);
+    self = ape_vm_thispop(vm);
     len = ape_object_string_getlength(self);
     return ape_object_make_floatnumber(vm->context, len);
 }
@@ -115,7 +156,7 @@ static ApeObject_t objfn_string_substr(ApeVM_t* vm, void* data, ApeSize_t argc, 
     ApeArgCheck_t check;
     const char* str;
     (void)data;
-    self = ape_vm_popthisstack(vm);
+    self = ape_vm_thispop(vm);
     ape_args_init(vm, &check, "substr", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC))
     {
@@ -168,7 +209,7 @@ static ApeObject_t objfn_string_split(ApeVM_t* vm, void* data, ApeSize_t argc, A
     delimstr = "";
     delimlen = 0;
     ape_args_init(vm, &check, "split", argc, args);
-    self = ape_vm_popthisstack(vm);
+    self = ape_vm_thispop(vm);
     inpstr = ape_object_string_getdata(self);
     if(ape_args_checkoptional(&check, 0, APE_OBJECT_STRING, true))
     {
@@ -211,7 +252,7 @@ static ApeObject_t objfn_string_indexof(ApeVM_t* vm, void* data, ApeSize_t argc,
     ApeObjType_t styp;
     ApeArgCheck_t check;
     (void)data;
-    self = ape_vm_popthisstack(vm);
+    self = ape_vm_thispop(vm);
     ape_args_init(vm, &check, "index", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_STRING | APE_OBJECT_NUMERIC))
     {
@@ -266,7 +307,7 @@ static ApeObject_t objfn_string_charat(ApeVM_t* vm, void* data, ApeSize_t argc, 
         return ape_object_make_null(vm->context);
     }
     idx = ape_object_value_asnumber(args[0]);
-    self = ape_vm_popthisstack(vm);
+    self = ape_vm_thispop(vm);
     inpstr = ape_object_string_getdata(self);
     inplen = ape_object_string_getlength(self);
     ch = inpstr[idx];
@@ -290,7 +331,7 @@ static ApeObject_t objfn_string_byteat(ApeVM_t* vm, void* data, ApeSize_t argc, 
         return ape_object_make_null(vm->context);
     }
     idx = ape_object_value_asnumber(args[0]);
-    self = ape_vm_popthisstack(vm);
+    self = ape_vm_thispop(vm);
     inpstr = ape_object_string_getdata(self);
     inplen = ape_object_string_getlength(self);
     ch = inpstr[idx];
@@ -406,7 +447,7 @@ static ApeObject_t objfn_string_format(ApeVM_t* vm, void* data, ApeSize_t argc, 
     ApeSize_t inplen;
     ApeObject_t self;
     (void)data;
-    self = ape_vm_popthisstack(vm);
+    self = ape_vm_thispop(vm);
     inpstr = ape_object_string_getdata(self);
     inplen = ape_object_string_getlength(self);
     return ape_builtins_stringformat(vm->context, inpstr, inplen, argc, args);
@@ -421,7 +462,9 @@ static ApeObject_t objfn_string_reverse(ApeVM_t* vm, void* data, ApeSize_t argc,
     ApeObject_t self;
     ApeObject_t res;
     (void)data;
-    self = ape_vm_popthisstack(vm);
+    (void)argc;
+    (void)args;
+    self = ape_vm_thispop(vm);
     inpstr = ape_object_string_getdata(self);
     inplen = ape_object_string_getlength(self);
     res = ape_object_make_string(vm->context, "");

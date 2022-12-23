@@ -1,0 +1,3175 @@
+desc: (none)
+cmd: ./run hello.ape
+time_unit: i
+#-----------
+snapshot=0
+#-----------
+time=0
+mem_heap_B=0
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=1
+#-----------
+time=568711
+mem_heap_B=2152
+mem_heap_extra_B=16
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=2
+#-----------
+time=575326
+mem_heap_B=7464
+mem_heap_extra_B=304
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=3
+#-----------
+time=580788
+mem_heap_B=8544
+mem_heap_extra_B=624
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=4
+#-----------
+time=584124
+mem_heap_B=8788
+mem_heap_extra_B=708
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=5
+#-----------
+time=589642
+mem_heap_B=9349
+mem_heap_extra_B=763
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=6
+#-----------
+time=593194
+mem_heap_B=9792
+mem_heap_extra_B=888
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=7
+#-----------
+time=599060
+mem_heap_B=10788
+mem_heap_extra_B=1044
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=8
+#-----------
+time=603842
+mem_heap_B=10933
+mem_heap_extra_B=1163
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=9
+#-----------
+time=609766
+mem_heap_B=12360
+mem_heap_extra_B=1360
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=10
+#-----------
+time=613560
+mem_heap_B=13262
+mem_heap_extra_B=1490
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=11
+#-----------
+time=620179
+mem_heap_B=13043
+mem_heap_extra_B=1525
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=12
+#-----------
+time=626174
+mem_heap_B=14383
+mem_heap_extra_B=1793
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=13
+#-----------
+time=630553
+mem_heap_B=15401
+mem_heap_extra_B=2095
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=14
+#-----------
+time=636159
+mem_heap_B=16409
+mem_heap_extra_B=2487
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=15
+#-----------
+time=641149
+mem_heap_B=21017
+mem_heap_extra_B=2519
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=16
+#-----------
+time=645752
+mem_heap_B=21921
+mem_heap_extra_B=2631
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=17
+#-----------
+time=653571
+mem_heap_B=24606
+mem_heap_extra_B=2738
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=18
+#-----------
+time=659739
+mem_heap_B=25149
+mem_heap_extra_B=2835
+mem_stacks_B=0
+heap_tree=detailed
+n7: 25149 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 14857 0x10FB0A: ape_mempool_alloc (mempool.c:358)
+  n12: 14857 0x12AE1D: ape_allocator_alloc_real (memgc.c:135)
+   n1: 4488 0x116C61: ape_make_vm (vm.c:838)
+    n1: 4488 0x13BAD7: ape_make_contextex (context.c:54)
+     n1: 4488 0x13B70D: ape_make_context (context.c:6)
+      n0: 4488 0x13541E: main (main.c:373)
+   n0: 2272 in 22 places, all below massif's threshold (1.00%)
+   n2: 2000 0x12B508: ape_gcmem_allocobjdata (memgc.c:294)
+    n1: 1200 0x110C33: ape_object_make_nativefuncmemory (libobject.c:237)
+     n1: 1200 0x114F3A: ape_make_globalstore (vm.c:166)
+      n1: 1200 0x13B9F1: ape_make_contextex (context.c:44)
+       n1: 1200 0x13B70D: ape_make_context (context.c:6)
+        n0: 1200 0x13541E: main (main.c:373)
+    n1: 800 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+     n1: 800 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+      n1: 800 0x110479: ape_object_make_string (libobject.c:79)
+       n0: 800 in 10 places, all below massif's threshold (1.00%)
+   n1: 1936 0x138DD5: ape_valarray_initcapacity (libarray.c:116)
+    n2: 1936 0x138D2F: ape_make_valarraycapacity (libarray.c:94)
+     n4: 1872 0x138C78: ape_make_valarray (libarray.c:77)
+      n0: 720 in 5 places, all below massif's threshold (1.00%)
+      n1: 384 0x114EC1: ape_make_globalstore (vm.c:155)
+       n1: 384 0x13B9F1: ape_make_contextex (context.c:44)
+        n1: 384 0x13B70D: ape_make_context (context.c:6)
+         n0: 384 0x13541E: main (main.c:373)
+      n1: 384 0x12B0F5: ape_make_gcmem (memgc.c:213)
+       n1: 384 0x13B943: ape_make_contextex (context.c:32)
+        n1: 384 0x13B70D: ape_make_context (context.c:6)
+         n0: 384 0x13541E: main (main.c:373)
+      n1: 384 0x12CADE: ape_compiler_init (ccompile.c:269)
+       n1: 384 0x12C3F3: ape_compiler_make (ccompile.c:96)
+        n1: 384 0x13BA6B: ape_make_contextex (context.c:49)
+         n1: 384 0x13B70D: ape_make_context (context.c:6)
+          n0: 384 0x13541E: main (main.c:373)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n2: 1152 0x138CBF: ape_make_valarraycapacity (libarray.c:84)
+    n1: 576 0x138C78: ape_make_valarray (libarray.c:77)
+     n0: 576 in 8 places, all below massif's threshold (1.00%)
+    n1: 576 0x1396B2: ape_make_ptrarraycapacity (libarray.c:600)
+     n1: 576 0x13962F: ape_make_ptrarray (libarray.c:581)
+      n0: 576 in 8 places, all below massif's threshold (1.00%)
+   n1: 712 0x13B7A6: ape_make_contextex (context.c:17)
+    n1: 712 0x13B70D: ape_make_context (context.c:6)
+     n0: 712 0x13541E: main (main.c:373)
+   n1: 600 0x1293DE: ape_make_symbol (ccsymtab.c:7)
+    n1: 600 0x11512C: ape_globalstore_set (vm.c:220)
+     n1: 600 0x114F80: ape_make_globalstore (vm.c:171)
+      n1: 600 0x13B9F1: ape_make_contextex (context.c:44)
+       n1: 600 0x13B70D: ape_make_context (context.c:6)
+        n0: 600 0x13541E: main (main.c:373)
+   n1: 440 0x132E66: ape_make_strdict (libmap.c:364)
+    n0: 440 in 5 places, all below massif's threshold (1.00%)
+   n1: 336 0x12A7C5: deqlist_create (aadeque.h:115)
+    n1: 336 0x12A839: deqlist_create_empty (aadeque.h:133)
+     n2: 336 0x12ABDC: poolinit (memgc.c:74)
+      n1: 280 0x12B164: ape_make_gcmem (memgc.c:223)
+       n1: 280 0x13B943: ape_make_contextex (context.c:32)
+        n1: 280 0x13B70D: ape_make_context (context.c:6)
+         n0: 280 0x13541E: main (main.c:373)
+      n0: 56 in 1 place, below massif's threshold (1.00%)
+   n1: 321 0x10E68E: ape_util_strndup (util.c:156)
+    n1: 321 0x10E70F: ape_util_strdup (util.c:172)
+     n0: 321 in 5 places, all below massif's threshold (1.00%)
+   n1: 320 0x1144ED: deqlist_create (aadeque.h:115)
+    n1: 320 0x114561: deqlist_create_empty (aadeque.h:133)
+     n1: 320 0x116DA0: ape_make_vm (vm.c:857)
+      n1: 320 0x13BAD7: ape_make_contextex (context.c:54)
+       n1: 320 0x13B70D: ape_make_context (context.c:6)
+        n0: 320 0x13541E: main (main.c:373)
+   n1: 280 0x11D644: ape_ast_make_parser (ccparse.c:13)
+    n1: 280 0x131A1B: ape_compiler_makefilescope (ccompile.c:2251)
+     n1: 280 0x131C03: ape_compiler_pushfilescope (ccompile.c:2307)
+      n1: 280 0x12CB80: ape_compiler_init (ccompile.c:289)
+       n1: 280 0x12C3F3: ape_compiler_make (ccompile.c:96)
+        n1: 280 0x13BA6B: ape_make_contextex (context.c:49)
+         n1: 280 0x13B70D: ape_make_context (context.c:6)
+          n0: 280 0x13541E: main (main.c:373)
+ n2: 4608 0x12A572: da_grow_internal (dnarray.h:215)
+  n2: 2304 0x12B5FD: ape_gcmem_allocobjdata (memgc.c:310)
+   n1: 2304 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 2304 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n1: 2304 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 2304 0x116F27: ape_make_vm (vm.c:864)
+       n1: 2304 0x13BAD7: ape_make_contextex (context.c:54)
+        n1: 2304 0x13B70D: ape_make_context (context.c:6)
+         n0: 2304 0x13541E: main (main.c:373)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+  n2: 2304 0x12B684: ape_gcmem_allocobjdata (memgc.c:311)
+   n1: 2304 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 2304 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n1: 2304 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 2304 0x116F27: ape_make_vm (vm.c:864)
+       n1: 2304 0x13BAD7: ape_make_contextex (context.c:54)
+        n1: 2304 0x13B70D: ape_make_context (context.c:6)
+         n0: 2304 0x13541E: main (main.c:373)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 2152 0x10F582: ape_mempool_initdebughandle (mempool.c:222)
+  n1: 2152 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2152 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2152 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2152 0x13B70D: ape_make_context (context.c:6)
+      n0: 2152 0x13541E: main (main.c:373)
+ n1: 2048 0x10F597: ape_mempool_initdebughandle (mempool.c:223)
+  n1: 2048 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2048 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2048 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2048 0x13B70D: ape_make_context (context.c:6)
+      n0: 2048 0x13541E: main (main.c:373)
+ n1: 1024 0x10F5AC: ape_mempool_initdebughandle (mempool.c:224)
+  n1: 1024 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 1024 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 1024 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 1024 0x13B70D: ape_make_context (context.c:6)
+      n0: 1024 0x13541E: main (main.c:373)
+ n1: 460 0x110110: ape_mempool_realloc (mempool.c:496)
+  n1: 460 0x12AEC2: ape_allocator_realloc (memgc.c:155)
+   n1: 460 0x12AB78: ds_extrealloc (memgc.c:59)
+    n1: 460 0x13624E: ds_makeroomfor (sds.h:1068)
+     n1: 460 0x13637F: ds_appendlen (sds.h:1247)
+      n1: 460 0x1366BA: ape_object_string_append (libstring.c:70)
+       n1: 460 0x11053C: ape_object_make_stringlen (libobject.c:91)
+        n1: 460 0x110479: ape_object_make_string (libobject.c:79)
+         n0: 460 in 10 places, all below massif's threshold (1.00%)
+ n0: 0 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=19
+#-----------
+time=663919
+mem_heap_B=25512
+mem_heap_extra_B=2904
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=20
+#-----------
+time=670122
+mem_heap_B=26095
+mem_heap_extra_B=3161
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=21
+#-----------
+time=676718
+mem_heap_B=35021
+mem_heap_extra_B=3363
+mem_stacks_B=0
+heap_tree=detailed
+n7: 35021 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 18103 0x10FB0A: ape_mempool_alloc (mempool.c:358)
+  n10: 18103 0x12AE1D: ape_allocator_alloc_real (memgc.c:135)
+   n1: 4488 0x116C61: ape_make_vm (vm.c:838)
+    n1: 4488 0x13BAD7: ape_make_contextex (context.c:54)
+     n1: 4488 0x13B70D: ape_make_context (context.c:6)
+      n0: 4488 0x13541E: main (main.c:373)
+   n0: 4007 in 24 places, all below massif's threshold (1.00%)
+   n3: 2720 0x12B508: ape_gcmem_allocobjdata (memgc.c:294)
+    n1: 1360 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+     n1: 1360 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+      n1: 1360 0x110479: ape_object_make_string (libobject.c:79)
+       n0: 1360 in 17 places, all below massif's threshold (1.00%)
+    n2: 1280 0x110C33: ape_object_make_nativefuncmemory (libobject.c:237)
+     n1: 1200 0x114F3A: ape_make_globalstore (vm.c:166)
+      n1: 1200 0x13B9F1: ape_make_contextex (context.c:44)
+       n1: 1200 0x13B70D: ape_make_context (context.c:6)
+        n0: 1200 0x13541E: main (main.c:373)
+     n0: 80 in 1 place, below massif's threshold (1.00%)
+    n0: 80 in 1 place, below massif's threshold (1.00%)
+   n1: 1936 0x138DD5: ape_valarray_initcapacity (libarray.c:116)
+    n2: 1936 0x138D2F: ape_make_valarraycapacity (libarray.c:94)
+     n4: 1872 0x138C78: ape_make_valarray (libarray.c:77)
+      n0: 720 in 5 places, all below massif's threshold (1.00%)
+      n1: 384 0x114EC1: ape_make_globalstore (vm.c:155)
+       n1: 384 0x13B9F1: ape_make_contextex (context.c:44)
+        n1: 384 0x13B70D: ape_make_context (context.c:6)
+         n0: 384 0x13541E: main (main.c:373)
+      n1: 384 0x12B0F5: ape_make_gcmem (memgc.c:213)
+       n1: 384 0x13B943: ape_make_contextex (context.c:32)
+        n1: 384 0x13B70D: ape_make_context (context.c:6)
+         n0: 384 0x13541E: main (main.c:373)
+      n1: 384 0x12CADE: ape_compiler_init (ccompile.c:269)
+       n1: 384 0x12C3F3: ape_compiler_make (ccompile.c:96)
+        n1: 384 0x13BA6B: ape_make_contextex (context.c:49)
+         n1: 384 0x13B70D: ape_make_context (context.c:6)
+          n0: 384 0x13541E: main (main.c:373)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n2: 1152 0x138CBF: ape_make_valarraycapacity (libarray.c:84)
+    n1: 576 0x138C78: ape_make_valarray (libarray.c:77)
+     n0: 576 in 8 places, all below massif's threshold (1.00%)
+    n1: 576 0x1396B2: ape_make_ptrarraycapacity (libarray.c:600)
+     n1: 576 0x13962F: ape_make_ptrarray (libarray.c:581)
+      n0: 576 in 8 places, all below massif's threshold (1.00%)
+   n1: 960 0x132183: ape_valdict_init (libmap.c:55)
+    n2: 960 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 768 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 768 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 768 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 192 in 1 place, below massif's threshold (1.00%)
+   n1: 832 0x132141: ape_valdict_init (libmap.c:54)
+    n2: 832 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 768 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 768 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 768 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n1: 712 0x13B7A6: ape_make_contextex (context.c:17)
+    n1: 712 0x13B70D: ape_make_context (context.c:6)
+     n0: 712 0x13541E: main (main.c:373)
+   n2: 680 0x1293DE: ape_make_symbol (ccsymtab.c:7)
+    n1: 600 0x11512C: ape_globalstore_set (vm.c:220)
+     n1: 600 0x114F80: ape_make_globalstore (vm.c:171)
+      n1: 600 0x13B9F1: ape_make_contextex (context.c:44)
+       n1: 600 0x13B70D: ape_make_context (context.c:6)
+        n0: 600 0x13541E: main (main.c:373)
+    n0: 80 in 2 places, all below massif's threshold (1.00%)
+   n1: 616 0x132E66: ape_make_strdict (libmap.c:364)
+    n0: 616 in 7 places, all below massif's threshold (1.00%)
+ n2: 11008 0x12A572: da_grow_internal (dnarray.h:215)
+  n2: 6656 0x12B684: ape_gcmem_allocobjdata (memgc.c:311)
+   n1: 6656 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 6656 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 6656 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 4352 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 4352 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 4352 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 4352 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 4352 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 4352 0x13B70D: ape_make_context (context.c:6)
+            n0: 4352 0x13541E: main (main.c:373)
+      n1: 2304 0x116F27: ape_make_vm (vm.c:864)
+       n1: 2304 0x13BAD7: ape_make_contextex (context.c:54)
+        n1: 2304 0x13B70D: ape_make_context (context.c:6)
+         n0: 2304 0x13541E: main (main.c:373)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+  n2: 4352 0x12B5FD: ape_gcmem_allocobjdata (memgc.c:310)
+   n1: 4352 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 4352 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 4352 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 4352 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 4352 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 4352 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 4352 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 4352 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 4352 0x13B70D: ape_make_context (context.c:6)
+            n0: 4352 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 2152 0x10F582: ape_mempool_initdebughandle (mempool.c:222)
+  n1: 2152 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2152 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2152 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2152 0x13B70D: ape_make_context (context.c:6)
+      n0: 2152 0x13541E: main (main.c:373)
+ n1: 2048 0x10F597: ape_mempool_initdebughandle (mempool.c:223)
+  n1: 2048 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2048 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2048 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2048 0x13B70D: ape_make_context (context.c:6)
+      n0: 2048 0x13541E: main (main.c:373)
+ n1: 1024 0x10F5AC: ape_mempool_initdebughandle (mempool.c:224)
+  n1: 1024 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 1024 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 1024 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 1024 0x13B70D: ape_make_context (context.c:6)
+      n0: 1024 0x13541E: main (main.c:373)
+ n1: 686 0x110110: ape_mempool_realloc (mempool.c:496)
+  n1: 686 0x12AEC2: ape_allocator_realloc (memgc.c:155)
+   n1: 686 0x12AB78: ds_extrealloc (memgc.c:59)
+    n1: 686 0x13624E: ds_makeroomfor (sds.h:1068)
+     n1: 686 0x13637F: ds_appendlen (sds.h:1247)
+      n1: 686 0x1366BA: ape_object_string_append (libstring.c:70)
+       n1: 686 0x11053C: ape_object_make_stringlen (libobject.c:91)
+        n1: 686 0x110479: ape_object_make_string (libobject.c:79)
+         n0: 686 in 16 places, all below massif's threshold (1.00%)
+ n0: 0 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=22
+#-----------
+time=681169
+mem_heap_B=33021
+mem_heap_extra_B=3419
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=23
+#-----------
+time=688909
+mem_heap_B=33600
+mem_heap_extra_B=3560
+mem_stacks_B=0
+heap_tree=detailed
+n7: 33600 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 18853 0x10FB0A: ape_mempool_alloc (mempool.c:358)
+  n11: 18853 0x12AE1D: ape_allocator_alloc_real (memgc.c:135)
+   n1: 4488 0x116C61: ape_make_vm (vm.c:838)
+    n1: 4488 0x13BAD7: ape_make_contextex (context.c:54)
+     n1: 4488 0x13B70D: ape_make_context (context.c:6)
+      n0: 4488 0x13541E: main (main.c:373)
+   n0: 3656 in 23 places, all below massif's threshold (1.00%)
+   n3: 3440 0x12B508: ape_gcmem_allocobjdata (memgc.c:294)
+    n1: 1680 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+     n1: 1680 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+      n2: 1680 0x110479: ape_object_make_string (libobject.c:79)
+       n0: 1280 in 16 places, all below massif's threshold (1.00%)
+       n1: 400 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+        n1: 400 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+         n1: 400 0x14373F: ape_builtins_install_object (builtins.c:985)
+          n1: 400 0x14375E: ape_builtins_install (builtins.c:991)
+           n1: 400 0x13BB78: ape_make_contextex (context.c:63)
+            n1: 400 0x13B70D: ape_make_context (context.c:6)
+             n0: 400 0x13541E: main (main.c:373)
+    n2: 1680 0x110C33: ape_object_make_nativefuncmemory (libobject.c:237)
+     n1: 1200 0x114F3A: ape_make_globalstore (vm.c:166)
+      n1: 1200 0x13B9F1: ape_make_contextex (context.c:44)
+       n1: 1200 0x13B70D: ape_make_context (context.c:6)
+        n0: 1200 0x13541E: main (main.c:373)
+     n1: 480 0x143649: ape_builtins_setup_namespace (builtins.c:935)
+      n1: 480 0x14373F: ape_builtins_install_object (builtins.c:985)
+       n1: 480 0x14375E: ape_builtins_install (builtins.c:991)
+        n1: 480 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 480 0x13B70D: ape_make_context (context.c:6)
+          n0: 480 0x13541E: main (main.c:373)
+    n0: 80 in 1 place, below massif's threshold (1.00%)
+   n1: 1936 0x138DD5: ape_valarray_initcapacity (libarray.c:116)
+    n2: 1936 0x138D2F: ape_make_valarraycapacity (libarray.c:94)
+     n4: 1872 0x138C78: ape_make_valarray (libarray.c:77)
+      n0: 720 in 5 places, all below massif's threshold (1.00%)
+      n1: 384 0x114EC1: ape_make_globalstore (vm.c:155)
+       n1: 384 0x13B9F1: ape_make_contextex (context.c:44)
+        n1: 384 0x13B70D: ape_make_context (context.c:6)
+         n0: 384 0x13541E: main (main.c:373)
+      n1: 384 0x12B0F5: ape_make_gcmem (memgc.c:213)
+       n1: 384 0x13B943: ape_make_contextex (context.c:32)
+        n1: 384 0x13B70D: ape_make_context (context.c:6)
+         n0: 384 0x13541E: main (main.c:373)
+      n1: 384 0x12CADE: ape_compiler_init (ccompile.c:269)
+       n1: 384 0x12C3F3: ape_compiler_make (ccompile.c:96)
+        n1: 384 0x13BA6B: ape_make_contextex (context.c:49)
+         n1: 384 0x13B70D: ape_make_context (context.c:6)
+          n0: 384 0x13541E: main (main.c:373)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n2: 1152 0x138CBF: ape_make_valarraycapacity (libarray.c:84)
+    n1: 576 0x138C78: ape_make_valarray (libarray.c:77)
+     n0: 576 in 8 places, all below massif's threshold (1.00%)
+    n1: 576 0x1396B2: ape_make_ptrarraycapacity (libarray.c:600)
+     n1: 576 0x13962F: ape_make_ptrarray (libarray.c:581)
+      n0: 576 in 8 places, all below massif's threshold (1.00%)
+   n1: 960 0x132183: ape_valdict_init (libmap.c:55)
+    n2: 960 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 768 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 768 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 768 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 192 in 1 place, below massif's threshold (1.00%)
+   n1: 832 0x132141: ape_valdict_init (libmap.c:54)
+    n2: 832 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 768 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 768 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 768 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n1: 712 0x13B7A6: ape_make_contextex (context.c:17)
+    n1: 712 0x13B70D: ape_make_context (context.c:6)
+     n0: 712 0x13541E: main (main.c:373)
+   n2: 680 0x1293DE: ape_make_symbol (ccsymtab.c:7)
+    n1: 600 0x11512C: ape_globalstore_set (vm.c:220)
+     n1: 600 0x114F80: ape_make_globalstore (vm.c:171)
+      n1: 600 0x13B9F1: ape_make_contextex (context.c:44)
+       n1: 600 0x13B70D: ape_make_context (context.c:6)
+        n0: 600 0x13541E: main (main.c:373)
+    n0: 80 in 2 places, all below massif's threshold (1.00%)
+   n1: 616 0x132E66: ape_make_strdict (libmap.c:364)
+    n0: 616 in 7 places, all below massif's threshold (1.00%)
+   n1: 381 0x10E68E: ape_util_strndup (util.c:156)
+    n1: 381 0x10E70F: ape_util_strdup (util.c:172)
+     n0: 381 in 5 places, all below massif's threshold (1.00%)
+ n2: 8704 0x12A572: da_grow_internal (dnarray.h:215)
+  n2: 4352 0x12B5FD: ape_gcmem_allocobjdata (memgc.c:310)
+   n1: 4352 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 4352 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 4352 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 4352 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 4352 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 4352 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 4352 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 4352 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 4352 0x13B70D: ape_make_context (context.c:6)
+            n0: 4352 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+  n2: 4352 0x12B684: ape_gcmem_allocobjdata (memgc.c:311)
+   n1: 4352 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 4352 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 4352 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 4352 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 4352 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 4352 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 4352 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 4352 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 4352 0x13B70D: ape_make_context (context.c:6)
+            n0: 4352 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 2152 0x10F582: ape_mempool_initdebughandle (mempool.c:222)
+  n1: 2152 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2152 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2152 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2152 0x13B70D: ape_make_context (context.c:6)
+      n0: 2152 0x13541E: main (main.c:373)
+ n1: 2048 0x10F597: ape_mempool_initdebughandle (mempool.c:223)
+  n1: 2048 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2048 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2048 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2048 0x13B70D: ape_make_context (context.c:6)
+      n0: 2048 0x13541E: main (main.c:373)
+ n1: 1024 0x10F5AC: ape_mempool_initdebughandle (mempool.c:224)
+  n1: 1024 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 1024 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 1024 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 1024 0x13B70D: ape_make_context (context.c:6)
+      n0: 1024 0x13541E: main (main.c:373)
+ n1: 819 0x110110: ape_mempool_realloc (mempool.c:496)
+  n1: 819 0x12AEC2: ape_allocator_realloc (memgc.c:155)
+   n1: 819 0x12AB78: ds_extrealloc (memgc.c:59)
+    n1: 819 0x13624E: ds_makeroomfor (sds.h:1068)
+     n1: 819 0x13637F: ds_appendlen (sds.h:1247)
+      n1: 819 0x1366BA: ape_object_string_append (libstring.c:70)
+       n1: 819 0x11053C: ape_object_make_stringlen (libobject.c:91)
+        n1: 819 0x110479: ape_object_make_string (libobject.c:79)
+         n0: 819 in 17 places, all below massif's threshold (1.00%)
+ n0: 0 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=24
+#-----------
+time=692569
+mem_heap_B=33895
+mem_heap_extra_B=3641
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=25
+#-----------
+time=697861
+mem_heap_B=34300
+mem_heap_extra_B=3748
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=26
+#-----------
+time=702114
+mem_heap_B=34617
+mem_heap_extra_B=3807
+mem_stacks_B=0
+heap_tree=detailed
+n7: 34617 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 19707 0x10FB0A: ape_mempool_alloc (mempool.c:358)
+  n11: 19707 0x12AE1D: ape_allocator_alloc_real (memgc.c:135)
+   n1: 4488 0x116C61: ape_make_vm (vm.c:838)
+    n1: 4488 0x13BAD7: ape_make_contextex (context.c:54)
+     n1: 4488 0x13B70D: ape_make_context (context.c:6)
+      n0: 4488 0x13541E: main (main.c:373)
+   n3: 4240 0x12B508: ape_gcmem_allocobjdata (memgc.c:294)
+    n1: 2080 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+     n1: 2080 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+      n2: 2080 0x110479: ape_object_make_string (libobject.c:79)
+       n0: 1280 in 16 places, all below massif's threshold (1.00%)
+       n1: 800 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+        n1: 800 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+         n1: 800 0x14373F: ape_builtins_install_object (builtins.c:985)
+          n1: 800 0x14375E: ape_builtins_install (builtins.c:991)
+           n1: 800 0x13BB78: ape_make_contextex (context.c:63)
+            n1: 800 0x13B70D: ape_make_context (context.c:6)
+             n0: 800 0x13541E: main (main.c:373)
+    n2: 2080 0x110C33: ape_object_make_nativefuncmemory (libobject.c:237)
+     n1: 1200 0x114F3A: ape_make_globalstore (vm.c:166)
+      n1: 1200 0x13B9F1: ape_make_contextex (context.c:44)
+       n1: 1200 0x13B70D: ape_make_context (context.c:6)
+        n0: 1200 0x13541E: main (main.c:373)
+     n1: 880 0x143649: ape_builtins_setup_namespace (builtins.c:935)
+      n1: 880 0x14373F: ape_builtins_install_object (builtins.c:985)
+       n1: 880 0x14375E: ape_builtins_install (builtins.c:991)
+        n1: 880 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 880 0x13B70D: ape_make_context (context.c:6)
+          n0: 880 0x13541E: main (main.c:373)
+    n0: 80 in 1 place, below massif's threshold (1.00%)
+   n0: 3656 in 23 places, all below massif's threshold (1.00%)
+   n1: 1936 0x138DD5: ape_valarray_initcapacity (libarray.c:116)
+    n2: 1936 0x138D2F: ape_make_valarraycapacity (libarray.c:94)
+     n4: 1872 0x138C78: ape_make_valarray (libarray.c:77)
+      n0: 720 in 5 places, all below massif's threshold (1.00%)
+      n1: 384 0x114EC1: ape_make_globalstore (vm.c:155)
+       n1: 384 0x13B9F1: ape_make_contextex (context.c:44)
+        n1: 384 0x13B70D: ape_make_context (context.c:6)
+         n0: 384 0x13541E: main (main.c:373)
+      n1: 384 0x12B0F5: ape_make_gcmem (memgc.c:213)
+       n1: 384 0x13B943: ape_make_contextex (context.c:32)
+        n1: 384 0x13B70D: ape_make_context (context.c:6)
+         n0: 384 0x13541E: main (main.c:373)
+      n1: 384 0x12CADE: ape_compiler_init (ccompile.c:269)
+       n1: 384 0x12C3F3: ape_compiler_make (ccompile.c:96)
+        n1: 384 0x13BA6B: ape_make_contextex (context.c:49)
+         n1: 384 0x13B70D: ape_make_context (context.c:6)
+          n0: 384 0x13541E: main (main.c:373)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n2: 1152 0x138CBF: ape_make_valarraycapacity (libarray.c:84)
+    n1: 576 0x138C78: ape_make_valarray (libarray.c:77)
+     n0: 576 in 8 places, all below massif's threshold (1.00%)
+    n1: 576 0x1396B2: ape_make_ptrarraycapacity (libarray.c:600)
+     n1: 576 0x13962F: ape_make_ptrarray (libarray.c:581)
+      n0: 576 in 8 places, all below massif's threshold (1.00%)
+   n1: 960 0x132183: ape_valdict_init (libmap.c:55)
+    n2: 960 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 768 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 768 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 768 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 192 in 1 place, below massif's threshold (1.00%)
+   n1: 832 0x132141: ape_valdict_init (libmap.c:54)
+    n2: 832 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 768 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 768 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 768 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n1: 712 0x13B7A6: ape_make_contextex (context.c:17)
+    n1: 712 0x13B70D: ape_make_context (context.c:6)
+     n0: 712 0x13541E: main (main.c:373)
+   n2: 680 0x1293DE: ape_make_symbol (ccsymtab.c:7)
+    n1: 600 0x11512C: ape_globalstore_set (vm.c:220)
+     n1: 600 0x114F80: ape_make_globalstore (vm.c:171)
+      n1: 600 0x13B9F1: ape_make_contextex (context.c:44)
+       n1: 600 0x13B70D: ape_make_context (context.c:6)
+        n0: 600 0x13541E: main (main.c:373)
+    n0: 80 in 2 places, all below massif's threshold (1.00%)
+   n1: 616 0x132E66: ape_make_strdict (libmap.c:364)
+    n0: 616 in 7 places, all below massif's threshold (1.00%)
+   n1: 435 0x10E68E: ape_util_strndup (util.c:156)
+    n1: 435 0x10E70F: ape_util_strdup (util.c:172)
+     n0: 435 in 5 places, all below massif's threshold (1.00%)
+ n2: 8704 0x12A572: da_grow_internal (dnarray.h:215)
+  n2: 4352 0x12B5FD: ape_gcmem_allocobjdata (memgc.c:310)
+   n1: 4352 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 4352 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 4352 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 4352 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 4352 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 4352 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 4352 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 4352 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 4352 0x13B70D: ape_make_context (context.c:6)
+            n0: 4352 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+  n2: 4352 0x12B684: ape_gcmem_allocobjdata (memgc.c:311)
+   n1: 4352 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 4352 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 4352 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 4352 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 4352 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 4352 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 4352 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 4352 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 4352 0x13B70D: ape_make_context (context.c:6)
+            n0: 4352 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 2152 0x10F582: ape_mempool_initdebughandle (mempool.c:222)
+  n1: 2152 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2152 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2152 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2152 0x13B70D: ape_make_context (context.c:6)
+      n0: 2152 0x13541E: main (main.c:373)
+ n1: 2048 0x10F597: ape_mempool_initdebughandle (mempool.c:223)
+  n1: 2048 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2048 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2048 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2048 0x13B70D: ape_make_context (context.c:6)
+      n0: 2048 0x13541E: main (main.c:373)
+ n1: 1024 0x10F5AC: ape_mempool_initdebughandle (mempool.c:224)
+  n1: 1024 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 1024 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 1024 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 1024 0x13B70D: ape_make_context (context.c:6)
+      n0: 1024 0x13541E: main (main.c:373)
+ n1: 982 0x110110: ape_mempool_realloc (mempool.c:496)
+  n1: 982 0x12AEC2: ape_allocator_realloc (memgc.c:155)
+   n1: 982 0x12AB78: ds_extrealloc (memgc.c:59)
+    n1: 982 0x13624E: ds_makeroomfor (sds.h:1068)
+     n1: 982 0x13637F: ds_appendlen (sds.h:1247)
+      n1: 982 0x1366BA: ape_object_string_append (libstring.c:70)
+       n1: 982 0x11053C: ape_object_make_stringlen (libobject.c:91)
+        n1: 982 0x110479: ape_object_make_string (libobject.c:79)
+         n0: 982 in 17 places, all below massif's threshold (1.00%)
+ n0: 0 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=27
+#-----------
+time=707361
+mem_heap_B=34998
+mem_heap_extra_B=3906
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=28
+#-----------
+time=713536
+mem_heap_B=35469
+mem_heap_extra_B=4067
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=29
+#-----------
+time=720872
+mem_heap_B=44138
+mem_heap_extra_B=4174
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=30
+#-----------
+time=726084
+mem_heap_B=44516
+mem_heap_extra_B=4276
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=31
+#-----------
+time=732856
+mem_heap_B=44816
+mem_heap_extra_B=4440
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=32
+#-----------
+time=736822
+mem_heap_B=47152
+mem_heap_extra_B=4480
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=33
+#-----------
+time=741673
+mem_heap_B=47730
+mem_heap_extra_B=4598
+mem_stacks_B=0
+heap_tree=detailed
+n7: 47730 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 23583 0x10FB0A: ape_mempool_alloc (mempool.c:358)
+  n12: 23583 0x12AE1D: ape_allocator_alloc_real (memgc.c:135)
+   n3: 6000 0x12B508: ape_gcmem_allocobjdata (memgc.c:294)
+    n1: 2960 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+     n1: 2960 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+      n2: 2960 0x110479: ape_object_make_string (libobject.c:79)
+       n1: 1680 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+        n2: 1680 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+         n1: 1600 0x14373F: ape_builtins_install_object (builtins.c:985)
+          n1: 1600 0x14375E: ape_builtins_install (builtins.c:991)
+           n1: 1600 0x13BB78: ape_make_contextex (context.c:63)
+            n1: 1600 0x13B70D: ape_make_context (context.c:6)
+             n0: 1600 0x13541E: main (main.c:373)
+         n0: 80 in 1 place, below massif's threshold (1.00%)
+       n0: 1280 in 16 places, all below massif's threshold (1.00%)
+    n2: 2880 0x110C33: ape_object_make_nativefuncmemory (libobject.c:237)
+     n2: 1680 0x143649: ape_builtins_setup_namespace (builtins.c:935)
+      n1: 1600 0x14373F: ape_builtins_install_object (builtins.c:985)
+       n1: 1600 0x14375E: ape_builtins_install (builtins.c:991)
+        n1: 1600 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 1600 0x13B70D: ape_make_context (context.c:6)
+          n0: 1600 0x13541E: main (main.c:373)
+      n0: 80 in 1 place, below massif's threshold (1.00%)
+     n1: 1200 0x114F3A: ape_make_globalstore (vm.c:166)
+      n1: 1200 0x13B9F1: ape_make_contextex (context.c:44)
+       n1: 1200 0x13B70D: ape_make_context (context.c:6)
+        n0: 1200 0x13541E: main (main.c:373)
+    n0: 160 in 1 place, below massif's threshold (1.00%)
+   n1: 4488 0x116C61: ape_make_vm (vm.c:838)
+    n1: 4488 0x13BAD7: ape_make_contextex (context.c:54)
+     n1: 4488 0x13B70D: ape_make_context (context.c:6)
+      n0: 4488 0x13541E: main (main.c:373)
+   n0: 3748 in 22 places, all below massif's threshold (1.00%)
+   n1: 1728 0x132183: ape_valdict_init (libmap.c:55)
+    n2: 1728 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 1536 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 1536 0x11086A: ape_object_make_map (libobject.c:158)
+       n2: 1536 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 192 in 1 place, below massif's threshold (1.00%)
+   n1: 1600 0x132141: ape_valdict_init (libmap.c:54)
+    n2: 1600 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 1536 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 1536 0x11086A: ape_object_make_map (libobject.c:158)
+       n2: 1536 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n1: 1544 0x138DD5: ape_valarray_initcapacity (libarray.c:116)
+    n2: 1544 0x138D2F: ape_make_valarraycapacity (libarray.c:94)
+     n1: 1488 0x138C78: ape_make_valarray (libarray.c:77)
+      n0: 1488 in 8 places, all below massif's threshold (1.00%)
+     n0: 56 in 1 place, below massif's threshold (1.00%)
+   n2: 1152 0x138CBF: ape_make_valarraycapacity (libarray.c:84)
+    n1: 576 0x138C78: ape_make_valarray (libarray.c:77)
+     n0: 576 in 8 places, all below massif's threshold (1.00%)
+    n1: 576 0x1396B2: ape_make_ptrarraycapacity (libarray.c:600)
+     n1: 576 0x13962F: ape_make_ptrarray (libarray.c:581)
+      n0: 576 in 8 places, all below massif's threshold (1.00%)
+   n2: 880 0x1293DE: ape_make_symbol (ccsymtab.c:7)
+    n2: 680 0x11512C: ape_globalstore_set (vm.c:220)
+     n1: 600 0x114F80: ape_make_globalstore (vm.c:171)
+      n1: 600 0x13B9F1: ape_make_contextex (context.c:44)
+       n1: 600 0x13B70D: ape_make_context (context.c:6)
+        n0: 600 0x13541E: main (main.c:373)
+     n0: 80 in 1 place, below massif's threshold (1.00%)
+    n0: 200 in 2 places, all below massif's threshold (1.00%)
+   n1: 712 0x13B7A6: ape_make_contextex (context.c:17)
+    n1: 712 0x13B70D: ape_make_context (context.c:6)
+     n0: 712 0x13541E: main (main.c:373)
+   n1: 616 0x132E66: ape_make_strdict (libmap.c:364)
+    n0: 616 in 7 places, all below massif's threshold (1.00%)
+   n1: 576 0x132205: ape_valdict_init (libmap.c:57)
+    n1: 576 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n0: 576 in 2 places, all below massif's threshold (1.00%)
+   n1: 539 0x10E68E: ape_util_strndup (util.c:156)
+    n1: 539 0x10E70F: ape_util_strdup (util.c:172)
+     n0: 539 in 5 places, all below massif's threshold (1.00%)
+ n2: 16896 0x12A572: da_grow_internal (dnarray.h:215)
+  n2: 8448 0x12B5FD: ape_gcmem_allocobjdata (memgc.c:310)
+   n1: 8448 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 8448 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 8448 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 8448 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 8448 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 8448 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 8448 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 8448 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 8448 0x13B70D: ape_make_context (context.c:6)
+            n0: 8448 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+  n2: 8448 0x12B684: ape_gcmem_allocobjdata (memgc.c:311)
+   n1: 8448 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 8448 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 8448 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 8448 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 8448 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 8448 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 8448 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 8448 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 8448 0x13B70D: ape_make_context (context.c:6)
+            n0: 8448 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 2152 0x10F582: ape_mempool_initdebughandle (mempool.c:222)
+  n1: 2152 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2152 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2152 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2152 0x13B70D: ape_make_context (context.c:6)
+      n0: 2152 0x13541E: main (main.c:373)
+ n1: 2048 0x10F597: ape_mempool_initdebughandle (mempool.c:223)
+  n1: 2048 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2048 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2048 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2048 0x13B70D: ape_make_context (context.c:6)
+      n0: 2048 0x13541E: main (main.c:373)
+ n1: 2027 0x110110: ape_mempool_realloc (mempool.c:496)
+  n2: 2027 0x12AEC2: ape_allocator_realloc (memgc.c:155)
+   n1: 1243 0x12AB78: ds_extrealloc (memgc.c:59)
+    n1: 1243 0x13624E: ds_makeroomfor (sds.h:1068)
+     n1: 1243 0x13637F: ds_appendlen (sds.h:1247)
+      n1: 1243 0x1366BA: ape_object_string_append (libstring.c:70)
+       n1: 1243 0x11053C: ape_object_make_stringlen (libobject.c:91)
+        n2: 1243 0x110479: ape_object_make_string (libobject.c:79)
+         n0: 686 in 16 places, all below massif's threshold (1.00%)
+         n1: 557 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+          n2: 557 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+           n1: 536 0x14373F: ape_builtins_install_object (builtins.c:985)
+            n1: 536 0x14375E: ape_builtins_install (builtins.c:991)
+             n1: 536 0x13BB78: ape_make_contextex (context.c:63)
+              n1: 536 0x13B70D: ape_make_context (context.c:6)
+               n0: 536 0x13541E: main (main.c:373)
+           n0: 21 in 1 place, below massif's threshold (1.00%)
+   n2: 784 0x1390B4: ape_valarray_push (libarray.c:315)
+    n1: 768 0x1150EF: ape_globalstore_set (vm.c:215)
+     n1: 768 0x1436CD: ape_builtins_setup_namespace (builtins.c:937)
+      n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+       n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+        n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 768 0x13B70D: ape_make_context (context.c:6)
+          n0: 768 0x13541E: main (main.c:373)
+    n0: 16 in 1 place, below massif's threshold (1.00%)
+ n1: 1024 0x10F5AC: ape_mempool_initdebughandle (mempool.c:224)
+  n1: 1024 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 1024 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 1024 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 1024 0x13B70D: ape_make_context (context.c:6)
+      n0: 1024 0x13541E: main (main.c:373)
+ n0: 0 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=34
+#-----------
+time=745605
+mem_heap_B=47901
+mem_heap_extra_B=4699
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=35
+#-----------
+time=750548
+mem_heap_B=50415
+mem_heap_extra_B=4841
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=36
+#-----------
+time=755711
+mem_heap_B=50796
+mem_heap_extra_B=4940
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=37
+#-----------
+time=761441
+mem_heap_B=51149
+mem_heap_extra_B=5051
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=38
+#-----------
+time=765331
+mem_heap_B=51260
+mem_heap_extra_B=5172
+mem_stacks_B=0
+heap_tree=detailed
+n7: 51260 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 26972 0x10FB0A: ape_mempool_alloc (mempool.c:358)
+  n13: 26972 0x12AE1D: ape_allocator_alloc_real (memgc.c:135)
+   n3: 6880 0x12B508: ape_gcmem_allocobjdata (memgc.c:294)
+    n1: 3360 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+     n1: 3360 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+      n2: 3360 0x110479: ape_object_make_string (libobject.c:79)
+       n1: 2080 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+        n2: 2080 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+         n1: 1600 0x14373F: ape_builtins_install_object (builtins.c:985)
+          n1: 1600 0x14375E: ape_builtins_install (builtins.c:991)
+           n1: 1600 0x13BB78: ape_make_contextex (context.c:63)
+            n1: 1600 0x13B70D: ape_make_context (context.c:6)
+             n0: 1600 0x13541E: main (main.c:373)
+         n0: 480 in 2 places, all below massif's threshold (1.00%)
+       n0: 1280 in 16 places, all below massif's threshold (1.00%)
+    n2: 3280 0x110C33: ape_object_make_nativefuncmemory (libobject.c:237)
+     n2: 2080 0x143649: ape_builtins_setup_namespace (builtins.c:935)
+      n1: 1600 0x14373F: ape_builtins_install_object (builtins.c:985)
+       n1: 1600 0x14375E: ape_builtins_install (builtins.c:991)
+        n1: 1600 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 1600 0x13B70D: ape_make_context (context.c:6)
+          n0: 1600 0x13541E: main (main.c:373)
+      n0: 480 in 2 places, all below massif's threshold (1.00%)
+     n1: 1200 0x114F3A: ape_make_globalstore (vm.c:166)
+      n1: 1200 0x13B9F1: ape_make_contextex (context.c:44)
+       n1: 1200 0x13B70D: ape_make_context (context.c:6)
+        n0: 1200 0x13541E: main (main.c:373)
+    n0: 240 in 1 place, below massif's threshold (1.00%)
+   n1: 4488 0x116C61: ape_make_vm (vm.c:838)
+    n1: 4488 0x13BAD7: ape_make_contextex (context.c:54)
+     n1: 4488 0x13B70D: ape_make_context (context.c:6)
+      n0: 4488 0x13541E: main (main.c:373)
+   n0: 3624 in 21 places, all below massif's threshold (1.00%)
+   n1: 2496 0x132183: ape_valdict_init (libmap.c:55)
+    n2: 2496 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 2304 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 2304 0x11086A: ape_object_make_map (libobject.c:158)
+       n3: 2304 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x12649C: ape_builtins_install_io (libio.c:329)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 192 in 1 place, below massif's threshold (1.00%)
+   n1: 2368 0x132141: ape_valdict_init (libmap.c:54)
+    n2: 2368 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 2304 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 2304 0x11086A: ape_object_make_map (libobject.c:158)
+       n3: 2304 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x12649C: ape_builtins_install_io (libio.c:329)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n1: 1544 0x138DD5: ape_valarray_initcapacity (libarray.c:116)
+    n2: 1544 0x138D2F: ape_make_valarraycapacity (libarray.c:94)
+     n1: 1488 0x138C78: ape_make_valarray (libarray.c:77)
+      n0: 1488 in 8 places, all below massif's threshold (1.00%)
+     n0: 56 in 1 place, below massif's threshold (1.00%)
+   n2: 1152 0x138CBF: ape_make_valarraycapacity (libarray.c:84)
+    n1: 576 0x138C78: ape_make_valarray (libarray.c:77)
+     n0: 576 in 8 places, all below massif's threshold (1.00%)
+    n1: 576 0x1396B2: ape_make_ptrarraycapacity (libarray.c:600)
+     n1: 576 0x13962F: ape_make_ptrarray (libarray.c:581)
+      n0: 576 in 8 places, all below massif's threshold (1.00%)
+   n2: 1040 0x1293DE: ape_make_symbol (ccsymtab.c:7)
+    n2: 720 0x11512C: ape_globalstore_set (vm.c:220)
+     n1: 600 0x114F80: ape_make_globalstore (vm.c:171)
+      n1: 600 0x13B9F1: ape_make_contextex (context.c:44)
+       n1: 600 0x13B70D: ape_make_context (context.c:6)
+        n0: 600 0x13541E: main (main.c:373)
+     n0: 120 in 1 place, below massif's threshold (1.00%)
+    n0: 320 in 2 places, all below massif's threshold (1.00%)
+   n1: 832 0x132205: ape_valdict_init (libmap.c:57)
+    n2: 832 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 768 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 768 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 768 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n0: 768 in 3 places, all below massif's threshold (1.00%)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n1: 712 0x13B7A6: ape_make_contextex (context.c:17)
+    n1: 712 0x13B70D: ape_make_context (context.c:6)
+     n0: 712 0x13541E: main (main.c:373)
+   n1: 620 0x10E68E: ape_util_strndup (util.c:156)
+    n1: 620 0x10E70F: ape_util_strdup (util.c:172)
+     n0: 620 in 5 places, all below massif's threshold (1.00%)
+   n1: 616 0x132E66: ape_make_strdict (libmap.c:364)
+    n0: 616 in 7 places, all below massif's threshold (1.00%)
+   n1: 600 0x131F87: ape_make_valdictcapacity (libmap.c:16)
+    n0: 600 in 2 places, all below massif's threshold (1.00%)
+ n2: 16896 0x12A572: da_grow_internal (dnarray.h:215)
+  n2: 8448 0x12B5FD: ape_gcmem_allocobjdata (memgc.c:310)
+   n1: 8448 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 8448 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 8448 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 8448 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 8448 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 8448 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 8448 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 8448 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 8448 0x13B70D: ape_make_context (context.c:6)
+            n0: 8448 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+  n2: 8448 0x12B684: ape_gcmem_allocobjdata (memgc.c:311)
+   n1: 8448 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 8448 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 8448 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 8448 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 8448 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 8448 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 8448 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 8448 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 8448 0x13B70D: ape_make_context (context.c:6)
+            n0: 8448 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 2168 0x110110: ape_mempool_realloc (mempool.c:496)
+  n2: 2168 0x12AEC2: ape_allocator_realloc (memgc.c:155)
+   n1: 1368 0x12AB78: ds_extrealloc (memgc.c:59)
+    n1: 1368 0x13624E: ds_makeroomfor (sds.h:1068)
+     n1: 1368 0x13637F: ds_appendlen (sds.h:1247)
+      n1: 1368 0x1366BA: ape_object_string_append (libstring.c:70)
+       n1: 1368 0x11053C: ape_object_make_stringlen (libobject.c:91)
+        n2: 1368 0x110479: ape_object_make_string (libobject.c:79)
+         n0: 686 in 16 places, all below massif's threshold (1.00%)
+         n1: 682 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+          n1: 682 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+           n0: 682 in 3 places, all below massif's threshold (1.00%)
+   n2: 800 0x1390B4: ape_valarray_push (libarray.c:315)
+    n1: 768 0x1150EF: ape_globalstore_set (vm.c:215)
+     n1: 768 0x1436CD: ape_builtins_setup_namespace (builtins.c:937)
+      n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+       n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+        n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 768 0x13B70D: ape_make_context (context.c:6)
+          n0: 768 0x13541E: main (main.c:373)
+    n0: 32 in 1 place, below massif's threshold (1.00%)
+ n1: 2152 0x10F582: ape_mempool_initdebughandle (mempool.c:222)
+  n1: 2152 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2152 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2152 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2152 0x13B70D: ape_make_context (context.c:6)
+      n0: 2152 0x13541E: main (main.c:373)
+ n1: 2048 0x10F597: ape_mempool_initdebughandle (mempool.c:223)
+  n1: 2048 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2048 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2048 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2048 0x13B70D: ape_make_context (context.c:6)
+      n0: 2048 0x13541E: main (main.c:373)
+ n1: 1024 0x10F5AC: ape_mempool_initdebughandle (mempool.c:224)
+  n1: 1024 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 1024 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 1024 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 1024 0x13B70D: ape_make_context (context.c:6)
+      n0: 1024 0x13541E: main (main.c:373)
+ n0: 0 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=39
+#-----------
+time=770282
+mem_heap_B=53774
+mem_heap_extra_B=5298
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=40
+#-----------
+time=775342
+mem_heap_B=54140
+mem_heap_extra_B=5412
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=41
+#-----------
+time=780824
+mem_heap_B=54362
+mem_heap_extra_B=5550
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=42
+#-----------
+time=788107
+mem_heap_B=54811
+mem_heap_extra_B=5661
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=43
+#-----------
+time=796013
+mem_heap_B=54878
+mem_heap_extra_B=5770
+mem_stacks_B=0
+heap_tree=detailed
+n7: 54878 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 30478 0x10FB0A: ape_mempool_alloc (mempool.c:358)
+  n13: 30478 0x12AE1D: ape_allocator_alloc_real (memgc.c:135)
+   n3: 7600 0x12B508: ape_gcmem_allocobjdata (memgc.c:294)
+    n1: 3680 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+     n1: 3680 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+      n2: 3680 0x110479: ape_object_make_string (libobject.c:79)
+       n1: 2400 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+        n2: 2400 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+         n1: 1600 0x14373F: ape_builtins_install_object (builtins.c:985)
+          n1: 1600 0x14375E: ape_builtins_install (builtins.c:991)
+           n1: 1600 0x13BB78: ape_make_contextex (context.c:63)
+            n1: 1600 0x13B70D: ape_make_context (context.c:6)
+             n0: 1600 0x13541E: main (main.c:373)
+         n0: 800 in 3 places, all below massif's threshold (1.00%)
+       n0: 1280 in 16 places, all below massif's threshold (1.00%)
+    n2: 3600 0x110C33: ape_object_make_nativefuncmemory (libobject.c:237)
+     n2: 2400 0x143649: ape_builtins_setup_namespace (builtins.c:935)
+      n1: 1600 0x14373F: ape_builtins_install_object (builtins.c:985)
+       n1: 1600 0x14375E: ape_builtins_install (builtins.c:991)
+        n1: 1600 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 1600 0x13B70D: ape_make_context (context.c:6)
+          n0: 1600 0x13541E: main (main.c:373)
+      n0: 800 in 3 places, all below massif's threshold (1.00%)
+     n1: 1200 0x114F3A: ape_make_globalstore (vm.c:166)
+      n1: 1200 0x13B9F1: ape_make_contextex (context.c:44)
+       n1: 1200 0x13B70D: ape_make_context (context.c:6)
+        n0: 1200 0x13541E: main (main.c:373)
+    n0: 320 in 1 place, below massif's threshold (1.00%)
+   n1: 4488 0x116C61: ape_make_vm (vm.c:838)
+    n1: 4488 0x13BAD7: ape_make_contextex (context.c:54)
+     n1: 4488 0x13B70D: ape_make_context (context.c:6)
+      n0: 4488 0x13541E: main (main.c:373)
+   n0: 4336 in 22 places, all below massif's threshold (1.00%)
+   n1: 3264 0x132183: ape_valdict_init (libmap.c:55)
+    n2: 3264 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 3072 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 3072 0x11086A: ape_object_make_map (libobject.c:158)
+       n4: 3072 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x12649C: ape_builtins_install_io (libio.c:329)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x1388A3: ape_builtins_install_string (libstring.c:583)
+         n1: 768 0x143776: ape_builtins_install (builtins.c:993)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 192 in 1 place, below massif's threshold (1.00%)
+   n1: 3136 0x132141: ape_valdict_init (libmap.c:54)
+    n2: 3136 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 3072 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 3072 0x11086A: ape_object_make_map (libobject.c:158)
+       n4: 3072 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x12649C: ape_builtins_install_io (libio.c:329)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x1388A3: ape_builtins_install_string (libstring.c:583)
+         n1: 768 0x143776: ape_builtins_install (builtins.c:993)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n1: 1536 0x138DD5: ape_valarray_initcapacity (libarray.c:116)
+    n2: 1536 0x138D2F: ape_make_valarraycapacity (libarray.c:94)
+     n1: 1488 0x138C78: ape_make_valarray (libarray.c:77)
+      n0: 1488 in 8 places, all below massif's threshold (1.00%)
+     n0: 48 in 1 place, below massif's threshold (1.00%)
+   n1: 1152 0x138CBF: ape_make_valarraycapacity (libarray.c:84)
+    n0: 1152 in 2 places, all below massif's threshold (1.00%)
+   n1: 1088 0x132205: ape_valdict_init (libmap.c:57)
+    n2: 1088 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 1024 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 1024 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 1024 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n0: 1024 in 4 places, all below massif's threshold (1.00%)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n2: 1080 0x1293DE: ape_make_symbol (ccsymtab.c:7)
+    n1: 760 0x11512C: ape_globalstore_set (vm.c:220)
+     n0: 760 in 2 places, all below massif's threshold (1.00%)
+    n0: 320 in 2 places, all below massif's threshold (1.00%)
+   n1: 750 0x10E68E: ape_util_strndup (util.c:156)
+    n1: 750 0x10E70F: ape_util_strdup (util.c:172)
+     n0: 750 in 5 places, all below massif's threshold (1.00%)
+   n1: 720 0x131F87: ape_make_valdictcapacity (libmap.c:16)
+    n0: 720 in 2 places, all below massif's threshold (1.00%)
+   n1: 712 0x13B7A6: ape_make_contextex (context.c:17)
+    n1: 712 0x13B70D: ape_make_context (context.c:6)
+     n0: 712 0x13541E: main (main.c:373)
+   n1: 616 0x132E66: ape_make_strdict (libmap.c:364)
+    n0: 616 in 7 places, all below massif's threshold (1.00%)
+ n2: 16896 0x12A572: da_grow_internal (dnarray.h:215)
+  n2: 8448 0x12B5FD: ape_gcmem_allocobjdata (memgc.c:310)
+   n1: 8448 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 8448 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 8448 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 8448 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 8448 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 8448 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 8448 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 8448 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 8448 0x13B70D: ape_make_context (context.c:6)
+            n0: 8448 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+  n2: 8448 0x12B684: ape_gcmem_allocobjdata (memgc.c:311)
+   n1: 8448 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 8448 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 8448 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 8448 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 8448 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 8448 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 8448 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 8448 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 8448 0x13B70D: ape_make_context (context.c:6)
+            n0: 8448 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 2280 0x110110: ape_mempool_realloc (mempool.c:496)
+  n2: 2280 0x12AEC2: ape_allocator_realloc (memgc.c:155)
+   n1: 1464 0x12AB78: ds_extrealloc (memgc.c:59)
+    n1: 1464 0x13624E: ds_makeroomfor (sds.h:1068)
+     n1: 1464 0x13637F: ds_appendlen (sds.h:1247)
+      n1: 1464 0x1366BA: ape_object_string_append (libstring.c:70)
+       n1: 1464 0x11053C: ape_object_make_stringlen (libobject.c:91)
+        n2: 1464 0x110479: ape_object_make_string (libobject.c:79)
+         n1: 778 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+          n1: 778 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+           n0: 778 in 4 places, all below massif's threshold (1.00%)
+         n0: 686 in 16 places, all below massif's threshold (1.00%)
+   n2: 816 0x1390B4: ape_valarray_push (libarray.c:315)
+    n1: 768 0x1150EF: ape_globalstore_set (vm.c:215)
+     n1: 768 0x1436CD: ape_builtins_setup_namespace (builtins.c:937)
+      n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+       n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+        n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 768 0x13B70D: ape_make_context (context.c:6)
+          n0: 768 0x13541E: main (main.c:373)
+    n0: 48 in 1 place, below massif's threshold (1.00%)
+ n1: 2152 0x10F582: ape_mempool_initdebughandle (mempool.c:222)
+  n1: 2152 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2152 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2152 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2152 0x13B70D: ape_make_context (context.c:6)
+      n0: 2152 0x13541E: main (main.c:373)
+ n1: 2048 0x10F597: ape_mempool_initdebughandle (mempool.c:223)
+  n1: 2048 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2048 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2048 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2048 0x13B70D: ape_make_context (context.c:6)
+      n0: 2048 0x13541E: main (main.c:373)
+ n1: 1024 0x10F5AC: ape_mempool_initdebughandle (mempool.c:224)
+  n1: 1024 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 1024 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 1024 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 1024 0x13B70D: ape_make_context (context.c:6)
+      n0: 1024 0x13541E: main (main.c:373)
+ n0: 0 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=44
+#-----------
+time=800102
+mem_heap_B=54928
+mem_heap_extra_B=5712
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=45
+#-----------
+time=808006
+mem_heap_B=55227
+mem_heap_extra_B=5837
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=46
+#-----------
+time=812069
+mem_heap_B=55365
+mem_heap_extra_B=5979
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=47
+#-----------
+time=817012
+mem_heap_B=57879
+mem_heap_extra_B=6105
+mem_stacks_B=0
+heap_tree=detailed
+n7: 57879 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 33426 0x10FB0A: ape_mempool_alloc (mempool.c:358)
+  n14: 33426 0x12AE1D: ape_allocator_alloc_real (memgc.c:135)
+   n3: 7920 0x12B508: ape_gcmem_allocobjdata (memgc.c:294)
+    n1: 3760 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+     n1: 3760 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+      n2: 3760 0x110479: ape_object_make_string (libobject.c:79)
+       n1: 2480 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+        n2: 2480 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+         n1: 1600 0x14373F: ape_builtins_install_object (builtins.c:985)
+          n1: 1600 0x14375E: ape_builtins_install (builtins.c:991)
+           n1: 1600 0x13BB78: ape_make_contextex (context.c:63)
+            n1: 1600 0x13B70D: ape_make_context (context.c:6)
+             n0: 1600 0x13541E: main (main.c:373)
+         n0: 880 in 4 places, all below massif's threshold (1.00%)
+       n0: 1280 in 16 places, all below massif's threshold (1.00%)
+    n2: 3760 0x110C33: ape_object_make_nativefuncmemory (libobject.c:237)
+     n2: 2560 0x143649: ape_builtins_setup_namespace (builtins.c:935)
+      n1: 1600 0x14373F: ape_builtins_install_object (builtins.c:985)
+       n1: 1600 0x14375E: ape_builtins_install (builtins.c:991)
+        n1: 1600 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 1600 0x13B70D: ape_make_context (context.c:6)
+          n0: 1600 0x13541E: main (main.c:373)
+      n0: 960 in 4 places, all below massif's threshold (1.00%)
+     n1: 1200 0x114F3A: ape_make_globalstore (vm.c:166)
+      n1: 1200 0x13B9F1: ape_make_contextex (context.c:44)
+       n1: 1200 0x13B70D: ape_make_context (context.c:6)
+        n0: 1200 0x13541E: main (main.c:373)
+    n0: 400 in 1 place, below massif's threshold (1.00%)
+   n1: 4488 0x116C61: ape_make_vm (vm.c:838)
+    n1: 4488 0x13BAD7: ape_make_contextex (context.c:54)
+     n1: 4488 0x13B70D: ape_make_context (context.c:6)
+      n0: 4488 0x13541E: main (main.c:373)
+   n0: 4164 in 21 places, all below massif's threshold (1.00%)
+   n1: 4032 0x132183: ape_valdict_init (libmap.c:55)
+    n2: 4032 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 3840 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 3840 0x11086A: ape_object_make_map (libobject.c:158)
+       n5: 3840 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x12649C: ape_builtins_install_io (libio.c:329)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x1388A3: ape_builtins_install_string (libstring.c:583)
+         n1: 768 0x143776: ape_builtins_install (builtins.c:993)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x13DEDD: ape_builtins_install_math (libmath.c:148)
+         n1: 768 0x14378E: ape_builtins_install (builtins.c:995)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 192 in 1 place, below massif's threshold (1.00%)
+   n1: 3904 0x132141: ape_valdict_init (libmap.c:54)
+    n2: 3904 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 3840 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 3840 0x11086A: ape_object_make_map (libobject.c:158)
+       n5: 3840 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x12649C: ape_builtins_install_io (libio.c:329)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x1388A3: ape_builtins_install_string (libstring.c:583)
+         n1: 768 0x143776: ape_builtins_install (builtins.c:993)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x13DEDD: ape_builtins_install_math (libmath.c:148)
+         n1: 768 0x14378E: ape_builtins_install (builtins.c:995)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n1: 1536 0x138DD5: ape_valarray_initcapacity (libarray.c:116)
+    n2: 1536 0x138D2F: ape_make_valarraycapacity (libarray.c:94)
+     n1: 1488 0x138C78: ape_make_valarray (libarray.c:77)
+      n0: 1488 in 8 places, all below massif's threshold (1.00%)
+     n0: 48 in 1 place, below massif's threshold (1.00%)
+   n1: 1344 0x132205: ape_valdict_init (libmap.c:57)
+    n2: 1344 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 1280 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 1280 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 1280 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n0: 1280 in 5 places, all below massif's threshold (1.00%)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n2: 1160 0x1293DE: ape_make_symbol (ccsymtab.c:7)
+    n1: 760 0x11512C: ape_globalstore_set (vm.c:220)
+     n0: 760 in 2 places, all below massif's threshold (1.00%)
+    n0: 400 in 2 places, all below massif's threshold (1.00%)
+   n1: 1152 0x138CBF: ape_make_valarraycapacity (libarray.c:84)
+    n0: 1152 in 2 places, all below massif's threshold (1.00%)
+   n1: 840 0x131F87: ape_make_valdictcapacity (libmap.c:16)
+    n0: 840 in 2 places, all below massif's threshold (1.00%)
+   n1: 830 0x10E68E: ape_util_strndup (util.c:156)
+    n1: 830 0x10E70F: ape_util_strdup (util.c:172)
+     n0: 830 in 5 places, all below massif's threshold (1.00%)
+   n1: 712 0x13B7A6: ape_make_contextex (context.c:17)
+    n1: 712 0x13B70D: ape_make_context (context.c:6)
+     n0: 712 0x13541E: main (main.c:373)
+   n1: 672 0x1320FF: ape_valdict_init (libmap.c:53)
+    n2: 672 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 640 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 640 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 640 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n0: 640 in 5 places, all below massif's threshold (1.00%)
+     n0: 32 in 1 place, below massif's threshold (1.00%)
+   n1: 672 0x1321C4: ape_valdict_init (libmap.c:56)
+    n2: 672 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 640 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 640 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 640 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n0: 640 in 5 places, all below massif's threshold (1.00%)
+     n0: 32 in 1 place, below massif's threshold (1.00%)
+ n2: 16896 0x12A572: da_grow_internal (dnarray.h:215)
+  n2: 8448 0x12B5FD: ape_gcmem_allocobjdata (memgc.c:310)
+   n1: 8448 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 8448 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 8448 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 8448 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 8448 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 8448 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 8448 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 8448 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 8448 0x13B70D: ape_make_context (context.c:6)
+            n0: 8448 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+  n2: 8448 0x12B684: ape_gcmem_allocobjdata (memgc.c:311)
+   n1: 8448 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 8448 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 8448 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 8448 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 8448 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 8448 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 8448 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 8448 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 8448 0x13B70D: ape_make_context (context.c:6)
+            n0: 8448 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 2333 0x110110: ape_mempool_realloc (mempool.c:496)
+  n2: 2333 0x12AEC2: ape_allocator_realloc (memgc.c:155)
+   n1: 1485 0x12AB78: ds_extrealloc (memgc.c:59)
+    n1: 1485 0x13624E: ds_makeroomfor (sds.h:1068)
+     n1: 1485 0x13637F: ds_appendlen (sds.h:1247)
+      n1: 1485 0x1366BA: ape_object_string_append (libstring.c:70)
+       n1: 1485 0x11053C: ape_object_make_stringlen (libobject.c:91)
+        n2: 1485 0x110479: ape_object_make_string (libobject.c:79)
+         n1: 799 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+          n1: 799 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+           n0: 799 in 5 places, all below massif's threshold (1.00%)
+         n0: 686 in 16 places, all below massif's threshold (1.00%)
+   n2: 848 0x1390B4: ape_valarray_push (libarray.c:315)
+    n1: 768 0x1150EF: ape_globalstore_set (vm.c:215)
+     n1: 768 0x1436CD: ape_builtins_setup_namespace (builtins.c:937)
+      n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+       n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+        n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 768 0x13B70D: ape_make_context (context.c:6)
+          n0: 768 0x13541E: main (main.c:373)
+    n0: 80 in 1 place, below massif's threshold (1.00%)
+ n1: 2152 0x10F582: ape_mempool_initdebughandle (mempool.c:222)
+  n1: 2152 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2152 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2152 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2152 0x13B70D: ape_make_context (context.c:6)
+      n0: 2152 0x13541E: main (main.c:373)
+ n1: 2048 0x10F597: ape_mempool_initdebughandle (mempool.c:223)
+  n1: 2048 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2048 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2048 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2048 0x13B70D: ape_make_context (context.c:6)
+      n0: 2048 0x13541E: main (main.c:373)
+ n1: 1024 0x10F5AC: ape_mempool_initdebughandle (mempool.c:224)
+  n1: 1024 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 1024 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 1024 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 1024 0x13B70D: ape_make_context (context.c:6)
+      n0: 1024 0x13541E: main (main.c:373)
+ n0: 0 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=48
+#-----------
+time=822098
+mem_heap_B=58245
+mem_heap_extra_B=6219
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=49
+#-----------
+time=827158
+mem_heap_B=58611
+mem_heap_extra_B=6333
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=50
+#-----------
+time=830773
+mem_heap_B=58891
+mem_heap_extra_B=6429
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=51
+#-----------
+time=834871
+mem_heap_B=59169
+mem_heap_extra_B=6495
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=52
+#-----------
+time=838564
+mem_heap_B=59322
+mem_heap_extra_B=6598
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=53
+#-----------
+time=843648
+mem_heap_B=59780
+mem_heap_extra_B=6740
+mem_stacks_B=0
+heap_tree=detailed
+n7: 59780 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 35169 0x10FB0A: ape_mempool_alloc (mempool.c:358)
+  n14: 35169 0x12AE1D: ape_allocator_alloc_real (memgc.c:135)
+   n3: 9120 0x12B508: ape_gcmem_allocobjdata (memgc.c:294)
+    n1: 4400 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+     n1: 4400 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+      n2: 4400 0x110479: ape_object_make_string (libobject.c:79)
+       n1: 3120 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+        n3: 3120 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+         n1: 1600 0x14373F: ape_builtins_install_object (builtins.c:985)
+          n1: 1600 0x14375E: ape_builtins_install (builtins.c:991)
+           n1: 1600 0x13BB78: ape_make_contextex (context.c:63)
+            n1: 1600 0x13B70D: ape_make_context (context.c:6)
+             n0: 1600 0x13541E: main (main.c:373)
+         n0: 800 in 3 places, all below massif's threshold (1.00%)
+         n1: 720 0x13DEDD: ape_builtins_install_math (libmath.c:148)
+          n1: 720 0x14378E: ape_builtins_install (builtins.c:995)
+           n1: 720 0x13BB78: ape_make_contextex (context.c:63)
+            n1: 720 0x13B70D: ape_make_context (context.c:6)
+             n0: 720 0x13541E: main (main.c:373)
+       n0: 1280 in 16 places, all below massif's threshold (1.00%)
+    n2: 4320 0x110C33: ape_object_make_nativefuncmemory (libobject.c:237)
+     n3: 3120 0x143649: ape_builtins_setup_namespace (builtins.c:935)
+      n1: 1600 0x14373F: ape_builtins_install_object (builtins.c:985)
+       n1: 1600 0x14375E: ape_builtins_install (builtins.c:991)
+        n1: 1600 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 1600 0x13B70D: ape_make_context (context.c:6)
+          n0: 1600 0x13541E: main (main.c:373)
+      n0: 800 in 3 places, all below massif's threshold (1.00%)
+      n1: 720 0x13DEDD: ape_builtins_install_math (libmath.c:148)
+       n1: 720 0x14378E: ape_builtins_install (builtins.c:995)
+        n1: 720 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 720 0x13B70D: ape_make_context (context.c:6)
+          n0: 720 0x13541E: main (main.c:373)
+     n1: 1200 0x114F3A: ape_make_globalstore (vm.c:166)
+      n1: 1200 0x13B9F1: ape_make_contextex (context.c:44)
+       n1: 1200 0x13B70D: ape_make_context (context.c:6)
+        n0: 1200 0x13541E: main (main.c:373)
+    n0: 400 in 1 place, below massif's threshold (1.00%)
+   n0: 4536 in 21 places, all below massif's threshold (1.00%)
+   n1: 4488 0x116C61: ape_make_vm (vm.c:838)
+    n1: 4488 0x13BAD7: ape_make_contextex (context.c:54)
+     n1: 4488 0x13B70D: ape_make_context (context.c:6)
+      n0: 4488 0x13541E: main (main.c:373)
+   n1: 4032 0x132183: ape_valdict_init (libmap.c:55)
+    n2: 4032 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 3840 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 3840 0x11086A: ape_object_make_map (libobject.c:158)
+       n5: 3840 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x12649C: ape_builtins_install_io (libio.c:329)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x1388A3: ape_builtins_install_string (libstring.c:583)
+         n1: 768 0x143776: ape_builtins_install (builtins.c:993)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x13DEDD: ape_builtins_install_math (libmath.c:148)
+         n1: 768 0x14378E: ape_builtins_install (builtins.c:995)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 192 in 1 place, below massif's threshold (1.00%)
+   n1: 3904 0x132141: ape_valdict_init (libmap.c:54)
+    n2: 3904 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 3840 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 3840 0x11086A: ape_object_make_map (libobject.c:158)
+       n5: 3840 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x12649C: ape_builtins_install_io (libio.c:329)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x1388A3: ape_builtins_install_string (libstring.c:583)
+         n1: 768 0x143776: ape_builtins_install (builtins.c:993)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x13DEDD: ape_builtins_install_math (libmath.c:148)
+         n1: 768 0x14378E: ape_builtins_install (builtins.c:995)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n1: 1536 0x138DD5: ape_valarray_initcapacity (libarray.c:116)
+    n2: 1536 0x138D2F: ape_make_valarraycapacity (libarray.c:94)
+     n1: 1488 0x138C78: ape_make_valarray (libarray.c:77)
+      n0: 1488 in 8 places, all below massif's threshold (1.00%)
+     n0: 48 in 1 place, below massif's threshold (1.00%)
+   n1: 1344 0x132205: ape_valdict_init (libmap.c:57)
+    n2: 1344 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 1280 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 1280 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 1280 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n0: 1280 in 5 places, all below massif's threshold (1.00%)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n2: 1280 0x1293DE: ape_make_symbol (ccsymtab.c:7)
+    n1: 800 0x11512C: ape_globalstore_set (vm.c:220)
+     n0: 800 in 2 places, all below massif's threshold (1.00%)
+    n0: 480 in 2 places, all below massif's threshold (1.00%)
+   n1: 1152 0x138CBF: ape_make_valarraycapacity (libarray.c:84)
+    n0: 1152 in 2 places, all below massif's threshold (1.00%)
+   n1: 881 0x10E68E: ape_util_strndup (util.c:156)
+    n1: 881 0x10E70F: ape_util_strdup (util.c:172)
+     n0: 881 in 5 places, all below massif's threshold (1.00%)
+   n1: 840 0x131F87: ape_make_valdictcapacity (libmap.c:16)
+    n0: 840 in 2 places, all below massif's threshold (1.00%)
+   n1: 712 0x13B7A6: ape_make_contextex (context.c:17)
+    n1: 712 0x13B70D: ape_make_context (context.c:6)
+     n0: 712 0x13541E: main (main.c:373)
+   n1: 672 0x1320FF: ape_valdict_init (libmap.c:53)
+    n1: 672 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n0: 672 in 2 places, all below massif's threshold (1.00%)
+   n1: 672 0x1321C4: ape_valdict_init (libmap.c:56)
+    n1: 672 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n0: 672 in 2 places, all below massif's threshold (1.00%)
+ n2: 16896 0x12A572: da_grow_internal (dnarray.h:215)
+  n2: 8448 0x12B5FD: ape_gcmem_allocobjdata (memgc.c:310)
+   n1: 8448 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 8448 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 8448 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 8448 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 8448 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 8448 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 8448 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 8448 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 8448 0x13B70D: ape_make_context (context.c:6)
+            n0: 8448 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+  n2: 8448 0x12B684: ape_gcmem_allocobjdata (memgc.c:311)
+   n1: 8448 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 8448 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 8448 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 8448 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 8448 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 8448 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 8448 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 8448 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 8448 0x13B70D: ape_make_context (context.c:6)
+            n0: 8448 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 2491 0x110110: ape_mempool_realloc (mempool.c:496)
+  n2: 2491 0x12AEC2: ape_allocator_realloc (memgc.c:155)
+   n1: 1643 0x12AB78: ds_extrealloc (memgc.c:59)
+    n1: 1643 0x13624E: ds_makeroomfor (sds.h:1068)
+     n1: 1643 0x13637F: ds_appendlen (sds.h:1247)
+      n1: 1643 0x1366BA: ape_object_string_append (libstring.c:70)
+       n1: 1643 0x11053C: ape_object_make_stringlen (libobject.c:91)
+        n2: 1643 0x110479: ape_object_make_string (libobject.c:79)
+         n1: 957 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+          n1: 957 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+           n0: 957 in 5 places, all below massif's threshold (1.00%)
+         n0: 686 in 16 places, all below massif's threshold (1.00%)
+   n2: 848 0x1390B4: ape_valarray_push (libarray.c:315)
+    n1: 768 0x1150EF: ape_globalstore_set (vm.c:215)
+     n1: 768 0x1436CD: ape_builtins_setup_namespace (builtins.c:937)
+      n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+       n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+        n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 768 0x13B70D: ape_make_context (context.c:6)
+          n0: 768 0x13541E: main (main.c:373)
+    n0: 80 in 1 place, below massif's threshold (1.00%)
+ n1: 2152 0x10F582: ape_mempool_initdebughandle (mempool.c:222)
+  n1: 2152 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2152 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2152 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2152 0x13B70D: ape_make_context (context.c:6)
+      n0: 2152 0x13541E: main (main.c:373)
+ n1: 2048 0x10F597: ape_mempool_initdebughandle (mempool.c:223)
+  n1: 2048 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2048 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2048 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2048 0x13B70D: ape_make_context (context.c:6)
+      n0: 2048 0x13541E: main (main.c:373)
+ n1: 1024 0x10F5AC: ape_mempool_initdebughandle (mempool.c:224)
+  n1: 1024 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 1024 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 1024 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 1024 0x13B70D: ape_make_context (context.c:6)
+      n0: 1024 0x13541E: main (main.c:373)
+ n0: 0 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=54
+#-----------
+time=847359
+mem_heap_B=62025
+mem_heap_extra_B=6783
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=55
+#-----------
+time=850868
+mem_heap_B=62243
+mem_heap_extra_B=6845
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=56
+#-----------
+time=854729
+mem_heap_B=62472
+mem_heap_extra_B=6912
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=57
+#-----------
+time=858260
+mem_heap_B=62765
+mem_heap_extra_B=7059
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=58
+#-----------
+time=861931
+mem_heap_B=63369
+mem_heap_extra_B=7127
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=59
+#-----------
+time=870067
+mem_heap_B=64601
+mem_heap_extra_B=7159
+mem_stacks_B=0
+heap_tree=detailed
+n7: 64601 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 39886 0x10FB0A: ape_mempool_alloc (mempool.c:358)
+  n16: 39886 0x12AE1D: ape_allocator_alloc_real (memgc.c:135)
+   n3: 9920 0x12B508: ape_gcmem_allocobjdata (memgc.c:294)
+    n1: 4720 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+     n1: 4720 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+      n2: 4720 0x110479: ape_object_make_string (libobject.c:79)
+       n1: 3360 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+        n3: 3360 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+         n1: 1600 0x14373F: ape_builtins_install_object (builtins.c:985)
+          n1: 1600 0x14375E: ape_builtins_install (builtins.c:991)
+           n1: 1600 0x13BB78: ape_make_contextex (context.c:63)
+            n1: 1600 0x13B70D: ape_make_context (context.c:6)
+             n0: 1600 0x13541E: main (main.c:373)
+         n0: 1040 in 4 places, all below massif's threshold (1.00%)
+         n1: 720 0x13DEDD: ape_builtins_install_math (libmath.c:148)
+          n1: 720 0x14378E: ape_builtins_install (builtins.c:995)
+           n1: 720 0x13BB78: ape_make_contextex (context.c:63)
+            n1: 720 0x13B70D: ape_make_context (context.c:6)
+             n0: 720 0x13541E: main (main.c:373)
+       n0: 1360 in 17 places, all below massif's threshold (1.00%)
+    n3: 4640 0x110C33: ape_object_make_nativefuncmemory (libobject.c:237)
+     n3: 3360 0x143649: ape_builtins_setup_namespace (builtins.c:935)
+      n1: 1600 0x14373F: ape_builtins_install_object (builtins.c:985)
+       n1: 1600 0x14375E: ape_builtins_install (builtins.c:991)
+        n1: 1600 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 1600 0x13B70D: ape_make_context (context.c:6)
+          n0: 1600 0x13541E: main (main.c:373)
+      n0: 1040 in 4 places, all below massif's threshold (1.00%)
+      n1: 720 0x13DEDD: ape_builtins_install_math (libmath.c:148)
+       n1: 720 0x14378E: ape_builtins_install (builtins.c:995)
+        n1: 720 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 720 0x13B70D: ape_make_context (context.c:6)
+          n0: 720 0x13541E: main (main.c:373)
+     n1: 1200 0x114F3A: ape_make_globalstore (vm.c:166)
+      n1: 1200 0x13B9F1: ape_make_contextex (context.c:44)
+       n1: 1200 0x13B70D: ape_make_context (context.c:6)
+        n0: 1200 0x13541E: main (main.c:373)
+     n0: 80 in 1 place, below massif's threshold (1.00%)
+    n0: 560 in 2 places, all below massif's threshold (1.00%)
+   n1: 4800 0x132183: ape_valdict_init (libmap.c:55)
+    n2: 4800 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 4608 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 4608 0x11086A: ape_object_make_map (libobject.c:158)
+       n6: 4608 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x12649C: ape_builtins_install_io (libio.c:329)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x1388A3: ape_builtins_install_string (libstring.c:583)
+         n1: 768 0x143776: ape_builtins_install (builtins.c:993)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x13DEDD: ape_builtins_install_math (libmath.c:148)
+         n1: 768 0x14378E: ape_builtins_install (builtins.c:995)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x143712: ape_builtins_install_vm (builtins.c:952)
+         n1: 768 0x14379A: ape_builtins_install (builtins.c:996)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 192 in 1 place, below massif's threshold (1.00%)
+   n1: 4672 0x132141: ape_valdict_init (libmap.c:54)
+    n2: 4672 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 4608 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 4608 0x11086A: ape_object_make_map (libobject.c:158)
+       n6: 4608 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x12649C: ape_builtins_install_io (libio.c:329)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x1388A3: ape_builtins_install_string (libstring.c:583)
+         n1: 768 0x143776: ape_builtins_install (builtins.c:993)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x13DEDD: ape_builtins_install_math (libmath.c:148)
+         n1: 768 0x14378E: ape_builtins_install (builtins.c:995)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x143712: ape_builtins_install_vm (builtins.c:952)
+         n1: 768 0x14379A: ape_builtins_install (builtins.c:996)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n1: 4488 0x116C61: ape_make_vm (vm.c:838)
+    n1: 4488 0x13BAD7: ape_make_contextex (context.c:54)
+     n1: 4488 0x13B70D: ape_make_context (context.c:6)
+      n0: 4488 0x13541E: main (main.c:373)
+   n0: 4092 in 19 places, all below massif's threshold (1.00%)
+   n1: 1728 0x138DD5: ape_valarray_initcapacity (libarray.c:116)
+    n2: 1728 0x138D2F: ape_make_valarraycapacity (libarray.c:94)
+     n1: 1488 0x138C78: ape_make_valarray (libarray.c:77)
+      n0: 1488 in 8 places, all below massif's threshold (1.00%)
+     n0: 240 in 2 places, all below massif's threshold (1.00%)
+   n1: 1600 0x132205: ape_valdict_init (libmap.c:57)
+    n2: 1600 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 1536 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 1536 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 1536 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n0: 1536 in 6 places, all below massif's threshold (1.00%)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n2: 1400 0x1293DE: ape_make_symbol (ccsymtab.c:7)
+    n1: 920 0x11512C: ape_globalstore_set (vm.c:220)
+     n0: 920 in 3 places, all below massif's threshold (1.00%)
+    n0: 480 in 2 places, all below massif's threshold (1.00%)
+   n1: 1224 0x138CBF: ape_make_valarraycapacity (libarray.c:84)
+    n0: 1224 in 3 places, all below massif's threshold (1.00%)
+   n2: 960 0x131F87: ape_make_valdictcapacity (libmap.c:16)
+    n1: 720 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+     n1: 720 0x11086A: ape_object_make_map (libobject.c:158)
+      n1: 720 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+       n0: 720 in 6 places, all below massif's threshold (1.00%)
+    n0: 240 in 1 place, below massif's threshold (1.00%)
+   n1: 930 0x10E68E: ape_util_strndup (util.c:156)
+    n1: 930 0x10E70F: ape_util_strdup (util.c:172)
+     n0: 930 in 5 places, all below massif's threshold (1.00%)
+   n2: 824 0x133054: ape_strdict_init (libmap.c:394)
+    n1: 808 0x1338ED: ape_strdict_growandrehash (libmap.c:611)
+     n1: 808 0x133B38: ape_strdict_setinternal (libmap.c:655)
+      n1: 808 0x1335D2: ape_strdict_set (libmap.c:515)
+       n0: 808 in 4 places, all below massif's threshold (1.00%)
+    n0: 16 in 1 place, below massif's threshold (1.00%)
+   n2: 824 0x133095: ape_strdict_init (libmap.c:395)
+    n1: 808 0x1338ED: ape_strdict_growandrehash (libmap.c:611)
+     n1: 808 0x133B38: ape_strdict_setinternal (libmap.c:655)
+      n1: 808 0x1335D2: ape_strdict_set (libmap.c:515)
+       n0: 808 in 4 places, all below massif's threshold (1.00%)
+    n0: 16 in 1 place, below massif's threshold (1.00%)
+   n2: 824 0x133117: ape_strdict_init (libmap.c:397)
+    n1: 808 0x1338ED: ape_strdict_growandrehash (libmap.c:611)
+     n1: 808 0x133B38: ape_strdict_setinternal (libmap.c:655)
+      n1: 808 0x1335D2: ape_strdict_set (libmap.c:515)
+       n0: 808 in 4 places, all below massif's threshold (1.00%)
+    n0: 16 in 1 place, below massif's threshold (1.00%)
+   n1: 800 0x1320FF: ape_valdict_init (libmap.c:53)
+    n2: 800 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 768 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 768 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 768 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n0: 768 in 6 places, all below massif's threshold (1.00%)
+     n0: 32 in 1 place, below massif's threshold (1.00%)
+   n1: 800 0x1321C4: ape_valdict_init (libmap.c:56)
+    n2: 800 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 768 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 768 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 768 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n0: 768 in 6 places, all below massif's threshold (1.00%)
+     n0: 32 in 1 place, below massif's threshold (1.00%)
+ n2: 16896 0x12A572: da_grow_internal (dnarray.h:215)
+  n2: 8448 0x12B5FD: ape_gcmem_allocobjdata (memgc.c:310)
+   n1: 8448 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 8448 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 8448 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 8448 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 8448 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 8448 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 8448 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 8448 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 8448 0x13B70D: ape_make_context (context.c:6)
+            n0: 8448 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+  n2: 8448 0x12B684: ape_gcmem_allocobjdata (memgc.c:311)
+   n1: 8448 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 8448 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 8448 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 8448 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 8448 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 8448 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 8448 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 8448 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 8448 0x13B70D: ape_make_context (context.c:6)
+            n0: 8448 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 2595 0x110110: ape_mempool_realloc (mempool.c:496)
+  n2: 2595 0x12AEC2: ape_allocator_realloc (memgc.c:155)
+   n1: 1747 0x12AB78: ds_extrealloc (memgc.c:59)
+    n1: 1747 0x13624E: ds_makeroomfor (sds.h:1068)
+     n1: 1747 0x13637F: ds_appendlen (sds.h:1247)
+      n1: 1747 0x1366BA: ape_object_string_append (libstring.c:70)
+       n1: 1747 0x11053C: ape_object_make_stringlen (libobject.c:91)
+        n2: 1747 0x110479: ape_object_make_string (libobject.c:79)
+         n1: 1030 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+          n1: 1030 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+           n0: 1030 in 6 places, all below massif's threshold (1.00%)
+         n0: 717 in 17 places, all below massif's threshold (1.00%)
+   n2: 848 0x1390B4: ape_valarray_push (libarray.c:315)
+    n1: 768 0x1150EF: ape_globalstore_set (vm.c:215)
+     n1: 768 0x1436CD: ape_builtins_setup_namespace (builtins.c:937)
+      n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+       n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+        n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 768 0x13B70D: ape_make_context (context.c:6)
+          n0: 768 0x13541E: main (main.c:373)
+    n0: 80 in 1 place, below massif's threshold (1.00%)
+ n1: 2152 0x10F582: ape_mempool_initdebughandle (mempool.c:222)
+  n1: 2152 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2152 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2152 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2152 0x13B70D: ape_make_context (context.c:6)
+      n0: 2152 0x13541E: main (main.c:373)
+ n1: 2048 0x10F597: ape_mempool_initdebughandle (mempool.c:223)
+  n1: 2048 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2048 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2048 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2048 0x13B70D: ape_make_context (context.c:6)
+      n0: 2048 0x13541E: main (main.c:373)
+ n1: 1024 0x10F5AC: ape_mempool_initdebughandle (mempool.c:224)
+  n1: 1024 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 1024 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 1024 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 1024 0x13B70D: ape_make_context (context.c:6)
+      n0: 1024 0x13541E: main (main.c:373)
+ n0: 0 in 1 place, below massif's threshold (1.00%)
+#-----------
+snapshot=60
+#-----------
+time=873547
+mem_heap_B=63929
+mem_heap_extra_B=7207
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=61
+#-----------
+time=877021
+mem_heap_B=65025
+mem_heap_extra_B=7407
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=62
+#-----------
+time=880502
+mem_heap_B=65979
+mem_heap_extra_B=7645
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=63
+#-----------
+time=883940
+mem_heap_B=66755
+mem_heap_extra_B=7829
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=64
+#-----------
+time=887292
+mem_heap_B=67123
+mem_heap_extra_B=8069
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=65
+#-----------
+time=890696
+mem_heap_B=67574
+mem_heap_extra_B=8250
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=66
+#-----------
+time=894549
+mem_heap_B=67754
+mem_heap_extra_B=8390
+mem_stacks_B=0
+heap_tree=peak
+n7: 67754 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 43007 0x10FB0A: ape_mempool_alloc (mempool.c:358)
+  n14: 43007 0x12AE1D: ape_allocator_alloc_real (memgc.c:135)
+   n3: 9920 0x12B508: ape_gcmem_allocobjdata (memgc.c:294)
+    n1: 4720 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+     n1: 4720 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+      n2: 4720 0x110479: ape_object_make_string (libobject.c:79)
+       n1: 3360 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+        n2: 3360 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+         n0: 1760 in 5 places, all below massif's threshold (1.00%)
+         n1: 1600 0x14373F: ape_builtins_install_object (builtins.c:985)
+          n1: 1600 0x14375E: ape_builtins_install (builtins.c:991)
+           n1: 1600 0x13BB78: ape_make_contextex (context.c:63)
+            n1: 1600 0x13B70D: ape_make_context (context.c:6)
+             n0: 1600 0x13541E: main (main.c:373)
+       n0: 1360 in 17 places, all below massif's threshold (1.00%)
+    n3: 4640 0x110C33: ape_object_make_nativefuncmemory (libobject.c:237)
+     n2: 3360 0x143649: ape_builtins_setup_namespace (builtins.c:935)
+      n0: 1760 in 5 places, all below massif's threshold (1.00%)
+      n1: 1600 0x14373F: ape_builtins_install_object (builtins.c:985)
+       n1: 1600 0x14375E: ape_builtins_install (builtins.c:991)
+        n1: 1600 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 1600 0x13B70D: ape_make_context (context.c:6)
+          n0: 1600 0x13541E: main (main.c:373)
+     n1: 1200 0x114F3A: ape_make_globalstore (vm.c:166)
+      n1: 1200 0x13B9F1: ape_make_contextex (context.c:44)
+       n1: 1200 0x13B70D: ape_make_context (context.c:6)
+        n0: 1200 0x13541E: main (main.c:373)
+     n0: 80 in 1 place, below massif's threshold (1.00%)
+    n0: 560 in 2 places, all below massif's threshold (1.00%)
+   n0: 6128 in 24 places, all below massif's threshold (1.00%)
+   n1: 4800 0x132183: ape_valdict_init (libmap.c:55)
+    n2: 4800 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 4608 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 4608 0x11086A: ape_object_make_map (libobject.c:158)
+       n6: 4608 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x12649C: ape_builtins_install_io (libio.c:329)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x1388A3: ape_builtins_install_string (libstring.c:583)
+         n1: 768 0x143776: ape_builtins_install (builtins.c:993)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x13DEDD: ape_builtins_install_math (libmath.c:148)
+         n1: 768 0x14378E: ape_builtins_install (builtins.c:995)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x143712: ape_builtins_install_vm (builtins.c:952)
+         n1: 768 0x14379A: ape_builtins_install (builtins.c:996)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 192 in 1 place, below massif's threshold (1.00%)
+   n1: 4672 0x132141: ape_valdict_init (libmap.c:54)
+    n2: 4672 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 4608 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 4608 0x11086A: ape_object_make_map (libobject.c:158)
+       n6: 4608 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x12649C: ape_builtins_install_io (libio.c:329)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x1388A3: ape_builtins_install_string (libstring.c:583)
+         n1: 768 0x143776: ape_builtins_install (builtins.c:993)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x13DEDD: ape_builtins_install_math (libmath.c:148)
+         n1: 768 0x14378E: ape_builtins_install (builtins.c:995)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x143712: ape_builtins_install_vm (builtins.c:952)
+         n1: 768 0x14379A: ape_builtins_install (builtins.c:996)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n1: 4488 0x116C61: ape_make_vm (vm.c:838)
+    n1: 4488 0x13BAD7: ape_make_contextex (context.c:54)
+     n1: 4488 0x13B70D: ape_make_context (context.c:6)
+      n0: 4488 0x13541E: main (main.c:373)
+   n1: 2960 0x138DD5: ape_valarray_initcapacity (libarray.c:116)
+    n2: 2960 0x138D2F: ape_make_valarraycapacity (libarray.c:94)
+     n2: 2592 0x138C78: ape_make_valarray (libarray.c:77)
+      n0: 1824 in 7 places, all below massif's threshold (1.00%)
+      n1: 768 0x12CADE: ape_compiler_init (ccompile.c:269)
+       n0: 768 in 2 places, all below massif's threshold (1.00%)
+     n0: 368 in 2 places, all below massif's threshold (1.00%)
+   n3: 2376 0x138CBF: ape_make_valarraycapacity (libarray.c:84)
+    n2: 1296 0x1396B2: ape_make_ptrarraycapacity (libarray.c:600)
+     n1: 1080 0x13962F: ape_make_ptrarray (libarray.c:581)
+      n0: 1080 in 8 places, all below massif's threshold (1.00%)
+     n0: 216 in 1 place, below massif's threshold (1.00%)
+    n1: 1008 0x138C78: ape_make_valarray (libarray.c:77)
+     n0: 1008 in 8 places, all below massif's threshold (1.00%)
+    n0: 72 in 1 place, below massif's threshold (1.00%)
+   n2: 1640 0x1293DE: ape_make_symbol (ccsymtab.c:7)
+    n1: 920 0x11512C: ape_globalstore_set (vm.c:220)
+     n0: 920 in 3 places, all below massif's threshold (1.00%)
+    n0: 720 in 2 places, all below massif's threshold (1.00%)
+   n1: 1600 0x132205: ape_valdict_init (libmap.c:57)
+    n2: 1600 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 1536 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 1536 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 1536 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n0: 1536 in 6 places, all below massif's threshold (1.00%)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n1: 983 0x10E68E: ape_util_strndup (util.c:156)
+    n1: 983 0x10E70F: ape_util_strdup (util.c:172)
+     n0: 983 in 5 places, all below massif's threshold (1.00%)
+   n1: 960 0x131F87: ape_make_valdictcapacity (libmap.c:16)
+    n0: 960 in 2 places, all below massif's threshold (1.00%)
+   n1: 880 0x132E66: ape_make_strdict (libmap.c:364)
+    n0: 880 in 7 places, all below massif's threshold (1.00%)
+   n1: 800 0x1320FF: ape_valdict_init (libmap.c:53)
+    n2: 800 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 768 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 768 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 768 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n0: 768 in 6 places, all below massif's threshold (1.00%)
+     n0: 32 in 1 place, below massif's threshold (1.00%)
+   n1: 800 0x1321C4: ape_valdict_init (libmap.c:56)
+    n2: 800 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 768 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 768 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 768 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n0: 768 in 6 places, all below massif's threshold (1.00%)
+     n0: 32 in 1 place, below massif's threshold (1.00%)
+ n2: 16896 0x12A572: da_grow_internal (dnarray.h:215)
+  n2: 8448 0x12B5FD: ape_gcmem_allocobjdata (memgc.c:310)
+   n1: 8448 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 8448 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 8448 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 8448 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 8448 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 8448 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 8448 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 8448 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 8448 0x13B70D: ape_make_context (context.c:6)
+            n0: 8448 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+  n2: 8448 0x12B684: ape_gcmem_allocobjdata (memgc.c:311)
+   n1: 8448 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 8448 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 8448 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 8448 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 8448 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 8448 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 8448 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 8448 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 8448 0x13B70D: ape_make_context (context.c:6)
+            n0: 8448 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 2627 0x110110: ape_mempool_realloc (mempool.c:496)
+  n2: 2627 0x12AEC2: ape_allocator_realloc (memgc.c:155)
+   n1: 1747 0x12AB78: ds_extrealloc (memgc.c:59)
+    n1: 1747 0x13624E: ds_makeroomfor (sds.h:1068)
+     n1: 1747 0x13637F: ds_appendlen (sds.h:1247)
+      n1: 1747 0x1366BA: ape_object_string_append (libstring.c:70)
+       n1: 1747 0x11053C: ape_object_make_stringlen (libobject.c:91)
+        n2: 1747 0x110479: ape_object_make_string (libobject.c:79)
+         n1: 1030 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+          n1: 1030 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+           n0: 1030 in 6 places, all below massif's threshold (1.00%)
+         n0: 717 in 17 places, all below massif's threshold (1.00%)
+   n2: 880 0x1390B4: ape_valarray_push (libarray.c:315)
+    n1: 768 0x1150EF: ape_globalstore_set (vm.c:215)
+     n1: 768 0x1436CD: ape_builtins_setup_namespace (builtins.c:937)
+      n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+       n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+        n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 768 0x13B70D: ape_make_context (context.c:6)
+          n0: 768 0x13541E: main (main.c:373)
+    n0: 112 in 1 place, below massif's threshold (1.00%)
+ n1: 2152 0x10F582: ape_mempool_initdebughandle (mempool.c:222)
+  n1: 2152 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2152 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2152 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2152 0x13B70D: ape_make_context (context.c:6)
+      n0: 2152 0x13541E: main (main.c:373)
+ n1: 2048 0x10F597: ape_mempool_initdebughandle (mempool.c:223)
+  n1: 2048 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2048 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2048 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2048 0x13B70D: ape_make_context (context.c:6)
+      n0: 2048 0x13541E: main (main.c:373)
+ n1: 1024 0x10F5AC: ape_mempool_initdebughandle (mempool.c:224)
+  n1: 1024 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 1024 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 1024 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 1024 0x13B70D: ape_make_context (context.c:6)
+      n0: 1024 0x13541E: main (main.c:373)
+ n0: 0 in 3 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=67
+#-----------
+time=897935
+mem_heap_B=67246
+mem_heap_extra_B=8154
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=68
+#-----------
+time=901951
+mem_heap_B=66925
+mem_heap_extra_B=8187
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=69
+#-----------
+time=905325
+mem_heap_B=67142
+mem_heap_extra_B=8282
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=70
+#-----------
+time=912336
+mem_heap_B=67530
+mem_heap_extra_B=8382
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=71
+#-----------
+time=918402
+mem_heap_B=67573
+mem_heap_extra_B=8419
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=72
+#-----------
+time=921980
+mem_heap_B=66946
+mem_heap_extra_B=8182
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=73
+#-----------
+time=925330
+mem_heap_B=66187
+mem_heap_extra_B=7821
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=74
+#-----------
+time=929136
+mem_heap_B=64551
+mem_heap_extra_B=7473
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=75
+#-----------
+time=955961
+mem_heap_B=64623
+mem_heap_extra_B=7489
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=76
+#-----------
+time=983988
+mem_heap_B=65559
+mem_heap_extra_B=7473
+mem_stacks_B=0
+heap_tree=detailed
+n8: 65559 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 39737 0x10FB0A: ape_mempool_alloc (mempool.c:358)
+  n13: 39737 0x12AE1D: ape_allocator_alloc_real (memgc.c:135)
+   n3: 10080 0x12B508: ape_gcmem_allocobjdata (memgc.c:294)
+    n1: 4800 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+     n2: 4800 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+      n2: 4720 0x110479: ape_object_make_string (libobject.c:79)
+       n1: 3360 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+        n2: 3360 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+         n0: 1760 in 5 places, all below massif's threshold (1.00%)
+         n1: 1600 0x14373F: ape_builtins_install_object (builtins.c:985)
+          n1: 1600 0x14375E: ape_builtins_install (builtins.c:991)
+           n1: 1600 0x13BB78: ape_make_contextex (context.c:63)
+            n1: 1600 0x13B70D: ape_make_context (context.c:6)
+             n0: 1600 0x13541E: main (main.c:373)
+       n0: 1360 in 17 places, all below massif's threshold (1.00%)
+      n0: 80 in 1 place, below massif's threshold (1.00%)
+    n3: 4640 0x110C33: ape_object_make_nativefuncmemory (libobject.c:237)
+     n2: 3360 0x143649: ape_builtins_setup_namespace (builtins.c:935)
+      n0: 1760 in 5 places, all below massif's threshold (1.00%)
+      n1: 1600 0x14373F: ape_builtins_install_object (builtins.c:985)
+       n1: 1600 0x14375E: ape_builtins_install (builtins.c:991)
+        n1: 1600 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 1600 0x13B70D: ape_make_context (context.c:6)
+          n0: 1600 0x13541E: main (main.c:373)
+     n1: 1200 0x114F3A: ape_make_globalstore (vm.c:166)
+      n1: 1200 0x13B9F1: ape_make_contextex (context.c:44)
+       n1: 1200 0x13B70D: ape_make_context (context.c:6)
+        n0: 1200 0x13541E: main (main.c:373)
+     n0: 80 in 1 place, below massif's threshold (1.00%)
+    n0: 640 in 3 places, all below massif's threshold (1.00%)
+   n0: 6052 in 31 places, all below massif's threshold (1.00%)
+   n1: 4800 0x132183: ape_valdict_init (libmap.c:55)
+    n2: 4800 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 4608 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 4608 0x11086A: ape_object_make_map (libobject.c:158)
+       n6: 4608 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x12649C: ape_builtins_install_io (libio.c:329)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x1388A3: ape_builtins_install_string (libstring.c:583)
+         n1: 768 0x143776: ape_builtins_install (builtins.c:993)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x13DEDD: ape_builtins_install_math (libmath.c:148)
+         n1: 768 0x14378E: ape_builtins_install (builtins.c:995)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x143712: ape_builtins_install_vm (builtins.c:952)
+         n1: 768 0x14379A: ape_builtins_install (builtins.c:996)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 192 in 1 place, below massif's threshold (1.00%)
+   n1: 4672 0x132141: ape_valdict_init (libmap.c:54)
+    n2: 4672 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 4608 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 4608 0x11086A: ape_object_make_map (libobject.c:158)
+       n6: 4608 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x12649C: ape_builtins_install_io (libio.c:329)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x1388A3: ape_builtins_install_string (libstring.c:583)
+         n1: 768 0x143776: ape_builtins_install (builtins.c:993)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x13DEDD: ape_builtins_install_math (libmath.c:148)
+         n1: 768 0x14378E: ape_builtins_install (builtins.c:995)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x143712: ape_builtins_install_vm (builtins.c:952)
+         n1: 768 0x14379A: ape_builtins_install (builtins.c:996)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 768 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n1: 4488 0x116C61: ape_make_vm (vm.c:838)
+    n1: 4488 0x13BAD7: ape_make_contextex (context.c:54)
+     n1: 4488 0x13B70D: ape_make_context (context.c:6)
+      n0: 4488 0x13541E: main (main.c:373)
+   n2: 1729 0x138DD5: ape_valarray_initcapacity (libarray.c:116)
+    n2: 1712 0x138D2F: ape_make_valarraycapacity (libarray.c:94)
+     n1: 1472 0x138C78: ape_make_valarray (libarray.c:77)
+      n0: 1472 in 8 places, all below massif's threshold (1.00%)
+     n0: 240 in 3 places, all below massif's threshold (1.00%)
+    n0: 17 in 1 place, below massif's threshold (1.00%)
+   n1: 1600 0x132205: ape_valdict_init (libmap.c:57)
+    n2: 1600 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 1536 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 1536 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 1536 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n0: 1536 in 6 places, all below massif's threshold (1.00%)
+     n0: 64 in 1 place, below massif's threshold (1.00%)
+   n2: 1400 0x1293DE: ape_make_symbol (ccsymtab.c:7)
+    n1: 920 0x11512C: ape_globalstore_set (vm.c:220)
+     n0: 920 in 3 places, all below massif's threshold (1.00%)
+    n0: 480 in 2 places, all below massif's threshold (1.00%)
+   n1: 1368 0x138CBF: ape_make_valarraycapacity (libarray.c:84)
+    n0: 1368 in 4 places, all below massif's threshold (1.00%)
+   n2: 988 0x10E68E: ape_util_strndup (util.c:156)
+    n1: 965 0x10E70F: ape_util_strdup (util.c:172)
+     n0: 965 in 6 places, all below massif's threshold (1.00%)
+    n0: 23 in 2 places, all below massif's threshold (1.00%)
+   n1: 960 0x131F87: ape_make_valdictcapacity (libmap.c:16)
+    n0: 960 in 2 places, all below massif's threshold (1.00%)
+   n1: 800 0x1320FF: ape_valdict_init (libmap.c:53)
+    n2: 800 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 768 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 768 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 768 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n0: 768 in 6 places, all below massif's threshold (1.00%)
+     n0: 32 in 1 place, below massif's threshold (1.00%)
+   n1: 800 0x1321C4: ape_valdict_init (libmap.c:56)
+    n2: 800 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 768 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 768 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 768 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n0: 768 in 6 places, all below massif's threshold (1.00%)
+     n0: 32 in 1 place, below massif's threshold (1.00%)
+ n2: 16896 0x12A572: da_grow_internal (dnarray.h:215)
+  n2: 8448 0x12B5FD: ape_gcmem_allocobjdata (memgc.c:310)
+   n1: 8448 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 8448 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 8448 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 8448 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 8448 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 8448 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 8448 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 8448 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 8448 0x13B70D: ape_make_context (context.c:6)
+            n0: 8448 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+  n2: 8448 0x12B684: ape_gcmem_allocobjdata (memgc.c:311)
+   n1: 8448 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 8448 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 8448 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 8448 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 8448 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 8448 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 8448 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 8448 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 8448 0x13B70D: ape_make_context (context.c:6)
+            n0: 8448 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 2678 0x110110: ape_mempool_realloc (mempool.c:496)
+  n2: 2678 0x12AEC2: ape_allocator_realloc (memgc.c:155)
+   n1: 1782 0x12AB78: ds_extrealloc (memgc.c:59)
+    n1: 1782 0x13624E: ds_makeroomfor (sds.h:1068)
+     n1: 1782 0x13637F: ds_appendlen (sds.h:1247)
+      n1: 1782 0x1366BA: ape_object_string_append (libstring.c:70)
+       n2: 1782 0x11053C: ape_object_make_stringlen (libobject.c:91)
+        n2: 1747 0x110479: ape_object_make_string (libobject.c:79)
+         n1: 1030 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+          n1: 1030 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+           n0: 1030 in 6 places, all below massif's threshold (1.00%)
+         n0: 717 in 17 places, all below massif's threshold (1.00%)
+        n0: 35 in 1 place, below massif's threshold (1.00%)
+   n2: 896 0x1390B4: ape_valarray_push (libarray.c:315)
+    n1: 768 0x1150EF: ape_globalstore_set (vm.c:215)
+     n1: 768 0x1436CD: ape_builtins_setup_namespace (builtins.c:937)
+      n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+       n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+        n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 768 0x13B70D: ape_make_context (context.c:6)
+          n0: 768 0x13541E: main (main.c:373)
+    n0: 128 in 1 place, below massif's threshold (1.00%)
+ n1: 2152 0x10F582: ape_mempool_initdebughandle (mempool.c:222)
+  n1: 2152 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2152 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2152 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2152 0x13B70D: ape_make_context (context.c:6)
+      n0: 2152 0x13541E: main (main.c:373)
+ n1: 2048 0x10F597: ape_mempool_initdebughandle (mempool.c:223)
+  n1: 2048 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2048 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2048 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2048 0x13B70D: ape_make_context (context.c:6)
+      n0: 2048 0x13541E: main (main.c:373)
+ n1: 1024 0x10F5AC: ape_mempool_initdebughandle (mempool.c:224)
+  n1: 1024 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 1024 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 1024 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 1024 0x13B70D: ape_make_context (context.c:6)
+      n0: 1024 0x13541E: main (main.c:373)
+ n1: 1024 0x4A95D03: _IO_file_doallocate (filedoalloc.c:101)
+  n2: 1024 0x4AA5ECF: _IO_doallocbuf (genops.c:347)
+   n1: 1024 0x4AA4F2F: _IO_file_overflow@@GLIBC_2.2.5 (fileops.c:745)
+    n1: 1024 0x4AA36B4: _IO_new_file_xsputn (fileops.c:1244)
+     n1: 1024 0x4AA36B4: _IO_file_xsputn@@GLIBC_2.2.5 (fileops.c:1197)
+      n1: 1024 0x4A973C0: fwrite (iofwrite.c:39)
+       n1: 1024 0x13E3EC: wr_default_iowriter (writer.c:48)
+        n1: 1024 0x13E5B7: ape_writer_appendlen (writer.c:111)
+         n1: 1024 0x111301: ape_tostring_object (libobject.c:472)
+          n1: 1024 0x13FBA7: cfn_println (builtins.c:183)
+           n1: 1024 0x1162E7: ape_vm_callnativefunction (vm.c:621)
+            n1: 1024 0x116797: ape_vm_callobjectargs (vm.c:726)
+             n1: 1024 0x1168CF: ape_vm_callobjectstack (vm.c:745)
+              n1: 1024 0x11BEF5: ape_vmdo_executefunction (vm.c:2035)
+               n1: 1024 0x117FD8: ape_vm_run (vm.c:1079)
+                n1: 1024 0x13C441: ape_context_executefile (context.c:260)
+                 n0: 1024 0x135711: main (main.c:434)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+ n0: 0 in 2 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=77
+#-----------
+time=987350
+mem_heap_B=64070
+mem_heap_extra_B=6890
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=78
+#-----------
+time=991623
+mem_heap_B=58391
+mem_heap_extra_B=6601
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=79
+#-----------
+time=995005
+mem_heap_B=57365
+mem_heap_extra_B=6027
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=80
+#-----------
+time=998490
+mem_heap_B=55948
+mem_heap_extra_B=5644
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=81
+#-----------
+time=1001865
+mem_heap_B=54283
+mem_heap_extra_B=5053
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=82
+#-----------
+time=1005220
+mem_heap_B=53669
+mem_heap_extra_B=4363
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=83
+#-----------
+time=1008664
+mem_heap_B=41513
+mem_heap_extra_B=3879
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=84
+#-----------
+time=1012028
+mem_heap_B=39997
+mem_heap_extra_B=3579
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=85
+#-----------
+time=1015366
+mem_heap_B=36583
+mem_heap_extra_B=3273
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=86
+#-----------
+time=1018711
+mem_heap_B=35289
+mem_heap_extra_B=2943
+mem_stacks_B=0
+heap_tree=detailed
+n8: 35289 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 19657 0x10FB0A: ape_mempool_alloc (mempool.c:358)
+  n10: 19657 0x12AE1D: ape_allocator_alloc_real (memgc.c:135)
+   n4: 6320 0x12B508: ape_gcmem_allocobjdata (memgc.c:294)
+    n1: 2960 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+     n2: 2960 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+      n2: 2880 0x110479: ape_object_make_string (libobject.c:79)
+       n1: 2800 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+        n4: 2800 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+         n1: 1040 0x14373F: ape_builtins_install_object (builtins.c:985)
+          n1: 1040 0x14375E: ape_builtins_install (builtins.c:991)
+           n1: 1040 0x13BB78: ape_make_contextex (context.c:63)
+            n1: 1040 0x13B70D: ape_make_context (context.c:6)
+             n0: 1040 0x13541E: main (main.c:373)
+         n1: 720 0x13DEDD: ape_builtins_install_math (libmath.c:148)
+          n1: 720 0x14378E: ape_builtins_install (builtins.c:995)
+           n1: 720 0x13BB78: ape_make_contextex (context.c:63)
+            n1: 720 0x13B70D: ape_make_context (context.c:6)
+             n0: 720 0x13541E: main (main.c:373)
+         n0: 640 in 3 places, all below massif's threshold (1.00%)
+         n1: 400 0x12649C: ape_builtins_install_io (libio.c:329)
+          n1: 400 0x14376A: ape_builtins_install (builtins.c:992)
+           n1: 400 0x13BB78: ape_make_contextex (context.c:63)
+            n1: 400 0x13B70D: ape_make_context (context.c:6)
+             n0: 400 0x13541E: main (main.c:373)
+       n0: 80 in 17 places, all below massif's threshold (1.00%)
+      n0: 80 in 1 place, below massif's threshold (1.00%)
+    n2: 2800 0x110C33: ape_object_make_nativefuncmemory (libobject.c:237)
+     n4: 2720 0x143649: ape_builtins_setup_namespace (builtins.c:935)
+      n1: 960 0x14373F: ape_builtins_install_object (builtins.c:985)
+       n1: 960 0x14375E: ape_builtins_install (builtins.c:991)
+        n1: 960 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 960 0x13B70D: ape_make_context (context.c:6)
+          n0: 960 0x13541E: main (main.c:373)
+      n1: 720 0x13DEDD: ape_builtins_install_math (libmath.c:148)
+       n1: 720 0x14378E: ape_builtins_install (builtins.c:995)
+        n1: 720 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 720 0x13B70D: ape_make_context (context.c:6)
+          n0: 720 0x13541E: main (main.c:373)
+      n0: 640 in 3 places, all below massif's threshold (1.00%)
+      n1: 400 0x12649C: ape_builtins_install_io (libio.c:329)
+       n1: 400 0x14376A: ape_builtins_install (builtins.c:992)
+        n1: 400 0x13BB78: ape_make_contextex (context.c:63)
+         n1: 400 0x13B70D: ape_make_context (context.c:6)
+          n0: 400 0x13541E: main (main.c:373)
+     n0: 80 in 2 places, all below massif's threshold (1.00%)
+    n1: 400 0x11091E: ape_object_make_mapcapacity (libobject.c:172)
+     n1: 400 0x11086A: ape_object_make_map (libobject.c:158)
+      n1: 400 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+       n0: 400 in 6 places, all below massif's threshold (1.00%)
+    n0: 160 in 2 places, all below massif's threshold (1.00%)
+   n1: 3840 0x132141: ape_valdict_init (libmap.c:54)
+    n2: 3840 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 3840 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 3840 0x11086A: ape_object_make_map (libobject.c:158)
+       n6: 3840 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x12649C: ape_builtins_install_io (libio.c:329)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x1388A3: ape_builtins_install_string (libstring.c:583)
+         n1: 768 0x143776: ape_builtins_install (builtins.c:993)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x13DEDD: ape_builtins_install_math (libmath.c:148)
+         n1: 768 0x14378E: ape_builtins_install (builtins.c:995)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x143712: ape_builtins_install_vm (builtins.c:952)
+         n1: 768 0x14379A: ape_builtins_install (builtins.c:996)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n0: 0 in 1 place, below massif's threshold (1.00%)
+     n0: 0 in 1 place, below massif's threshold (1.00%)
+   n1: 3840 0x132183: ape_valdict_init (libmap.c:55)
+    n2: 3840 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 3840 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 3840 0x11086A: ape_object_make_map (libobject.c:158)
+       n6: 3840 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n1: 768 0x126482: ape_builtins_install_io (libio.c:328)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x12649C: ape_builtins_install_io (libio.c:329)
+         n1: 768 0x14376A: ape_builtins_install (builtins.c:992)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x1388A3: ape_builtins_install_string (libstring.c:583)
+         n1: 768 0x143776: ape_builtins_install (builtins.c:993)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x13DEDD: ape_builtins_install_math (libmath.c:148)
+         n1: 768 0x14378E: ape_builtins_install (builtins.c:995)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n1: 768 0x143712: ape_builtins_install_vm (builtins.c:952)
+         n1: 768 0x14379A: ape_builtins_install (builtins.c:996)
+          n1: 768 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 768 0x13B70D: ape_make_context (context.c:6)
+            n0: 768 0x13541E: main (main.c:373)
+        n0: 0 in 1 place, below massif's threshold (1.00%)
+     n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 1353 in 34 places, all below massif's threshold (1.00%)
+   n1: 1280 0x132205: ape_valdict_init (libmap.c:57)
+    n2: 1280 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 1280 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 1280 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 1280 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n0: 1280 in 6 places, all below massif's threshold (1.00%)
+     n0: 0 in 1 place, below massif's threshold (1.00%)
+   n1: 712 0x13B7A6: ape_make_contextex (context.c:17)
+    n1: 712 0x13B70D: ape_make_context (context.c:6)
+     n0: 712 0x13541E: main (main.c:373)
+   n1: 640 0x1320FF: ape_valdict_init (libmap.c:53)
+    n2: 640 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 640 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 640 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 640 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n0: 640 in 6 places, all below massif's threshold (1.00%)
+     n0: 0 in 1 place, below massif's threshold (1.00%)
+   n1: 640 0x1321C4: ape_valdict_init (libmap.c:56)
+    n2: 640 0x131FE8: ape_make_valdictcapacity (libmap.c:27)
+     n1: 640 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+      n1: 640 0x11086A: ape_object_make_map (libobject.c:158)
+       n1: 640 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+        n0: 640 in 6 places, all below massif's threshold (1.00%)
+     n0: 0 in 1 place, below massif's threshold (1.00%)
+   n2: 600 0x131F87: ape_make_valdictcapacity (libmap.c:16)
+    n1: 600 0x11095A: ape_object_make_mapcapacity (libobject.c:177)
+     n1: 600 0x11086A: ape_object_make_map (libobject.c:158)
+      n1: 600 0x1435F2: ape_builtins_setup_namespace (builtins.c:932)
+       n0: 600 in 6 places, all below massif's threshold (1.00%)
+    n0: 0 in 1 place, below massif's threshold (1.00%)
+   n1: 432 0x138CBF: ape_make_valarraycapacity (libarray.c:84)
+    n0: 432 in 4 places, all below massif's threshold (1.00%)
+ n2: 8448 0x12A572: da_grow_internal (dnarray.h:215)
+  n2: 8448 0x12B684: ape_gcmem_allocobjdata (memgc.c:311)
+   n1: 8448 0x1105F4: ape_object_make_stringcapacity (libobject.c:107)
+    n1: 8448 0x1104D5: ape_object_make_stringlen (libobject.c:86)
+     n2: 8448 0x110479: ape_object_make_string (libobject.c:79)
+      n1: 8448 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+       n1: 8448 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+        n1: 8448 0x14373F: ape_builtins_install_object (builtins.c:985)
+         n1: 8448 0x14375E: ape_builtins_install (builtins.c:991)
+          n1: 8448 0x13BB78: ape_make_contextex (context.c:63)
+           n1: 8448 0x13B70D: ape_make_context (context.c:6)
+            n0: 8448 0x13541E: main (main.c:373)
+      n0: 0 in 1 place, below massif's threshold (1.00%)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+  n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 2152 0x10F582: ape_mempool_initdebughandle (mempool.c:222)
+  n1: 2152 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2152 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2152 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2152 0x13B70D: ape_make_context (context.c:6)
+      n0: 2152 0x13541E: main (main.c:373)
+ n1: 2048 0x10F597: ape_mempool_initdebughandle (mempool.c:223)
+  n1: 2048 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 2048 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 2048 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 2048 0x13B70D: ape_make_context (context.c:6)
+      n0: 2048 0x13541E: main (main.c:373)
+ n1: 1024 0x10F5AC: ape_mempool_initdebughandle (mempool.c:224)
+  n1: 1024 0x10F789: ape_mempool_init (mempool.c:260)
+   n1: 1024 0x12ADBA: ape_allocator_alloc_real (memgc.c:124)
+    n1: 1024 0x13B7A6: ape_make_contextex (context.c:17)
+     n1: 1024 0x13B70D: ape_make_context (context.c:6)
+      n0: 1024 0x13541E: main (main.c:373)
+ n1: 1024 0x4A95D03: _IO_file_doallocate (filedoalloc.c:101)
+  n2: 1024 0x4AA5ECF: _IO_doallocbuf (genops.c:347)
+   n1: 1024 0x4AA4F2F: _IO_file_overflow@@GLIBC_2.2.5 (fileops.c:745)
+    n1: 1024 0x4AA36B4: _IO_new_file_xsputn (fileops.c:1244)
+     n1: 1024 0x4AA36B4: _IO_file_xsputn@@GLIBC_2.2.5 (fileops.c:1197)
+      n1: 1024 0x4A973C0: fwrite (iofwrite.c:39)
+       n1: 1024 0x13E3EC: wr_default_iowriter (writer.c:48)
+        n1: 1024 0x13E5B7: ape_writer_appendlen (writer.c:111)
+         n1: 1024 0x111301: ape_tostring_object (libobject.c:472)
+          n1: 1024 0x13FBA7: cfn_println (builtins.c:183)
+           n1: 1024 0x1162E7: ape_vm_callnativefunction (vm.c:621)
+            n1: 1024 0x116797: ape_vm_callobjectargs (vm.c:726)
+             n1: 1024 0x1168CF: ape_vm_callobjectstack (vm.c:745)
+              n1: 1024 0x11BEF5: ape_vmdo_executefunction (vm.c:2035)
+               n1: 1024 0x117FD8: ape_vm_run (vm.c:1079)
+                n1: 1024 0x13C441: ape_context_executefile (context.c:260)
+                 n0: 1024 0x135711: main (main.c:434)
+   n0: 0 in 1 place, below massif's threshold (1.00%)
+ n1: 936 0x110110: ape_mempool_realloc (mempool.c:496)
+  n2: 936 0x12AEC2: ape_allocator_realloc (memgc.c:155)
+   n1: 872 0x12AB78: ds_extrealloc (memgc.c:59)
+    n1: 872 0x13624E: ds_makeroomfor (sds.h:1068)
+     n1: 872 0x13637F: ds_appendlen (sds.h:1247)
+      n1: 872 0x1366BA: ape_object_string_append (libstring.c:70)
+       n2: 872 0x11053C: ape_object_make_stringlen (libobject.c:91)
+        n2: 837 0x110479: ape_object_make_string (libobject.c:79)
+         n1: 806 0x134064: ape_object_map_setnamedvalue (libmap.c:749)
+          n1: 806 0x143682: ape_builtins_setup_namespace (builtins.c:935)
+           n0: 806 in 6 places, all below massif's threshold (1.00%)
+         n0: 31 in 17 places, all below massif's threshold (1.00%)
+        n0: 35 in 1 place, below massif's threshold (1.00%)
+   n0: 64 in 1 place, below massif's threshold (1.00%)
+ n0: 0 in 2 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=87
+#-----------
+time=1022141
+mem_heap_B=33927
+mem_heap_extra_B=2577
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=88
+#-----------
+time=1025512
+mem_heap_B=30554
+mem_heap_extra_B=2238
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=89
+#-----------
+time=1028864
+mem_heap_B=27245
+mem_heap_extra_B=1875
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=90
+#-----------
+time=1032204
+mem_heap_B=21982
+mem_heap_extra_B=1514
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=91
+#-----------
+time=1035634
+mem_heap_B=20694
+mem_heap_extra_B=1122
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=92
+#-----------
+time=1039025
+mem_heap_B=17158
+mem_heap_extra_B=770
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=93
+#-----------
+time=1042489
+mem_heap_B=7511
+mem_heap_extra_B=385
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=94
+#-----------
+time=1050644
+mem_heap_B=4200
+mem_heap_extra_B=32
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=95
+#-----------
+time=1055889
+mem_heap_B=0
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty

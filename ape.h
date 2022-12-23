@@ -178,6 +178,12 @@ THE SOFTWARE.
     ape_object_value_istype(o, APE_OBJECT_STRING)
 
 /*
+* is this object an array?
+*/
+#define ape_object_value_isarray(o) \
+    ape_object_value_istype(o, APE_OBJECT_ARRAY)
+
+/*
 * is this object something that can be called like a function?
 */
 #define ape_object_value_iscallable(o) \
@@ -656,10 +662,10 @@ typedef struct ApePtrArray_t MemList_t;
 typedef ApeObject_t (*ApeWrappedNativeFunc_t)(ApeContext_t*, void*, ApeSize_t, ApeObject_t*);
 typedef ApeObject_t (*ApeNativeFuncPtr_t)(ApeVM_t*, void*, ApeSize_t, ApeObject_t*);
 
-typedef size_t (*ApeIOStdoutWriteFunc_t)(void*, const void*, size_t);
-typedef char* (*ApeIOReadFunc_t)(void*, const char*);
-typedef size_t (*ApeIOWriteFunc_t)(void* context, const char*, const char*, size_t);
-typedef size_t (*ApeIOFlushFunc_t)(void* context, const char*, const char*, size_t);
+typedef size_t (*ApeIOStdoutWriteFunc_t)(ApeContext_t*, const void*, size_t);
+typedef char* (*ApeIOReadFunc_t)(ApeContext_t*, const char*, size_t*);
+typedef size_t (*ApeIOWriteFunc_t)(ApeContext_t*, const char*, const char*, size_t);
+typedef size_t (*ApeIOFlushFunc_t)(ApeContext_t* context, const char*, const char*, size_t);
 
 typedef size_t (*ApeWriterWriteFunc_t)(ApeContext_t*, void*, const char*, size_t);
 typedef void (*ApeWriterFlushFunc_t)(ApeContext_t*, void*);
@@ -1291,7 +1297,6 @@ struct ApeVM_t
     ApeValDict_t* globalobjects;
 
     ApeValDict_t* stackobjects;
-
     int stackptr;
 
     ApeObject_t thisobjects[APE_CONF_SIZE_VM_THISSTACK];
@@ -1414,6 +1419,46 @@ static APE_INLINE ApeObject_t object_make_from_data(ApeContext_t* ctx, ApeObjTyp
     object.handle = data;
     object.handle->datatype = type;
     return object;
+}
+
+static APE_INLINE ApeObject_t ape_object_make_floatnumber(ApeContext_t* ctx, ApeFloat_t val)
+{
+    ApeObject_t rt;
+    (void)ctx;
+    rt.handle = NULL;
+    rt.type = APE_OBJECT_FLOATNUMBER;
+    rt.valfloatnum = val;
+    return rt;
+}
+
+static APE_INLINE ApeObject_t ape_object_make_fixednumber(ApeContext_t* ctx, ApeInt_t val)
+{
+    ApeObject_t rt;
+    (void)ctx;
+    rt.handle = NULL;
+    rt.type = APE_OBJECT_FIXEDNUMBER;
+    rt.valfixednum = val;
+    return rt;
+}
+
+static APE_INLINE ApeObject_t ape_object_make_bool(ApeContext_t* ctx, bool val)
+{
+    ApeObject_t rt;
+    (void)ctx;
+    rt.handle = NULL;
+    rt.type = APE_OBJECT_BOOL;
+    rt.valbool = val;
+    return rt;
+}
+
+static APE_INLINE ApeObject_t ape_object_make_null(ApeContext_t* ctx)
+{
+    ApeObject_t rt;
+    (void)ctx;
+    rt.handle = NULL;
+    rt.type = APE_OBJECT_NULL;
+    rt.valnull = NULL;
+    return rt;
 }
 
 static APE_INLINE void ape_args_init(ApeVM_t* vm, ApeArgCheck_t* check, const char* name, ApeSize_t argc, ApeObject_t* args)

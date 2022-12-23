@@ -2351,11 +2351,31 @@ ApeAstExpression_t* ape_parser_parseliteralmap(ApeAstParser_t* p)
         {
             break;
         }
-        if(!ape_lexer_expectcurrent(&p->lexer, TOKEN_OPCOMMA))
-        {
-            goto err;
-        }
-        ape_lexer_nexttoken(&p->lexer);
+        /*
+        allows to omit commas if next token is an identifier, like this:
+            {
+                foo: "bar"
+                blah: "etc"
+                ...
+            }
+            
+        */
+        #if 0
+            if(!ape_lexer_expectcurrent(&p->lexer, TOKEN_OPCOMMA))
+            {
+                goto err;
+            }
+            ape_lexer_nexttoken(&p->lexer);
+        #else
+            if(ape_lexer_currenttokenis(&p->lexer, TOKEN_OPCOMMA))
+            {
+                ape_lexer_nexttoken(&p->lexer);
+            }
+            else if(!ape_lexer_currenttokenis(&p->lexer, TOKEN_VALIDENT))
+            {
+                goto err;
+            }
+        #endif
     }
     ape_lexer_nexttoken(&p->lexer);
     res = ape_ast_make_literalmapexpr(p->context, keys, values);

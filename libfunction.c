@@ -1,6 +1,79 @@
 
 #include "inline.h"
 
+ApeObject_t ape_object_make_function(ApeContext_t* ctx, const char* name, ApeAstCompResult_t* cres, bool wdata, ApeInt_t nloc, ApeInt_t nargs, ApeSize_t fvcount)
+{
+    ApeSize_t actualfvcount;
+    ApeGCObjData_t* data;
+    data = ape_object_make_objdata(ctx, APE_OBJECT_SCRIPTFUNCTION);
+    if(!data)
+    {
+        return ape_object_make_null(ctx);
+    }
+    if(wdata)
+    {
+        data->valscriptfunc.name = name ? ape_util_strdup(ctx, name) : ape_util_strdup(ctx, "anonymous");
+        if(!data->valscriptfunc.name)
+        {
+            return ape_object_make_null(ctx);
+        }
+    }
+    else
+    {
+        data->valscriptfunc.const_name = name ? name : "anonymous";
+    }
+    data->valscriptfunc.compiledcode = cres;
+    data->valscriptfunc.owns_data = wdata;
+    data->valscriptfunc.numlocals = nloc;
+    data->valscriptfunc.numargs = nargs;
+    if(((ApeInt_t)fvcount) > 0)
+    {
+        actualfvcount = fvcount;
+        if(fvcount == 0)
+        {
+            actualfvcount = 1;
+        }
+        //fprintf(stderr, "ape_object_make_function: sizeof(ApeObject_t)=%d actualfvcount=%d rs=%d\n", sizeof(ApeObject_t), actualfvcount, sizeof(ApeObject_t)*actualfvcount);
+        data->valscriptfunc.freevals = (ApeObject_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeObject_t) * actualfvcount);
+        if(!data->valscriptfunc.freevals)
+        {
+            return ape_object_make_null(ctx);
+        }
+    }
+    data->valscriptfunc.numfreevals = fvcount;
+    return object_make_from_data(ctx, APE_OBJECT_SCRIPTFUNCTION, data);
+}
+
+ApeObject_t ape_object_make_nativefuncmemory(ApeContext_t* ctx, const char* name, ApeNativeFuncPtr_t fn, void* data, ApeSize_t dlen)
+{
+    ApeGCObjData_t* obj;
+    if(dlen > APE_CONF_SIZE_NATFN_MAXDATALEN)
+    {
+        return ape_object_make_null(ctx);
+    }
+    obj = ape_object_make_objdata(ctx, APE_OBJECT_NATIVEFUNCTION);
+    if(!obj)
+    {
+        return ape_object_make_null(ctx);
+    }
+    obj->valnatfunc.name = ape_util_strdup(ctx, name);
+    if(!obj->valnatfunc.name)
+    {
+        return ape_object_make_null(ctx);
+    }
+    obj->valnatfunc.nativefnptr = fn;
+    if(data)
+    {
+        #if 0
+        memcpy(obj->valnatfunc.data, data, dlen);
+        #else
+        obj->valnatfunc.dataptr = data;
+        #endif
+    }
+    obj->valnatfunc.datalen = dlen;
+    return object_make_from_data(ctx, APE_OBJECT_NATIVEFUNCTION, obj);
+}
+
 const char* ape_object_function_getname(ApeObject_t obj)
 {
     ApeGCObjData_t* data;

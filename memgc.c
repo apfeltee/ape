@@ -325,22 +325,27 @@ bool ape_gcmem_canputinpool(ApeGCMemory_t* mem, ApeGCObjData_t* data)
     {
         case APE_OBJECT_ARRAY:
             {
+                #if 0
                 if(ape_object_array_getlength(obj) > 1024)
                 {
                     return false;
                 }
+                #endif
             }
             break;
         case APE_OBJECT_MAP:
             {
+                #if 0
                 if(ape_object_map_getlength(obj) > 1024)
                 {
                     return false;
                 }
+                #endif
             }
             break;
         case APE_OBJECT_STRING:
             {
+                #if 1
                 return false;
                 if(data->valstring.valalloc != NULL)
                 {
@@ -349,6 +354,7 @@ bool ape_gcmem_canputinpool(ApeGCMemory_t* mem, ApeGCObjData_t* data)
                         return false;
                     }
                 }
+                #endif
             }
             break;
         default:

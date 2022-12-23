@@ -173,7 +173,7 @@ ApeObject_t ape_object_make_error(ApeContext_t* ctx, const char* error)
 ApeObject_t ape_object_make_error_nocopy(ApeContext_t* ctx, char* error)
 {
     ApeGCObjData_t* data;
-    data = ape_gcmem_allocobjdata(ctx->vm->mem, APE_OBJECT_ERROR);
+    data = ape_object_make_objdata(ctx, APE_OBJECT_ERROR);
     if(!data)
     {
         return ape_object_make_null(ctx);

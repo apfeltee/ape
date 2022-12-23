@@ -766,6 +766,43 @@ void ape_ptrarray_clear(ApePtrArray_t* arr)
     ape_valarray_clear(arr->arr);
 }
 
+ApeObject_t ape_object_make_array(ApeContext_t* ctx)
+{
+    return ape_object_make_arraycapacity(ctx, 8);
+}
+
+ApeObject_t ape_object_make_arraycapacity(ApeContext_t* ctx, unsigned capacity)
+{
+    ApeGCObjData_t* data;
+    if(capacity == 0)
+    {
+        capacity = 1;
+    }
+    #if 1
+        #if 1
+        data = ape_gcmem_getfrompool(ctx->vm->mem, APE_OBJECT_ARRAY);
+        if(data)
+        {
+            ape_valarray_clear(data->valarray);
+            return object_make_from_data(ctx, APE_OBJECT_ARRAY, data);
+        }
+        #endif
+        data = ape_gcmem_allocobjdata(ctx->vm->mem, APE_OBJECT_ARRAY);
+    #else
+        data = ape_object_make_objdata(ctx, APE_OBJECT_ARRAY);
+    #endif
+    if(!data)
+    {
+        return ape_object_make_null(ctx);
+    }
+    data->valarray = ape_make_valarraycapacity(ctx, capacity, sizeof(ApeObject_t));
+    if(!data->valarray)
+    {
+        return ape_object_make_null(ctx);
+    }
+    return object_make_from_data(ctx, APE_OBJECT_ARRAY, data);
+}
+
 ApeObject_t ape_object_array_getvalue(ApeObject_t object, ApeSize_t ix)
 {
     ApeObject_t* res;
@@ -868,7 +905,7 @@ static ApeObject_t objfn_array_length(ApeVM_t* vm, void* data, ApeSize_t argc, A
     (void)data;
     (void)argc;
     (void)args;
-    self = ape_vm_popthisstack(vm);
+    self = ape_vm_thispop(vm);
     return ape_object_make_floatnumber(vm->context, ape_object_array_getlength(self));
 }
 
@@ -880,7 +917,7 @@ static ApeObject_t objfn_array_push(ApeVM_t* vm, void* data, ApeSize_t argc, Ape
     (void)data;
     (void)argc;
     (void)args;
-    self = ape_vm_popthisstack(vm);
+    self = ape_vm_thispop(vm);
     for(i=0; i<argc; i++)
     {
         ape_object_array_pushvalue(self, args[i]);
@@ -896,7 +933,7 @@ static ApeObject_t objfn_array_pop(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
     (void)data;
     (void)argc;
     (void)args;
-    self = ape_vm_popthisstack(vm);
+    self = ape_vm_thispop(vm);
     if(ape_object_array_popvalue(self, &rt))
     {
         return rt;
@@ -912,7 +949,7 @@ static ApeObject_t objfn_array_first(ApeVM_t* vm, void* data, ApeSize_t argc, Ap
     (void)data;
     (void)argc;
     (void)args;
-    self = ape_vm_popthisstack(vm);
+    self = ape_vm_thispop(vm);
     len = ape_object_array_getlength(self);
     if(len > 0)
     {
@@ -929,7 +966,7 @@ static ApeObject_t objfn_array_last(ApeVM_t* vm, void* data, ApeSize_t argc, Ape
     (void)data;
     (void)argc;
     (void)args;
-    self = ape_vm_popthisstack(vm);
+    self = ape_vm_thispop(vm);
     len = ape_object_array_getlength(self);
     if(len > 0)
     {
@@ -962,7 +999,7 @@ static ApeObject_t objfn_array_fill(ApeVM_t* vm, void* data, ApeSize_t argc, Ape
     }
     howmuch = ape_object_value_asnumber(args[0]);
     val = args[1];
-    self = ape_vm_popthisstack(vm);
+    self = ape_vm_thispop(vm);
     len = ape_object_array_getlength(self);
     for(i=0; i<howmuch; i++)
     {
@@ -991,7 +1028,7 @@ static ApeObject_t objfn_array_map(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
         return ape_object_make_null(vm->context);  
     }
     fn = args[0];
-    self = ape_vm_popthisstack(vm);
+    self = ape_vm_thispop(vm);
     len = ape_object_array_getlength(self);
     for(i=0; i<len; i++)
     {
@@ -1042,7 +1079,7 @@ static ApeObject_t objfn_array_join(ApeVM_t* vm, void* data, ApeSize_t argc, Ape
     (void)data;
     sstr = "";
     slen = 0;
-    self = ape_vm_popthisstack(vm);
+    self = ape_vm_thispop(vm);
     ape_args_init(vm, &check, "join", argc, args);
     if(ape_args_checkoptional(&check, 0, APE_OBJECT_STRING, true))
     {
@@ -1086,7 +1123,7 @@ static ApeObject_t objfn_array_slice(ApeVM_t* vm, void* data, ApeSize_t argc, Ap
     ApeObject_t res;
     ApeArgCheck_t check;
     (void)data;
-    self = ape_vm_popthisstack(vm);
+    self = ape_vm_thispop(vm);
     ape_args_init(vm, &check, "slice", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC))
     {

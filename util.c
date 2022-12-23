@@ -17,9 +17,12 @@
 * https://beej.us/guide/bgnet/html/split/slightly-advanced-techniques.html#serialization
 * https://en.wikipedia.org/wiki/IEEE_754
 */
-#define pack754_32(f) (pack754((f), 32, 8))
+#if 0
+    #define pack754_32(f) (pack754((f), 32, 8))
+    #define unpack754_32(i) (unpack754((i), 32, 8))
+#endif
+
 #define pack754_64(f) (pack754((f), 64, 11))
-#define unpack754_32(i) (unpack754((i), 32, 8))
 #define unpack754_64(i) (unpack754((i), 64, 11))
 
 uint64_t pack754(long double f, unsigned bits, unsigned expbits)
@@ -116,7 +119,7 @@ long double unpack754(uint64_t i, unsigned bits, unsigned expbits)
     return result;
 }
 
-
+/* this used to be done via type punning, which may not be portable */
 ApeFloat_t ape_util_uinttofloat(ApeUInt_t val)
 {
     return unpack754_64(val);
@@ -148,7 +151,6 @@ char* ape_util_stringfmt(ApeContext_t* ctx, const char* format, ...)
     va_end(args);
     return res;
 }
-
 
 char* ape_util_strndup(ApeContext_t* ctx, const char* string, size_t n)
 {
@@ -213,50 +215,71 @@ unsigned int ape_util_upperpoweroftwo(unsigned int v)
     return v;
 }
 
-char* ape_util_default_readfile(void* ptr, const char* filename)
+
+char* ape_util_default_readhandle(ApeContext_t* ctx, FILE* hnd, size_t* dlen)
 {
-    long pos;
-    size_t size_read;
-    size_t size_to_read;
-    char* file_contents;
-    FILE* fp;
-    ApeContext_t* ctx;
-    ctx = (ApeContext_t*)ptr;
-    fp = fopen(filename, "r");
-    size_to_read = 0;
-    size_read = 0;
-    if(!fp)
+    long rawtold;
+    /*
+    * the value returned by ftell() may not necessarily be the same as
+    * the amount that can be read.
+    * since we only ever read a maximum of $toldlen, there will
+    * be no memory trashing.
+    */
+    size_t toldlen;
+    size_t actuallen;
+    char* buf;
+    if(fseek(hnd, 0, SEEK_END) == -1)
     {
         return NULL;
     }
-    fseek(fp, 0L, SEEK_END);
-    pos = ftell(fp);
-    if(pos < 0)
+    if((rawtold = ftell(hnd)) == -1)
     {
-        fclose(fp);
         return NULL;
     }
-    size_to_read = pos;
-    rewind(fp);
-    file_contents = (char*)ape_allocator_alloc(&ctx->alloc, sizeof(char) * (size_to_read + 1));
-    if(!file_contents)
+    toldlen = rawtold;
+    if(fseek(hnd, 0, SEEK_SET) == -1)
     {
-        fclose(fp);
         return NULL;
     }
-    size_read = fread(file_contents, 1, size_to_read, fp);
-    if(ferror(fp))
+    buf = (char*)ape_allocator_alloc(&ctx->alloc, toldlen + 1);
+    memset(buf, 0, toldlen+1);
+    if(buf != NULL)
     {
-        fclose(fp);
-        free(file_contents);
-        return NULL;
+        actuallen = fread(buf, sizeof(char), toldlen, hnd);
+        /*
+        // optionally, read remainder:
+        size_t tmplen;
+        if(actuallen < toldlen)
+        {
+            tmplen = actuallen;
+            actuallen += fread(buf+tmplen, sizeof(char), actuallen-toldlen, hnd);
+            ...
+        }
+        // unlikely to be necessary, so not implemented.
+        */
+        if(dlen != NULL)
+        {
+            *dlen = actuallen;
+        }
+        return buf;
     }
-    fclose(fp);
-    file_contents[size_read] = '\0';
-    return file_contents;
+    return NULL;
 }
 
-size_t ape_util_default_writefile(void* ctx, const char* path, const char* string, size_t string_size)
+char* ape_util_default_readfile(ApeContext_t* ctx, const char* filename, size_t* dlen)
+{
+    char* b;
+    FILE* fh;
+    if((fh = fopen(filename, "rb")) == NULL)
+    {
+        return NULL;
+    }
+    b = ape_util_default_readhandle(ctx, fh, dlen);
+    fclose(fh);
+    return b;
+}
+
+size_t ape_util_default_writefile(ApeContext_t* ctx, const char* path, const char* string, size_t string_size)
 {
     size_t written;
     FILE* fp;
@@ -271,7 +294,7 @@ size_t ape_util_default_writefile(void* ctx, const char* path, const char* strin
     return written;
 }
 
-size_t ape_util_default_stdoutwrite(void* ctx, const void* data, size_t size)
+size_t ape_util_default_stdoutwrite(ApeContext_t* ctx, const void* data, size_t size)
 {
     (void)ctx;
     return fwrite(data, 1, size, stdout);
