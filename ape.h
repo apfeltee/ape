@@ -1301,7 +1301,8 @@ struct ApeVM_t
     ApeObject_t thisobjects[APE_CONF_SIZE_VM_THISSTACK];
     int thisptr;
 
-    DequeList_t* frameobjects;
+    //DequeList_t* frameobjects;
+    intptr_t* frameobjects;
     ApeSize_t countframes;
     ApeFrame_t* lastframe;
 

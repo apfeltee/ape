@@ -329,7 +329,7 @@ void *ds_extrealloc(void *ptr, size_t oldsz, size_t newsz, void *userptr);
 void ds_extfree(void *ptr, void *userptr);
 void poolinit(ApeContext_t *ctx, ApeGCObjPool_t *pool);
 void pooldestroy(ApeContext_t *ctx, ApeGCObjPool_t *pool);
-void poolput(ApeGCObjPool_t *pool, ApeInt_t idx, ApeGCObjData_t *data);
+void poolput(ApeContext_t* ctx, ApeGCObjPool_t *pool, ApeInt_t idx, ApeGCObjData_t *data);
 ApeGCObjData_t *poolget(ApeGCObjPool_t *pool, ApeInt_t idx);
 void *ape_mem_defaultmalloc(ApeContext_t *ctx, void *userptr, size_t size);
 void ape_mem_defaultfree(ApeContext_t *ctx, void *userptr, void *objptr);

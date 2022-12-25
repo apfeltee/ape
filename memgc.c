@@ -20,7 +20,7 @@
 
 struct ApeGCObjPool_t
 {
-    DequeList_t* datapool;
+    intptr_t* datapool;
     ApeSize_t count;
 };
 
@@ -28,13 +28,8 @@ struct ApeGCMemory_t
 {
     ApeContext_t* context;
     ApeSize_t allocations_since_sweep;
-
-    //ApeGCObjData_t** frontobjects;
     intptr_t* frontobjects;
-
-    //ApeGCObjData_t** backobjects;
     intptr_t* backobjects;
-
     ApeValArray_t* objects_not_gced;
     ApeGCObjPool_t data_only_pool;
     ApeGCObjPool_t pools[APE_CONF_SIZE_GCMEM_POOLCOUNT];
@@ -70,30 +65,30 @@ void poolinit(ApeContext_t* ctx, ApeGCObjPool_t* pool)
 {
     (void)ctx;
     pool->count = 0;
-    pool->datapool = deqlist_create_empty(ctx, sizeof(ApeGCObjData_t*));
+    pool->datapool = da_make(ctx, pool->datapool, 0, sizeof(ApeGCObjData_t*));
 }
 
 void pooldestroy(ApeContext_t* ctx, ApeGCObjPool_t* pool)
 {
     (void)ctx;
-    deqlist_destroy(pool->datapool);
+    da_destroy(ctx, pool->datapool);
 }
 
-void poolput(ApeGCObjPool_t* pool, ApeInt_t idx, ApeGCObjData_t* data)
+void poolput(ApeContext_t* ctx, ApeGCObjPool_t* pool, ApeInt_t idx, ApeGCObjData_t* data)
 {
-    if(idx >= deqlist_len(pool->datapool))
+    if(idx >= da_count(pool->datapool))
     {
-        deqlist_push(&pool->datapool, data);
+        da_push(ctx, pool->datapool, data);
     }
     else
     {
-        deqlist_set(pool->datapool, idx, data);
+        da_set(pool->datapool, idx, data);
     }
 }
 
 ApeGCObjData_t* poolget(ApeGCObjPool_t* pool, ApeInt_t idx)
 {
-    return (ApeGCObjData_t*)deqlist_get(pool->datapool, idx);
+    return (ApeGCObjData_t*)da_get(pool->datapool, idx);
 }
 
 void* ape_mem_defaultmalloc(ApeContext_t* ctx, void* userptr, size_t size)
@@ -584,7 +579,7 @@ void ape_gcmem_sweep(ApeGCMemory_t* mem)
                 if(ape_gcmem_canputinpool(mem, data))
                 {
                     pool = ape_gcmem_getpoolfor(mem, (ApeObjType_t)data->datatype);
-                    poolput(pool, pool->count, data);
+                    poolput(mem->context, pool, pool->count, data);
                     pool->count++;
                 }
                 else
@@ -592,7 +587,7 @@ void ape_gcmem_sweep(ApeGCMemory_t* mem)
                     ape_object_data_deinit(mem->context, data);
                     if(mem->data_only_pool.count < APE_ACTUAL_POOLSIZE)
                     {
-                        poolput(&mem->data_only_pool, mem->data_only_pool.count, data);
+                        poolput(mem->context, &mem->data_only_pool, mem->data_only_pool.count, data);
                         mem->data_only_pool.count++;
                     }
                     else

@@ -63,7 +63,7 @@ bool ape_traceback_appendfromvm(ApeTraceback_t* traceback, ApeVM_t* vm)
     ApeFrame_t* frame;
     for(i = vm->countframes - 1; i >= 0; i--)
     {
-        frame = (ApeFrame_t*)deqlist_get(vm->frameobjects, i);        
+        frame = (ApeFrame_t*)da_get(vm->frameobjects, i);        
         ok = ape_traceback_append(traceback, ape_object_function_getname(frame->function), ape_frame_srcposition(frame));
         if(!ok)
         {
