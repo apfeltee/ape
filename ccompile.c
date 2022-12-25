@@ -446,8 +446,10 @@ ApeInt_t ape_compiler_emit(ApeAstCompiler_t* comp, ApeOpByte_t op, ApeSize_t ope
     for(i = 0; i < len; i++)
     {
         srcpos = (ApePosition_t*)ape_valarray_top(comp->srcpositionsstack);
-        APE_ASSERT(srcpos->line >= 0);
-        APE_ASSERT(srcpos->column >= 0);
+        #if 0
+            APE_ASSERT(srcpos->line >= 0);
+            APE_ASSERT(srcpos->column >= 0);
+        #endif
         ok = ape_valarray_push(ape_compiler_getsrcpositions(comp), srcpos);
         if(!ok)
         {
@@ -1322,8 +1324,11 @@ bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpression_t* s
             break;
         default:
             {
+                /*
                 APE_ASSERT(false);
                 return false;
+                */
+                return ape_compiler_compileexpression(comp, stmt);
             }
             break;
     }

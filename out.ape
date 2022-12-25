@@ -1,0 +1,14 @@
+if (1)
+{
+    if (2)
+    { println("ok")
+    }
+    else
+    {
+        println("something broke. go fix it.")
+    }
+}
+for (i = 0 ;(i < 10);i = (i + 1)){ if ((i == 5)) { println("works")
+ }
+ }
+println("all good.")

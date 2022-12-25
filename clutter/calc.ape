@@ -19,35 +19,29 @@ const Token =
 function isspace(ch) 
 {
     if(ch == " " || ch == "\t" || ch == "\r" || ch == "\n")
+    {
         return 1;
+    }
     return 0;
 }
 
 function isdigit(ch)
 {
-    if(ord(ch) >= ord("0") && ord(ch) <= ord("9"))
-        return 1;
-    return 0;
-}
-
-function isalpha(ch) 
-{
-    if(ord(ch) >= ord("a") && ord(ch) <= ord("z"))
-        return 1;
-    if(ord(ch) >= ord("A") && ord(ch) <= ord("Z"))
-        return 1;
-    return 0;
-}
-
-class Lexer
-{
-    function Lexer(input)
+    if(ch.ord >= 0 && ch.ord <= 9)
     {
+        return 1;
+    }
+    return 0;
+}
+
+
+
+function Lexer(input)
+{
         this.input = input;
         this.index = 0;
         this.number = 0;
         this.lastchar = " ";
-    }
 
     function nextchar()
     {
@@ -240,7 +234,9 @@ function Parser(input)
                 break;
             }
             if(pre[state.lasttoken - Token.PLUS] < min)
+            {
                 break;
+            }
             var op = state.lasttoken;
             var prec = pre[state.lasttoken - Token.PLUS];
             state.nexttoken();
@@ -264,7 +260,9 @@ while(true)
 {
     var text = input(">");
     if(text == "quit")
+    {
         break;
+    }
     print(calc(text));
 }
 

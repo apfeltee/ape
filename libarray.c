@@ -9,6 +9,23 @@
  
 #define DEBUG 0
 
+#ifndef JK_DYNARRAY_MAX
+    #define JK_DYNARRAY_MAX(a, b) \
+        ( \
+            _da_if((a) > (b)) \
+            _da_then(a) \
+            _da_else(b) \
+        )
+#endif
+
+#ifndef JK_DYNARRAY_MIN
+    #define JK_DYNARRAY_MIN(a, b) \
+        ( \
+            _da_if((a) < (b)) \
+            _da_then(a) \
+            _da_else(b) \
+        )
+#endif
 
 
 static ApeSize_t g_callcount = 0;
@@ -43,7 +60,6 @@ static inline void debugmsg(void* self, const char* name, const char* fmt, ...)
  __attribute__((format(printf, 3, 4)));
 #endif
 
-//debugmsg(arr, "ape_valarray_push", "ix=%d p=%p", ix, value);
 static inline void debugmsgv(ApeValArray_t* self, const char* name, const char* fmt, va_list va)
 {
     ApeSize_t cap;
@@ -58,7 +74,7 @@ static inline void debugmsgv(ApeValArray_t* self, const char* name, const char* 
         cap = self->capacity;
         cnt = self->count;
     #endif
-    fprintf(stderr, "--%04ld: in <%ld:elemsize=%ld count=%ld capacity=%ld> %s:", g_callcount, self->ident, elemsz, cnt, cap, name);
+    fprintf(stderr, "--%04zd: in <%zd:elemsize=%zd count=%zd capacity=%zd> %s:", g_callcount, self->ident, elemsz, cnt, cap, name);
     vfprintf(stderr, fmt, va);
     fprintf(stderr, "\n");
     g_callcount++;
@@ -131,7 +147,7 @@ bool ape_valarray_initcapacity(ApeValArray_t* arr, ApeContext_t* ctx, ApeSize_t 
         arr->lock_capacity = false;
     #endif
     #if defined(DEBUG) && (DEBUG == 1)
-        debugmsg(arr, "ape_valarray_initcapacity", "capacity=%ld elsz=%ld", capacity, arr->elemsize);
+        debugmsg(arr, "ape_valarray_initcapacity", "capacity=%zd elsz=%zd", capacity, arr->elemsize);
     #endif
 
     return true;
@@ -242,7 +258,7 @@ bool ape_valarray_push(ApeValArray_t* arr, void* value)
         cnt = cnt - 1;
     }
     #if defined(DEBUG) && (DEBUG == 1)
-        debugmsg(arr, "ape_valarray_push", "ix=%ld p=%p", cnt, value);
+        debugmsg(arr, "ape_valarray_push", "ix=%zd p=%p", cnt, value);
     #endif
     #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
         #if 1
@@ -280,24 +296,28 @@ bool ape_valarray_push(ApeValArray_t* arr, void* value)
         if(arr->capacity < (arr->count + 1))
         {
             #if defined(NEW_ALLOC_SCHEME) && (NEW_ALLOC_SCHEME == 1)
-                ApeSize_t items = arr->count;
-                newcap = arr->capacity;
-                if(newcap < 16)
-                {
-                    /* Allocate new arr twice as much as current. */
-                    newcap = newcap * 2;
-                }
-                else
-                {
-                    /* Allocate new arr half as much as current. */
-                    newcap += newcap / 2;
-                }
-                if(newcap < items)
-                {
-                    newcap = items;
-                }
-                toalloc = newcap * elmsz;
                 prevalloc = oldcap * elmsz;
+
+                /*
+                if(arr != NULL)
+                {
+                    acount = JK_DYNARRAY_MAX(2 * da_count(arr), da_count(arr) + count);
+                }
+                asize = ((2 * tsize) + (acount * tsize));
+                */
+                ApeSize_t tmpcnt;
+                tmpcnt = acnt;
+                if(tmpcnt == 0)
+                {
+                    tmpcnt = 2;
+                }
+
+
+                newcap = JK_DYNARRAY_MAX(2 * tmpcnt, acnt + 1);
+                toalloc = ((2 * elmsz) + (tmpcnt * elmsz));
+
+                fprintf(stderr, "newcap=%zd toalloc=%zd\n", newcap, toalloc);
+
             #else
                 if(oldcap > 0)
                 {
@@ -362,7 +382,7 @@ void* ape_valarray_get(ApeValArray_t* arr, ApeSize_t ix)
         rtp = &arr->arraydata[offset];
     #endif
     #if defined(DEBUG) && (DEBUG == 1)
-        debugmsg(arr, "ape_valarray_get", "ix=%ld rtp=%p", ix, rtp);
+        debugmsg(arr, "ape_valarray_get", "ix=%zd rtp=%p", ix, rtp);
     #endif
     return rtp;
 }
@@ -370,7 +390,7 @@ void* ape_valarray_get(ApeValArray_t* arr, ApeSize_t ix)
 bool ape_valarray_set(ApeValArray_t* arr, ApeSize_t ix, void* value)
 {
     #if defined(DEBUG) && (DEBUG == 1)
-        debugmsg(arr, "ape_valarray_set", "ix=%ld p=%p", ix, value);
+        debugmsg(arr, "ape_valarray_set", "ix=%zd p=%p", ix, value);
     #endif
     #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
         #if 0
@@ -427,7 +447,7 @@ void* ape_valarray_pop(ApeValArray_t* arr)
     #endif
 
     #if defined(DEBUG) && (DEBUG == 1)
-        debugmsg(arr, "ape_valarray_pop", "ix=%ld p=%p", cnt-1, res);
+        debugmsg(arr, "ape_valarray_pop", "ix=%zd p=%p", cnt-1, res);
     #endif
     return res;
 }
@@ -509,7 +529,7 @@ bool ape_valarray_removeat(ApeValArray_t* arr, ApeSize_t ix)
     cnt = ape_valarray_count(arr);
 
     #if defined(DEBUG) && (DEBUG == 1)
-        debugmsg(arr, "ape_valarray_removeat", "ix=%ld", ix);
+        debugmsg(arr, "ape_valarray_removeat", "ix=%zd", ix);
     #endif
     #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
 
@@ -684,7 +704,6 @@ ApePtrArray_t* ape_ptrarray_copywithitems(ApeContext_t* ctx, ApePtrArray_t* arr,
             goto err;
         }
         ok = ape_ptrarray_push(copy, &copieditem);
-        //ok = ape_valarray_push(copy->arr, copieditem);
         if(!ok)
         {
             goto err;
@@ -748,7 +767,7 @@ void* ape_ptrarray_get(ApePtrArray_t* arr, ApeSize_t ix)
     {
         return NULL;
     }
-    //fprintf(stderr, "ape_ptrarray_get: ix=%ld p=%p\n", ix, res);
+    //fprintf(stderr, "ape_ptrarray_get: ix=%zd p=%p\n", ix, res);
     #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
         return res;
     #else

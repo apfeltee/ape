@@ -4,13 +4,17 @@
 #include <stdio.h>
 #include <string.h>
 #include <signal.h>
-#if __has_include(<readline/readline.h>)
-    #include <readline/readline.h>
-    #include <readline/history.h>
-#else
-    #define NO_READLINE
+#include <ctype.h>
+#if defined(__has_include)
+    #if __has_include(<readline/readline.h>)
+        #define HAVE_READLINE
+    #endif
 #endif
 
+#if defined(HAVE_READLINE)
+    #include <readline/readline.h>
+    #include <readline/history.h>
+#endif
 #include "ape.h"
 
 enum
@@ -141,7 +145,7 @@ static ApeObject_t exit_repl(ApeContext_t* ctx, void* data, ApeSize_t argc, ApeO
     return ape_object_make_null(ctx);
 }
 
-#if !defined(NO_READLINE)
+#if defined(HAVE_READLINE)
 static bool notjustspace(const char* line)
 {
     int c;
@@ -441,7 +445,7 @@ int main(int argc, char* argv[])
         }
         else
         {
-            #if !defined(NO_READLINE)
+            #if defined(HAVE_READLINE)
                 do_repl(ctx);
             #else
                 fprintf(stderr, "no repl support compiled in\n");

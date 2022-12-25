@@ -1,0 +1,24 @@
+
+/*
+cannot do this:
+if(1)
+    if(2)
+        println("ok")
+    else
+        println("not ok")
+...
+no idea how to implement it, tbh.
+*/
+if(1)
+{
+    if(2)
+        println("ok")
+    else
+        println("not ok")
+} else
+    println("something broke. go fix it.")
+for(i=0; i<10; i++)
+    if(i==5)
+        println("works")
+
+println("all good.")

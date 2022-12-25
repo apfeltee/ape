@@ -18,9 +18,12 @@
 #define _dv_then(...) (__VA_ARGS__) :
 #define _dv_else(...) (__VA_ARGS__)
 
+extern void* ds_extmalloc(size_t size, void* userptr);
+extern void* ds_extrealloc(void* ptr, size_t oldsz, size_t newsz, void* userptr);
+extern void ds_extfree(void* ptr, void* userptr);
+
 #define vec_unpack_(v) \
     (char**)&(v)->data, &(v)->length, &(v)->capacity, sizeof(*(v)->data)
-
 
 #define vec_t(T) \
     struct \
@@ -33,9 +36,9 @@
 #define vec_init(v) \
     memset((v), 0, sizeof(*(v)))
 
-#define vec_deinit(v) \
+#define vec_deinit(uptr, v) \
     ( \
-        free((v)->data), \
+        ds_extfree((v)->data, uptr), \
         vec_init(v) \
     )
 
@@ -45,9 +48,9 @@
 #define vec_get(v, i) \
     (v)->data[i]
 
-#define vec_push(v, val) \
+#define vec_push(uptr, v, val) \
     ( \
-        _dv_if(vec_expand_(vec_unpack_(v))) \
+        _dv_if(vec_expand_(uptr, vec_unpack_(v))) \
         _dv_then( -1 ) \
         _dv_else( ((v)->data[(v)->length++] = (val), 0)), \
         0 \
@@ -68,9 +71,9 @@
         (v)->length -= (count) \
     )
 
-#define vec_insert(v, idx, val) \
+#define vec_insert(uptr, v, idx, val) \
     ( \
-        _dv_if(vec_insert_(vec_unpack_(v), idx)) \
+        _dv_if(vec_insert_(uptr, vec_unpack_(v), idx)) \
         _dv_then(-1) \
         _dv_else((v)->data[idx] = (val), 0), \
         (v)->length++, 0 \
@@ -100,17 +103,17 @@
 #define vec_last(v) \
     (v)->data[(v)->length - 1]
 
-#define vec_reserve(v, n) \
-    vec_reserve_(vec_unpack_(v), n)
+#define vec_reserve(uptr, v, n) \
+    vec_reserve_(uptr, vec_unpack_(v), n)
 
-#define vec_compact(v) \
-    vec_compact_(vec_unpack_(v))
+#define vec_compact(uptr, v) \
+    vec_compact_(uptr, vec_unpack_(v))
 
-#define vec_pusharr(v, arr, count) \
+#define vec_pusharr(uptr, v, arr, count) \
     do \
     { \
         int i__, n__ = (count); \
-        if(vec_reserve_po2_(vec_unpack_(v), (v)->length + n__) != 0) \
+        if(vec_reserve_po2_(uptr, vec_unpack_(v), (v)->length + n__) != 0) \
         { \
             break; \
         } \
@@ -190,22 +193,22 @@ typedef vec_t(float) vec_float_t;
 typedef vec_t(double) vec_double_t;
 
 
-static int vec_expand_(char** data, int* length, int* capacity, int memsz);
-static int vec_reserve_(char** data, int* length, int* capacity, int memsz, int n);
-static int vec_reserve_po2_(char** data, int* length, int* capacity, int memsz, int n);
-static int vec_compact_(char** data, int* length, int* capacity, int memsz);
-static int vec_insert_(char** data, int* length, int* capacity, int memsz, int idx);
+static int vec_expand_(void* uptr, char** data, int* length, int* capacity, int memsz);
+static int vec_reserve_(void* uptr, char** data, int* length, int* capacity, int memsz, int n);
+static int vec_reserve_po2_(void* uptr, char** data, int* length, int* capacity, int memsz, int n);
+static int vec_compact_(void* uptr, char** data, int* length, int* capacity, int memsz);
+static int vec_insert_(void* uptr, char** data, int* length, int* capacity, int memsz, int idx);
 static void vec_splice_(char** data, int* length, int* capacity, int memsz, int start, int count);
 static void vec_swapsplice_(char** data, int* length, int* capacity, int memsz, int start, int count);
 static void vec_swap_(char** data, int* length, int* capacity, int memsz, int idx1, int idx2);
 
-static inline int vec_expand_(char** data, int* length, int* capacity, int memsz)
+static inline int vec_expand_(void* uptr, char** data, int* length, int* capacity, int memsz)
 {
     if(*length + 1 > *capacity)
     {
         void* ptr;
         int n = (*capacity == 0) ? 1 : *capacity << 1;
-        ptr = realloc(*data, n * memsz);
+        ptr = ds_extrealloc(*data, *capacity, n * memsz, uptr);
         if(ptr == NULL)
             return -1;
         *data = ptr;
@@ -214,12 +217,12 @@ static inline int vec_expand_(char** data, int* length, int* capacity, int memsz
     return 0;
 }
 
-static inline int vec_reserve_(char** data, int* length, int* capacity, int memsz, int n)
+static inline int vec_reserve_(void* uptr, char** data, int* length, int* capacity, int memsz, int n)
 {
     (void)length;
     if(n > *capacity)
     {
-        void* ptr = realloc(*data, n * memsz);
+        void* ptr = ds_extrealloc(*data, *capacity, n * memsz, uptr);
         if(ptr == NULL)
             return -1;
         *data = ptr;
@@ -228,21 +231,21 @@ static inline int vec_reserve_(char** data, int* length, int* capacity, int mems
     return 0;
 }
 
-static inline int vec_reserve_po2_(char** data, int* length, int* capacity, int memsz, int n)
+static inline int vec_reserve_po2_(void* uptr, char** data, int* length, int* capacity, int memsz, int n)
 {
     int n2 = 1;
     if(n == 0)
         return 0;
     while(n2 < n)
         n2 <<= 1;
-    return vec_reserve_(data, length, capacity, memsz, n2);
+    return vec_reserve_(uptr, data, length, capacity, memsz, n2);
 }
 
-static inline int vec_compact_(char** data, int* length, int* capacity, int memsz)
+static inline int vec_compact_(void* uptr, char** data, int* length, int* capacity, int memsz)
 {
     if(*length == 0)
     {
-        free(*data);
+        ds_extfree(*data, uptr);
         *data = NULL;
         *capacity = 0;
         return 0;
@@ -251,7 +254,7 @@ static inline int vec_compact_(char** data, int* length, int* capacity, int mems
     {
         void* ptr;
         int n = *length;
-        ptr = realloc(*data, n * memsz);
+        ptr = ds_extrealloc(*data, *capacity, n * memsz, uptr);
         if(ptr == NULL)
             return -1;
         *capacity = n;
@@ -260,9 +263,9 @@ static inline int vec_compact_(char** data, int* length, int* capacity, int mems
     return 0;
 }
 
-static inline int vec_insert_(char** data, int* length, int* capacity, int memsz, int idx)
+static inline int vec_insert_(void* uptr, char** data, int* length, int* capacity, int memsz, int idx)
 {
-    int err = vec_expand_(data, length, capacity, memsz);
+    int err = vec_expand_(uptr, data, length, capacity, memsz);
     if(err)
         return err;
     memmove(*data + (idx + 1) * memsz, *data + idx * memsz, (*length - idx) * memsz);

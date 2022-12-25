@@ -28,7 +28,12 @@
         )
 #endif
 
-static APE_INLINE intptr_t* da_grow_internal(intptr_t* arr, intptr_t count, intptr_t tsize);
+
+extern void* ds_extmalloc(size_t size, void* userptr);
+extern void* ds_extrealloc(void* ptr, size_t oldsz, size_t newsz, void* userptr);
+extern void ds_extfree(void* ptr, void* userptr);
+
+static APE_INLINE intptr_t* da_grow_internal(void* uptr, intptr_t* arr, intptr_t count, intptr_t tsize);
 
 #define da_count_internal(arr) \
     ((((intptr_t*)(arr)) - 2)[0])
@@ -40,32 +45,29 @@ static APE_INLINE intptr_t* da_grow_internal(intptr_t* arr, intptr_t count, intp
 #define da_need_to_grow_internal(arr, n) \
     ((!(arr)) || (da_count_internal(arr) + (n)) >= da_capacity_internal(arr))
 
-#define da_maybe_grow_internal(arr, n) \
+#define da_maybe_grow_internal(uptr, arr, n) \
     ( \
         _da_if(da_need_to_grow_internal((intptr_t*)(arr), (n))) \
         _da_then( \
-            (arr) = da_grow_internal((intptr_t*)(arr), (n), sizeof(*(arr))) \
+            (arr) = da_grow_internal(uptr, (intptr_t*)(arr), (n), sizeof(*(arr))) \
         ) \
         _da_else(0) \
     )
 
-#define da_make(arr, n, sztyp) \
-    (da_grow_internal((intptr_t*)arr, n, sztyp))
+#define da_make(uptr, arr, n, sztyp) \
+    (da_grow_internal(uptr, (intptr_t*)arr, n, sztyp))
 
 #define da_init(arr, n, sztyp) \
     da_init(arr, n, sztyp)
 
-#define da_destroy(arr) \
+#define da_destroy(uptr, arr) \
     ( \
         _da_if(arr) \
         _da_then( \
-            free(((intptr_t*)(arr)) - 2), (arr) = NULL, 0 \
+            ds_extfree(((intptr_t*)(arr)) - 2, uptr), (arr) = NULL, 0 \
         ) \
         _da_else(0) \
     )
-
-#define da_free(arr) \
-    da_destroy(arr)
 
 #define da_clear(arr) \
     (\
@@ -105,24 +107,15 @@ static APE_INLINE intptr_t* da_grow_internal(intptr_t* arr, intptr_t count, intp
         (arr)[da_count_internal(arr) - 1] \
     )
 
-#if 1
-    #define da_push(arr, ...) \
-        ( \
-            da_maybe_grow_internal((arr), APE_CONF_PLAINLIST_CAPACITY_ADD), \
-            ((intptr_t*)(arr))[da_count_internal(arr)++] = (intptr_t)(__VA_ARGS__) \
-        )
-#else
-    #define da_push(arr, ...) \
-        ( \
-            da_maybe_grow_internal((arr), 1), \
-            ((intptr_t*)(arr))[da_count_internal(arr)++] = (intptr_t)(__VA_ARGS__) \
-        )
-
-#endif
-
-#define da_pushn(arr, n) \
+#define da_push(uptr, arr, ...) \
     ( \
-        da_maybe_grow_internal((arr), n), \
+        da_maybe_grow_internal(uptr, (arr), APE_CONF_PLAINLIST_CAPACITY_ADD), \
+        ((intptr_t*)(arr))[da_count_internal(arr)++] = (intptr_t)(__VA_ARGS__) \
+    )
+
+#define da_pushn(uptr, arr, n) \
+    ( \
+        da_maybe_grow_internal(uptr, (arr), n), \
         da_count_internal(arr) += n \
     )
 
@@ -152,9 +145,9 @@ static APE_INLINE intptr_t* da_grow_internal(intptr_t* arr, intptr_t count, intp
         _da_else(0) \
     )
 
-#define da_grow(arr, n) \
+#define da_grow(uptr, arr, n) \
     ( \
-        ((arr) = da_grow_internal((intptr_t*)(arr), (n), sizeof(*(arr)))), \
+        ((arr) = da_grow_internal(uptr, (intptr_t*)(arr), (n), sizeof(*(arr)))), \
         da_count_internal(arr) += (n) \
     )
 
@@ -170,12 +163,12 @@ static APE_INLINE intptr_t* da_grow_internal(intptr_t* arr, intptr_t count, intp
 
 #define da_sizeof(arr) (sizeof(*(arr)) * da_count(arr))
 
-static APE_INLINE void da_copy(intptr_t* from, intptr_t* to, unsigned int begin, unsigned int end)
+static APE_INLINE void da_copy(void* uptr, intptr_t* from, intptr_t* to, unsigned int begin, unsigned int end)
 {
     unsigned int i;
     for(i=begin; i<end; i++)
     {
-        da_maybe_grow_internal(to, APE_CONF_PLAINLIST_CAPACITY_ADD);
+        da_maybe_grow_internal(uptr, to, APE_CONF_PLAINLIST_CAPACITY_ADD);
         to[i] = from[i];
     }
 }
@@ -192,7 +185,7 @@ static APE_INLINE void da_removeat(intptr_t* from, unsigned int ix)
 #undef _da_else
 */
 
-static APE_INLINE intptr_t* da_grow_internal(intptr_t* arr, intptr_t count, intptr_t tsize)
+static APE_INLINE intptr_t* da_grow_internal(void* uptr, intptr_t* arr, intptr_t count, intptr_t tsize)
 {
     intptr_t asize;
     intptr_t acount;
@@ -205,53 +198,31 @@ static APE_INLINE intptr_t* da_grow_internal(intptr_t* arr, intptr_t count, intp
     {
         acount = JK_DYNARRAY_MAX(2 * da_count(arr), da_count(arr) + count);
     }
-    asize = 2 * sizeof(intptr_t) + acount * tsize;
+    asize = ((2 * tsize) + (acount * tsize));
     if(arr)
     {
-        #if 0
-            ptr = (intptr_t*)realloc(((intptr_t*)arr)-2, asize*tsize);
-        #else
-            //ptr = (intptr_t*)malloc(asize);
-            ptr = (intptr_t*)calloc(asize, tsize);
-            if(ptr)
-            {
-                memcpy(ptr, ((intptr_t*)arr) - 2, da_count(arr) * tsize + 2 * sizeof(intptr_t));
-                da_free(arr);
-            }
-        #endif
+        ptr = (intptr_t*)ds_extmalloc(asize * tsize, uptr);
         if(ptr)
         {
-            zerosize = asize - 2 * sizeof(intptr_t) - ptr[0] * tsize;
-            memset(((intptr_t*)ptr) + (asize - zerosize), 0, zerosize);
-            res = (intptr_t*)(ptr + 2);
-            da_capacity_internal(res) = acount;
+            memcpy(ptr, ((intptr_t*)arr) - 2, ((da_count(arr) * tsize) + (2 * tsize)));
+            da_destroy(uptr, arr);
         }
-        else
-        {
-            assert(0);
-        }
+        assert(ptr != NULL);
+        zerosize = ((asize - (2 * tsize)) - (ptr[0] * tsize));
+        memset(((intptr_t*)ptr) + (asize - zerosize), 0, zerosize);
+        res = (intptr_t*)(ptr + 2);
+        da_capacity_internal(res) = acount;
     }
     else
     {
-        #if 0
-            ptr = (intptr_t*)realloc(0, asize*tsize);
-        #else
-            //ptr = (intptr_t*)malloc(asize);
-            ptr = (intptr_t*)calloc(asize, tsize);
-        #endif
-        if(ptr)
-        {
-            res = (intptr_t*)(ptr + 2);
-            memset(ptr, 0, asize);
-            da_count_internal(res) = 0;
-            da_capacity_internal(res) = acount;
-        }
-        else
-        {
-            assert(0);
-        }
+        ptr = (intptr_t*)ds_extmalloc(asize*tsize, uptr);
+        assert(ptr != NULL);
+        res = (intptr_t*)(ptr + 2);
+        memset(ptr, 0, asize);
+        da_count_internal(res) = 0;
+        da_capacity_internal(res) = acount;
     }
-    assert(res);
+    assert(res != NULL);
     return res;
 }
 

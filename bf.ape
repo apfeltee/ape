@@ -4,9 +4,7 @@ function bf(src, input)
 {
     const memory = []
     for(i=0; i<300; i++)
-    {
         memory.push(0)
-    }
     var memptr  = 0
     var inptr = 0
     var instr    = 0
@@ -14,9 +12,8 @@ function bf(src, input)
     while(instr < src.length)
     {
         if(instr < 0)
-        {
             println("Invalid instruction pointer (instr=" + instr + ")")
-        }
+        
         var c = src[instr]
         if(c == "+")
         {
@@ -29,14 +26,10 @@ function bf(src, input)
         {
             memory[memptr] = memory[memptr] - 1
             if(memptr < 0)
-            {
                 println("Heap underrun")
-            }
         }
         else if(c == ".")
-        {
             print(String.chr(memory[memptr]))
-        }
         else if(c == "x")
         {
            memory[memptr] = input[inptr]
@@ -46,24 +39,18 @@ function bf(src, input)
         {
             memptr = memptr + 1
             if(memptr > memory.length)
-            {
                 println("data pointer out of bounds")
-            }
         }
         else if(c == "<")
         {
             memptr = memptr - 1
             if(memptr < 0)
-            {
                 println("data pointer cannot go below 0")
-            }
         }
         else if(c == "[")
         {
             if (memory[memptr] != 0)
-            {
                 stack.push(instr)
-            }
             else
             {
                 var bcount = 0
@@ -72,31 +59,21 @@ function bf(src, input)
                 {
                     instr = instr + 1
                     if(instr > src.length)
-                    {
                         println("Missing matching ']'")
-                    }
                     if(src[instr] == "]")
                     {
                         if(bcount != 0)
-                        {
-                            bcount = bcount - 1
-                        }
+                            bcount = bcount - 1;
                         else
-                        {
-                            cont = false
-                        }
+                            cont = false;
                     }
                     else if(src[instr] == "[")
-                    {
-                        bcount = bcount + 1
-                    }
+                        bcount = bcount + 1;
                }
            }
         }
         else if(c == "]")
-        {
             instr = stack.pop() - 1
-        }
         instr = instr + 1
     }
 }

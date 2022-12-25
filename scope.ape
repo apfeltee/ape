@@ -1,9 +1,0 @@
-
-function blah()
-{
-    foo = "bar"
-    println("in blah: foo=", foo);
-}
-
-blah()
-println("foo=", foo)

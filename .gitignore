@@ -18,6 +18,7 @@ uftrace.*
 *.stackdump
 *.class
 push.sh
+ed.sh
 *.p.txt
 *.gcov
 *.gcno

@@ -1110,22 +1110,16 @@ bool ape_vmdo_appendstring(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, Ape
         /* avoid doing unnecessary copying by reusing the origin as-is */
         if(leftlen == 0)
         {
-            //ape_vm_pushstack(vm, ape_object_string_copy(vm->context, right));
             ape_vm_pushstack(vm, right);
         }
         else if(rightlen == 0)
         {
-            //ape_vm_pushstack(vm, ape_object_string_copy(vm->context, left));
             ape_vm_pushstack(vm, left);
         }
         else
         {
             leftstr = ape_object_string_getdata(left);
             rightstr = ape_object_string_getdata(right);
-            #if 0
-            ape_gcmem_markobject(left);
-            ape_gcmem_markobject(right);
-            #endif
             objres = ape_object_make_stringcapacity(vm->context, leftlen + rightlen);
             if(ape_object_value_isnull(objres))
             {
@@ -1166,6 +1160,7 @@ bool ape_vmdo_appendstring(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, Ape
         {
             return false;
         }
+
         ape_vm_pushstack(vm, objres);
     }
     return true;
@@ -1189,7 +1184,6 @@ bool ape_vmdo_getindex(ApeVM_t* vm, ApeObject_t left, ApeObject_t index, ApeObjT
     /*
     * todo: object method lookup could be implemented here
     */
-    #if 1
     {
         ApeObject_t objfn;
         ApeObject_t objval;
@@ -1226,7 +1220,6 @@ bool ape_vmdo_getindex(ApeVM_t* vm, ApeObject_t left, ApeObject_t index, ApeObjT
             }
         }
     }
-    #endif
     canindex = (
         (lefttype == APE_OBJECT_ARRAY) ||
         (lefttype == APE_OBJECT_MAP) ||

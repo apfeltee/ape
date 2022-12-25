@@ -2,10 +2,17 @@
 
 #include <stdarg.h>
 #include <sys/stat.h>
-#if __has_include(<dirent.h>)
+#if defined(__has_include)
+    #if __has_include(<dirent.h>)
+        #include <dirent.h>
+    #else
+        #if !defined(__linux__) && !defined(__unix__)
+            #define CORE_NODIRENT
+        #endif
+    #endif
+#endif
+#if !defined(CORE_NODIRENT)
     #include <dirent.h>
-#else
-    #define CORE_NODIRENT
 #endif
 #include "inline.h"
 
