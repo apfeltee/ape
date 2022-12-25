@@ -38,7 +38,7 @@ struct ApeValArray_t
     ApeSize_t elemsize;
 
     #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
-        DequeList_t* arraydata;
+        intptr_t* arraydata;
     #else
         unsigned char* start;
         unsigned char* arraydata;
@@ -107,7 +107,7 @@ ApeValArray_t* ape_make_valarraycapacity(ApeContext_t* ctx, ApeSize_t capacity, 
     arr->elemsize = elsz;
     arr->start = 0;
     g_arrayident++;
-    ok = ape_valarray_initcapacity(arr, ctx, capacity);
+    ok = ape_valarray_initcapacity(ctx, arr, capacity);
     if(!ok)
     {
         ape_allocator_free(&ctx->alloc, arr);
@@ -116,7 +116,7 @@ ApeValArray_t* ape_make_valarraycapacity(ApeContext_t* ctx, ApeSize_t capacity, 
     return arr;
 }
 
-bool ape_valarray_initcapacity(ApeValArray_t* arr, ApeContext_t* ctx, ApeSize_t capacity)
+bool ape_valarray_initcapacity(ApeContext_t* ctx, ApeValArray_t* arr, ApeSize_t capacity)
 {
     arr->context = ctx;
     if(capacity == 0)
@@ -125,7 +125,7 @@ bool ape_valarray_initcapacity(ApeValArray_t* arr, ApeContext_t* ctx, ApeSize_t 
         capacity = 1;
     }
     #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
-        arr->arraydata = deqlist_create(ctx, arr->elemsize, capacity);
+        arr->arraydata = da_make(ctx, arr->arraydata, 0, arr->elemsize);
     #else
         if(capacity > 0)
         {
@@ -161,7 +161,7 @@ void ape_valarray_deinit(ApeValArray_t* arr)
     {
         ctx = arr->context;
         #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
-            deqlist_destroy(arr->arraydata);
+            da_destroy(ctx, arr->arraydata);
         #else
             if(arr->allocdata != NULL)
             {
@@ -195,7 +195,7 @@ ApeSize_t ape_valarray_count(ApeValArray_t* arr)
         {
             return 0;
         }
-        return deqlist_count(arr->arraydata);
+        return da_count(arr->arraydata);
     #else
         return arr->count;
     #endif
@@ -261,12 +261,12 @@ bool ape_valarray_push(ApeValArray_t* arr, void* value)
         debugmsg(arr, "ape_valarray_push", "ix=%zd p=%p", cnt, value);
     #endif
     #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
-        #if 1
-            deqlist_push(&arr->arraydata, *(void**)value);
-            deqlist_set(arr->arraydata, cnt, *(void**)value);
+        #if 0
+            da_push(ctx, arr->arraydata, *(void**)value);
+            da_set(arr->arraydata, cnt, *(void**)value);
         #else
-            deqlist_push(&arr->arraydata, value);
-            deqlist_set(arr->arraydata, cnt, value);
+            da_push(ctx, arr->arraydata, value);
+            da_set(arr->arraydata, cnt, value);
         #endif
     #else
         bool ok;
@@ -358,7 +358,7 @@ void* ape_valarray_get(ApeValArray_t* arr, ApeSize_t ix)
         return NULL;
     }
     #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
-        raw = deqlist_get(arr->arraydata, ix);
+        raw = da_get(arr->arraydata, ix);
         if(raw != NULL)
         {
             #if 0
@@ -394,9 +394,9 @@ bool ape_valarray_set(ApeValArray_t* arr, ApeSize_t ix, void* value)
     #endif
     #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
         #if 0
-            deqlist_set(arr->arraydata, ix, *(void**)value);
+            da_set(arr->arraydata, ix, *(void**)value);
         #else
-            deqlist_set(arr->arraydata, ix, value);            
+            da_set(arr->arraydata, ix, value);            
         #endif
     #else
         ApeSize_t cnt;
@@ -438,7 +438,7 @@ void* ape_valarray_pop(ApeValArray_t* arr)
 
     #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
         //res =
-        deqlist_pop(&arr->arraydata);
+        da_pop(arr->arraydata);
         #if 0
             res = *(void**)res;
         #endif
@@ -512,9 +512,9 @@ ApeValArray_t* ape_valarray_copy(ApeContext_t* ctx, ApeValArray_t* arr)
             ape_valarray_push(copy, p);
             #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
                 #if 0
-                    deqlist_set(copy->arraydata, i, *(void**)p);
+                    da_set(copy->arraydata, i, *(void**)p);
                 #else
-                    deqlist_set(copy->arraydata, i, p);                
+                    da_set(copy->arraydata, i, p);                
                 #endif
             #endif
         }
@@ -569,7 +569,7 @@ void ape_valarray_clear(ApeValArray_t* arr)
     if(sz > 0)
     {
         #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
-            deqlist_clear(arr->arraydata, 0, sz-1);
+            da_clear(arr->arraydata, 0, sz-1);
         #else
             arr->count = 0;
         #endif
@@ -592,7 +592,7 @@ void* ape_valarray_data(ApeValArray_t* arr)
 
 void ape_valarray_orphandata(ApeValArray_t* arr)
 {
-    ape_valarray_initcapacity(arr, arr->context, 0);
+    ape_valarray_initcapacity(arr->context, arr, 0);
 }
 
 
@@ -692,7 +692,6 @@ ApePtrArray_t* ape_ptrarray_copywithitems(ApeContext_t* ctx, ApePtrArray_t* arr,
         else
         {
         #if defined(VALARRAY_USE_DNARRAY) && (VALARRAY_USE_DNARRAY == 1)
-            //curritem = deqlist_get(arr->arr->arraydata, i);
             copieditem = copyfn(ctx, curritem);
         #else
             copieditem = copyfn(ctx, curritem);

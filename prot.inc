@@ -465,7 +465,7 @@ void ape_builtins_install_string(ApeVM_t *vm);
 /* libarray.c */
 ApeValArray_t *ape_make_valarray(ApeContext_t *ctx, ApeSize_t elsz);
 ApeValArray_t *ape_make_valarraycapacity(ApeContext_t *ctx, ApeSize_t capacity, ApeSize_t elsz);
-bool ape_valarray_initcapacity(ApeValArray_t *arr, ApeContext_t *ctx, ApeSize_t capacity);
+bool ape_valarray_initcapacity(ApeContext_t *ctx, ApeValArray_t *arr, ApeSize_t capacity);
 void ape_valarray_deinit(ApeValArray_t *arr);
 void ape_valarray_destroy(ApeValArray_t *arr);
 ApeSize_t ape_valarray_count(ApeValArray_t *arr);

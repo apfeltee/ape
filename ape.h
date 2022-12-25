@@ -639,26 +639,6 @@ typedef struct /**/ ApePseudoClass_t ApePseudoClass_t;
 typedef struct /**/ ApeArgCheck_t ApeArgCheck_t;
 typedef struct /**/ ApeMemPool_t ApeMemPool_t;
 
-#define APE_USE_ALIST 1
-typedef struct Vector_t Vector_t;
-typedef uint32_t VectIndex_t;
-typedef int32_t VectStatus_t;
-
-typedef void* DequeValue_t;
-typedef unsigned int DequeSize_t;
-typedef struct DequeList_t DequeList_t;
-
-
-#if defined(APE_USE_ALIST) && (APE_USE_ALIST != 0)
-    #if(APE_USE_ALIST == 1)
-typedef void* MemList_t;
-    #elif(APE_USE_ALIST == 2)
-typedef Vector_t MemList_t;
-    #endif
-#else
-typedef struct ApePtrArray_t MemList_t;
-#endif
-
 typedef ApeObject_t (*ApeWrappedNativeFunc_t)(ApeContext_t*, void*, ApeSize_t, ApeObject_t*);
 typedef ApeObject_t (*ApeNativeFuncPtr_t)(ApeVM_t*, void*, ApeSize_t, ApeObject_t*);
 
