@@ -3,8 +3,8 @@
 
 static const ApePosition_t g_prspriv_srcposinvalid = { NULL, -1, -1 };
 
-static ApeRightAssocParseFNCallback_t rightassocparsefns[TOKEN_TYPE_MAX];
-static ApeLeftAssocParseFNCallback_t  leftassocparsefns[TOKEN_TYPE_MAX];
+static ApeRightAssocParseFNCallback_t rightassocparsefns[TOKEN_TYPE_MAX + 1];
+static ApeLeftAssocParseFNCallback_t  leftassocparsefns[TOKEN_TYPE_MAX + 1];
 
 
 ApeAstParser_t* ape_ast_make_parser(ApeContext_t* ctx, const ApeConfig_t* config, ApeErrorList_t* errors)
@@ -29,6 +29,8 @@ ApeAstParser_t* ape_ast_make_parser(ApeContext_t* ctx, const ApeConfig_t* config
         rightassocparsefns[TOKEN_KWNULL] = ape_parser_parseliteralnull;
         rightassocparsefns[TOKEN_OPNOT] = ape_parser_parseprefixexpr;
         rightassocparsefns[TOKEN_OPMINUS] = ape_parser_parseprefixexpr;
+        rightassocparsefns[TOKEN_OPBITNOT] = ape_parser_parseprefixexpr;
+
         rightassocparsefns[TOKEN_OPLEFTPAREN] = ape_parser_parsegroupedexpr;
         rightassocparsefns[TOKEN_KWFUNCTION] = ape_parser_parseliteralfunc;
         rightassocparsefns[TOKEN_OPLEFTBRACKET] = ape_parser_parseliteralarray;
@@ -2551,6 +2553,8 @@ ApeAstPrecedence_t ape_parser_getprecedence(ApeAstTokType_t tk)
             return PRECEDENCE_LOGICAL_AND;
         case TOKEN_OPOR:
             return PRECEDENCE_LOGICAL_OR;
+        case TOKEN_OPBITNOT:
+            return PRECEDENCE_SUM;
         case TOKEN_OPBITOR:
             return PRECEDENCE_BIT_OR;
         case TOKEN_OPBITXOR:
@@ -2627,6 +2631,8 @@ ApeOperator_t ape_parser_tokentooperator(ApeAstTokType_t tk)
             return APE_OPERATOR_LEFTSHIFT;
         case TOKEN_ASSIGNRIGHTSHIFT:
             return APE_OPERATOR_RIGHTSHIFT;
+        case TOKEN_OPBITNOT:
+            return APE_OPERATOR_BITNOT;
         case TOKEN_OPBITAND:
             return APE_OPERATOR_BITAND;
         case TOKEN_OPBITOR:

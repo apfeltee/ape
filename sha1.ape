@@ -60,7 +60,7 @@ function sha1_ft(t, b, c, d)
 {
     if(t < 20)
     {
-        return (b & c) | (bitnot(b) & d);
+        return (b & c) | ((~b) & d);
     }
     if(t < 40)
     {

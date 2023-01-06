@@ -1,26 +1,9 @@
 
-function fun() {
-    const arr = [1, 2, 3]
-    const dict = {"a": 1, "b": 2}
-    const str = "lorem ipsum"
-    dict["a"] = 1
-    const res = function(a, b, c) {
-        const res_str = tostring(a) + tostring(b) + tostring(c)
-        return res_str;
-    }
-    return res(1, 2, 3)
-}
-println(fun().reverse())
-
 var n = 256
 var str = ""
 for (var i = 0; i < n; i++)
 {
-    str = str + "x"
+    str += "x"
 }
 println("str = ", Object.length(str))
-for (var i = 0; i < n; i++)
-{
-    println(`(str[${i}]=${str[i]} == "x") = ${str[i] == "x"}`)
-}
 

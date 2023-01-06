@@ -70,15 +70,22 @@ function toint(s)
     return (new Number(s))+0;
 }
 
-function println(...args)
-{
-    console.log(...args);
-}
-
 function print(...args)
 {
-    process.stdout.write(...args);
+    //process.stdout.write(...args);
+    for(var i=0; i<args.length; i++)
+    {
+        var arg = args[i];
+        process.stdout.write(arg.toString());
+    }
 }
+
+function println(...args)
+{
+    print(...args);
+    print("\n");
+}
+
 
 // this jank is needed so we don't accidentally override something in the actual target script.
 var __noderun_data = {};

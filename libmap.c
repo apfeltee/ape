@@ -2,8 +2,8 @@
 #include "inline.h"
 
 #define APE_CONF_DICT_INITIAL_SIZE (2)
-#define APE_CONF_MAP_INITIAL_CAPACITY (64/4)
-
+//#define APE_CONF_MAP_INITIAL_CAPACITY (64/4)
+#define APE_CONF_MAP_INITIAL_CAPACITY 0
 
 ApeValDict_t* ape_make_valdict(ApeContext_t* ctx, ApeSize_t ksz, ApeSize_t vsz)
 {

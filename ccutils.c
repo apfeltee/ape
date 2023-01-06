@@ -601,8 +601,8 @@ ApeAstCompResult_t* ape_compscope_orphanresult(ApeAstCompScope_t* scope)
     {
         return NULL;
     }
-    ape_valarray_orphandata(scope->bytecode);
-    ape_valarray_orphandata(scope->srcpositions);
+    ape_valarray_reset(scope->bytecode);
+    ape_valarray_reset(scope->srcpositions);
     return res;
 }
 

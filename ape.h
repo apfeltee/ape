@@ -274,6 +274,9 @@ THE SOFTWARE.
 #if 1
     #define ape_allocator_alloc(alc, sz) \
         ape_allocator_alloc_real(alc, #sz, __FUNCTION__, __FILE__, __LINE__, sz)
+
+    #define ape_allocator_realloc(alc, ptr, oldsz, newsz) \
+        ape_allocator_realloc_real(alc, #newsz, __FUNCTION__, __FILE__, __LINE__, ptr, oldsz, newsz)
 #else
     #define ape_allocator_alloc(alc, sz) \
         ape_allocator_alloc_real(alc, sz)
@@ -345,6 +348,7 @@ enum ApeAstTokType_t
     TOKEN_OPNOTEQUAL,
     TOKEN_OPAND,
     TOKEN_OPOR,
+    TOKEN_OPBITNOT,
     TOKEN_OPBITAND,
     TOKEN_OPBITOR,
     TOKEN_OPBITXOR,
@@ -411,6 +415,7 @@ enum ApeOperator_t
     APE_OPERATOR_MODULUS,
     APE_OPERATOR_LOGICALAND,
     APE_OPERATOR_LOGICALOR,
+    APE_OPERATOR_BITNOT,
     APE_OPERATOR_BITAND,
     APE_OPERATOR_BITOR,
     APE_OPERATOR_BITXOR,
@@ -510,6 +515,7 @@ enum ApeOpcodeValue_t
     APE_OPCODE_MKNUMBER,
     APE_OPCODE_LEN,
     APE_OPCODE_SETRECOVER,
+    APE_OPCODE_BITNOT,
     APE_OPCODE_BITOR,
     APE_OPCODE_BITXOR,
     APE_OPCODE_BITAND,

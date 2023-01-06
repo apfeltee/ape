@@ -106,15 +106,11 @@ void ape_context_freeallocated(ApeContext_t* ctx, void* ptr)
 void ape_context_debugvalue(ApeContext_t* ctx, const char* name, ApeObject_t val)
 {
     char* extobj;
-    char* extdata;
     const char* tnameobj;
-    const char* tnamedata;
     const char* finaltype;
     (void)finaltype;
     tnameobj = ape_object_value_typename(val.type);
-    tnamedata = ape_object_value_typename(val.handle->datatype);    
     extobj = ape_object_value_typeunionname(ctx, val.type);
-    extdata = ape_object_value_typeunionname(ctx, val.handle->datatype);
     finaltype = tnameobj;
     ape_writer_appendf(ctx->debugwriter, "[DEBUG] %s", name);
     if(extobj)
@@ -124,30 +120,12 @@ void ape_context_debugvalue(ApeContext_t* ctx, const char* name, ApeObject_t val
             ape_writer_appendf(ctx->debugwriter, "(obj-union-type=%s)", extobj);
         }
     }
-    if(extdata)
-    {
-        if(strcmp(extdata, tnameobj) != 0)
-        {
-            ape_writer_appendf(ctx->debugwriter, "(data-union-type=%s)", extdata);
-        }
-    }
-    if(strcmp(tnameobj, tnamedata) != 0)
-    {
-        ape_writer_appendf(ctx->debugwriter, " (obj-type=%s, data-type=%s) = ", tnameobj, tnamedata);
-    }
-    else
-    {
-        ape_writer_appendf(ctx->debugwriter, " (type=%s) = ", tnameobj);        
-    }
+    ape_writer_appendf(ctx->debugwriter, " (type=%s) = ", tnameobj);        
     ape_tostring_object(ctx->debugwriter, val, true);
     ape_writer_append(ctx->debugwriter, "\n");
     if(extobj)
     {
         ape_allocator_free(&ctx->alloc, extobj);
-    }
-    if(extdata)
-    {
-        ape_allocator_free(&ctx->alloc, extdata);
     }
 }
 

@@ -33,7 +33,7 @@ extern void* ds_extmalloc(size_t size, void* userptr);
 extern void* ds_extrealloc(void* ptr, size_t oldsz, size_t newsz, void* userptr);
 extern void ds_extfree(void* ptr, void* userptr);
 
-static APE_INLINE intptr_t* da_grow_internal(void* uptr, intptr_t* arr, intptr_t count, intptr_t tsize);
+static APE_INLINE intptr_t* da_grow_internal(void* uptr, intptr_t* arr, size_t capacity, size_t tsize);
 
 #define da_count_internal(arr) \
     ((((intptr_t*)(arr)) - 2)[0])
@@ -47,18 +47,19 @@ static APE_INLINE intptr_t* da_grow_internal(void* uptr, intptr_t* arr, intptr_t
 
 #define da_maybe_grow_internal(uptr, arr, n) \
     ( \
-        _da_if(da_need_to_grow_internal((intptr_t*)(arr), (n))) \
+        _da_if( \
+            da_need_to_grow_internal((intptr_t*)(arr), (n)) \
+        ) \
         _da_then( \
-            (arr) = da_grow_internal(uptr, (intptr_t*)(arr), (n), sizeof(*(arr))) \
+            (arr) = (intptr_t*)da_grow_internal(uptr, (intptr_t*)(arr), (n), sizeof(*(arr))) \
         ) \
         _da_else(0) \
     )
 
 #define da_make(uptr, arr, n, sztyp) \
-    (da_grow_internal(uptr, (intptr_t*)arr, n, sztyp))
-
-#define da_init(arr, n, sztyp) \
-    da_init(arr, n, sztyp)
+    ( \
+        da_grow_internal(uptr, (intptr_t*)arr, n, sztyp) \
+    )
 
 #define da_destroy(uptr, arr) \
     ( \
@@ -97,13 +98,34 @@ static APE_INLINE intptr_t* da_grow_internal(void* uptr, intptr_t* arr, intptr_t
     ))
 
 #define da_get(arr, idx) \
-    (arr)[(idx)]
+    ( \
+        _da_if((idx) <= da_count(arr)) \
+        _da_then( \
+            (void*)( \
+                (arr)[(idx)] \
+            ) \
+        ) \
+        _da_else( \
+            (void*)(NULL) \
+        ) \
+    )
 
 #define da_set(arr, idx, val) \
-    (arr)[idx] = val
+    ( \
+        _da_if((idx) < da_count(arr)) \
+        _da_then( \
+            ( \
+                (arr)[idx] = (intptr_t)val \
+            ), \
+            true \
+        ) \
+        _da_else( \
+            false \
+        ) \
+    )
 
 #define da_last(arr) \
-    ( \
+    (void*)( \
         (arr)[da_count_internal(arr) - 1] \
     )
 
@@ -173,7 +195,7 @@ static APE_INLINE void da_copy(void* uptr, intptr_t* from, intptr_t* to, unsigne
     }
 }
 
-static APE_INLINE void da_removeat(intptr_t* from, unsigned int ix)
+static APE_INLINE void da_removeat(intptr_t* from, size_t ix)
 {
     (void)from;
     (void)ix;
@@ -185,20 +207,32 @@ static APE_INLINE void da_removeat(intptr_t* from, unsigned int ix)
 #undef _da_else
 */
 
-static APE_INLINE intptr_t* da_grow_internal(void* uptr, intptr_t* arr, intptr_t count, intptr_t tsize)
+static APE_INLINE intptr_t* da_grow_internal(void* uptr, intptr_t* arr, size_t capacity, size_t tsize)
 {
-    intptr_t asize;
-    intptr_t acount;
-    intptr_t zerosize;
+    size_t asize;
+    size_t acount;
+    size_t zerosize;
+    size_t actualcapacity;
     intptr_t* res;
     intptr_t* ptr;
     res = NULL;
     acount = 0;
+    actualcapacity = capacity;
+    tsize = tsize + sizeof(intptr_t);
+    if(actualcapacity == 0)
+    {
+        actualcapacity = 1;
+    }
     if(arr != NULL)
     {
-        acount = JK_DYNARRAY_MAX(2 * da_count(arr), da_count(arr) + count);
+        acount = JK_DYNARRAY_MAX(2 * da_count(arr), da_count(arr) + actualcapacity);
     }
     asize = ((2 * tsize) + (acount * tsize));
+
+
+    //fprintf(stderr, "da_grow_internal: arg.uptr=%p arg.arr=%p arg.capacity=%zu arg.tsize=%zu asize=%zu acount=%zu\n", uptr, arr, actualcapacity, tsize, asize, acount);
+
+
     if(arr)
     {
         ptr = (intptr_t*)ds_extmalloc(asize * tsize, uptr);

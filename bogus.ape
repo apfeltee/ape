@@ -1,0 +1,4 @@
+
+// indeed
+[0x0, eval(`prin` + `${"t"}ln`)][((((0xCaFE >> 4) % 0x86) ^ 0x64) >> 6)]("this is very silly!")
+

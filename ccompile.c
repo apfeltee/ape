@@ -1464,6 +1464,11 @@ bool ape_compiler_compileexpression(ApeAstCompiler_t* comp, ApeAstExpression_t* 
                             op = APE_OPCODE_BITOR;
                         }
                         break;
+                    case APE_OPERATOR_BITNOT:
+                        {
+                            op = APE_OPCODE_BITNOT;
+                        }
+                        break;
                     case APE_OPERATOR_BITXOR:
                         {
                             op = APE_OPCODE_BITXOR;
@@ -1671,6 +1676,11 @@ bool ape_compiler_compileexpression(ApeAstCompiler_t* comp, ApeAstExpression_t* 
                     case APE_OPERATOR_NOT:
                         {
                             op = APE_OPCODE_NOT;
+                        }
+                        break;
+                    case APE_OPERATOR_BITNOT:
+                        {
+                            op = APE_OPCODE_BITNOT;
                         }
                         break;
                     default:

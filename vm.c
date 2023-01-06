@@ -90,6 +90,7 @@ static ApeOpcodeDef_t g_definitions[APE_OPCODE_MAX + 1] =
     { "number", 1, { 8 } },
     { "len", 0, { 0 } },
     { "setrecover", 1, { 2 } },
+    { "op(~)", 0, {0}},
     { "op(|)", 0, { 0 } },
     { "op(^)", 0, { 0 } },
     { "op(&)", 0, { 0 } },
@@ -1120,22 +1121,24 @@ bool ape_vmdo_appendstring(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, Ape
         {
             leftstr = ape_object_string_getdata(left);
             rightstr = ape_object_string_getdata(right);
-            objres = ape_object_make_stringcapacity(vm->context, leftlen + rightlen);
-            if(ape_object_value_isnull(objres))
-            {
-                return false;
-            }
 
-            ok = ape_object_string_append(vm->context, objres, leftstr, leftlen);
-            if(!ok)
-            {
-                return false;
-            }
-            ok = ape_object_string_append(vm->context, objres, rightstr, rightlen);
-            if(!ok)
-            {
-                return false;
-            }
+                objres = ape_object_make_stringcapacity(vm->context, leftlen + rightlen);
+                if(ape_object_value_isnull(objres))
+                {
+                    return false;
+                }
+
+                ok = ape_object_string_append(vm->context, objres, leftstr, leftlen);
+                if(!ok)
+                {
+                    return false;
+                }
+                ok = ape_object_string_append(vm->context, objres, rightstr, rightlen);
+                if(!ok)
+                {
+                    return false;
+                }
+
             ape_vm_pushstack(vm, objres);
         }
     }
@@ -1146,21 +1149,24 @@ bool ape_vmdo_appendstring(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, Ape
         * in short, this does 'left = left + tostring(right)'
         * TODO: probably really inefficient.
         */
-        allbuf = ape_make_writer(vm->context);
-        tostrbuf = ape_make_writer(vm->context);
-        ape_writer_appendlen(allbuf, ape_object_string_getdata(left), ape_object_string_getlength(left));
-        ape_tostring_object(tostrbuf, right, false);
-        ape_writer_appendlen(allbuf, ape_writer_getdata(tostrbuf), ape_writer_getlength(tostrbuf));
-        buflen = ape_writer_getlength(allbuf);
-        objres = ape_object_make_stringcapacity(vm->context, buflen);
-        ok = ape_object_string_append(vm->context, objres, ape_writer_getdata(allbuf), buflen);
-        ape_writer_destroy(tostrbuf);
-        ape_writer_destroy(allbuf);
-        if(!ok)
-        {
-            return false;
-        }
-
+        #if 1
+            allbuf = ape_make_writer(vm->context);
+            tostrbuf = ape_make_writer(vm->context);
+            ape_writer_appendlen(allbuf, ape_object_string_getdata(left), ape_object_string_getlength(left));
+            ape_tostring_object(tostrbuf, right, false);
+            ape_writer_appendlen(allbuf, ape_writer_getdata(tostrbuf), ape_writer_getlength(tostrbuf));
+            buflen = ape_writer_getlength(allbuf);
+            objres = ape_object_make_stringcapacity(vm->context, buflen);
+            ok = ape_object_string_append(vm->context, objres, ape_writer_getdata(allbuf), buflen);
+            ape_writer_destroy(tostrbuf);
+            ape_writer_destroy(allbuf);
+            if(!ok)
+            {
+                return false;
+            }
+        #else
+            if(ape_object_value_isstring())
+        #endif
         ape_vm_pushstack(vm, objres);
     }
     return true;
@@ -1274,6 +1280,7 @@ bool ape_vmdo_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeVa
 {
     bool ok;
     bool isfixed;
+    bool needtwo;
     bool overloadfound;
     const char* lefttn;
     const char* righttn;
@@ -1308,6 +1315,7 @@ bool ape_vmdo_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeVa
             left = ape_object_make_floatnumber(vm->context, 0);
         }
     }
+    needtwo = true;
     lefttype = ape_object_value_type(left);
     righttype = ape_object_value_type(right);
     if(ape_object_value_isnumeric(left) && ape_object_value_isnumeric(right))
@@ -1398,13 +1406,6 @@ bool ape_vmdo_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeVa
                 }
                 break;
             case APE_OPCODE_LEFTSHIFT:
-                /*
-                {
-                    int uleft = ape_util_numbertoint32(leftval);
-                    unsigned int uright = ape_util_numbertouint32(rightval);
-                    bigres = (uleft << (uright & 0x1F));
-                }
-                */
                 {
                     ApeFloat_t rightval = ape_object_value_asnumber(right);
                     ApeFloat_t leftval = ape_object_value_asnumber(left);
@@ -1415,13 +1416,6 @@ bool ape_vmdo_math(ApeVM_t* vm, ApeObject_t left, ApeObject_t right, ApeOpcodeVa
                 }
                 break;
             case APE_OPCODE_RIGHTSHIFT:
-                /*
-                {
-                    int uleft = ape_util_numbertoint32(leftval);
-                    unsigned int uright = ape_util_numbertouint32(rightval);
-                    bigres = (uleft >> (uright & 0x1F));
-                }
-                */
                 {
                     ApeFloat_t rightval = ape_object_value_asnumber(right);
                     ApeFloat_t leftval = ape_object_value_asnumber(left);
@@ -1765,6 +1759,45 @@ bool ape_vmdo_executefunction(ApeVM_t* vm, ApeObject_t function, ApeValArray_t *
                             goto err;
                         }
                     }
+                }
+                break;
+            case APE_OPCODE_BITNOT:
+                {
+
+
+                    operand = ape_vm_popstack(vm);
+                    opertype = ape_object_value_type(operand);
+                    if(ape_object_type_isnumeric(opertype))
+                    {
+                        ApeInt_t vi;
+                        if(ape_object_value_isfixednumber(operand))
+                        {
+                            vi = ape_object_value_asfixednumber(operand);
+                        }
+                        else
+                        {
+                            vi = ape_object_value_asfloatnumber(operand);
+                        }
+                        objres = ape_object_make_fixednumber(vm->context, ~vi);
+                        ape_vm_pushstack(vm, objres);
+                    }
+                    else
+                    {
+                        overloadfound = false;
+                        ok = ape_vm_tryoverloadoperator(vm, operand, ape_object_make_null(vm->context), APE_OPCODE_BITNOT, &overloadfound);
+                        if(!ok)
+                        {
+                            goto err;
+                        }
+                        if(!overloadfound)
+                        {
+                            optypestr = ape_object_value_typename(opertype);
+                            ape_vm_adderror(vm, APE_ERROR_RUNTIME, "invalid operand type for BITNOT, got %s", optypestr);
+                            goto err;
+                        }
+                    }
+
+
                 }
                 break;
             case APE_OPCODE_NOT:

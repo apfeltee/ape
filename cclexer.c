@@ -226,6 +226,11 @@ ApeAstToken_t ape_lexer_internalnexttoken(ApeAstLexer_t* lex)
                     }
                 }
                 break;
+            case '~':
+                {
+                    ape_lexer_token_init(&outtok, TOKEN_OPBITNOT, "~", 1);
+                }
+                break;
             case '|':
                 {
                     if(ape_lexer_peekchar(lex) == '|')

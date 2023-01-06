@@ -7,8 +7,9 @@ for arg in "$@"; do
     args+=("$arg")
   fi
 done
+thisdir="$(dirname "$(readlink -ef "$0")")"
 if [[ "$withvalgrind" == 1 ]]; then
-  exec valgrind node "etc/nodeshim.js" "${args[@]}"
+  exec valgrind node "$thisdir/etc/nodeshim.js" "${args[@]}"
 else
-  exec node "etc/nodeshim.js" "${args[@]}"
+  exec node "$thisdir/etc/nodeshim.js" "${args[@]}"
 fi

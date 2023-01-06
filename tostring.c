@@ -61,6 +61,8 @@ const char* ape_tostring_operator(ApeOperator_t op)
             return "&&";
         case APE_OPERATOR_LOGICALOR:
             return "||";
+        case APE_OPERATOR_BITNOT:
+            return "~";
         case APE_OPERATOR_BITAND:
             return "&";
         case APE_OPERATOR_BITOR:

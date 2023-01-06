@@ -118,7 +118,7 @@ void* ape_allocator_alloc_real(ApeAllocator_t* alloc, const char* str, const cha
         alloc->pool = ape_mempool_init(APE_CONF_SIZE_MEMPOOL_INITIAL, APE_CONF_SIZE_MEMPOOL_MAX);
         alloc->ready = true;
     }
-    //if(APE_UNLIKELY(alloc->pool->enabledebug))
+    if(APE_UNLIKELY(alloc->pool->enabledebug))
     {
         ape_mempool_debugprintf(alloc->pool, "ape_allocator_alloc: %zu [%s:%d:%s] %s\n", size, file, line, func, str);
     }
@@ -144,8 +144,12 @@ void ape_allocator_free(ApeAllocator_t* alloc, void* ptr)
     }
 }
 
-void* ape_allocator_realloc(ApeAllocator_t* alloc, void* ptr, size_t oldsz, size_t newsz)
+void* ape_allocator_realloc_real(ApeAllocator_t* alloc, const char *str, const char *func, const char *file, int line, void* ptr, size_t oldsz, size_t newsz)
 {
+    if(APE_UNLIKELY(alloc->pool->enabledebug))
+    {
+        ape_mempool_debugprintf(alloc->pool, "ape_allocator_realloc: %zu (old %zu) [%s:%d:%s] %s\n", newsz, oldsz, file, line, func, str);
+    }
     return ape_mempool_realloc(alloc->pool, ptr, oldsz, newsz);
 }
 
@@ -256,7 +260,7 @@ void ape_gcmem_destroy(ApeGCMemory_t* mem)
         for(j = 0; j < (pool->count + 0); j++)
         {
             data = poolget(pool, j);
-            fprintf(stderr, "deinit: type=%s\n", ape_object_value_typename(data->datatype));
+            //fprintf(stderr, "deinit: type=%s\n", ape_object_value_typename(data->datatype));
             ape_object_data_deinit(mem->context, data);
             ape_allocator_free(&mem->context->alloc, data);
         }
