@@ -1,15 +1,15 @@
 
 #include "inline.h"
 
-ApeSymbol_t* ape_make_symbol(ApeContext_t* ctx, const char* name, ApeSymbolType_t type, ApeSize_t index, bool assignable)
+ApeSymbol* ape_make_symbol(ApeContext* ctx, const char* name, ApeSymbolType type, ApeSize index, bool assignable)
 {
-    ApeSymbol_t* symbol;
-    symbol = (ApeSymbol_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeSymbol_t));
+    ApeSymbol* symbol;
+    symbol = (ApeSymbol*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeSymbol));
     if(!symbol)
     {
         return NULL;
     }
-    memset(symbol, 0, sizeof(ApeSymbol_t));
+    memset(symbol, 0, sizeof(ApeSymbol));
     symbol->context = ctx;
     symbol->name = ape_util_strdup(ctx, name);
     if(!symbol->name)
@@ -23,7 +23,7 @@ ApeSymbol_t* ape_make_symbol(ApeContext_t* ctx, const char* name, ApeSymbolType_
     return symbol;
 }
 
-void* ape_symbol_destroy(ApeContext_t* ctx, ApeSymbol_t* symbol)
+void* ape_symbol_destroy(ApeContext* ctx, ApeSymbol* symbol)
 {
     if(!symbol)
     {
@@ -34,21 +34,21 @@ void* ape_symbol_destroy(ApeContext_t* ctx, ApeSymbol_t* symbol)
     return NULL;
 }
 
-ApeSymbol_t* ape_symbol_copy(ApeContext_t* ctx, ApeSymbol_t* symbol)
+ApeSymbol* ape_symbol_copy(ApeContext* ctx, ApeSymbol* symbol)
 {
     return ape_make_symbol(ctx, symbol->name, symbol->symtype, symbol->index, symbol->assignable);
 }
 
-ApeSymTable_t* ape_make_symtable(ApeContext_t* ctx, ApeSymTable_t* outer, ApeGlobalStore_t* global_store, int mgo)
+ApeSymTable* ape_make_symtable(ApeContext* ctx, ApeSymTable* outer, ApeGlobalStore* global_store, int mgo)
 {
     bool ok;
-    ApeSymTable_t* table;
-    table = (ApeSymTable_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeSymTable_t));
+    ApeSymTable* table;
+    table = (ApeSymTable*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeSymTable));
     if(!table)
     {
         return NULL;
     }
-    memset(table, 0, sizeof(ApeSymTable_t));
+    memset(table, 0, sizeof(ApeSymTable));
     table->context = ctx;
     table->maxnumdefinitions = 0;
     table->outer = outer;
@@ -80,9 +80,9 @@ err:
     return NULL;
 }
 
-void ape_symtable_destroy(ApeSymTable_t* table)
+void ape_symtable_destroy(ApeSymTable* table)
 {
-    ApeContext_t* ctx;
+    ApeContext* ctx;
     if(!table)
     {
         return;
@@ -93,22 +93,22 @@ void ape_symtable_destroy(ApeSymTable_t* table)
         ape_symtable_popblockscope(table);
     }
     ape_ptrarray_destroy(table->blockscopes);
-    ape_ptrarray_destroywithitems(ctx, table->modglobalsymbols, (ApeDataCallback_t)ape_symbol_destroy);
-    ape_ptrarray_destroywithitems(ctx, table->freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
-    memset(table, 0, sizeof(ApeSymTable_t));
+    ape_ptrarray_destroywithitems(ctx, table->modglobalsymbols, (ApeDataCallback)ape_symbol_destroy);
+    ape_ptrarray_destroywithitems(ctx, table->freesymbols, (ApeDataCallback)ape_symbol_destroy);
+    memset(table, 0, sizeof(ApeSymTable));
     ape_allocator_free(&ctx->alloc, table);
 }
 
-ApeSymTable_t* ape_symtable_copy(ApeContext_t* ctx, ApeSymTable_t* table)
+ApeSymTable* ape_symtable_copy(ApeContext* ctx, ApeSymTable* table)
 {
-    ApeSymTable_t* copy;
+    ApeSymTable* copy;
 
-    copy = (ApeSymTable_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeSymTable_t));
+    copy = (ApeSymTable*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeSymTable));
     if(!copy)
     {
         return NULL;
     }
-    memset(copy, 0, sizeof(ApeSymTable_t));
+    memset(copy, 0, sizeof(ApeSymTable));
     copy->context = ctx;
     copy->outer = NULL;
     copy->globalstore = NULL;
@@ -118,18 +118,18 @@ ApeSymTable_t* ape_symtable_copy(ApeContext_t* ctx, ApeSymTable_t* table)
     {
         copy->outer = table->outer;
         copy->globalstore = table->globalstore;
-        copy->blockscopes = ape_ptrarray_copywithitems(ctx, table->blockscopes, (ApeDataCallback_t)ape_blockscope_copy, (ApeDataCallback_t)ape_blockscope_destroy);
+        copy->blockscopes = ape_ptrarray_copywithitems(ctx, table->blockscopes, (ApeDataCallback)ape_blockscope_copy, (ApeDataCallback)ape_blockscope_destroy);
         //copy->blockscopes = ape_ptrarray_copywithitems(ctx, table->blockscopes, NULL, NULL);
         if(!copy->blockscopes)
         {
             goto err;
         }
-        copy->freesymbols = ape_ptrarray_copywithitems(ctx, table->freesymbols, (ApeDataCallback_t)ape_symbol_copy, (ApeDataCallback_t)ape_symbol_destroy);
+        copy->freesymbols = ape_ptrarray_copywithitems(ctx, table->freesymbols, (ApeDataCallback)ape_symbol_copy, (ApeDataCallback)ape_symbol_destroy);
         if(!copy->freesymbols)
         {
             goto err;
         }
-        copy->modglobalsymbols = ape_ptrarray_copywithitems(ctx, table->modglobalsymbols, (ApeDataCallback_t)ape_symbol_copy, (ApeDataCallback_t)ape_symbol_destroy);
+        copy->modglobalsymbols = ape_ptrarray_copywithitems(ctx, table->modglobalsymbols, (ApeDataCallback)ape_symbol_copy, (ApeDataCallback)ape_symbol_destroy);
         if(!copy->modglobalsymbols)
         {
             goto err;
@@ -144,16 +144,16 @@ err:
 }
 
 
-bool ape_symtable_setsymbol(ApeSymTable_t* table, ApeSymbol_t* symbol)
+bool ape_symtable_setsymbol(ApeSymTable* table, ApeSymbol* symbol)
 {
-    ApeAstBlockScope_t* topscope;
-    ApeSymbol_t* existing;
-    topscope = (ApeAstBlockScope_t*)ape_ptrarray_top(table->blockscopes);
+    ApeAstBlockScope* topscope;
+    ApeSymbol* existing;
+    topscope = (ApeAstBlockScope*)ape_ptrarray_top(table->blockscopes);
     if(topscope != NULL)
     {
         if(topscope->store)
         {
-            existing= (ApeSymbol_t*)ape_strdict_getbyname(topscope->store, symbol->name);
+            existing= (ApeSymbol*)ape_strdict_getbyname(topscope->store, symbol->name);
             if(existing)
             {
                 ape_symbol_destroy(table->context, existing);
@@ -164,31 +164,31 @@ bool ape_symtable_setsymbol(ApeSymTable_t* table, ApeSymbol_t* symbol)
     return false;
 }
 
-int ape_symtable_nextsymbolindex(ApeSymTable_t* table)
+int ape_symtable_nextsymbolindex(ApeSymTable* table)
 {
     int ix;
-    ApeAstBlockScope_t* topscope;
-    topscope = (ApeAstBlockScope_t*)ape_ptrarray_top(table->blockscopes);
+    ApeAstBlockScope* topscope;
+    topscope = (ApeAstBlockScope*)ape_ptrarray_top(table->blockscopes);
     ix = topscope->offset + topscope->numdefinitions;
     return ix;
 }
 
-int ape_symtable_count(ApeSymTable_t* table)
+int ape_symtable_count(ApeSymTable* table)
 {
-    ApeInt_t i;
+    ApeInt i;
     int count;
-    ApeAstBlockScope_t* scope;
+    ApeAstBlockScope* scope;
     count = 0;
-    for(i = (ApeInt_t)ape_ptrarray_count(table->blockscopes) - 1; i >= 0; i--)
+    for(i = (ApeInt)ape_ptrarray_count(table->blockscopes) - 1; i >= 0; i--)
     {
-        scope = (ApeAstBlockScope_t*)ape_ptrarray_get(table->blockscopes, i);
+        scope = (ApeAstBlockScope*)ape_ptrarray_get(table->blockscopes, i);
         count += scope->numdefinitions;
     }
     return count;
 }
 
 
-bool ape_symtable_addmodulesymbol(ApeSymTable_t* st, ApeSymbol_t* symbol)
+bool ape_symtable_addmodulesymbol(ApeSymTable* st, ApeSymbol* symbol)
 {
     bool ok;
     if(symbol->symtype != APE_SYMBOL_MODULEGLOBAL)
@@ -201,7 +201,7 @@ bool ape_symtable_addmodulesymbol(ApeSymTable_t* st, ApeSymbol_t* symbol)
         /* todo: make sure it should be true in this case */
         return true;
     }
-    ApeSymbol_t* copy = ape_symbol_copy(st->context, symbol);
+    ApeSymbol* copy = ape_symbol_copy(st->context, symbol);
     if(!copy)
     {
         return false;
@@ -215,18 +215,18 @@ bool ape_symtable_addmodulesymbol(ApeSymTable_t* st, ApeSymbol_t* symbol)
     return true;
 }
 
-ApeSymbol_t* ape_symtable_define(ApeSymTable_t* table, const char* name, bool assignable)
+ApeSymbol* ape_symtable_define(ApeSymTable* table, const char* name, bool assignable)
 {    
     bool ok;
     bool gsadded;
     int ix;
-    ApeSize_t defcnt;
-    ApeContext_t* ctx;
-    ApeAstBlockScope_t* topscope;
-    ApeSymbolType_t symtype;
-    ApeSymbol_t* symbol;
-    ApeSymbol_t* gscopy;
-    const ApeSymbol_t* glsym;
+    ApeSize defcnt;
+    ApeContext* ctx;
+    ApeAstBlockScope* topscope;
+    ApeSymbolType symtype;
+    ApeSymbol* symbol;
+    ApeSymbol* gscopy;
+    const ApeSymbol* glsym;
     ctx = table->context;
     glsym = ape_globalstore_getsymbol(table->globalstore, name);
     if(glsym)
@@ -274,13 +274,13 @@ ApeSymbol_t* ape_symtable_define(ApeSymTable_t* table, const char* name, bool as
     {
         if(gsadded)
         {
-            gscopy = (ApeSymbol_t*)ape_ptrarray_pop(table->modglobalsymbols);
+            gscopy = (ApeSymbol*)ape_ptrarray_pop(table->modglobalsymbols);
             ape_symbol_destroy(ctx, gscopy);
         }
         ape_symbol_destroy(ctx, symbol);
         return NULL;
     }
-    topscope = (ApeAstBlockScope_t*)ape_ptrarray_top(table->blockscopes);
+    topscope = (ApeAstBlockScope*)ape_ptrarray_top(table->blockscopes);
     topscope->numdefinitions++;
     defcnt = ape_symtable_count(table);
     if(defcnt > table->maxnumdefinitions)
@@ -291,11 +291,11 @@ ApeSymbol_t* ape_symtable_define(ApeSymTable_t* table, const char* name, bool as
     return symbol;
 }
 
-ApeSymbol_t* ape_symtable_deffree(ApeSymTable_t* st, ApeSymbol_t* original)
+ApeSymbol* ape_symtable_deffree(ApeSymTable* st, ApeSymbol* original)
 {
     bool ok;
-    ApeSymbol_t* symbol;
-    ApeSymbol_t* copy;
+    ApeSymbol* symbol;
+    ApeSymbol* copy;
     copy = ape_make_symbol(st->context, original->name, original->symtype, original->index, original->assignable);
     if(!copy)
     {
@@ -324,10 +324,10 @@ ApeSymbol_t* ape_symtable_deffree(ApeSymTable_t* st, ApeSymbol_t* original)
     return symbol;
 }
 
-ApeSymbol_t* ape_symtable_definefuncname(ApeSymTable_t* st, const char* name, bool assignable)
+ApeSymbol* ape_symtable_definefuncname(ApeSymTable* st, const char* name, bool assignable)
 {
     bool ok;
-    ApeSymbol_t* symbol;
+    ApeSymbol* symbol;
     if(strchr(name, ':'))
     {
         /* module symbol */
@@ -348,10 +348,10 @@ ApeSymbol_t* ape_symtable_definefuncname(ApeSymTable_t* st, const char* name, bo
     return symbol;
 }
 
-ApeSymbol_t* ape_symtable_definethis(ApeSymTable_t* st)
+ApeSymbol* ape_symtable_definethis(ApeSymTable* st)
 {
     bool ok;
-    ApeSymbol_t* symbol;
+    ApeSymbol* symbol;
     symbol = ape_make_symbol(st->context, "this", APE_SYMBOL_THIS, 0, false);
     if(!symbol)
     {
@@ -366,21 +366,21 @@ ApeSymbol_t* ape_symtable_definethis(ApeSymTable_t* st)
     return symbol;
 }
 
-ApeSymbol_t* ape_symtable_resolve(ApeSymTable_t* table, const char* name)
+ApeSymbol* ape_symtable_resolve(ApeSymTable* table, const char* name)
 {
-    ApeInt_t i;
-    ApeSymbol_t* symbol;
-    ApeAstBlockScope_t* scope;
+    ApeInt i;
+    ApeSymbol* symbol;
+    ApeAstBlockScope* scope;
     scope = NULL;
     symbol = ape_globalstore_getsymbol(table->globalstore, name);
     if(symbol)
     {
         return symbol;
     }
-    for(i = (ApeInt_t)ape_ptrarray_count(table->blockscopes) - 1; i >= 0; i--)
+    for(i = (ApeInt)ape_ptrarray_count(table->blockscopes) - 1; i >= 0; i--)
     {
-        scope = (ApeAstBlockScope_t*)ape_ptrarray_get(table->blockscopes, i);
-        symbol = (ApeSymbol_t*)ape_strdict_getbyname(scope->store, name);
+        scope = (ApeAstBlockScope*)ape_ptrarray_get(table->blockscopes, i);
+        symbol = (ApeSymbol*)ape_strdict_getbyname(scope->store, name);
         if(symbol)
         {
             break;
@@ -407,18 +407,18 @@ ApeSymbol_t* ape_symtable_resolve(ApeSymTable_t* table, const char* name)
     return symbol;
 }
 
-bool ape_symtable_symbol_is_defined(ApeSymTable_t* table, const char* name)
+bool ape_symtable_symbol_is_defined(ApeSymTable* table, const char* name)
 {
-    ApeAstBlockScope_t* topscope;
-    ApeSymbol_t* symbol;
+    ApeAstBlockScope* topscope;
+    ApeSymbol* symbol;
     /* todo: rename to something more obvious */
     symbol = ape_globalstore_getsymbol(table->globalstore, name);
     if(symbol)
     {
         return true;
     }
-    topscope = (ApeAstBlockScope_t*)ape_ptrarray_top(table->blockscopes);
-    symbol = (ApeSymbol_t*)ape_strdict_getbyname(topscope->store, name);
+    topscope = (ApeAstBlockScope*)ape_ptrarray_top(table->blockscopes);
+    symbol = (ApeSymbol*)ape_strdict_getbyname(topscope->store, name);
     if(symbol)
     {
         return true;
@@ -426,14 +426,14 @@ bool ape_symtable_symbol_is_defined(ApeSymTable_t* table, const char* name)
     return false;
 }
 
-bool ape_symtable_pushblockscope(ApeSymTable_t* table)
+bool ape_symtable_pushblockscope(ApeSymTable* table)
 {
     bool ok;
     int block_scope_offset;
-    ApeAstBlockScope_t* prev_block_scope;
-    ApeAstBlockScope_t* new_scope;
+    ApeAstBlockScope* prev_block_scope;
+    ApeAstBlockScope* new_scope;
     block_scope_offset = 0;
-    prev_block_scope = (ApeAstBlockScope_t*)ape_ptrarray_top(table->blockscopes);
+    prev_block_scope = (ApeAstBlockScope*)ape_ptrarray_top(table->blockscopes);
     if(prev_block_scope)
     {
         block_scope_offset = table->modglobaloffset + prev_block_scope->offset + prev_block_scope->numdefinitions;
@@ -456,26 +456,26 @@ bool ape_symtable_pushblockscope(ApeSymTable_t* table)
     return true;
 }
 
-void ape_symtable_popblockscope(ApeSymTable_t* table)
+void ape_symtable_popblockscope(ApeSymTable* table)
 {
-    ApeAstBlockScope_t* topscope;
-    topscope = (ApeAstBlockScope_t*)ape_ptrarray_top(table->blockscopes);
+    ApeAstBlockScope* topscope;
+    topscope = (ApeAstBlockScope*)ape_ptrarray_top(table->blockscopes);
     ape_ptrarray_pop(table->blockscopes);
     ape_blockscope_destroy(table->context, topscope);
 }
 
-ApeAstBlockScope_t* ape_symtable_getblockscope(ApeSymTable_t* table)
+ApeAstBlockScope* ape_symtable_getblockscope(ApeSymTable* table)
 {
-    ApeAstBlockScope_t* topscope;
+    ApeAstBlockScope* topscope;
     if(table == NULL)
     {
         return NULL;
     }
-    topscope = (ApeAstBlockScope_t*)ape_ptrarray_top(table->blockscopes);
+    topscope = (ApeAstBlockScope*)ape_ptrarray_top(table->blockscopes);
     return topscope;
 }
 
-bool ape_symtable_ismoduleglobalscope(ApeSymTable_t* table)
+bool ape_symtable_ismoduleglobalscope(ApeSymTable* table)
 {
     if(table == NULL)
     {
@@ -484,12 +484,12 @@ bool ape_symtable_ismoduleglobalscope(ApeSymTable_t* table)
     return table->outer == NULL;
 }
 
-bool ape_symtable_istopblockscope(ApeSymTable_t* table)
+bool ape_symtable_istopblockscope(ApeSymTable* table)
 {
     return ape_ptrarray_count(table->blockscopes) == 1;
 }
 
-bool ape_symtable_istopglobalscope(ApeSymTable_t* table)
+bool ape_symtable_istopglobalscope(ApeSymTable* table)
 {
     if(table != NULL)
     {
@@ -501,12 +501,12 @@ bool ape_symtable_istopglobalscope(ApeSymTable_t* table)
     return false;
 }
 
-ApeSize_t ape_symtable_getmoduleglobalsymbolcount(const ApeSymTable_t* table)
+ApeSize ape_symtable_getmoduleglobalsymbolcount(const ApeSymTable* table)
 {
     return ape_ptrarray_count(table->modglobalsymbols);
 }
 
-const ApeSymbol_t* ape_symtable_getmoduleglobalsymbolat(const ApeSymTable_t* table, int ix)
+const ApeSymbol* ape_symtable_getmoduleglobalsymbolat(const ApeSymTable* table, int ix)
 {
-    return (ApeSymbol_t*)ape_ptrarray_get(table->modglobalsymbols, ix);
+    return (ApeSymbol*)ape_ptrarray_get(table->modglobalsymbols, ix);
 }

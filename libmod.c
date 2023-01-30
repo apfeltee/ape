@@ -1,15 +1,15 @@
 
 #include "inline.h"
 
-ApeModule_t* ape_make_module(ApeContext_t* ctx, const char* name)
+ApeModule* ape_make_module(ApeContext* ctx, const char* name)
 {
-    ApeModule_t* module;
-    module = (ApeModule_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeModule_t));
+    ApeModule* module;
+    module = (ApeModule*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeModule));
     if(!module)
     {
         return NULL;
     }
-    memset(module, 0, sizeof(ApeModule_t));
+    memset(module, 0, sizeof(ApeModule));
     module->context = ctx;
     module->name = ape_util_strdup(ctx, name);
     if(!module->name)
@@ -26,27 +26,27 @@ ApeModule_t* ape_make_module(ApeContext_t* ctx, const char* name)
     return module;
 }
 
-void* ape_module_destroy(ApeContext_t* ctx, ApeModule_t* module)
+void* ape_module_destroy(ApeContext* ctx, ApeModule* module)
 {
     if(!module)
     {
         return NULL;
     }
     ape_allocator_free(&ctx->alloc, module->name);
-    ape_ptrarray_destroywithitems(ctx, module->modsymbols, (ApeDataCallback_t)ape_symbol_destroy);
+    ape_ptrarray_destroywithitems(ctx, module->modsymbols, (ApeDataCallback)ape_symbol_destroy);
     ape_allocator_free(&ctx->alloc, module);
     return NULL;
 }
 
-ApeModule_t* ape_module_copy(ApeContext_t* ctx, ApeModule_t* src)
+ApeModule* ape_module_copy(ApeContext* ctx, ApeModule* src)
 {
-    ApeModule_t* copy;
-    copy = (ApeModule_t*)ape_allocator_alloc(&src->context->alloc, sizeof(ApeModule_t));
+    ApeModule* copy;
+    copy = (ApeModule*)ape_allocator_alloc(&src->context->alloc, sizeof(ApeModule));
     if(!copy)
     {
         return NULL;
     }
-    memset(copy, 0, sizeof(ApeModule_t));
+    memset(copy, 0, sizeof(ApeModule));
     copy->context = src->context;
     copy->name = ape_util_strdup(src->context, src->name);
     if(!copy->name)
@@ -54,7 +54,7 @@ ApeModule_t* ape_module_copy(ApeContext_t* ctx, ApeModule_t* src)
         ape_module_destroy(ctx, copy);
         return NULL;
     }
-    copy->modsymbols = ape_ptrarray_copywithitems(ctx, src->modsymbols, (ApeDataCallback_t)ape_symbol_copy, (ApeDataCallback_t)ape_symbol_destroy);
+    copy->modsymbols = ape_ptrarray_copywithitems(ctx, src->modsymbols, (ApeDataCallback)ape_symbol_copy, (ApeDataCallback)ape_symbol_destroy);
     if(!copy->modsymbols)
     {
         ape_module_destroy(ctx, copy);
@@ -74,11 +74,11 @@ const char* ape_module_getname(const char* path)
     return path;
 }
 
-bool ape_module_addsymbol(ApeModule_t* module, const ApeSymbol_t* symbol)
+bool ape_module_addsymbol(ApeModule* module, const ApeSymbol* symbol)
 {
     bool ok;
-    ApeWriter_t* name_buf;
-    ApeSymbol_t* module_symbol;
+    ApeWriter* name_buf;
+    ApeSymbol* module_symbol;
     name_buf = ape_make_writer(module->context);
     if(!name_buf)
     {

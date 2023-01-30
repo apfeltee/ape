@@ -49,16 +49,16 @@
     #define DT_REG 8
 #endif
 
-static ApeObject_t cfn_file_write(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject cfn_file_write(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     bool havethismuch;
     const char* string;
     const char* path;
-    ApeSize_t slen;
-    ApeSize_t written;
-    ApeSize_t thismuch;
-    const ApeConfig_t* config;
-    ApeArgCheck_t check;
+    ApeSize slen;
+    ApeSize written;
+    ApeSize thismuch;
+    const ApeConfig* config;
+    ApeArgCheck check;
     (void)data;
     havethismuch = false;
     thismuch = 0;
@@ -89,23 +89,23 @@ static ApeObject_t cfn_file_write(ApeVM_t* vm, void* data, ApeSize_t argc, ApeOb
     }
     if(havethismuch)
     {
-        written = (ApeSize_t)config->fileio.fnwritefile(vm->context, path, string, thismuch);
+        written = (ApeSize)config->fileio.fnwritefile(vm->context, path, string, thismuch);
     }
     else
     {
-        written = (ApeSize_t)config->fileio.fnwritefile(vm->context, path, string, slen);
+        written = (ApeSize)config->fileio.fnwritefile(vm->context, path, string, slen);
     }
     return ape_object_make_floatnumber(vm->context, written);
 }
 
-static ApeObject_t cfn_file_read(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject cfn_file_read(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     size_t len;
     char* contents;
     const char* path;
     long int thismuch;
-    const ApeConfig_t* config;
-    ApeArgCheck_t check;
+    const ApeConfig* config;
+    ApeArgCheck check;
     thismuch = -1;
     (void)data;
     ape_args_init(vm, &check, "read", argc, args);
@@ -129,17 +129,17 @@ static ApeObject_t cfn_file_read(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObj
     {
         return ape_object_make_null(vm->context);
     }
-    ApeObject_t res = ape_object_make_stringlen(vm->context, contents, len);
+    ApeObject res = ape_object_make_stringlen(vm->context, contents, len);
     ape_allocator_free(&vm->context->alloc, contents);
     return res;
 }
 
-static ApeObject_t cfn_file_isfile(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject cfn_file_isfile(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     const char* path;
     struct stat st;
     (void)data;
-    ApeArgCheck_t check;
+    ApeArgCheck check;
     ape_args_init(vm, &check, "isfile", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_STRING))
     {
@@ -156,12 +156,12 @@ static ApeObject_t cfn_file_isfile(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
     return ape_object_make_bool(vm->context, false);
 }
 
-static ApeObject_t cfn_file_isdirectory(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject cfn_file_isdirectory(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     const char* path;
     struct stat st;
     (void)data;
-    ApeArgCheck_t check;
+    ApeArgCheck check;
     ape_args_init(vm, &check, "isdirectory", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_STRING))
     {
@@ -180,9 +180,9 @@ static ApeObject_t cfn_file_isdirectory(ApeVM_t* vm, void* data, ApeSize_t argc,
 
 /* strict ansi does not have timespec */
 #if defined(__linux__) && !defined(APE_CCENV_ANSIMODE)
-static ApeObject_t timespec_to_map(ApeVM_t* vm, struct timespec ts)
+static ApeObject timespec_to_map(ApeVM* vm, struct timespec ts)
 {
-    ApeObject_t map;
+    ApeObject map;
     map = ape_object_make_map(vm->context);
     ape_object_map_setnamednumber(vm->context, map, "sec", ts.tv_sec);
     ape_object_map_setnamednumber(vm->context, map, "nsec", ts.tv_nsec);
@@ -211,16 +211,16 @@ static ApeObject_t timespec_to_map(ApeVM_t* vm, struct timespec ts)
 #define for_field_number(ctx, f, val) \
     for_field(ctx, f, val, ape_object_map_setnamednumber, ape_object_make_floatnumber)
 
-static ApeObject_t cfn_file_stat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject cfn_file_stat(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     bool specificfield;
     const char* path;
     const char* field;
     struct stat st;
-    ApeContext_t* ctx;
-    ApeObject_t objsecond;
-    ApeObject_t objpath;
-    ApeObject_t map;
+    ApeContext* ctx;
+    ApeObject objsecond;
+    ApeObject objpath;
+    ApeObject map;
     (void)data;
     field = NULL;
     specificfield = false;
@@ -290,17 +290,17 @@ static ApeObject_t cfn_file_stat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObj
 
 #if !defined(CORE_NODIRENT)
 
-static ApeObject_t cfn_dir_readdir(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject cfn_dir_readdir(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     const char* path;
     DIR* hnd;
     struct dirent* dent;
-    ApeContext_t* ctx;
-    ApeObject_t ary;
-    ApeObject_t subm;
+    ApeContext* ctx;
+    ApeObject ary;
+    ApeObject subm;
     (void)data;
     ctx = vm->context;
-    ApeArgCheck_t check;
+    ApeArgCheck check;
     ape_args_init(vm, &check, "readdir", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_STRING))
     {
@@ -340,9 +340,9 @@ static ApeObject_t cfn_dir_readdir(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
 
 #endif
 
-void ape_builtins_install_io(ApeVM_t* vm)
+void ape_builtins_install_io(ApeVM* vm)
 {
-    static ApeNativeItem_t g_core_filefuncs[]=
+    static ApeNativeItem g_core_filefuncs[]=
     {
         {"read", cfn_file_read},
         {"write", cfn_file_write},
@@ -352,7 +352,7 @@ void ape_builtins_install_io(ApeVM_t* vm)
         {NULL, NULL},
     };
 
-    static ApeNativeItem_t g_core_dirfuncs[]=
+    static ApeNativeItem g_core_dirfuncs[]=
     {
         #if !defined(CORE_NODIRENT)
         {"read", cfn_dir_readdir},

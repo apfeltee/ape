@@ -58,35 +58,35 @@ extern void ds_extfree(void* ptr, void* userptr);
 * initialize a memory pool for allocations between 2^min2 and 2^max2, inclusive.
 * (Larger allocations will be directly allocated and freed via mmap / munmap.)
 */
-ApeMemPool_t* ape_mempool_init(ApeSize_t min2, ApeSize_t max2);
+ApeMemPool* ape_mempool_init(ApeSize min2, ApeSize max2);
 
 
-bool ape_mempool_setdebughandle(ApeMemPool_t* mp, FILE* handle, bool mustclose);
+bool ape_mempool_setdebughandle(ApeMemPool* mp, FILE* handle, bool mustclose);
 
-bool ape_mempool_setdebugfile(ApeMemPool_t* mp, const char* path);
-void ape_mempool_debugprintv(ApeMemPool_t* mp, const char* fmt, va_list va);
-void ape_mempool_debugprintf(ApeMemPool_t* mp, const char* fmt, ...);
+bool ape_mempool_setdebugfile(ApeMemPool* mp, const char* path);
+void ape_mempool_debugprintv(ApeMemPool* mp, const char* fmt, va_list va);
+void ape_mempool_debugprintf(ApeMemPool* mp, const char* fmt, ...);
 
 /* Allocate SZ bytes. */
-void* ape_mempool_alloc(ApeMemPool_t* mp, ApeSize_t sz);
+void* ape_mempool_alloc(ApeMemPool* mp, ApeSize sz);
 
 /* would release a pointer when mmap (or alternatives) are not available */
-void ape_mempool_free(ApeMemPool_t* mp, void* p);
+void ape_mempool_free(ApeMemPool* mp, void* p);
 
 /*
 * mmap a new memory pool of TOTAL_SZ bytes, then build an internal
 * freelist of SZ-byte cells, with the head at (result)[0].
 */
-void** ape_mempool_newpool(ApeMemPool_t* mp, ApeSize_t sz, ApeSize_t total_sz);
+void** ape_mempool_newpool(ApeMemPool* mp, ApeSize sz, ApeSize total_sz);
 
 /* return pointer P (SZ bytes in size) to the appropriate pool. */
-void ape_mempool_repool(ApeMemPool_t* mp, void *p, ApeSize_t sz);
+void ape_mempool_repool(ApeMemPool* mp, void *p, ApeSize sz);
 
 /* resize P from OLD_SZ to NEW_SZ, copying content. */
-void *ape_mempool_realloc(ApeMemPool_t* mp, void *p, ApeSize_t old_sz, ApeSize_t new_sz);
+void *ape_mempool_realloc(ApeMemPool* mp, void *p, ApeSize old_sz, ApeSize new_sz);
 
 /* releases and destroys the pool. */
-void ape_mempool_destroy(ApeMemPool_t* mp);
+void ape_mempool_destroy(ApeMemPool* mp);
 
 static APE_INLINE int ape_util_doubletoint(double n)
 {
@@ -148,11 +148,11 @@ static APE_INLINE unsigned int ape_util_numbertouint32(double n)
 }
 
 /* fixme */
-ApeUInt_t ape_util_floattouint(ApeFloat_t val);
-ApeFloat_t ape_util_uinttofloat(ApeUInt_t val);
+ApeUInt ape_util_floattouint(ApeFloat val);
+ApeFloat ape_util_uinttofloat(ApeUInt val);
 
 
-static APE_INLINE void* ape_valdict_getkeyat(const ApeValDict_t* dict, ApeSize_t ix)
+static APE_INLINE void* ape_valdict_getkeyat(const ApeValDict* dict, ApeSize ix)
 {
     if(ix >= dict->count)
     {
@@ -161,7 +161,7 @@ static APE_INLINE void* ape_valdict_getkeyat(const ApeValDict_t* dict, ApeSize_t
     return ((char*)dict->keys) + (dict->keysize * ix);
 }
 
-static APE_INLINE void* ape_valdict_getvalueat(const ApeValDict_t* dict, ApeSize_t ix)
+static APE_INLINE void* ape_valdict_getvalueat(const ApeValDict* dict, ApeSize ix)
 {
     if(ix >= dict->count)
     {
@@ -170,9 +170,9 @@ static APE_INLINE void* ape_valdict_getvalueat(const ApeValDict_t* dict, ApeSize
     return (char*)dict->values + (dict->valsize * ix);
 }
 
-static APE_INLINE bool ape_valdict_setvalueat(const ApeValDict_t* dict, ApeSize_t ix, const void* value)
+static APE_INLINE bool ape_valdict_setvalueat(const ApeValDict* dict, ApeSize ix, const void* value)
 {
-    ApeSize_t offset;
+    ApeSize offset;
     if(ix >= dict->count)
     {
         return false;
@@ -182,7 +182,7 @@ static APE_INLINE bool ape_valdict_setvalueat(const ApeValDict_t* dict, ApeSize_
     return true;
 }
 
-static APE_INLINE ApeSize_t ape_valdict_count(const ApeValDict_t* dict)
+static APE_INLINE ApeSize ape_valdict_count(const ApeValDict* dict)
 {
     if(!dict)
     {
@@ -191,9 +191,9 @@ static APE_INLINE ApeSize_t ape_valdict_count(const ApeValDict_t* dict)
     return dict->count;
 }
 
-static APE_INLINE void ape_valdict_clear(ApeValDict_t* dict)
+static APE_INLINE void ape_valdict_clear(ApeValDict* dict)
 {
-    ApeSize_t i;
+    ApeSize i;
     dict->count = 0;
     for(i = 0; i < dict->cellcap; i++)
     {

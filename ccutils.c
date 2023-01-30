@@ -1,12 +1,12 @@
 
 #include "inline.h"
 
-static const ApePosition_t g_prspriv_srcposinvalid = { NULL, -1, -1 };
+static const ApePosition g_prspriv_srcposinvalid = { NULL, -1, -1 };
 
-ApeAstIdentExpr_t* ape_ast_make_ident(ApeContext_t* ctx, ApeAstToken_t tok)
+ApeAstIdentExpr* ape_ast_make_ident(ApeContext* ctx, ApeAstToken tok)
 {
-    ApeAstIdentExpr_t* res;
-    res = (ApeAstIdentExpr_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstIdentExpr_t));
+    ApeAstIdentExpr* res;
+    res = (ApeAstIdentExpr*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstIdentExpr));
     if(!res)
     {
         return NULL;
@@ -22,10 +22,10 @@ ApeAstIdentExpr_t* ape_ast_make_ident(ApeContext_t* ctx, ApeAstToken_t tok)
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_expression(ApeContext_t* ctx, ApeAstExprType_t type)
+ApeAstExpression* ape_ast_make_expression(ApeContext* ctx, ApeAstExprType type)
 {
-    ApeAstExpression_t* res;
-    res = (ApeAstExpression_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstExpression_t));
+    ApeAstExpression* res;
+    res = (ApeAstExpression*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstExpression));
     if(!res)
     {
         return NULL;
@@ -36,9 +36,9 @@ ApeAstExpression_t* ape_ast_make_expression(ApeContext_t* ctx, ApeAstExprType_t 
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_identexpr(ApeContext_t* ctx, ApeAstIdentExpr_t* ident)
+ApeAstExpression* ape_ast_make_identexpr(ApeContext* ctx, ApeAstIdentExpr* ident)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_IDENT);
     if(!res)
     {
@@ -48,9 +48,9 @@ ApeAstExpression_t* ape_ast_make_identexpr(ApeContext_t* ctx, ApeAstIdentExpr_t*
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_literalnumberexpr(ApeContext_t* ctx, ApeFloat_t val)
+ApeAstExpression* ape_ast_make_literalnumberexpr(ApeContext* ctx, ApeFloat val)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_LITERALNUMBER);
     if(!res)
     {
@@ -60,9 +60,9 @@ ApeAstExpression_t* ape_ast_make_literalnumberexpr(ApeContext_t* ctx, ApeFloat_t
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_literalboolexpr(ApeContext_t* ctx, bool val)
+ApeAstExpression* ape_ast_make_literalboolexpr(ApeContext* ctx, bool val)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_LITERALBOOL);
     if(!res)
     {
@@ -72,9 +72,9 @@ ApeAstExpression_t* ape_ast_make_literalboolexpr(ApeContext_t* ctx, bool val)
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_literalstringexpr(ApeContext_t* ctx, char* value, ApeSize_t len, bool wasallocd)
+ApeAstExpression* ape_ast_make_literalstringexpr(ApeContext* ctx, char* value, ApeSize len, bool wasallocd)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_LITERALSTRING);
     if(!res)
     {
@@ -86,9 +86,9 @@ ApeAstExpression_t* ape_ast_make_literalstringexpr(ApeContext_t* ctx, char* valu
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_literalnullexpr(ApeContext_t* ctx)
+ApeAstExpression* ape_ast_make_literalnullexpr(ApeContext* ctx)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_LITERALNULL);
     if(!res)
     {
@@ -97,9 +97,9 @@ ApeAstExpression_t* ape_ast_make_literalnullexpr(ApeContext_t* ctx)
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_literalarrayexpr(ApeContext_t* ctx, ApePtrArray_t * values)
+ApeAstExpression* ape_ast_make_literalarrayexpr(ApeContext* ctx, ApePtrArray * values)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_LITERALARRAY);
     if(!res)
     {
@@ -109,9 +109,9 @@ ApeAstExpression_t* ape_ast_make_literalarrayexpr(ApeContext_t* ctx, ApePtrArray
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_literalmapexpr(ApeContext_t* ctx, ApePtrArray_t * keys, ApePtrArray_t * values)
+ApeAstExpression* ape_ast_make_literalmapexpr(ApeContext* ctx, ApePtrArray * keys, ApePtrArray * values)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_LITERALMAP);
     if(!res)
     {
@@ -122,9 +122,9 @@ ApeAstExpression_t* ape_ast_make_literalmapexpr(ApeContext_t* ctx, ApePtrArray_t
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_prefixexpr(ApeContext_t* ctx, ApeOperator_t op, ApeAstExpression_t* right)
+ApeAstExpression* ape_ast_make_prefixexpr(ApeContext* ctx, ApeOperator op, ApeAstExpression* right)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_PREFIX);
     if(!res)
     {
@@ -135,9 +135,9 @@ ApeAstExpression_t* ape_ast_make_prefixexpr(ApeContext_t* ctx, ApeOperator_t op,
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_infixexpr(ApeContext_t* ctx, ApeOperator_t op, ApeAstExpression_t* left, ApeAstExpression_t* right)
+ApeAstExpression* ape_ast_make_infixexpr(ApeContext* ctx, ApeOperator op, ApeAstExpression* left, ApeAstExpression* right)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_INFIX);
     if(!res)
     {
@@ -149,9 +149,9 @@ ApeAstExpression_t* ape_ast_make_infixexpr(ApeContext_t* ctx, ApeOperator_t op, 
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_literalfuncexpr(ApeContext_t* ctx, ApePtrArray_t * params, ApeAstBlockExpr_t* body)
+ApeAstExpression* ape_ast_make_literalfuncexpr(ApeContext* ctx, ApePtrArray * params, ApeAstBlockExpr* body)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_LITERALFUNCTION);
     if(!res)
     {
@@ -163,9 +163,9 @@ ApeAstExpression_t* ape_ast_make_literalfuncexpr(ApeContext_t* ctx, ApePtrArray_
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_callexpr(ApeContext_t* ctx, ApeAstExpression_t* function, ApePtrArray_t * args)
+ApeAstExpression* ape_ast_make_callexpr(ApeContext* ctx, ApeAstExpression* function, ApePtrArray * args)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_CALL);
     if(!res)
     {
@@ -176,9 +176,9 @@ ApeAstExpression_t* ape_ast_make_callexpr(ApeContext_t* ctx, ApeAstExpression_t*
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_indexexpr(ApeContext_t* ctx, ApeAstExpression_t* left, ApeAstExpression_t* index)
+ApeAstExpression* ape_ast_make_indexexpr(ApeContext* ctx, ApeAstExpression* left, ApeAstExpression* index)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_INDEX);
     if(!res)
     {
@@ -189,9 +189,9 @@ ApeAstExpression_t* ape_ast_make_indexexpr(ApeContext_t* ctx, ApeAstExpression_t
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_assignexpr(ApeContext_t* ctx, ApeAstExpression_t* dest, ApeAstExpression_t* source, bool ispostfix)
+ApeAstExpression* ape_ast_make_assignexpr(ApeContext* ctx, ApeAstExpression* dest, ApeAstExpression* source, bool ispostfix)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_ASSIGN);
     if(!res)
     {
@@ -203,9 +203,9 @@ ApeAstExpression_t* ape_ast_make_assignexpr(ApeContext_t* ctx, ApeAstExpression_
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_logicalexpr(ApeContext_t* ctx, ApeOperator_t op, ApeAstExpression_t* left, ApeAstExpression_t* right)
+ApeAstExpression* ape_ast_make_logicalexpr(ApeContext* ctx, ApeOperator op, ApeAstExpression* left, ApeAstExpression* right)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_LOGICAL);
     if(!res)
     {
@@ -217,9 +217,9 @@ ApeAstExpression_t* ape_ast_make_logicalexpr(ApeContext_t* ctx, ApeOperator_t op
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_ternaryexpr(ApeContext_t* ctx, ApeAstExpression_t* test, ApeAstExpression_t* iftrue, ApeAstExpression_t* iffalse)
+ApeAstExpression* ape_ast_make_ternaryexpr(ApeContext* ctx, ApeAstExpression* test, ApeAstExpression* iftrue, ApeAstExpression* iffalse)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_TERNARY);
     if(!res)
     {
@@ -231,9 +231,9 @@ ApeAstExpression_t* ape_ast_make_ternaryexpr(ApeContext_t* ctx, ApeAstExpression
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_definestmt(ApeContext_t* ctx, ApeAstIdentExpr_t* name, ApeAstExpression_t* value, bool assignable)
+ApeAstExpression* ape_ast_make_definestmt(ApeContext* ctx, ApeAstIdentExpr* name, ApeAstExpression* value, bool assignable)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_DEFINE);
     if(!res)
     {
@@ -245,9 +245,9 @@ ApeAstExpression_t* ape_ast_make_definestmt(ApeContext_t* ctx, ApeAstIdentExpr_t
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_ifstmt(ApeContext_t* ctx, ApePtrArray_t * cases, ApeAstBlockExpr_t* alternative)
+ApeAstExpression* ape_ast_make_ifstmt(ApeContext* ctx, ApePtrArray * cases, ApeAstBlockExpr* alternative)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_IFELSE);
     if(!res)
     {
@@ -258,9 +258,9 @@ ApeAstExpression_t* ape_ast_make_ifstmt(ApeContext_t* ctx, ApePtrArray_t * cases
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_returnstmt(ApeContext_t* ctx, ApeAstExpression_t* value)
+ApeAstExpression* ape_ast_make_returnstmt(ApeContext* ctx, ApeAstExpression* value)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_RETURNVALUE);
     if(!res)
     {
@@ -270,9 +270,9 @@ ApeAstExpression_t* ape_ast_make_returnstmt(ApeContext_t* ctx, ApeAstExpression_
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_expressionstmt(ApeContext_t* ctx, ApeAstExpression_t* value)
+ApeAstExpression* ape_ast_make_expressionstmt(ApeContext* ctx, ApeAstExpression* value)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_EXPRESSION);
     if(!res)
     {
@@ -282,9 +282,9 @@ ApeAstExpression_t* ape_ast_make_expressionstmt(ApeContext_t* ctx, ApeAstExpress
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_whilestmt(ApeContext_t* ctx, ApeAstExpression_t* test, ApeAstBlockExpr_t* body)
+ApeAstExpression* ape_ast_make_whilestmt(ApeContext* ctx, ApeAstExpression* test, ApeAstBlockExpr* body)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_WHILELOOP);
     if(!res)
     {
@@ -295,9 +295,9 @@ ApeAstExpression_t* ape_ast_make_whilestmt(ApeContext_t* ctx, ApeAstExpression_t
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_breakstmt(ApeContext_t* ctx)
+ApeAstExpression* ape_ast_make_breakstmt(ApeContext* ctx)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_BREAK);
     if(!res)
     {
@@ -306,9 +306,9 @@ ApeAstExpression_t* ape_ast_make_breakstmt(ApeContext_t* ctx)
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_foreachstmt(ApeContext_t* ctx, ApeAstIdentExpr_t* iterator, ApeAstExpression_t* source, ApeAstBlockExpr_t* body)
+ApeAstExpression* ape_ast_make_foreachstmt(ApeContext* ctx, ApeAstIdentExpr* iterator, ApeAstExpression* source, ApeAstBlockExpr* body)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_FOREACH);
     if(!res)
     {
@@ -320,9 +320,9 @@ ApeAstExpression_t* ape_ast_make_foreachstmt(ApeContext_t* ctx, ApeAstIdentExpr_
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_forstmt(ApeContext_t* ctx, ApeAstExpression_t* init, ApeAstExpression_t* test, ApeAstExpression_t* update, ApeAstBlockExpr_t* body)
+ApeAstExpression* ape_ast_make_forstmt(ApeContext* ctx, ApeAstExpression* init, ApeAstExpression* test, ApeAstExpression* update, ApeAstBlockExpr* body)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_FORLOOP);
     if(!res)
     {
@@ -335,9 +335,9 @@ ApeAstExpression_t* ape_ast_make_forstmt(ApeContext_t* ctx, ApeAstExpression_t* 
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_continuestmt(ApeContext_t* ctx)
+ApeAstExpression* ape_ast_make_continuestmt(ApeContext* ctx)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_CONTINUE);
     if(!res)
     {
@@ -346,9 +346,9 @@ ApeAstExpression_t* ape_ast_make_continuestmt(ApeContext_t* ctx)
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_blockstmt(ApeContext_t* ctx, ApeAstBlockExpr_t* block)
+ApeAstExpression* ape_ast_make_blockstmt(ApeContext* ctx, ApeAstBlockExpr* block)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_BLOCK);
     if(!res)
     {
@@ -358,9 +358,9 @@ ApeAstExpression_t* ape_ast_make_blockstmt(ApeContext_t* ctx, ApeAstBlockExpr_t*
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_includestmt(ApeContext_t* ctx, char* path)
+ApeAstExpression* ape_ast_make_includestmt(ApeContext* ctx, char* path)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_INCLUDE);
     if(!res)
     {
@@ -370,9 +370,9 @@ ApeAstExpression_t* ape_ast_make_includestmt(ApeContext_t* ctx, char* path)
     return res;
 }
 
-ApeAstExpression_t* ape_ast_make_recoverstmt(ApeContext_t* ctx, ApeAstIdentExpr_t* errorident, ApeAstBlockExpr_t* body)
+ApeAstExpression* ape_ast_make_recoverstmt(ApeContext* ctx, ApeAstIdentExpr* errorident, ApeAstBlockExpr* body)
 {
-    ApeAstExpression_t* res;
+    ApeAstExpression* res;
     res = ape_ast_make_expression(ctx, APE_EXPR_RECOVER);
     if(!res)
     {
@@ -383,10 +383,10 @@ ApeAstExpression_t* ape_ast_make_recoverstmt(ApeContext_t* ctx, ApeAstIdentExpr_
     return res;
 }
 
-ApeAstBlockExpr_t* ape_ast_make_codeblock(ApeContext_t* ctx, ApePtrArray_t * statements)
+ApeAstBlockExpr* ape_ast_make_codeblock(ApeContext* ctx, ApePtrArray * statements)
 {
-    ApeAstBlockExpr_t* block;
-    block = (ApeAstBlockExpr_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstBlockExpr_t));
+    ApeAstBlockExpr* block;
+    block = (ApeAstBlockExpr*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstBlockExpr));
     if(!block)
     {
         return NULL;
@@ -396,10 +396,10 @@ ApeAstBlockExpr_t* ape_ast_make_codeblock(ApeContext_t* ctx, ApePtrArray_t * sta
     return block;
 }
 
-ApeAstIdentExpr_t* ape_ast_copy_ident(ApeContext_t* ctx, ApeAstIdentExpr_t* ident)
+ApeAstIdentExpr* ape_ast_copy_ident(ApeContext* ctx, ApeAstIdentExpr* ident)
 {
-    ApeAstIdentExpr_t* res;
-    res = (ApeAstIdentExpr_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstIdentExpr_t));
+    ApeAstIdentExpr* res;
+    res = (ApeAstIdentExpr*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstIdentExpr));
     if(!res)
     {
         return NULL;
@@ -415,14 +415,14 @@ ApeAstIdentExpr_t* ape_ast_copy_ident(ApeContext_t* ctx, ApeAstIdentExpr_t* iden
     return res;
 }
 
-ApeAstBlockExpr_t* ape_ast_copy_codeblock(ApeContext_t* ctx, ApeAstBlockExpr_t* block)
+ApeAstBlockExpr* ape_ast_copy_codeblock(ApeContext* ctx, ApeAstBlockExpr* block)
 {
-    ApeAstBlockExpr_t* res;
-    ApePtrArray_t* statementscopy;
-    ApeDataCallback_t copyfn;
-    ApeDataCallback_t destroyfn;
-    copyfn = (ApeDataCallback_t)ape_ast_copy_expr;
-    destroyfn = (ApeDataCallback_t)ape_ast_destroy_expr;
+    ApeAstBlockExpr* res;
+    ApePtrArray* statementscopy;
+    ApeDataCallback copyfn;
+    ApeDataCallback destroyfn;
+    copyfn = (ApeDataCallback)ape_ast_copy_expr;
+    destroyfn = (ApeDataCallback)ape_ast_destroy_expr;
     if(!block)
     {
         return NULL;
@@ -442,11 +442,11 @@ ApeAstBlockExpr_t* ape_ast_copy_codeblock(ApeContext_t* ctx, ApeAstBlockExpr_t* 
     return res;
 }
 
-ApeAstIfCaseExpr_t* ape_ast_copy_ifcase(ApeContext_t* ctx, ApeAstIfCaseExpr_t* ifcase)
+ApeAstIfCaseExpr* ape_ast_copy_ifcase(ApeContext* ctx, ApeAstIfCaseExpr* ifcase)
 {
-    ApeAstExpression_t* testcopy;
-    ApeAstBlockExpr_t* consequencecopy;
-    ApeAstIfCaseExpr_t* ifcasecopy;
+    ApeAstExpression* testcopy;
+    ApeAstBlockExpr* consequencecopy;
+    ApeAstIfCaseExpr* ifcasecopy;
     if(!ifcase)
     {
         return NULL;
@@ -479,17 +479,17 @@ err:
 }
 
 
-ApeAstCompFile_t* ape_make_compfile(ApeContext_t* ctx, const char* path)
+ApeAstCompFile* ape_make_compfile(ApeContext* ctx, const char* path)
 {
     size_t len;
     const char* last_slash_pos;
-    ApeAstCompFile_t* file;
-    file = (ApeAstCompFile_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstCompFile_t));
+    ApeAstCompFile* file;
+    file = (ApeAstCompFile*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstCompFile));
     if(!file)
     {
         return NULL;
     }
-    memset(file, 0, sizeof(ApeAstCompFile_t));
+    memset(file, 0, sizeof(ApeAstCompFile));
     file->context = ctx;
     last_slash_pos = strrchr(path, '/');
     if(last_slash_pos)
@@ -521,9 +521,9 @@ error:
     return NULL;
 }
 
-void* ape_compfile_destroy(ApeContext_t* ctx, ApeAstCompFile_t* file)
+void* ape_compfile_destroy(ApeContext* ctx, ApeAstCompFile* file)
 {
-    ApeSize_t i;
+    ApeSize i;
     void* item;
     if(!file)
     {
@@ -541,28 +541,28 @@ void* ape_compfile_destroy(ApeContext_t* ctx, ApeAstCompFile_t* file)
     return NULL;
 }
 
-ApeAstCompScope_t* ape_make_compscope(ApeContext_t* ctx, ApeAstCompScope_t* outer)
+ApeAstCompScope* ape_make_compscope(ApeContext* ctx, ApeAstCompScope* outer)
 {
-    ApeAstCompScope_t* scope;
-    scope = (ApeAstCompScope_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstCompScope_t));
+    ApeAstCompScope* scope;
+    scope = (ApeAstCompScope*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstCompScope));
     if(!scope)
     {
         return NULL;
     }
-    memset(scope, 0, sizeof(ApeAstCompScope_t));
+    memset(scope, 0, sizeof(ApeAstCompScope));
     scope->context = ctx;
     scope->outer = outer;
-    scope->bytecode = ape_make_valarray(ctx, sizeof(ApeUShort_t));
+    scope->bytecode = ape_make_valarray(ctx, sizeof(ApeUShort));
     if(!scope->bytecode)
     {
         goto err;
     }
-    scope->srcpositions = ape_make_valarray(ctx, sizeof(ApePosition_t));
+    scope->srcpositions = ape_make_valarray(ctx, sizeof(ApePosition));
     if(!scope->srcpositions)
     {
         goto err;
     }
-    scope->breakipstack = ape_make_valarray(ctx, sizeof(ApeInt_t));
+    scope->breakipstack = ape_make_valarray(ctx, sizeof(ApeInt));
     if(!scope->breakipstack)
     {
         goto err;
@@ -578,9 +578,9 @@ err:
     return NULL;
 }
 
-void ape_compscope_destroy(ApeAstCompScope_t* scope)
+void ape_compscope_destroy(ApeAstCompScope* scope)
 {
-    ApeContext_t* ctx;
+    ApeContext* ctx;
     ctx = scope->context;
     ape_valarray_destroy(scope->continueipstack);
     ape_valarray_destroy(scope->breakipstack);
@@ -589,12 +589,12 @@ void ape_compscope_destroy(ApeAstCompScope_t* scope)
     ape_allocator_free(&ctx->alloc, scope);
 }
 
-ApeAstCompResult_t* ape_compscope_orphanresult(ApeAstCompScope_t* scope)
+ApeAstCompResult* ape_compscope_orphanresult(ApeAstCompScope* scope)
 {
-    ApeAstCompResult_t* res;
+    ApeAstCompResult* res;
     res = ape_make_compresult(scope->context,
-        (ApeUShort_t*)ape_valarray_data(scope->bytecode),
-        (ApePosition_t*)ape_valarray_data(scope->srcpositions),
+        (ApeUShort*)ape_valarray_data(scope->bytecode),
+        (ApePosition*)ape_valarray_data(scope->srcpositions),
         ape_valarray_count(scope->bytecode)
     );
     if(!res)
@@ -606,15 +606,15 @@ ApeAstCompResult_t* ape_compscope_orphanresult(ApeAstCompScope_t* scope)
     return res;
 }
 
-ApeAstCompResult_t* ape_make_compresult(ApeContext_t* ctx, ApeUShort_t* bytecode, ApePosition_t* src_positions, int count)
+ApeAstCompResult* ape_make_compresult(ApeContext* ctx, ApeUShort* bytecode, ApePosition* src_positions, int count)
 {
-    ApeAstCompResult_t* res;
-    res = (ApeAstCompResult_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstCompResult_t));
+    ApeAstCompResult* res;
+    res = (ApeAstCompResult*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstCompResult));
     if(!res)
     {
         return NULL;
     }
-    memset(res, 0, sizeof(ApeAstCompResult_t));
+    memset(res, 0, sizeof(ApeAstCompResult));
     res->context = ctx;
     res->bytecode = bytecode;
     res->srcpositions = src_positions;
@@ -622,9 +622,9 @@ ApeAstCompResult_t* ape_make_compresult(ApeContext_t* ctx, ApeUShort_t* bytecode
     return res;
 }
 
-void ape_compresult_destroy(ApeAstCompResult_t* res)
+void ape_compresult_destroy(ApeAstCompResult* res)
 {
-    ApeContext_t* ctx;
+    ApeContext* ctx;
     if(res == NULL)
     {
         return;
@@ -636,17 +636,17 @@ void ape_compresult_destroy(ApeAstCompResult_t* res)
 }
 
 
-ApeAstBlockScope_t* ape_make_blockscope(ApeContext_t* ctx, int offset)
+ApeAstBlockScope* ape_make_blockscope(ApeContext* ctx, int offset)
 {
-    ApeAstBlockScope_t* sc;
-    sc = (ApeAstBlockScope_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstBlockScope_t));
+    ApeAstBlockScope* sc;
+    sc = (ApeAstBlockScope*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstBlockScope));
     if(!sc)
     {
         return NULL;
     }
-    memset(sc, 0, sizeof(ApeAstBlockScope_t));
+    memset(sc, 0, sizeof(ApeAstBlockScope));
     sc->context = ctx;
-    sc->store = ape_make_strdict(ctx, (ApeDataCallback_t)ape_symbol_copy, (ApeDataCallback_t)ape_symbol_destroy);
+    sc->store = ape_make_strdict(ctx, (ApeDataCallback)ape_symbol_copy, (ApeDataCallback)ape_symbol_destroy);
     if(!sc->store)
     {
         ape_blockscope_destroy(ctx, sc);
@@ -657,7 +657,7 @@ ApeAstBlockScope_t* ape_make_blockscope(ApeContext_t* ctx, int offset)
     return sc;
 }
 
-void* ape_blockscope_destroy(ApeContext_t* ctx, ApeAstBlockScope_t* scope)
+void* ape_blockscope_destroy(ApeContext* ctx, ApeAstBlockScope* scope)
 {
     if(scope != NULL)
     {
@@ -670,19 +670,19 @@ void* ape_blockscope_destroy(ApeContext_t* ctx, ApeAstBlockScope_t* scope)
     return NULL;
 }
 
-ApeAstBlockScope_t* ape_blockscope_copy(ApeContext_t* ctx, ApeAstBlockScope_t* scope)
+ApeAstBlockScope* ape_blockscope_copy(ApeContext* ctx, ApeAstBlockScope* scope)
 {
-    ApeAstBlockScope_t* copy;
+    ApeAstBlockScope* copy;
     if(scope == NULL)
     {
         return NULL;
     }
-    copy = (ApeAstBlockScope_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstBlockScope_t));
+    copy = (ApeAstBlockScope*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstBlockScope));
     if(!copy)
     {
         return NULL;
     }
-    memset(copy, 0, sizeof(ApeAstBlockScope_t));
+    memset(copy, 0, sizeof(ApeAstBlockScope));
     copy->context = ctx;
     copy->numdefinitions = scope->numdefinitions;
     copy->offset = scope->offset;

@@ -1,25 +1,25 @@
 
 #include "inline.h"
 
-static bool ape_lexer_readchar(ApeAstLexer_t* lex);
-static char ape_lexer_peekchar(ApeAstLexer_t* lex);
+static bool ape_lexer_readchar(ApeAstLexer* lex);
+static char ape_lexer_peekchar(ApeAstLexer* lex);
 static bool ape_lexer_isletter(char ch);
 static bool ape_lexer_isdigit(char ch);
 static bool ape_lexer_isoneof(char ch, const char* allowed, int allowedlen);
-static const char* ape_lexer_readident(ApeAstLexer_t* lex, int* outlen);
-static const char* ape_lexer_readnumber(ApeAstLexer_t* lex, int* outlen);
-static const char* ape_lexer_readstring(ApeAstLexer_t* lex, char delimiter, bool istemplate, bool* outtemplatefound, int* outlen);
-static void ape_lexer_skipspace(ApeAstLexer_t* lex);
-static bool ape_lexer_addline(ApeAstLexer_t* lex, int offset);
+static const char* ape_lexer_readident(ApeAstLexer* lex, int* outlen);
+static const char* ape_lexer_readnumber(ApeAstLexer* lex, int* outlen);
+static const char* ape_lexer_readstring(ApeAstLexer* lex, char delimiter, bool istemplate, bool* outtemplatefound, int* outlen);
+static void ape_lexer_skipspace(ApeAstLexer* lex);
+static bool ape_lexer_addline(ApeAstLexer* lex, int offset);
 
-static ApeAstTokType_t ape_lexer_lookupident(const char* ident, ApeSize_t len)
+static ApeAstTokType ape_lexer_lookupident(const char* ident, ApeSize len)
 {
     int i;
-    ApeSize_t kwlen;
+    ApeSize kwlen;
     static struct
     {
         const char* value;
-        ApeAstTokType_t type;
+        ApeAstTokType type;
     } keywords[] = {
         { "function", TOKEN_KWFUNCTION },
         { "const", TOKEN_KWCONST },
@@ -41,7 +41,7 @@ static ApeAstTokType_t ape_lexer_lookupident(const char* ident, ApeSize_t len)
         #if 0
         { "global", TOKEN_KWGLOBAL },
         #endif
-        {NULL, (ApeAstTokType_t)0},
+        {NULL, (ApeAstTokType)0},
     };
 
     for(i = 0; keywords[i].value != NULL; i++)
@@ -55,28 +55,28 @@ static ApeAstTokType_t ape_lexer_lookupident(const char* ident, ApeSize_t len)
     return TOKEN_VALIDENT;
 }
 
-static ApePosition_t ape_lexer_makesourcepos(const ApeAstCompFile_t* file, int line, int column)
+static ApePosition ape_lexer_makesourcepos(const ApeAstCompFile* file, int line, int column)
 {
-    ApePosition_t r;
+    ApePosition r;
     r.file = file;
     r.line = line;
     r.column = column;
     return r;
 }
 
-void ape_lexer_token_init(ApeAstToken_t* tok, ApeAstTokType_t type, const char* literal, int len)
+void ape_lexer_token_init(ApeAstToken* tok, ApeAstTokType type, const char* literal, int len)
 {
     tok->toktype = type;
     tok->literal = literal;
     tok->len = len;
 }
 
-char* ape_lexer_tokendupliteral(ApeContext_t* ctx, const ApeAstToken_t* tok)
+char* ape_lexer_tokendupliteral(ApeContext* ctx, const ApeAstToken* tok)
 {
     return ape_util_strndup(ctx, tok->literal, tok->len);
 }
 
-bool ape_lexer_init(ApeAstLexer_t* lex, ApeContext_t* ctx, ApeErrorList_t* errs, const char* input, size_t inlen, ApeAstCompFile_t* file)
+bool ape_lexer_init(ApeAstLexer* lex, ApeContext* ctx, ApeErrorList* errs, const char* input, size_t inlen, ApeAstCompFile* file)
 {
     lex->context = ctx;
     lex->errors = errs;
@@ -114,27 +114,27 @@ bool ape_lexer_init(ApeAstLexer_t* lex, ApeContext_t* ctx, ApeErrorList_t* errs,
     return true;
 }
 
-bool ape_lexer_failed(ApeAstLexer_t* lex)
+bool ape_lexer_failed(ApeAstLexer* lex)
 {
     return lex->failed;
 }
 
-void ape_lexer_continuetemplatestring(ApeAstLexer_t* lex)
+void ape_lexer_continuetemplatestring(ApeAstLexer* lex)
 {
     lex->continue_template_string = true;
 }
 
-bool ape_lexer_currenttokenis(ApeAstLexer_t* lex, ApeAstTokType_t type)
+bool ape_lexer_currenttokenis(ApeAstLexer* lex, ApeAstTokType type)
 {
     return lex->curtoken.toktype == type;
 }
 
-bool ape_lexer_peektokenis(ApeAstLexer_t* lex, ApeAstTokType_t type)
+bool ape_lexer_peektokenis(ApeAstLexer* lex, ApeAstTokType type)
 {
     return lex->peektoken.toktype == type;
 }
 
-bool ape_lexer_nexttoken(ApeAstLexer_t* lex)
+bool ape_lexer_nexttoken(ApeAstLexer* lex)
 {
     lex->prevtoken = lex->curtoken;
     lex->curtoken = lex->peektoken;
@@ -142,7 +142,7 @@ bool ape_lexer_nexttoken(ApeAstLexer_t* lex)
     return !lex->failed;
 }
 
-bool ape_lexer_previous_token(ApeAstLexer_t* lex)
+bool ape_lexer_previous_token(ApeAstLexer* lex)
 {
     if(lex->prevtoken.toktype == TOKEN_INVALID)
     {
@@ -159,7 +159,7 @@ bool ape_lexer_previous_token(ApeAstLexer_t* lex)
     return true;
 }
 
-ApeAstToken_t ape_lexer_internalnexttoken(ApeAstLexer_t* lex)
+ApeAstToken ape_lexer_internalnexttoken(ApeAstLexer* lex)
 {
     bool templatefound;
     char c;    
@@ -169,8 +169,8 @@ ApeAstToken_t ape_lexer_internalnexttoken(ApeAstLexer_t* lex)
     const char* str;
     const char* identstr;
     const char* numberstr;
-    ApeAstTokType_t type;
-    ApeAstToken_t outtok;
+    ApeAstTokType type;
+    ApeAstToken outtok;
     outtok.toktype = TOKEN_INVALID;
     lex->prevtokenstate.ch = lex->ch;
     lex->prevtokenstate.column = lex->column;
@@ -558,7 +558,7 @@ ApeAstToken_t ape_lexer_internalnexttoken(ApeAstLexer_t* lex)
     return outtok;
 }
 
-bool ape_lexer_expectcurrent(ApeAstLexer_t* lex, ApeAstTokType_t type)
+bool ape_lexer_expectcurrent(ApeAstLexer* lex, ApeAstTokType type)
 {
     const char* expectedtypestr;
     const char* actualtypestr;
@@ -577,7 +577,7 @@ bool ape_lexer_expectcurrent(ApeAstLexer_t* lex, ApeAstTokType_t type)
     return true;
 }
 
-static bool ape_lexer_readchar(ApeAstLexer_t* lex)
+static bool ape_lexer_readchar(ApeAstLexer* lex)
 {
     bool ok;
     if(lex->nextposition >= lex->inputlen)
@@ -608,7 +608,7 @@ static bool ape_lexer_readchar(ApeAstLexer_t* lex)
     return true;
 }
 
-static char ape_lexer_peekchar(ApeAstLexer_t* lex)
+static char ape_lexer_peekchar(ApeAstLexer* lex)
 {
     if(lex->nextposition >= lex->inputlen)
     {
@@ -642,7 +642,7 @@ static bool ape_lexer_isoneof(char ch, const char* allowed, int allowedlen)
     return false;
 }
 
-static const char* ape_lexer_readident(ApeAstLexer_t* lex, int* outlen)
+static const char* ape_lexer_readident(ApeAstLexer* lex, int* outlen)
 {
     int len;
     int position;
@@ -666,7 +666,7 @@ end:
     return lex->input + position;
 }
 
-static const char* ape_lexer_readnumber(ApeAstLexer_t* lex, int* outlen)
+static const char* ape_lexer_readnumber(ApeAstLexer* lex, int* outlen)
 {
     int len;
     int position;
@@ -681,7 +681,7 @@ static const char* ape_lexer_readnumber(ApeAstLexer_t* lex, int* outlen)
     return lex->input + position;
 }
 
-static const char* ape_lexer_readstring(ApeAstLexer_t* lex, char delimiter, bool istemplate, bool* outtemplatefound, int* outlen)
+static const char* ape_lexer_readstring(ApeAstLexer* lex, char delimiter, bool istemplate, bool* outtemplatefound, int* outlen)
 {
     bool escaped;
     int len;
@@ -717,7 +717,7 @@ static const char* ape_lexer_readstring(ApeAstLexer_t* lex, char delimiter, bool
 }
 
 
-static void ape_lexer_skipspace(ApeAstLexer_t* lex)
+static void ape_lexer_skipspace(ApeAstLexer* lex)
 {
     char ch;
     ch = lex->ch;
@@ -728,7 +728,7 @@ static void ape_lexer_skipspace(ApeAstLexer_t* lex)
     }
 }
 
-static bool ape_lexer_addline(ApeAstLexer_t* lex, int offset)
+static bool ape_lexer_addline(ApeAstLexer* lex, int offset)
 {
     bool ok;
     size_t linelen;
@@ -739,7 +739,7 @@ static bool ape_lexer_addline(ApeAstLexer_t* lex, int offset)
     {
         return true;
     }
-    if(lex->line < (ApeInt_t)ape_ptrarray_count(lex->file->lines))
+    if(lex->line < (ApeInt)ape_ptrarray_count(lex->file->lines))
     {
         return true;
     }

@@ -118,12 +118,12 @@ static bool populate_flags(int argc, int begin, char** argv, const char* expectv
     return true;
 }
 
-static void print_errors(ApeContext_t* ctx)
+static void print_errors(ApeContext* ctx)
 {
     int i;
     int count;
     char* err_str;
-    ApeError_t* err;
+    ApeError* err;
     count = ape_context_errorcount(ctx);
     for (i = 0; i < count; i++)
     {
@@ -134,7 +134,7 @@ static void print_errors(ApeContext_t* ctx)
     }
 }
 
-static ApeObject_t exit_repl(ApeContext_t* ctx, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject exit_repl(ApeContext* ctx, void* data, ApeSize argc, ApeObject* args)
 {
     bool* exit_repl;
     (void)ctx;
@@ -160,12 +160,12 @@ static bool notjustspace(const char* line)
     return false;
 }
 
-static void do_repl(ApeContext_t* ctx)
+static void do_repl(ApeContext* ctx)
 {
     size_t len;
     char* line;
     char* object_str;
-    ApeObject_t res;
+    ApeObject res;
     ctx->config.replmode = true;
     ape_context_settimeout(ctx, 100.0);
     while(true)
@@ -370,8 +370,8 @@ int main(int argc, char* argv[])
     const char* filename;
     FlagContext_t fx;
     Options_t opts;
-    ApeContext_t* ctx;
-    ApeObject_t args_array;
+    ApeContext* ctx;
+    ApeObject args_array;
     replexit = false;
     cmdfailed = false;
     populate_flags(argc, 1, argv, "epIdm", &fx);

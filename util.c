@@ -120,17 +120,17 @@ long double unpack754(uint64_t i, unsigned bits, unsigned expbits)
 }
 
 /* this used to be done via type punning, which may not be portable */
-ApeFloat_t ape_util_uinttofloat(ApeUInt_t val)
+ApeFloat ape_util_uinttofloat(ApeUInt val)
 {
     return unpack754_64(val);
 }
 
-ApeUInt_t ape_util_floattouint(ApeFloat_t val)
+ApeUInt ape_util_floattouint(ApeFloat val)
 {
     return pack754_64(val);
 }
 
-char* ape_util_stringfmt(ApeContext_t* ctx, const char* format, ...)
+char* ape_util_stringfmt(ApeContext* ctx, const char* format, ...)
 {
     int to_write;
     int written;
@@ -152,7 +152,7 @@ char* ape_util_stringfmt(ApeContext_t* ctx, const char* format, ...)
     return res;
 }
 
-char* ape_util_strndup(ApeContext_t* ctx, const char* string, size_t n)
+char* ape_util_strndup(ApeContext* ctx, const char* string, size_t n)
 {
     char* output_string;
     output_string = (char*)ape_allocator_alloc(&ctx->alloc, n + 1);
@@ -165,7 +165,7 @@ char* ape_util_strndup(ApeContext_t* ctx, const char* string, size_t n)
     return output_string;
 }
 
-char* ape_util_strdup(ApeContext_t* ctx, const char* string)
+char* ape_util_strdup(ApeContext* ctx, const char* string)
 {
     if(!string)
     {
@@ -179,9 +179,9 @@ unsigned long ape_util_hashstring(const void* ptr, size_t len)
 {
     size_t i;
     unsigned long hash;
-    ApeUShort_t val;
-    const ApeUShort_t* ptr_u8;
-    ptr_u8 = (const ApeUShort_t*)ptr;
+    ApeUShort val;
+    const ApeUShort* ptr_u8;
+    ptr_u8 = (const ApeUShort*)ptr;
     hash = 5381;
     for(i = 0; i < len; i++)
     {
@@ -192,7 +192,7 @@ unsigned long ape_util_hashstring(const void* ptr, size_t len)
 }
 
 /* djb2 */
-unsigned long ape_util_hashfloat(ApeFloat_t val)
+unsigned long ape_util_hashfloat(ApeFloat val)
 {
     uintptr_t* vptr;
     unsigned long hash;
@@ -216,7 +216,7 @@ unsigned int ape_util_upperpoweroftwo(unsigned int v)
 }
 
 
-char* ape_util_default_readhandle(ApeContext_t* ctx, FILE* hnd, long int wantedamount, size_t* dlen)
+char* ape_util_default_readhandle(ApeContext* ctx, FILE* hnd, long int wantedamount, size_t* dlen)
 {
     bool mustseek;
     long int rawtold;
@@ -301,7 +301,7 @@ char* ape_util_default_readhandle(ApeContext_t* ctx, FILE* hnd, long int wanteda
     return NULL;
 }
 
-char* ape_util_default_readfile(ApeContext_t* ctx, const char* filename, long int thismuch, size_t* dlen)
+char* ape_util_default_readfile(ApeContext* ctx, const char* filename, long int thismuch, size_t* dlen)
 {
     char* b;
     FILE* fh;
@@ -315,7 +315,7 @@ char* ape_util_default_readfile(ApeContext_t* ctx, const char* filename, long in
     return b;
 }
 
-size_t ape_util_default_writefile(ApeContext_t* ctx, const char* path, const char* string, size_t string_size)
+size_t ape_util_default_writefile(ApeContext* ctx, const char* path, const char* string, size_t string_size)
 {
     size_t written;
     FILE* fp;
@@ -331,18 +331,18 @@ size_t ape_util_default_writefile(ApeContext_t* ctx, const char* path, const cha
     return written;
 }
 
-size_t ape_util_default_stdoutwrite(ApeContext_t* ctx, const void* data, size_t size)
+size_t ape_util_default_stdoutwrite(ApeContext* ctx, const void* data, size_t size)
 {
     (void)ctx;
     return fwrite(data, 1, size, stdout);
 }
 
-ApePtrArray_t * ape_util_splitstring(ApeContext_t* ctx, const char* str, const char* delimiter)
+ApePtrArray * ape_util_splitstring(ApeContext* ctx, const char* str, const char* delimiter)
 {
-    ApeSize_t i;
+    ApeSize i;
     long len;
     bool ok;
-    ApePtrArray_t* res;
+    ApePtrArray* res;
     char* line;
     char* rest;
     const char* line_start;
@@ -399,11 +399,11 @@ err:
     return NULL;
 }
 
-char* ape_util_joinarray(ApeContext_t* ctx, ApePtrArray_t * items, const char* with)
+char* ape_util_joinarray(ApeContext* ctx, ApePtrArray * items, const char* with)
 {
-    ApeSize_t i;
+    ApeSize i;
     char* item;
-    ApeWriter_t* res;
+    ApeWriter* res;
     res = ape_make_writer(ctx);
     if(!res)
     {
@@ -421,14 +421,14 @@ char* ape_util_joinarray(ApeContext_t* ctx, ApePtrArray_t * items, const char* w
     return ape_writer_getstringanddestroy(res);
 }
 
-char* ape_util_canonicalisepath(ApeContext_t* ctx, const char* path)
+char* ape_util_canonicalisepath(ApeContext* ctx, const char* path)
 {
-    ApeSize_t i;
+    ApeSize i;
     char* joined;
     char* item;
     char* next_item;
     void* ptritem;
-    ApePtrArray_t* split;
+    ApePtrArray* split;
     if(!strchr(path, '/') || (!strstr(path, "/../") && !strstr(path, "./")))
     {
         return ape_util_strdup(ctx, path);

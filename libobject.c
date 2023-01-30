@@ -2,9 +2,9 @@
 #include <inttypes.h>
 #include "inline.h"
 
-ApeGCObjData_t* ape_object_make_objdata(ApeContext_t* ctx, ApeObjType_t type)
+ApeGCObjData* ape_object_make_objdata(ApeContext* ctx, ApeObjType type)
 {
-    ApeGCObjData_t* data;
+    ApeGCObjData* data;
     data = ape_gcmem_getfrompool(ctx->mem, type);
     if(!data)
     {
@@ -20,26 +20,26 @@ ApeGCObjData_t* ape_object_make_objdata(ApeContext_t* ctx, ApeObjType_t type)
 }
 
 /* defined in libstring.c */
-ApeObject_t ape_object_make_string(ApeContext_t* ctx, const char* string);
-ApeObject_t ape_object_make_stringlen(ApeContext_t* ctx, const char* string, ApeSize_t len);
-ApeObject_t ape_object_make_stringcapacity(ApeContext_t* ctx, ApeSize_t capacity);
+ApeObject ape_object_make_string(ApeContext* ctx, const char* string);
+ApeObject ape_object_make_stringlen(ApeContext* ctx, const char* string, ApeSize len);
+ApeObject ape_object_make_stringcapacity(ApeContext* ctx, ApeSize capacity);
 
 /* defined in libarray.c*/
-ApeObject_t ape_object_make_array(ApeContext_t* ctx);
-ApeObject_t ape_object_make_arraycapacity(ApeContext_t* ctx, unsigned capacity);
+ApeObject ape_object_make_array(ApeContext* ctx);
+ApeObject ape_object_make_arraycapacity(ApeContext* ctx, unsigned capacity);
 
 /* defined in libmap.c */
-ApeObject_t ape_object_make_map(ApeContext_t* ctx);
-ApeObject_t ape_object_make_mapcapacity(ApeContext_t* ctx, unsigned capacity);
+ApeObject ape_object_make_map(ApeContext* ctx);
+ApeObject ape_object_make_mapcapacity(ApeContext* ctx, unsigned capacity);
 
 /* defined in libfunction */
-ApeObject_t ape_object_make_function(ApeContext_t* ctx, const char* name, ApeAstCompResult_t* cres, bool wdata, ApeInt_t nloc, ApeInt_t nargs, ApeSize_t fvcount);
-ApeObject_t ape_object_make_nativefuncmemory(ApeContext_t* ctx, const char* name, ApeNativeFuncPtr_t fn, void* data, ApeSize_t dlen);
+ApeObject ape_object_make_function(ApeContext* ctx, const char* name, ApeAstCompResult* cres, bool wdata, ApeInt nloc, ApeInt nargs, ApeSize fvcount);
+ApeObject ape_object_make_nativefuncmemory(ApeContext* ctx, const char* name, ApeNativeFuncPtr fn, void* data, ApeSize dlen);
 
 
-ApeObject_t ape_object_make_external(ApeContext_t* ctx, void* ptr)
+ApeObject ape_object_make_external(ApeContext* ctx, void* ptr)
 {
-    ApeGCObjData_t* data;
+    ApeGCObjData* data;
     data = ape_object_make_objdata(ctx, APE_OBJECT_EXTERNAL);
     if(!data)
     {
@@ -51,9 +51,9 @@ ApeObject_t ape_object_make_external(ApeContext_t* ctx, void* ptr)
     return object_make_from_data(ctx, APE_OBJECT_EXTERNAL, data);
 }
 
-bool ape_object_value_ishashable(ApeObject_t obj)
+bool ape_object_value_ishashable(ApeObject obj)
 {
-    ApeObjType_t type;
+    ApeObjType type;
     type = ape_object_value_type(obj);
     switch(type)
     {
@@ -82,7 +82,7 @@ bool ape_object_value_ishashable(ApeObject_t obj)
 
 }
 
-void ape_tostring_quotechar(ApeWriter_t* buf, int ch)
+void ape_tostring_quotechar(ApeWriter* buf, int ch)
 {
     switch(ch)
     {
@@ -152,11 +152,11 @@ void ape_tostring_quotechar(ApeWriter_t* buf, int ch)
     }
 }
 
-void ape_tostring_quotestring(ApeWriter_t* buf, const char* str, ApeSize_t len, bool withquotes)
+void ape_tostring_quotestring(ApeWriter* buf, const char* str, ApeSize len, bool withquotes)
 {
     int bch;
     char ch;
-    ApeSize_t i;
+    ApeSize i;
     if(withquotes)
     {
         ape_writer_append(buf, "\"");
@@ -180,20 +180,20 @@ void ape_tostring_quotestring(ApeWriter_t* buf, const char* str, ApeSize_t len, 
     }
 }
 
-void ape_tostring_object(ApeWriter_t* buf, ApeObject_t obj, bool quote_str)
+void ape_tostring_object(ApeWriter* buf, ApeObject obj, bool quote_str)
 {
     const char* sdata;
     const char* fname;
-    ApeSize_t slen;
-    ApeSize_t i;
-    ApeFloat_t fltnum;
-    ApeObject_t iobj;
-    ApeObject_t key;
-    ApeObject_t val;
-    ApeTraceback_t* traceback;
-    ApeObjType_t type;
-    ApeValArray_t* arr;
-    const ApeScriptFunction_t* compfunc;
+    ApeSize slen;
+    ApeSize i;
+    ApeFloat fltnum;
+    ApeObject iobj;
+    ApeObject key;
+    ApeObject val;
+    ApeTraceback* traceback;
+    ApeObjType type;
+    ApeValArray* arr;
+    const ApeScriptFunction* compfunc;
     (void)compfunc;
     type = ape_object_value_type(obj);
     switch(type)
@@ -217,12 +217,12 @@ void ape_tostring_object(ApeWriter_t* buf, ApeObject_t obj, bool quote_str)
             {
                 fltnum = ape_object_value_asfloatnumber(obj);
                 #if 1
-                if(fltnum == ((ApeInt_t)fltnum))
+                if(fltnum == ((ApeInt)fltnum))
                 {
                     #if 0
-                    ape_writer_appendf(buf, "%" PRId64, (ApeInt_t)fltnum);
+                    ape_writer_appendf(buf, "%" PRId64, (ApeInt)fltnum);
                     #else
-                    ape_writer_appendf(buf, "%" PRIi64, (ApeInt_t)fltnum);
+                    ape_writer_appendf(buf, "%" PRIi64, (ApeInt)fltnum);
                     #endif
                 }
                 else
@@ -350,7 +350,7 @@ void ape_tostring_object(ApeWriter_t* buf, ApeObject_t obj, bool quote_str)
     }
 }
 
-const char* ape_object_value_typename(const ApeObjType_t type)
+const char* ape_object_value_typename(const ApeObjType type)
 {
     switch(type)
     {
@@ -388,7 +388,7 @@ const char* ape_object_value_typename(const ApeObjType_t type)
     return "NONE";
 }
 
-void ape_object_data_deinit(ApeContext_t* ctx, ApeGCObjData_t* data)
+void ape_object_data_deinit(ApeContext* ctx, ApeGCObjData* data)
 {
     if(data == NULL)
     {
@@ -470,10 +470,10 @@ void ape_object_data_deinit(ApeContext_t* ctx, ApeGCObjData_t* data)
         }                                                \
     } while(0)
 
-char* ape_object_value_typeunionname(ApeContext_t* ctx, const ApeObjType_t type)
+char* ape_object_value_typeunionname(ApeContext* ctx, const ApeObjType type)
 {
     bool in_between;
-    ApeWriter_t* res;
+    ApeWriter* res;
     if(type == APE_OBJECT_ANY || type == APE_OBJECT_NONE || type == APE_OBJECT_FREED)
     {
         return ape_util_strdup(ctx, ape_object_value_typename(type));
@@ -498,11 +498,11 @@ char* ape_object_value_typeunionname(ApeContext_t* ctx, const ApeObjType_t type)
     return ape_writer_getstringanddestroy(res);
 }
 
-char* ape_object_value_serialize(ApeContext_t* ctx, ApeObject_t object, ApeSize_t* lendest)
+char* ape_object_value_serialize(ApeContext* ctx, ApeObject object, ApeSize* lendest)
 {
-    ApeSize_t l;
+    ApeSize l;
     char* string;
-    ApeWriter_t* buf;
+    ApeWriter* buf;
     buf = ape_make_writer(ctx);
     if(!buf)
     {
@@ -518,9 +518,9 @@ char* ape_object_value_serialize(ApeContext_t* ctx, ApeObject_t object, ApeSize_
     return string;
 }
 
-bool ape_object_extern_setdestroyfunc(ApeObject_t object, ApeDataCallback_t destroy_fn)
+bool ape_object_extern_setdestroyfunc(ApeObject object, ApeDataCallback destroy_fn)
 {
-    ApeExternalData_t* data;
+    ApeExternalData* data;
     APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_EXTERNAL);
     data = ape_object_value_asexternal(object);
     if(!data)
@@ -532,9 +532,9 @@ bool ape_object_extern_setdestroyfunc(ApeObject_t object, ApeDataCallback_t dest
 }
 
 
-bool ape_object_extern_setdata(ApeObject_t object, void* ext_data)
+bool ape_object_extern_setdata(ApeObject object, void* ext_data)
 {
-    ApeExternalData_t* data;
+    ApeExternalData* data;
     APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_EXTERNAL);
     data = ape_object_value_asexternal(object);
     if(!data)
@@ -545,9 +545,9 @@ bool ape_object_extern_setdata(ApeObject_t object, void* ext_data)
     return true;
 }
 
-bool ape_object_extern_setcopyfunc(ApeObject_t object, ApeDataCallback_t copy_fn)
+bool ape_object_extern_setcopyfunc(ApeObject object, ApeDataCallback copy_fn)
 {
-    ApeExternalData_t* data;
+    ApeExternalData* data;
     APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_EXTERNAL);
     data = ape_object_value_asexternal(object);
     if(!data)
@@ -558,17 +558,17 @@ bool ape_object_extern_setcopyfunc(ApeObject_t object, ApeDataCallback_t copy_fn
     return true;
 }
 
-ApeObject_t ape_object_getkvpairat(ApeContext_t* ctx, ApeObject_t object, int ix)
+ApeObject ape_object_getkvpairat(ApeContext* ctx, ApeObject object, int ix)
 {
-    ApeObject_t key;
-    ApeObject_t val;
-    ApeObject_t res;
-    ApeObject_t key_obj;
-    ApeObject_t val_obj;
-    ApeGCObjData_t* data;
+    ApeObject key;
+    ApeObject val;
+    ApeObject res;
+    ApeObject key_obj;
+    ApeObject val_obj;
+    ApeGCObjData* data;
     APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_MAP);
     data = ape_object_value_allocated_data(object);
-    if(ix >= (ApeInt_t)ape_valdict_count(data->valmap))
+    if(ix >= (ApeInt)ape_valdict_count(data->valmap))
     {
         return ape_object_make_null(ctx);
     }
@@ -594,31 +594,31 @@ ApeObject_t ape_object_getkvpairat(ApeContext_t* ctx, ApeObject_t object, int ix
     return res;
 }
 
-ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj, ApeValDict_t* copies)
+ApeObject ape_object_value_internalcopydeep(ApeContext* ctx, ApeObject obj, ApeValDict* copies)
 {
-    ApeSize_t i;
-    ApeSize_t len;
+    ApeSize i;
+    ApeSize len;
     bool ok;
     const char* str;
-    ApeUShort_t* bytecode_copy;
-    ApeScriptFunction_t* function_copy;
-    ApeScriptFunction_t* function;
-    ApePosition_t* src_positions_copy;
-    ApeAstCompResult_t* comp_res_copy;
-    ApeObject_t free_val;
-    ApeObject_t free_val_copy;
-    ApeObject_t item;
-    ApeObject_t item_copy;
-    ApeObject_t key;
-    ApeObject_t val;
-    ApeObject_t key_copy;
-    ApeObject_t val_copy;
-    ApeObject_t copy;
-    ApeObject_t* copy_ptr;
-    ApeObjType_t type;
+    ApeUShort* bytecode_copy;
+    ApeScriptFunction* function_copy;
+    ApeScriptFunction* function;
+    ApePosition* src_positions_copy;
+    ApeAstCompResult* comp_res_copy;
+    ApeObject free_val;
+    ApeObject free_val_copy;
+    ApeObject item;
+    ApeObject item_copy;
+    ApeObject key;
+    ApeObject val;
+    ApeObject key_copy;
+    ApeObject val_copy;
+    ApeObject copy;
+    ApeObject* copy_ptr;
+    ApeObjType type;
     if(copies != NULL)
     {
-        copy_ptr = (ApeObject_t*)ape_valdict_getbykey(copies, &obj);
+        copy_ptr = (ApeObject*)ape_valdict_getbykey(copies, &obj);
         if(copy_ptr)
         {
             //ape_context_debugvalue(ctx, "internalcopydeep:copy_ptr", *copy_ptr);
@@ -662,19 +662,19 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
                 bytecode_copy = NULL;
                 src_positions_copy = NULL;
                 comp_res_copy = NULL;
-                bytecode_copy = (ApeUShort_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeUShort_t) * function->compiledcode->count);
+                bytecode_copy = (ApeUShort*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeUShort) * function->compiledcode->count);
                 if(!bytecode_copy)
                 {
                     return ape_object_make_null(ctx);
                 }
-                memcpy(bytecode_copy, function->compiledcode->bytecode, sizeof(ApeUShort_t) * function->compiledcode->count);
-                src_positions_copy = (ApePosition_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApePosition_t) * function->compiledcode->count);
+                memcpy(bytecode_copy, function->compiledcode->bytecode, sizeof(ApeUShort) * function->compiledcode->count);
+                src_positions_copy = (ApePosition*)ape_allocator_alloc(&ctx->alloc, sizeof(ApePosition) * function->compiledcode->count);
                 if(!src_positions_copy)
                 {
                     ape_allocator_free(&ctx->alloc, bytecode_copy);
                     return ape_object_make_null(ctx);
                 }
-                memcpy(src_positions_copy, function->compiledcode->srcpositions, sizeof(ApePosition_t) * function->compiledcode->count);
+                memcpy(src_positions_copy, function->compiledcode->srcpositions, sizeof(ApePosition) * function->compiledcode->count);
                 /* todo: add compilation result copy function */
                 comp_res_copy = ape_make_compresult(ctx, bytecode_copy, src_positions_copy, function->compiledcode->count);
                 if(!comp_res_copy)
@@ -695,7 +695,7 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
                     return ape_object_make_null(ctx);
                 }
                 function_copy = ape_object_value_asscriptfunction(copy);
-                function_copy->freevals = (ApeObject_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeObject_t) * function->numfreevals);
+                function_copy->freevals = (ApeObject*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeObject) * function->numfreevals);
                 if(!function_copy->freevals)
                 {
                     return ape_object_make_null(ctx);
@@ -796,11 +796,11 @@ ApeObject_t ape_object_value_internalcopydeep(ApeContext_t* ctx, ApeObject_t obj
 }
 
 
-ApeObject_t ape_object_value_copydeep(ApeContext_t* ctx, ApeObject_t obj)
+ApeObject ape_object_value_copydeep(ApeContext* ctx, ApeObject obj)
 {
-    ApeObject_t res;
-    ApeValDict_t* copies;
-    copies = ape_make_valdict(ctx, sizeof(ApeObject_t), sizeof(ApeObject_t));
+    ApeObject res;
+    ApeValDict* copies;
+    copies = ape_make_valdict(ctx, sizeof(ApeObject), sizeof(ApeObject));
     if(!copies)
     {
         return ape_object_make_null(ctx);
@@ -810,19 +810,19 @@ ApeObject_t ape_object_value_copydeep(ApeContext_t* ctx, ApeObject_t obj)
     return res;
 }
 
-ApeObject_t ape_object_value_copyflat(ApeContext_t* ctx, ApeObject_t obj)
+ApeObject ape_object_value_copyflat(ApeContext* ctx, ApeObject obj)
 {
-    ApeSize_t i;
-    ApeSize_t len;
+    ApeSize i;
+    ApeSize len;
     bool ok;
     const char* str;
     void* data_copy;
-    ApeObject_t item;
-    ApeObject_t copy;
-    ApeObject_t key;
-    ApeObject_t val;
-    ApeObjType_t type;
-    ApeExternalData_t* external;
+    ApeObject item;
+    ApeObject copy;
+    ApeObject key;
+    ApeObject val;
+    ApeObjType type;
+    ApeExternalData* external;
     copy = ape_object_make_null(ctx);
     type = ape_object_value_type(obj);
     //ape_context_debugvalue(ctx, "copyflat:obj", obj);
@@ -937,19 +937,19 @@ ApeObject_t ape_object_value_copyflat(ApeContext_t* ctx, ApeObject_t obj)
 }
 
 
-bool ape_object_value_wrapequals(const ApeObject_t* a_ptr, const ApeObject_t* b_ptr)
+bool ape_object_value_wrapequals(const ApeObject* a_ptr, const ApeObject* b_ptr)
 {
-    ApeObject_t a = *a_ptr;
-    ApeObject_t b = *b_ptr;
+    ApeObject a = *a_ptr;
+    ApeObject b = *b_ptr;
     return ape_object_value_equals(a, b);
 }
 
-unsigned long ape_object_value_hash(ApeObject_t* obj_ptr)
+unsigned long ape_object_value_hash(ApeObject* obj_ptr)
 {
     bool bval;
-    ApeFloat_t val;
-    ApeObject_t obj;
-    ApeObjType_t type;
+    ApeFloat val;
+    ApeObject obj;
+    ApeObjType type;
     obj = *obj_ptr;
     type = ape_object_value_type(obj);
     switch(type)
@@ -980,7 +980,7 @@ unsigned long ape_object_value_hash(ApeObject_t* obj_ptr)
     return 0;
 }
 
-ApeFloat_t ape_object_value_asnumerica(ApeObject_t obj, ApeObjType_t t)
+ApeFloat ape_object_value_asnumerica(ApeObject obj, ApeObjType t)
 {
     if(ape_object_type_isnumber(t))
     {
@@ -997,7 +997,7 @@ ApeFloat_t ape_object_value_asnumerica(ApeObject_t obj, ApeObjType_t t)
     return 0;
 }
 
-ApeFloat_t ape_object_value_asnumeric(ApeObject_t obj)
+ApeFloat ape_object_value_asnumeric(ApeObject obj)
 {
     return ape_object_value_asnumerica(obj, ape_object_value_type(obj));
 }
@@ -1008,7 +1008,7 @@ ApeFloat_t ape_object_value_asnumeric(ApeObject_t obj)
 * -1 === definitely not equal
 * n === as used in VM
 */
-ApeFloat_t ape_object_value_compare(ApeObject_t a, ApeObject_t b, bool* out_ok)
+ApeFloat ape_object_value_compare(ApeObject a, ApeObject b, bool* out_ok)
 {
     int a_len;
     int b_len;
@@ -1018,8 +1018,8 @@ ApeFloat_t ape_object_value_compare(ApeObject_t a, ApeObject_t b, bool* out_ok)
     intptr_t b_data_val;
     const char* a_string;
     const char* b_string;
-    ApeObjType_t a_type;
-    ApeObjType_t b_type;
+    ApeObjType a_type;
+    ApeObjType b_type;
     if((a.handle != NULL) && (b.handle != NULL))
     {
         if(a.handle == b.handle)
@@ -1049,11 +1049,11 @@ ApeFloat_t ape_object_value_compare(ApeObject_t a, ApeObject_t b, bool* out_ok)
     {
         #if 1
             #if 0
-                ApeFloat_t leftval = ape_object_value_asnumerica(a, a_type);
-                ApeFloat_t rightval = ape_object_value_asnumerica(b, b_type);
+                ApeFloat leftval = ape_object_value_asnumerica(a, a_type);
+                ApeFloat rightval = ape_object_value_asnumerica(b, b_type);
             #else
-                ApeFloat_t leftval = ape_object_value_asnumber(a);
-                ApeFloat_t rightval = ape_object_value_asnumber(b);
+                ApeFloat leftval = ape_object_value_asnumber(a);
+                ApeFloat rightval = ape_object_value_asnumber(b);
 
             #endif
             return leftval - rightval;
@@ -1094,7 +1094,7 @@ ApeFloat_t ape_object_value_compare(ApeObject_t a, ApeObject_t b, bool* out_ok)
     {
         a_data_val = (intptr_t)ape_object_value_allocated_data(a);
         b_data_val = (intptr_t)ape_object_value_allocated_data(b);
-        return (ApeFloat_t)(a_data_val - b_data_val);
+        return (ApeFloat)(a_data_val - b_data_val);
     }
     else
     {
@@ -1103,12 +1103,12 @@ ApeFloat_t ape_object_value_compare(ApeObject_t a, ApeObject_t b, bool* out_ok)
     return 1;
 }
 
-bool ape_object_value_equals(ApeObject_t a, ApeObject_t b)
+bool ape_object_value_equals(ApeObject a, ApeObject b)
 {
     bool ok;
-    ApeFloat_t res;
-    ApeObjType_t a_type;
-    ApeObjType_t b_type;
+    ApeFloat res;
+    ApeObjType a_type;
+    ApeObjType b_type;
     a_type = ape_object_value_type(a);
     b_type = ape_object_value_type(b);
     if(a_type != b_type)

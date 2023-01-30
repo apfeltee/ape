@@ -6,37 +6,37 @@
 * this is fine for now, but is less than ideal...
 */
 
-char* ape_object_string_getinternalobjdata(ApeGCObjData_t* data)
+char* ape_object_string_getinternalobjdata(ApeGCObjData* data)
 {
     APE_ASSERT(data->datatype == APE_OBJECT_STRING);
     return data->valstring.valalloc;
 }
 
-const char* ape_object_string_getdata(ApeObject_t object)
+const char* ape_object_string_getdata(ApeObject object)
 {
-    ApeGCObjData_t* data;
+    ApeGCObjData* data;
     APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_STRING);
     data = ape_object_value_allocated_data(object);
     return ape_object_string_getinternalobjdata(data);
 }
 
-char* ape_object_string_getmutable(ApeObject_t object)
+char* ape_object_string_getmutable(ApeObject object)
 {
-    ApeGCObjData_t* data;
+    ApeGCObjData* data;
     APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_STRING);
     data = ape_object_value_allocated_data(object);
     return ape_object_string_getinternalobjdata(data);
 }
 
-ApeObject_t ape_object_make_string(ApeContext_t* ctx, const char* string)
+ApeObject ape_object_make_string(ApeContext* ctx, const char* string)
 {
     return ape_object_make_stringlen(ctx, string, strlen(string));
 }
 
-ApeObject_t ape_object_make_stringlen(ApeContext_t* ctx, const char* string, ApeSize_t len)
+ApeObject ape_object_make_stringlen(ApeContext* ctx, const char* string, ApeSize len)
 {
     bool ok;
-    ApeObject_t res;
+    ApeObject res;
     res = ape_object_make_stringcapacity(ctx, len);
     if(ape_object_value_isnull(res))
     {
@@ -50,10 +50,10 @@ ApeObject_t ape_object_make_stringlen(ApeContext_t* ctx, const char* string, Ape
     return res;
 }
 
-ApeObject_t ape_object_make_stringcapacity(ApeContext_t* ctx, ApeSize_t capacity)
+ApeObject ape_object_make_stringcapacity(ApeContext* ctx, ApeSize capacity)
 {
     bool ok;
-    ApeGCObjData_t* data;
+    ApeGCObjData* data;
     data = ape_object_make_objdata(ctx, APE_OBJECT_STRING);
     if(!data)
     {
@@ -69,7 +69,7 @@ ApeObject_t ape_object_make_stringcapacity(ApeContext_t* ctx, ApeSize_t capacity
     return object_make_from_data(ctx, APE_OBJECT_STRING, data);
 }
 
-bool ape_object_string_reservecapacity(ApeContext_t* ctx, ApeGCObjData_t *data, ApeSize_t capacity)
+bool ape_object_string_reservecapacity(ApeContext* ctx, ApeGCObjData *data, ApeSize capacity)
 {
     (void)ctx;
     if(data->valstring.valalloc == NULL)
@@ -83,9 +83,9 @@ bool ape_object_string_reservecapacity(ApeContext_t* ctx, ApeGCObjData_t *data, 
     return true;
 }
 
-ApeSize_t ape_object_string_getlength(ApeObject_t object)
+ApeSize ape_object_string_getlength(ApeObject object)
 {
-    ApeGCObjData_t* data;
+    ApeGCObjData* data;
     APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_STRING);
     data = ape_object_value_allocated_data(object);
     if(data->valstring.valalloc == NULL)
@@ -95,28 +95,28 @@ ApeSize_t ape_object_string_getlength(ApeObject_t object)
     return ds_getlength(data->valstring.valalloc);
 }
 
-void ape_object_string_setlength(ApeObject_t object, ApeSize_t len)
+void ape_object_string_setlength(ApeObject object, ApeSize len)
 {
-    ApeGCObjData_t* data;
+    ApeGCObjData* data;
     APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_STRING);
     data = ape_object_value_allocated_data(object);
     ds_setlength(data->valstring.valalloc, len);
 }
 
-bool ape_object_string_append(ApeContext_t* ctx, ApeObject_t obj, const char* src, ApeSize_t len)
+bool ape_object_string_append(ApeContext* ctx, ApeObject obj, const char* src, ApeSize len)
 {
-    ApeGCObjData_t* data;
+    ApeGCObjData* data;
     APE_ASSERT(ape_object_value_type(obj) == APE_OBJECT_STRING);
     data = ape_object_value_allocated_data(obj);
     data->valstring.valalloc = ds_appendlen(data->valstring.valalloc, src, len, ctx);
     return true;
 }
 
-unsigned long ape_object_string_gethash(ApeObject_t obj)
+unsigned long ape_object_string_gethash(ApeObject obj)
 {
     const char* rawstr;
-    ApeSize_t rawlen;
-    ApeGCObjData_t* data;
+    ApeSize rawlen;
+    ApeGCObjData* data;
     APE_ASSERT(ape_object_value_type(obj) == APE_OBJECT_STRING);
     data = ape_object_value_allocated_data(obj);
     if(data->valstring.hash == 0)
@@ -132,10 +132,10 @@ unsigned long ape_object_string_gethash(ApeObject_t obj)
     return data->valstring.hash;
 }
 
-static ApeObject_t objfn_string_length(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject objfn_string_length(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
-    ApeInt_t len;
-    ApeObject_t self;
+    ApeInt len;
+    ApeObject self;
     (void)vm;
     (void)data;
     (void)argc;
@@ -146,14 +146,14 @@ static ApeObject_t objfn_string_length(ApeVM_t* vm, void* data, ApeSize_t argc, 
     return ape_object_make_floatnumber(vm->context, len);
 }
 
-static ApeObject_t objfn_string_substr(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject objfn_string_substr(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
-    ApeInt_t begin;
-    ApeInt_t end;
-    ApeInt_t len;
-    ApeInt_t nlen;
-    ApeObject_t self;
-    ApeArgCheck_t check;
+    ApeInt begin;
+    ApeInt end;
+    ApeInt len;
+    ApeInt nlen;
+    ApeObject self;
+    ApeArgCheck check;
     const char* str;
     (void)data;
     self = ape_vm_thispop(vm);
@@ -192,19 +192,19 @@ static ApeObject_t objfn_string_substr(ApeVM_t* vm, void* data, ApeSize_t argc, 
     return ape_object_make_stringlen(vm->context, str+begin, nlen);
 }
 
-static ApeObject_t objfn_string_split(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject objfn_string_split(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     char c;
     const char* inpstr;
     const char* delimstr;
     char* itm;
-    ApeSize_t i;
-    ApeSize_t inplen;
-    ApeSize_t delimlen;
-    ApeObject_t arr;
-    ApeObject_t self;
-    ApePtrArray_t* parr;
-    ApeArgCheck_t check;
+    ApeSize i;
+    ApeSize inplen;
+    ApeSize delimlen;
+    ApeObject arr;
+    ApeObject self;
+    ApePtrArray* parr;
+    ApeArgCheck check;
     (void)data;
     delimstr = "";
     delimlen = 0;
@@ -240,17 +240,17 @@ static ApeObject_t objfn_string_split(ApeVM_t* vm, void* data, ApeSize_t argc, A
     return arr;
 }
 
-static ApeObject_t objfn_string_indexof(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject objfn_string_indexof(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     char findme;
     const char* findstr;
     const char* inpstr;
-    ApeSize_t i;
-    ApeSize_t inplen;
-    ApeSize_t findlen;
-    ApeObject_t self;
-    ApeObjType_t styp;
-    ApeArgCheck_t check;
+    ApeSize i;
+    ApeSize inplen;
+    ApeSize findlen;
+    ApeObject self;
+    ApeObjType styp;
+    ApeArgCheck check;
     (void)data;
     self = ape_vm_thispop(vm);
     ape_args_init(vm, &check, "index", argc, args);
@@ -291,14 +291,14 @@ static ApeObject_t objfn_string_indexof(ApeVM_t* vm, void* data, ApeSize_t argc,
 }
 
 
-static ApeObject_t objfn_string_charat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject objfn_string_charat(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     char ch;
     const char* inpstr;
-    ApeSize_t idx;
-    ApeSize_t inplen;
-    ApeObject_t self;
-    ApeArgCheck_t check;
+    ApeSize idx;
+    ApeSize inplen;
+    ApeObject self;
+    ApeArgCheck check;
     (void)data;
     (void)inplen;
     ape_args_init(vm, &check, "charAt", argc, args);
@@ -315,14 +315,14 @@ static ApeObject_t objfn_string_charat(ApeVM_t* vm, void* data, ApeSize_t argc, 
 }
 
 
-static ApeObject_t objfn_string_byteat(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject objfn_string_byteat(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     char ch;
     const char* inpstr;
-    ApeSize_t idx;
-    ApeSize_t inplen;
-    ApeObject_t self;
-    ApeArgCheck_t check;
+    ApeSize idx;
+    ApeSize inplen;
+    ApeObject self;
+    ApeArgCheck check;
     (void)data;
     (void)inplen;
     ape_args_init(vm, &check, "charAt", argc, args);
@@ -338,17 +338,17 @@ static ApeObject_t objfn_string_byteat(ApeVM_t* vm, void* data, ApeSize_t argc, 
     return ape_object_make_floatnumber(vm->context, ch);
 }
 
-ApeObject_t ape_builtins_stringformat(ApeContext_t* ctx, const char* fmt, ApeSize_t fmtlen, ApeSize_t argc, ApeObject_t* args)
+ApeObject ape_builtins_stringformat(ApeContext* ctx, const char* fmt, ApeSize fmtlen, ApeSize argc, ApeObject* args)
 {
     char cch;
     char pch;
     char nch;
     char chval;
-    ApeSize_t i;
-    ApeSize_t idx;
-    ApeObject_t srt;
-    ApeArgCheck_t check;
-    ApeWriter_t* buf;
+    ApeSize i;
+    ApeSize idx;
+    ApeObject srt;
+    ApeArgCheck check;
+    ApeWriter* buf;
     (void)pch;
     idx = 0;
     cch = -1;
@@ -441,11 +441,11 @@ ApeObject_t ape_builtins_stringformat(ApeContext_t* ctx, const char* fmt, ApeSiz
 
 }
 
-static ApeObject_t objfn_string_format(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject objfn_string_format(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     const char* inpstr;
-    ApeSize_t inplen;
-    ApeObject_t self;
+    ApeSize inplen;
+    ApeObject self;
     (void)data;
     self = ape_vm_thispop(vm);
     inpstr = ape_object_string_getdata(self);
@@ -453,14 +453,14 @@ static ApeObject_t objfn_string_format(ApeVM_t* vm, void* data, ApeSize_t argc, 
     return ape_builtins_stringformat(vm->context, inpstr, inplen, argc, args);
 }
 
-static ApeObject_t objfn_string_reverse(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject objfn_string_reverse(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     char ch;
-    ApeInt_t i;
+    ApeInt i;
     const char* inpstr;
-    ApeSize_t inplen;
-    ApeObject_t self;
-    ApeObject_t res;
+    ApeSize inplen;
+    ApeObject self;
+    ApeObject res;
     (void)data;
     (void)argc;
     (void)args;
@@ -483,13 +483,13 @@ static ApeObject_t objfn_string_reverse(ApeVM_t* vm, void* data, ApeSize_t argc,
 }
 
 
-static ApeObject_t cfn_string_chr(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject cfn_string_chr(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     char c;
     char buf[2];
-    ApeFloat_t val;
+    ApeFloat val;
     (void)data;
-    ApeArgCheck_t check;
+    ApeArgCheck check;
     ape_args_init(vm, &check, "chr", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC))
     {
@@ -502,11 +502,11 @@ static ApeObject_t cfn_string_chr(ApeVM_t* vm, void* data, ApeSize_t argc, ApeOb
     return ape_object_make_stringlen(vm->context, buf, 1);
 }
 
-static ApeObject_t cfn_string_ord(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject cfn_string_ord(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     const char* str;
     (void)data;
-    ApeArgCheck_t check;
+    ApeArgCheck check;
     ape_args_init(vm, &check, "sqrt", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_STRING | APE_OBJECT_NULL))
     {
@@ -520,20 +520,20 @@ static ApeObject_t cfn_string_ord(ApeVM_t* vm, void* data, ApeSize_t argc, ApeOb
     return ape_object_make_floatnumber(vm->context, str[0]);
 }
 
-static ApeObject_t cfn_string_join(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject cfn_string_join(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     const char* sstr;
     const char* bstr;
-    ApeSize_t i;
-    ApeSize_t slen;
-    ApeSize_t alen;
-    ApeSize_t blen;
-    ApeObject_t rt;
-    ApeObject_t arritem;
-    ApeObject_t arrobj;
-    ApeObject_t sjoin;
-    ApeWriter_t* wr;
-    ApeArgCheck_t check;
+    ApeSize i;
+    ApeSize slen;
+    ApeSize alen;
+    ApeSize blen;
+    ApeObject rt;
+    ApeObject arritem;
+    ApeObject arrobj;
+    ApeObject sjoin;
+    ApeWriter* wr;
+    ApeArgCheck check;
     (void)data;
     sstr = "";
     slen = 0;
@@ -572,12 +572,12 @@ static ApeObject_t cfn_string_join(ApeVM_t* vm, void* data, ApeSize_t argc, ApeO
     return rt;
 }
 
-void ape_builtins_install_string(ApeVM_t* vm)
+void ape_builtins_install_string(ApeVM* vm)
 {
-    ApeSize_t i;
-    ApePseudoClass_t* psc;
+    ApeSize i;
+    ApePseudoClass* psc;
     static const char classname[] = "String";
-    static ApeNativeItem_t staticfuncs[]=
+    static ApeNativeItem staticfuncs[]=
     {
         {"join", cfn_string_join},
         {"chr", cfn_string_chr},
@@ -592,7 +592,7 @@ void ape_builtins_install_string(ApeVM_t* vm)
         {NULL, NULL},
     };
 
-    static ApeObjMemberItem_t memberfuncs[]=
+    static ApeObjMemberItem memberfuncs[]=
     {
         {"length", false, objfn_string_length},
         {"split", true, objfn_string_split},

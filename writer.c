@@ -1,20 +1,20 @@
 
 #include "inline.h"
 
-ApeWriter_t* ape_make_writer(ApeContext_t* ctx)
+ApeWriter* ape_make_writer(ApeContext* ctx)
 {
     return ape_make_writercapacity(ctx, 1);
 }
 
-ApeWriter_t* ape_make_writerdefault(ApeContext_t* ctx)
+ApeWriter* ape_make_writerdefault(ApeContext* ctx)
 {
-    ApeWriter_t* buf;
-    buf = (ApeWriter_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeWriter_t));
+    ApeWriter* buf;
+    buf = (ApeWriter*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeWriter));
     if(buf == NULL)
     {
         return NULL;
     }
-    memset(buf, 0, sizeof(ApeWriter_t));
+    memset(buf, 0, sizeof(ApeWriter));
     buf->context = ctx;
     buf->failed = false;
     buf->datastring = NULL;
@@ -26,9 +26,9 @@ ApeWriter_t* ape_make_writerdefault(ApeContext_t* ctx)
     return buf;
 }
 
-ApeWriter_t* ape_make_writercapacity(ApeContext_t* ctx, ApeSize_t capacity)
+ApeWriter* ape_make_writercapacity(ApeContext* ctx, ApeSize capacity)
 {
-    ApeWriter_t* buf;
+    ApeWriter* buf;
     buf = ape_make_writerdefault(ctx);
     buf->datastring = (char*)ape_allocator_alloc(&ctx->alloc, capacity);
     if(buf->datastring == NULL)
@@ -42,21 +42,21 @@ ApeWriter_t* ape_make_writercapacity(ApeContext_t* ctx, ApeSize_t capacity)
     return buf;
 }
 
-static size_t wr_default_iowriter(ApeContext_t* ctx, void* hptr, const char* source, size_t len)
+static size_t wr_default_iowriter(ApeContext* ctx, void* hptr, const char* source, size_t len)
 {
     (void)ctx;
     return fwrite(source, sizeof(char), len, (FILE*)hptr);
 }
 
-static void wr_default_ioflusher(ApeContext_t* ctx, void* hptr)
+static void wr_default_ioflusher(ApeContext* ctx, void* hptr)
 {
     (void)ctx;
     fflush((FILE*)hptr);
 }
 
-ApeWriter_t* ape_make_writerio(ApeContext_t* ctx, FILE* hnd, bool alsoclose, bool alsoflush)
+ApeWriter* ape_make_writerio(ApeContext* ctx, FILE* hnd, bool alsoclose, bool alsoflush)
 {
-    ApeWriter_t* buf;
+    ApeWriter* buf;
     buf = ape_make_writerdefault(ctx);
     buf->iohandle = hnd;
     buf->iowriter = wr_default_iowriter;
@@ -66,7 +66,7 @@ ApeWriter_t* ape_make_writerio(ApeContext_t* ctx, FILE* hnd, bool alsoclose, boo
     return buf;
 }
 
-void ape_writer_destroy(ApeWriter_t* buf)
+void ape_writer_destroy(ApeWriter* buf)
 {
     if(buf == NULL)
     {
@@ -94,10 +94,10 @@ void ape_writer_destroy(ApeWriter_t* buf)
 
 }
 
-bool ape_writer_appendlen(ApeWriter_t* buf, const char* str, ApeSize_t str_len)
+bool ape_writer_appendlen(ApeWriter* buf, const char* str, ApeSize str_len)
 {
     bool ok;
-    ApeSize_t required_capacity;
+    ApeSize required_capacity;
     if(buf->failed)
     {
         return false;
@@ -131,17 +131,17 @@ bool ape_writer_appendlen(ApeWriter_t* buf, const char* str, ApeSize_t str_len)
     return true;
 }
 
-bool ape_writer_append(ApeWriter_t* buf, const char* str)
+bool ape_writer_append(ApeWriter* buf, const char* str)
 {
     return ape_writer_appendlen(buf, str, strlen(str));
 }
 
-bool ape_writer_appendf(ApeWriter_t* buf, const char* fmt, ...)
+bool ape_writer_appendf(ApeWriter* buf, const char* fmt, ...)
 {
     bool ok;
-    ApeInt_t written;
-    ApeInt_t to_write;
-    ApeSize_t required_capacity;
+    ApeInt written;
+    ApeInt to_write;
+    ApeSize required_capacity;
     char* tbuf;
     va_list args;
     (void)written;
@@ -186,7 +186,7 @@ bool ape_writer_appendf(ApeWriter_t* buf, const char* fmt, ...)
     return ok;
 }
 
-const char* ape_writer_getdata(const ApeWriter_t* buf)
+const char* ape_writer_getdata(const ApeWriter* buf)
 {
     if(buf->failed)
     {
@@ -195,12 +195,12 @@ const char* ape_writer_getdata(const ApeWriter_t* buf)
     return buf->datastring;
 }
 
-const char* ape_writer_getstring(const ApeWriter_t* buf)
+const char* ape_writer_getstring(const ApeWriter* buf)
 {
     return ape_writer_getdata(buf);
 }
 
-ApeSize_t ape_writer_getlength(const ApeWriter_t* buf)
+ApeSize ape_writer_getlength(const ApeWriter* buf)
 {
     if(buf->failed)
     {
@@ -209,7 +209,7 @@ ApeSize_t ape_writer_getlength(const ApeWriter_t* buf)
     return buf->datalength;
 }
 
-char* ape_writer_getstringanddestroy(ApeWriter_t* buf)
+char* ape_writer_getstringanddestroy(ApeWriter* buf)
 {
     char* res;
     if(buf->failed)
@@ -223,12 +223,12 @@ char* ape_writer_getstringanddestroy(ApeWriter_t* buf)
     return res;
 }
 
-bool ape_writer_failed(ApeWriter_t* buf)
+bool ape_writer_failed(ApeWriter* buf)
 {
     return buf->failed;
 }
 
-bool ape_writer_grow(ApeWriter_t* buf, ApeSize_t new_capacity)
+bool ape_writer_grow(ApeWriter* buf, ApeSize new_capacity)
 {
     char* new_data;
     new_data = (char*)ape_allocator_alloc(&buf->context->alloc, new_capacity);

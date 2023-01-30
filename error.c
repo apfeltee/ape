@@ -1,17 +1,17 @@
 
 #include "inline.h"
 
-ApeTraceback_t* ape_make_traceback(ApeContext_t* ctx)
+ApeTraceback* ape_make_traceback(ApeContext* ctx)
 {
-    ApeTraceback_t* traceback;
-    traceback = (ApeTraceback_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeTraceback_t));
+    ApeTraceback* traceback;
+    traceback = (ApeTraceback*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeTraceback));
     if(!traceback)
     {
         return NULL;
     }
-    memset(traceback, 0, sizeof(ApeTraceback_t));
+    memset(traceback, 0, sizeof(ApeTraceback));
     traceback->context = ctx;
-    traceback->items = ape_make_valarray(ctx, sizeof(ApeTracebackItem_t));
+    traceback->items = ape_make_valarray(ctx, sizeof(ApeTracebackItem));
     if(!traceback->items)
     {
         ape_traceback_destroy(traceback);
@@ -20,27 +20,27 @@ ApeTraceback_t* ape_make_traceback(ApeContext_t* ctx)
     return traceback;
 }
 
-void ape_traceback_destroy(ApeTraceback_t* traceback)
+void ape_traceback_destroy(ApeTraceback* traceback)
 {
-    ApeSize_t i;
-    ApeTracebackItem_t* item;
+    ApeSize i;
+    ApeTracebackItem* item;
     if(!traceback)
     {
         return;
     }
     for(i = 0; i < ape_valarray_count(traceback->items); i++)
     {
-        item = (ApeTracebackItem_t*)ape_valarray_get(traceback->items, i);
+        item = (ApeTracebackItem*)ape_valarray_get(traceback->items, i);
         ape_allocator_free(&traceback->context->alloc, item->function_name);
     }
     ape_valarray_destroy(traceback->items);
     ape_allocator_free(&traceback->context->alloc, traceback);
 }
 
-bool ape_traceback_append(ApeTraceback_t* traceback, const char* function_name, ApePosition_t pos)
+bool ape_traceback_append(ApeTraceback* traceback, const char* function_name, ApePosition pos)
 {
     bool ok;
-    ApeTracebackItem_t item;
+    ApeTracebackItem item;
     item.function_name = ape_util_strdup(traceback->context, function_name);
     if(!item.function_name)
     {
@@ -56,14 +56,14 @@ bool ape_traceback_append(ApeTraceback_t* traceback, const char* function_name, 
     return true;
 }
 
-bool ape_traceback_appendfromvm(ApeTraceback_t* traceback, ApeVM_t* vm)
+bool ape_traceback_appendfromvm(ApeTraceback* traceback, ApeVM* vm)
 {
-    ApeInt_t i;
+    ApeInt i;
     bool ok;
-    ApeFrame_t* frame;
+    ApeFrame* frame;
     for(i = vm->countframes - 1; i >= 0; i--)
     {
-        frame = (ApeFrame_t*)da_get(vm->frameobjects, i);        
+        frame = (ApeFrame*)da_get(vm->frameobjects, i);        
         ok = ape_traceback_append(traceback, ape_object_function_getname(frame->function), ape_frame_srcposition(frame));
         if(!ok)
         {
@@ -73,7 +73,7 @@ bool ape_traceback_appendfromvm(ApeTraceback_t* traceback, ApeVM_t* vm)
     return true;
 }
 
-const char* ape_traceback_itemgetfilepath(ApeTracebackItem_t* item)
+const char* ape_traceback_itemgetfilepath(ApeTracebackItem* item)
 {
     if(!item->pos.file)
     {
@@ -82,14 +82,14 @@ const char* ape_traceback_itemgetfilepath(ApeTracebackItem_t* item)
     return item->pos.file->path;
 }
 
-bool ape_tostring_traceback(ApeWriter_t* buf, ApeTraceback_t* traceback)
+bool ape_tostring_traceback(ApeWriter* buf, ApeTraceback* traceback)
 {
-    ApeSize_t i;
-    ApeSize_t depth;
+    ApeSize i;
+    ApeSize depth;
     depth = ape_valarray_count(traceback->items);
     for(i = 0; i < depth; i++)
     {
-        ApeTracebackItem_t* item = (ApeTracebackItem_t*)ape_valarray_get(traceback->items, i);
+        ApeTracebackItem* item = (ApeTracebackItem*)ape_valarray_get(traceback->items, i);
         const char* filename = ape_traceback_itemgetfilepath(item);
         if(item->pos.line >= 0 && item->pos.column >= 0)
         {
@@ -103,7 +103,7 @@ bool ape_tostring_traceback(ApeWriter_t* buf, ApeTraceback_t* traceback)
     return !ape_writer_failed(buf);
 }
 
-const char* ape_tostring_errortype(ApeErrorType_t type)
+const char* ape_tostring_errortype(ApeErrorType type)
 {
     switch(type)
     {
@@ -124,7 +124,7 @@ const char* ape_tostring_errortype(ApeErrorType_t type)
     }
 }
 
-ApeErrorType_t ape_error_gettype(ApeError_t* error)
+ApeErrorType ape_error_gettype(ApeError* error)
 {
     switch(error->errtype)
     {
@@ -147,15 +147,15 @@ ApeErrorType_t ape_error_gettype(ApeError_t* error)
     }
 }
 
-const char* ape_error_gettypestring(ApeError_t* error)
+const char* ape_error_gettypestring(ApeError* error)
 {
     return ape_tostring_errortype(ape_error_gettype(error));
 }
 
-ApeObject_t ape_object_make_error(ApeContext_t* ctx, const char* error)
+ApeObject ape_object_make_error(ApeContext* ctx, const char* error)
 {
     char* error_str;
-    ApeObject_t res;
+    ApeObject res;
     error_str = ape_util_strdup(ctx, error);
     if(!error_str)
     {
@@ -170,9 +170,9 @@ ApeObject_t ape_object_make_error(ApeContext_t* ctx, const char* error)
     return res;
 }
 
-ApeObject_t ape_object_make_error_nocopy(ApeContext_t* ctx, char* error)
+ApeObject ape_object_make_error_nocopy(ApeContext* ctx, char* error)
 {
-    ApeGCObjData_t* data;
+    ApeGCObjData* data;
     data = ape_object_make_objdata(ctx, APE_OBJECT_ERROR);
     if(!data)
     {
@@ -183,27 +183,27 @@ ApeObject_t ape_object_make_error_nocopy(ApeContext_t* ctx, char* error)
     return object_make_from_data(ctx, APE_OBJECT_ERROR, data);
 }
 
-void ape_errorlist_initerrors(ApeErrorList_t* errors)
+void ape_errorlist_initerrors(ApeErrorList* errors)
 {
-    memset(errors, 0, sizeof(ApeErrorList_t));
+    memset(errors, 0, sizeof(ApeErrorList));
     errors->count = 0;
 }
 
-void ape_errorlist_destroy(ApeErrorList_t* errors)
+void ape_errorlist_destroy(ApeErrorList* errors)
 {
     ape_errorlist_clear(errors);
 }
 
-void ape_errorlist_add(ApeErrorList_t* errors, ApeErrorType_t type, ApePosition_t pos, const char* message)
+void ape_errorlist_add(ApeErrorList* errors, ApeErrorType type, ApePosition pos, const char* message)
 {
     int len;
     int to_copy;
-    ApeError_t err;
+    ApeError err;
     if(errors->count >= APE_CONF_SIZE_ERRORS_MAXCOUNT)
     {
         return;
     }
-    memset(&err, 0, sizeof(ApeError_t));
+    memset(&err, 0, sizeof(ApeError));
     err.errtype = type;
     len = (int)strlen(message);
     to_copy = len;
@@ -219,7 +219,7 @@ void ape_errorlist_add(ApeErrorList_t* errors, ApeErrorType_t type, ApePosition_
     errors->count++;
 }
 
-void ape_errorlist_addformat(ApeErrorList_t* errors, ApeErrorType_t type, ApePosition_t pos, const char* format, ...)
+void ape_errorlist_addformat(ApeErrorList* errors, ApeErrorType type, ApePosition pos, const char* format, ...)
 {
     int to_write;
     int written;
@@ -237,7 +237,7 @@ void ape_errorlist_addformat(ApeErrorList_t* errors, ApeErrorType_t type, ApePos
     ape_errorlist_add(errors, type, pos, res);
 }
 
-void ape_errorlist_addformatv(ApeErrorList_t* errors, ApeErrorType_t type, ApePosition_t pos, const char* format, va_list va)
+void ape_errorlist_addformatv(ApeErrorList* errors, ApeErrorType type, ApePosition pos, const char* format, va_list va)
 {
     int to_write;
     int written;
@@ -252,10 +252,10 @@ void ape_errorlist_addformatv(ApeErrorList_t* errors, ApeErrorType_t type, ApePo
     ape_errorlist_add(errors, type, pos, res);
 }
 
-void ape_errorlist_clear(ApeErrorList_t* errors)
+void ape_errorlist_clear(ApeErrorList* errors)
 {
-    ApeSize_t i;
-    ApeError_t* error;
+    ApeSize i;
+    ApeError* error;
     for(i = 0; i < ape_errorlist_count(errors); i++)
     {
         error = ape_errorlist_getat(errors, i);
@@ -267,21 +267,21 @@ void ape_errorlist_clear(ApeErrorList_t* errors)
     errors->count = 0;
 }
 
-ApeSize_t ape_errorlist_count(ApeErrorList_t* errors)
+ApeSize ape_errorlist_count(ApeErrorList* errors)
 {
     return errors->count;
 }
 
-ApeError_t* ape_errorlist_getat(ApeErrorList_t* errors, ApeInt_t ix)
+ApeError* ape_errorlist_getat(ApeErrorList* errors, ApeInt ix)
 {
-    if(ix >= (ApeInt_t)errors->count)
+    if(ix >= (ApeInt)errors->count)
     {
         return NULL;
     }
     return &errors->errors[ix];
 }
 
-ApeError_t* ape_errorlist_lasterror(ApeErrorList_t* errors)
+ApeError* ape_errorlist_lasterror(ApeErrorList* errors)
 {
     if(errors->count <= 0)
     {
@@ -290,17 +290,17 @@ ApeError_t* ape_errorlist_lasterror(ApeErrorList_t* errors)
     return &errors->errors[errors->count - 1];
 }
 
-bool ape_errorlist_haserrors(ApeErrorList_t* errors)
+bool ape_errorlist_haserrors(ApeErrorList* errors)
 {
     return ape_errorlist_count(errors) > 0;
 }
 
-const char* ape_error_getmessage(ApeError_t* error)
+const char* ape_error_getmessage(ApeError* error)
 {
     return error->message;
 }
 
-const char* ape_error_getfile(ApeError_t* error)
+const char* ape_error_getfile(ApeError* error)
 {
     if(!error->pos.file)
     {
@@ -309,14 +309,14 @@ const char* ape_error_getfile(ApeError_t* error)
     return error->pos.file->path;
 }
 
-const char* ape_error_getsource(ApeError_t* error)
+const char* ape_error_getsource(ApeError* error)
 {
     if(!error->pos.file)
     {
         return NULL;
     }
-    ApePtrArray_t* lines = error->pos.file->lines;
-    if(error->pos.line >= (ApeInt_t)ape_ptrarray_count(lines))
+    ApePtrArray* lines = error->pos.file->lines;
+    if(error->pos.line >= (ApeInt)ape_ptrarray_count(lines))
     {
         return NULL;
     }
@@ -324,7 +324,7 @@ const char* ape_error_getsource(ApeError_t* error)
     return line;
 }
 
-int ape_error_getline(ApeError_t* error)
+int ape_error_getline(ApeError* error)
 {
     if(error->pos.line < 0)
     {
@@ -333,7 +333,7 @@ int ape_error_getline(ApeError_t* error)
     return error->pos.line + 1;
 }
 
-int ape_error_getcolumn(ApeError_t* error)
+int ape_error_getcolumn(ApeError* error)
 {
     if(error->pos.column < 0)
     {
@@ -342,22 +342,22 @@ int ape_error_getcolumn(ApeError_t* error)
     return error->pos.column + 1;
 }
 
-ApeTraceback_t* ape_error_gettraceback(ApeError_t* error)
+ApeTraceback* ape_error_gettraceback(ApeError* error)
 {
     return error->traceback;
 }
 
-const char* ape_object_value_geterrormessage(ApeObject_t object)
+const char* ape_object_value_geterrormessage(ApeObject object)
 {
-    ApeGCObjData_t* data;
+    ApeGCObjData* data;
     APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_ERROR);
     data = ape_object_value_allocated_data(object);
     return data->valerror.message;
 }
 
-void ape_object_value_seterrortraceback(ApeObject_t object, ApeTraceback_t* traceback)
+void ape_object_value_seterrortraceback(ApeObject object, ApeTraceback* traceback)
 {
-    ApeGCObjData_t* data;
+    ApeGCObjData* data;
     APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_ERROR);
     if(ape_object_value_type(object) != APE_OBJECT_ERROR)
     {
@@ -368,9 +368,9 @@ void ape_object_value_seterrortraceback(ApeObject_t object, ApeTraceback_t* trac
     data->valerror.traceback = traceback;
 }
 
-ApeTraceback_t* ape_object_value_geterrortraceback(ApeObject_t object)
+ApeTraceback* ape_object_value_geterrortraceback(ApeObject object)
 {
-    ApeGCObjData_t* data;
+    ApeGCObjData* data;
     APE_ASSERT(ape_object_value_type(object) == APE_OBJECT_ERROR);
     data = ape_object_value_allocated_data(object);
     return data->valerror.traceback;

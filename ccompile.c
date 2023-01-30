@@ -4,11 +4,11 @@
 #endif
 #include "inline.h"
 
-typedef struct ApeTempU64Array_t ApeTempU64Array_t;
+typedef struct ApeTempU64Array ApeTempU64Array;
 
-struct ApeTempU64Array_t
+struct ApeTempU64Array
 {
-    ApeOpByte_t data[2];
+    ApeOpByte data[2];
 };
 
 #if 0
@@ -18,17 +18,17 @@ struct ApeTempU64Array_t
 
 /* have not yet found a better way to do this in c++ ... */
 #if defined(__cplusplus)
-    #define make_u64_array(...) (std::vector<ApeOpByte_t>{__VA_ARGS__}).data()
+    #define make_u64_array(...) (std::vector<ApeOpByte>{__VA_ARGS__}).data()
 #else
-    #define make_u64_array(...) ((ApeOpByte_t[]){__VA_ARGS__ })
+    #define make_u64_array(...) ((ApeOpByte[]){__VA_ARGS__ })
 #endif
 
-static const ApePosition_t g_ccpriv_srcposinvalid = { NULL, -1, -1 };
+static const ApePosition g_ccpriv_srcposinvalid = { NULL, -1, -1 };
 
-void ape_compiler_setsymtable(ApeAstCompiler_t* comp, ApeSymTable_t* table)
+void ape_compiler_setsymtable(ApeAstCompiler* comp, ApeSymTable* table)
 {
-    ApeAstFileScope_t* filescope;
-    filescope = (ApeAstFileScope_t*)ape_ptrarray_top(comp->filescopes);
+    ApeAstFileScope* filescope;
+    filescope = (ApeAstFileScope*)ape_ptrarray_top(comp->filescopes);
     if(!filescope)
     {
         APE_ASSERT(false);
@@ -37,21 +37,21 @@ void ape_compiler_setsymtable(ApeAstCompiler_t* comp, ApeSymTable_t* table)
     filescope->symtable = table;
 }
 
-ApeValArray_t* ape_compiler_getconstants(ApeAstCompiler_t* comp)
+ApeValArray* ape_compiler_getconstants(ApeAstCompiler* comp)
 {
     return comp->constants;
 }
 
-ApeSymTable_t* ape_compiler_getsymboltable(ApeAstCompiler_t* comp)
+ApeSymTable* ape_compiler_getsymboltable(ApeAstCompiler* comp)
 {
-    ApeSize_t l;
-    ApeAstFileScope_t* filescope;
+    ApeSize l;
+    ApeAstFileScope* filescope;
     filescope = NULL;
     if((l = ape_ptrarray_count(comp->filescopes)) > 0)
     {
-        //filescope = *(ApeAstFileScope_t**)ape_ptrarray_top(comp->filescopes);
-        filescope = (ApeAstFileScope_t*)ape_ptrarray_top(comp->filescopes);
-        //filescope = (ApeAstFileScope_t*)ape_ptrarray_get(comp->filescopes, l - 1);
+        //filescope = *(ApeAstFileScope**)ape_ptrarray_top(comp->filescopes);
+        filescope = (ApeAstFileScope*)ape_ptrarray_top(comp->filescopes);
+        //filescope = (ApeAstFileScope*)ape_ptrarray_get(comp->filescopes, l - 1);
     }
     //fprintf(stderr, "filescope=%p comp->filescopes=%d\n", filescope, ape_ptrarray_count(comp->filescopes));
     if(!filescope)
@@ -62,22 +62,22 @@ ApeSymTable_t* ape_compiler_getsymboltable(ApeAstCompiler_t* comp)
     return filescope->symtable;
 }
 
-ApeSymbol_t* ape_compiler_definesym(ApeAstCompiler_t* comp, ApePosition_t pos, const char* name, bool assignable, bool canshadow)
+ApeSymbol* ape_compiler_definesym(ApeAstCompiler* comp, ApePosition pos, const char* name, bool assignable, bool canshadow)
 {
-    ApeSymTable_t* symtable =NULL;
-    ApeSymbol_t* currentsymbol;
-    ApeSymbol_t* symbol;
+    ApeSymTable* symtable =NULL;
+    ApeSymbol* currentsymbol;
+    ApeSymbol* symbol;
     symtable = ape_compiler_getsymboltable(comp);
     if(!canshadow && !ape_symtable_istopglobalscope(symtable))
     {
-        currentsymbol = (ApeSymbol_t*)ape_symtable_resolve(symtable, name);
+        currentsymbol = (ApeSymbol*)ape_symtable_resolve(symtable, name);
         if(currentsymbol)
         {
             ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, pos, "symbol '%s' is already defined", name);
             return NULL;
         }
     }
-    symbol = (ApeSymbol_t*)ape_symtable_define(symtable, name, assignable);
+    symbol = (ApeSymbol*)ape_symtable_define(symtable, name, assignable);
     if(!symbol)
     {
         ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, pos, "cannot define symbol '%s'", name);
@@ -86,11 +86,11 @@ ApeSymbol_t* ape_compiler_definesym(ApeAstCompiler_t* comp, ApePosition_t pos, c
     return symbol;
 }
 
-ApeAstCompiler_t* ape_compiler_make(ApeContext_t* ctx, const ApeConfig_t* cfg, ApeGCMemory_t* mem, ApeErrorList_t* el, ApePtrArray_t* files, ApeGlobalStore_t* gs)
+ApeAstCompiler* ape_compiler_make(ApeContext* ctx, const ApeConfig* cfg, ApeGCMemory* mem, ApeErrorList* el, ApePtrArray* files, ApeGlobalStore* gs)
 {
     bool ok;
-    ApeAstCompiler_t* comp;
-    comp = (ApeAstCompiler_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstCompiler_t));
+    ApeAstCompiler* comp;
+    comp = (ApeAstCompiler*)ape_allocator_alloc(&ctx->alloc, sizeof(ApeAstCompiler));
     if(!comp)
     {
         return NULL;
@@ -105,9 +105,9 @@ ApeAstCompiler_t* ape_compiler_make(ApeContext_t* ctx, const ApeConfig_t* cfg, A
     return comp;
 }
 
-void ape_compiler_destroy(ApeAstCompiler_t* comp)
+void ape_compiler_destroy(ApeAstCompiler* comp)
 {
-    ApeContext_t* ctx;
+    ApeContext* ctx;
     if(!comp)
     {
         return;
@@ -117,12 +117,12 @@ void ape_compiler_destroy(ApeAstCompiler_t* comp)
     ape_allocator_free(&ctx->alloc, comp);
 }
 
-bool ape_compiler_compilecode(ApeAstCompiler_t* comp, const char* code, size_t csize)
+bool ape_compiler_compilecode(ApeAstCompiler* comp, const char* code, size_t csize)
 {
     bool ok;
-    ApeAstFileScope_t* filescope;
-    ApePtrArray_t* statements;
-    filescope = (ApeAstFileScope_t*)ape_ptrarray_top(comp->filescopes);
+    ApeAstFileScope* filescope;
+    ApePtrArray* statements;
+    filescope = (ApeAstFileScope*)ape_ptrarray_top(comp->filescopes);
     APE_ASSERT(filescope);
     statements = ape_parser_parseall(filescope->parser, code, csize, filescope->file);
     if(!statements)
@@ -136,21 +136,21 @@ bool ape_compiler_compilecode(ApeAstCompiler_t* comp, const char* code, size_t c
         if(!comp->context->config.runafterdump)
         {
             filescope = NULL;
-            ape_ptrarray_destroywithitems(comp->context, statements, (ApeDataCallback_t)ape_ast_destroy_expr);
+            ape_ptrarray_destroywithitems(comp->context, statements, (ApeDataCallback)ape_ast_destroy_expr);
             return false;
         }
     }
     ok = ape_compiler_compilestmtlist(comp, statements);
-    ape_ptrarray_destroywithitems(comp->context, statements, (ApeDataCallback_t)ape_ast_destroy_expr);
+    ape_ptrarray_destroywithitems(comp->context, statements, (ApeDataCallback)ape_ast_destroy_expr);
     return ok;
 }
 
-ApeAstCompResult_t* ape_compiler_compilesource(ApeAstCompiler_t* comp, const char* code, size_t csize)
+ApeAstCompResult* ape_compiler_compilesource(ApeAstCompiler* comp, const char* code, size_t csize)
 {
     bool ok;
-    ApeAstCompiler_t compshallowcopy;
-    ApeAstCompScope_t* compscope;
-    ApeAstCompResult_t* res;
+    ApeAstCompiler compshallowcopy;
+    ApeAstCompScope* compscope;
+    ApeAstCompResult* res;
     compscope = ape_compiler_getcompscope(comp);
     //fprintf(stderr, "ape_valarray_count(comp->srcpositionsstack)=%d\n", ape_valarray_count(comp->srcpositionsstack));
     /*
@@ -191,15 +191,15 @@ err:
     return NULL;
 }
 
-ApeAstCompResult_t* ape_compiler_compilefile(ApeAstCompiler_t* comp, const char* path)
+ApeAstCompResult* ape_compiler_compilefile(ApeAstCompiler* comp, const char* path)
 {
     bool ok;
     size_t clen;
     char* code;
-    ApeAstCompFile_t* file;
-    ApeAstCompResult_t* res;
-    ApeAstFileScope_t* filescope;
-    ApeAstCompFile_t* prevfile;
+    ApeAstCompFile* file;
+    ApeAstCompResult* res;
+    ApeAstFileScope* filescope;
+    ApeAstCompFile* prevfile;
     (void)clen;
     code = NULL;
     file = NULL;
@@ -228,7 +228,7 @@ ApeAstCompResult_t* ape_compiler_compilefile(ApeAstCompiler_t* comp, const char*
         goto err;
     }
     APE_ASSERT(ape_ptrarray_count(comp->filescopes) == 1);
-    filescope = (ApeAstFileScope_t*)ape_ptrarray_top(comp->filescopes);
+    filescope = (ApeAstFileScope*)ape_ptrarray_top(comp->filescopes);
     if(!filescope)
     {
         goto err;
@@ -256,10 +256,10 @@ err:
     return NULL;
 }
 
-bool ape_compiler_init(ApeAstCompiler_t* comp, ApeContext_t* ctx, const ApeConfig_t* cfg, ApeGCMemory_t* mem, ApeErrorList_t* el, ApePtrArray_t* fl, ApeGlobalStore_t* gs)
+bool ape_compiler_init(ApeAstCompiler* comp, ApeContext* ctx, const ApeConfig* cfg, ApeGCMemory* mem, ApeErrorList* el, ApePtrArray* fl, ApeGlobalStore* gs)
 {
     bool ok;
-    memset(comp, 0, sizeof(ApeAstCompiler_t));
+    memset(comp, 0, sizeof(ApeAstCompiler));
     comp->context = ctx;
     comp->config = cfg;
     comp->mem = mem;
@@ -271,17 +271,17 @@ bool ape_compiler_init(ApeAstCompiler_t* comp, ApeContext_t* ctx, const ApeConfi
     {
         goto err;
     }
-    comp->constants = ape_make_valarray(ctx, sizeof(ApeObject_t));
+    comp->constants = ape_make_valarray(ctx, sizeof(ApeObject));
     if(!comp->constants)
     {
         goto err;
     }
-    comp->srcpositionsstack = ape_make_valarray(ctx, sizeof(ApePosition_t));
+    comp->srcpositionsstack = ape_make_valarray(ctx, sizeof(ApePosition));
     if(!comp->srcpositionsstack)
     {
         goto err;
     }
-    comp->modules = ape_make_strdict(ctx, (ApeDataCallback_t)ape_module_copy, (ApeDataCallback_t)ape_module_destroy);
+    comp->modules = ape_make_strdict(ctx, (ApeDataCallback)ape_module_copy, (ApeDataCallback)ape_module_destroy);
     if(!comp->modules)
     {
         goto err;
@@ -308,17 +308,17 @@ err:
     return false;
 }
 
-void ape_compiler_deinit(ApeAstCompiler_t* comp)
+void ape_compiler_deinit(ApeAstCompiler* comp)
 {
-    ApeSize_t i;
-    ApeInt_t* val;
+    ApeSize i;
+    ApeInt* val;
     if(!comp)
     {
         return;
     }
     for(i = 0; i < ape_strdict_count(comp->stringconstantspositions); i++)
     {
-        val = (ApeInt_t*)ape_strdict_getvalueat(comp->stringconstantspositions, i);
+        val = (ApeInt*)ape_strdict_getvalueat(comp->stringconstantspositions, i);
         ape_allocator_free(&comp->context->alloc, val);
     }
     ape_strdict_destroy(comp->stringconstantspositions);
@@ -334,27 +334,27 @@ void ape_compiler_deinit(ApeAstCompiler_t* comp)
     ape_valarray_destroy(comp->srcpositionsstack);
     ape_valarray_destroy(comp->constants);
     ape_ptrarray_destroy(comp->filescopes);
-    memset(comp, 0, sizeof(ApeAstCompiler_t));
+    memset(comp, 0, sizeof(ApeAstCompiler));
 }
 
-bool ape_compiler_initshallowcopy(ApeAstCompiler_t* copy, ApeAstCompiler_t* src)
+bool ape_compiler_initshallowcopy(ApeAstCompiler* copy, ApeAstCompiler* src)
 {
-    ApeSize_t i;
+    ApeSize i;
     bool ok;
-    ApeInt_t* val;
-    ApeInt_t* valcopy;
+    ApeInt* val;
+    ApeInt* valcopy;
     const char* key;
     const char* loadedname;
     char* loadednamecopy;
-    ApeSymTable_t* srcst;
-    ApeSymTable_t* srcstcopy;
-    ApeSymTable_t* copyst;
-    ApeStrDict_t* modulescopy;
-    ApeValArray_t* constantscopy;
-    ApeAstFileScope_t* srcfilescope;
-    ApeAstFileScope_t* copyfilescope;
-    ApePtrArray_t* srcloadedmodulenames;
-    ApePtrArray_t* copyloadedmodulenames;
+    ApeSymTable* srcst;
+    ApeSymTable* srcstcopy;
+    ApeSymTable* copyst;
+    ApeStrDict* modulescopy;
+    ApeValArray* constantscopy;
+    ApeAstFileScope* srcfilescope;
+    ApeAstFileScope* copyfilescope;
+    ApePtrArray* srcloadedmodulenames;
+    ApePtrArray* copyloadedmodulenames;
     ok = ape_compiler_init(copy, src->context, src->config, src->mem, src->errors, src->files, src->globalstore);
     if(!ok)
     {
@@ -390,8 +390,8 @@ bool ape_compiler_initshallowcopy(ApeAstCompiler_t* copy, ApeAstCompiler_t* src)
     for(i = 0; i < ape_strdict_count(src->stringconstantspositions); i++)
     {
         key = (const char*)ape_strdict_getkeyat(src->stringconstantspositions, i);
-        val = (ApeInt_t*)ape_strdict_getvalueat(src->stringconstantspositions, i);
-        valcopy = (ApeInt_t*)ape_allocator_alloc(&src->context->alloc, sizeof(ApeInt_t));
+        val = (ApeInt*)ape_strdict_getvalueat(src->stringconstantspositions, i);
+        valcopy = (ApeInt*)ape_allocator_alloc(&src->context->alloc, sizeof(ApeInt));
         if(!valcopy)
         {
             goto err;
@@ -404,8 +404,8 @@ bool ape_compiler_initshallowcopy(ApeAstCompiler_t* copy, ApeAstCompiler_t* src)
             goto err;
         }
     }
-    srcfilescope = (ApeAstFileScope_t*)ape_ptrarray_top(src->filescopes);
-    copyfilescope = (ApeAstFileScope_t*)ape_ptrarray_top(copy->filescopes);
+    srcfilescope = (ApeAstFileScope*)ape_ptrarray_top(src->filescopes);
+    copyfilescope = (ApeAstFileScope*)ape_ptrarray_top(copy->filescopes);
     srcloadedmodulenames = srcfilescope->loadedmodulenames;
     copyloadedmodulenames = copyfilescope->loadedmodulenames;
     for(i = 0; i < ape_ptrarray_count(srcloadedmodulenames); i++)
@@ -429,14 +429,14 @@ err:
     return false;
 }
 
-ApeInt_t ape_compiler_emit(ApeAstCompiler_t* comp, ApeOpByte_t op, ApeSize_t operandscount, ApeOpByte_t* operands)
+ApeInt ape_compiler_emit(ApeAstCompiler* comp, ApeOpByte op, ApeSize operandscount, ApeOpByte* operands)
 {
-    ApeInt_t i;
-    ApeInt_t ip;
-    ApeInt_t len;
+    ApeInt i;
+    ApeInt ip;
+    ApeInt len;
     bool ok;
-    ApePosition_t* srcpos;
-    ApeAstCompScope_t* compscope;
+    ApePosition* srcpos;
+    ApeAstCompScope* compscope;
     ip = ape_compiler_getip(comp);
     len = ape_make_code(op, operandscount, operands, ape_compiler_getbytecode(comp));
     if(len == 0)
@@ -445,7 +445,7 @@ ApeInt_t ape_compiler_emit(ApeAstCompiler_t* comp, ApeOpByte_t op, ApeSize_t ope
     }
     for(i = 0; i < len; i++)
     {
-        srcpos = (ApePosition_t*)ape_valarray_top(comp->srcpositionsstack);
+        srcpos = (ApePosition*)ape_valarray_top(comp->srcpositionsstack);
         #if 0
             APE_ASSERT(srcpos->line >= 0);
             APE_ASSERT(srcpos->column >= 0);
@@ -461,15 +461,15 @@ ApeInt_t ape_compiler_emit(ApeAstCompiler_t* comp, ApeOpByte_t op, ApeSize_t ope
     return ip;
 }
 
-ApeAstCompScope_t* ape_compiler_getcompscope(ApeAstCompiler_t* comp)
+ApeAstCompScope* ape_compiler_getcompscope(ApeAstCompiler* comp)
 {
     return comp->compilation_scope;
 }
 
-bool ape_compiler_pushcompscope(ApeAstCompiler_t* comp)
+bool ape_compiler_pushcompscope(ApeAstCompiler* comp)
 {
-    ApeAstCompScope_t* currentscope;
-    ApeAstCompScope_t* newscope;
+    ApeAstCompScope* currentscope;
+    ApeAstCompScope* newscope;
     currentscope = ape_compiler_getcompscope(comp);
     newscope = ape_make_compscope(comp->context, currentscope);
     if(!newscope)
@@ -480,20 +480,20 @@ bool ape_compiler_pushcompscope(ApeAstCompiler_t* comp)
     return true;
 }
 
-void ape_compiler_popcompscope(ApeAstCompiler_t* comp)
+void ape_compiler_popcompscope(ApeAstCompiler* comp)
 {
-    ApeAstCompScope_t* currentscope;
+    ApeAstCompScope* currentscope;
     currentscope = ape_compiler_getcompscope(comp);
     APE_ASSERT(currentscope);
     ape_compiler_setcompscope(comp, currentscope->outer);
     ape_compscope_destroy(currentscope);
 }
 
-bool ape_compiler_pushsymtable(ApeAstCompiler_t* comp, ApeInt_t globaloffset)
+bool ape_compiler_pushsymtable(ApeAstCompiler* comp, ApeInt globaloffset)
 {
-    ApeAstFileScope_t* filescope;
-    ApeSymTable_t* currenttable;
-    filescope = (ApeAstFileScope_t*)ape_ptrarray_top(comp->filescopes);
+    ApeAstFileScope* filescope;
+    ApeSymTable* currenttable;
+    filescope = (ApeAstFileScope*)ape_ptrarray_top(comp->filescopes);
     //fprintf(stderr, "pushsymtable: filescopes=%ld\n", ape_ptrarray_count(comp->filescopes));
     if(!filescope)
     {
@@ -501,7 +501,7 @@ bool ape_compiler_pushsymtable(ApeAstCompiler_t* comp, ApeInt_t globaloffset)
             APE_ASSERT(false);
             return false;
         #else
-            ApeAstCompFile_t* file = ape_make_compfile(comp->context, "none");
+            ApeAstCompFile* file = ape_make_compfile(comp->context, "none");
             filescope = ape_compiler_makefilescope(comp, file);
             ape_ptrarray_push(comp->filescopes, &filescope);
         #endif
@@ -516,11 +516,11 @@ bool ape_compiler_pushsymtable(ApeAstCompiler_t* comp, ApeInt_t globaloffset)
     return true;
 }
 
-void ape_compiler_popsymtable(ApeAstCompiler_t* comp)
+void ape_compiler_popsymtable(ApeAstCompiler* comp)
 {
-    ApeAstFileScope_t* filescope;
-    ApeSymTable_t* currenttable;
-    filescope = (ApeAstFileScope_t*)ape_ptrarray_top(comp->filescopes);
+    ApeAstFileScope* filescope;
+    ApeSymTable* currenttable;
+    filescope = (ApeAstFileScope*)ape_ptrarray_top(comp->filescopes);
     if(!filescope)
     {
         APE_ASSERT(false);
@@ -536,22 +536,22 @@ void ape_compiler_popsymtable(ApeAstCompiler_t* comp)
     ape_symtable_destroy(currenttable);
 }
 
-ApeOpByte_t ape_compiler_getlastopcode(ApeAstCompiler_t* comp)
+ApeOpByte ape_compiler_getlastopcode(ApeAstCompiler* comp)
 {
-    ApeAstCompScope_t* currentscope;
+    ApeAstCompScope* currentscope;
     currentscope = ape_compiler_getcompscope(comp);
     return currentscope->lastopcode;
 }
 
-bool ape_compiler_compilestmtlist(ApeAstCompiler_t* comp, ApePtrArray_t* statements)
+bool ape_compiler_compilestmtlist(ApeAstCompiler* comp, ApePtrArray* statements)
 {
-    ApeSize_t i;
+    ApeSize i;
     bool ok;
-    ApeAstExpression_t* stmt;
+    ApeAstExpression* stmt;
     ok = true;
     for(i = 0; i < ape_ptrarray_count(statements); i++)
     {
-        stmt = (ApeAstExpression_t*)ape_ptrarray_get(statements, i);
+        stmt = (ApeAstExpression*)ape_ptrarray_get(statements, i);
         ok = ape_compiler_compilestatement(comp, stmt);
         if(!ok)
         {
@@ -562,10 +562,10 @@ bool ape_compiler_compilestmtlist(ApeAstCompiler_t* comp, ApePtrArray_t* stateme
 }
 
 
-bool ape_compiler_includemodule(ApeAstCompiler_t* comp, ApeAstExpression_t* includestmt)
+bool ape_compiler_includemodule(ApeAstCompiler* comp, ApeAstExpression* includestmt)
 {
     /* todo: split into smaller functions */
-    ApeSize_t i;
+    ApeSize i;
     bool ok;
     bool result;
     size_t clen;
@@ -576,18 +576,18 @@ bool ape_compiler_includemodule(ApeAstCompiler_t* comp, ApeAstExpression_t* incl
     const char* modulepath;
     const char* module_name;
     const char* filepathnoncanonicalised;
-    ApeAstFileScope_t* filescope;
-    ApeWriter_t* filepathbuf;
-    ApeSymTable_t* symtable;
-    ApeAstFileScope_t* fs;
-    ApeModule_t* module;
-    ApeSymTable_t* st;
-    ApeSymbol_t* symbol;
+    ApeAstFileScope* filescope;
+    ApeWriter* filepathbuf;
+    ApeSymTable* symtable;
+    ApeAstFileScope* fs;
+    ApeModule* module;
+    ApeSymTable* st;
+    ApeSymbol* symbol;
     (void)clen;
     result = false;
     filepath = NULL;
     code = NULL;
-    filescope = (ApeAstFileScope_t*)ape_ptrarray_top(comp->filescopes);
+    filescope = (ApeAstFileScope*)ape_ptrarray_top(comp->filescopes);
     modulepath = includestmt->exincludestmt.path;
     module_name = ape_module_getname(modulepath);
     for(i = 0; i < ape_ptrarray_count(filescope->loadedmodulenames); i++)
@@ -637,7 +637,7 @@ bool ape_compiler_includemodule(ApeAstCompiler_t* comp, ApeAstExpression_t* incl
     }
     for(i = 0; i < ape_ptrarray_count(comp->filescopes); i++)
     {
-        fs = (ApeAstFileScope_t*)ape_ptrarray_get(comp->filescopes, i);
+        fs = (ApeAstFileScope*)ape_ptrarray_get(comp->filescopes, i);
         if(APE_STREQ(fs->file->path, filepath))
         {
             ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, includestmt->pos, "cyclic reference of file '%s'", filepath);
@@ -645,7 +645,7 @@ bool ape_compiler_includemodule(ApeAstCompiler_t* comp, ApeAstExpression_t* incl
             goto end;
         }
     }
-    module = (ApeModule_t*)ape_strdict_getbyname(comp->modules, filepath);
+    module = (ApeModule*)ape_strdict_getbyname(comp->modules, filepath);
     if(!module)
     {
         /* todo: create new module function */
@@ -686,7 +686,7 @@ bool ape_compiler_includemodule(ApeAstCompiler_t* comp, ApeAstExpression_t* incl
         st = ape_compiler_getsymboltable(comp);
         for(i = 0; i < ape_symtable_getmoduleglobalsymbolcount(st); i++)
         {
-            symbol = (ApeSymbol_t*)ape_symtable_getmoduleglobalsymbolat(st, i);
+            symbol = (ApeSymbol*)ape_symtable_getmoduleglobalsymbolat(st, i);
             ape_module_addsymbol(module, symbol);
         }
         ape_compiler_popfilescope(comp);
@@ -700,7 +700,7 @@ bool ape_compiler_includemodule(ApeAstCompiler_t* comp, ApeAstExpression_t* incl
     }
     for(i = 0; i < ape_ptrarray_count(module->modsymbols); i++)
     {
-        symbol = (ApeSymbol_t*)ape_ptrarray_get(module->modsymbols, i);
+        symbol = (ApeSymbol*)ape_ptrarray_get(module->modsymbols, i);
         ok = ape_symtable_addmodulesymbol(symtable, symbol);
         if(!ok)
         {
@@ -728,44 +728,44 @@ end:
     return result;
 }
 
-bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpression_t* stmt)
+bool ape_compiler_compilestatement(ApeAstCompiler* comp, ApeAstExpression* stmt)
 {
     bool ok;
-    ApeInt_t afteraltip;
-    ApeInt_t afterbodyip;
-    ApeInt_t afterelifip;
-    ApeInt_t afterjumptorecoverip;
-    ApeInt_t afterrecoverip;
-    ApeInt_t aftertestip;
-    ApeInt_t afterupdateip;
-    ApeInt_t beforetestip;
-    ApeInt_t breakip;
-    ApeInt_t continueip;
-    ApeInt_t ip;
-    ApeInt_t jmptoafterbodyip;
-    ApeInt_t jumptoafterbodyip;
-    ApeInt_t jumptoafterrecoverip;
-    ApeInt_t jumptoafterupdateip;
-    ApeInt_t jumptoendip;
-    ApeInt_t nextcasejumpip;
-    ApeInt_t recoverip;
-    ApeInt_t updateip;
-    ApeInt_t* pos;
-    ApeSize_t i;
-    ApeAstCompScope_t* compscope;
-    ApeAstForExpr_t* forloop;
-    ApeAstForeachExpr_t* foreach;
-    ApeAstIfCaseExpr_t* ifcase;
-    ApeAstIfExpr_t* ifstmt;
-    ApeAstRecoverExpr_t* recover;
-    ApeSymTable_t* symtable;
-    ApeSymbol_t* errorsymbol;
-    ApeSymbol_t* indexsymbol;
-    ApeSymbol_t* itersymbol;
-    ApeSymbol_t* sourcesymbol;
-    ApeSymbol_t* symbol;
-    ApeValArray_t* jumptoendips;
-    ApeAstWhileLoopExpr_t* whileloop;
+    ApeInt afteraltip;
+    ApeInt afterbodyip;
+    ApeInt afterelifip;
+    ApeInt afterjumptorecoverip;
+    ApeInt afterrecoverip;
+    ApeInt aftertestip;
+    ApeInt afterupdateip;
+    ApeInt beforetestip;
+    ApeInt breakip;
+    ApeInt continueip;
+    ApeInt ip;
+    ApeInt jmptoafterbodyip;
+    ApeInt jumptoafterbodyip;
+    ApeInt jumptoafterrecoverip;
+    ApeInt jumptoafterupdateip;
+    ApeInt jumptoendip;
+    ApeInt nextcasejumpip;
+    ApeInt recoverip;
+    ApeInt updateip;
+    ApeInt* pos;
+    ApeSize i;
+    ApeAstCompScope* compscope;
+    ApeAstForExpr* forloop;
+    ApeAstForeachExpr* foreach;
+    ApeAstIfCaseExpr* ifcase;
+    ApeAstIfExpr* ifstmt;
+    ApeAstRecoverExpr* recover;
+    ApeSymTable* symtable;
+    ApeSymbol* errorsymbol;
+    ApeSymbol* indexsymbol;
+    ApeSymbol* itersymbol;
+    ApeSymbol* sourcesymbol;
+    ApeSymbol* symbol;
+    ApeValArray* jumptoendips;
+    ApeAstWhileLoopExpr* whileloop;
     breakip = 0;
     ok = false;
     ip = -1;
@@ -814,20 +814,20 @@ bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpression_t* s
         case APE_EXPR_IFELSE:
             {
                 ifstmt = &stmt->exifstmt;
-                jumptoendips = ape_make_valarray(comp->context, sizeof(ApeInt_t));
+                jumptoendips = ape_make_valarray(comp->context, sizeof(ApeInt));
                 if(!jumptoendips)
                 {
                     goto statementiferror;
                 }
                 for(i = 0; i < ape_ptrarray_count(ifstmt->cases); i++)
                 {
-                    ifcase = (ApeAstIfCaseExpr_t*)ape_ptrarray_get(ifstmt->cases, i);
+                    ifcase = (ApeAstIfCaseExpr*)ape_ptrarray_get(ifstmt->cases, i);
                     ok = ape_compiler_compileexpression(comp, ifcase->test);
                     if(!ok)
                     {
                         goto statementiferror;
                     }
-                    nextcasejumpip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFFALSE, 1, make_u64_array((ApeOpByte_t)(0xbeef)));
+                    nextcasejumpip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFFALSE, 1, make_u64_array((ApeOpByte)(0xbeef)));
                     ok = ape_compiler_compilecodeblock(comp, ifcase->consequence);
                     if(!ok)
                     {
@@ -836,7 +836,7 @@ bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpression_t* s
                     /* don't emit jump for the last statement */
                     if(i < (ape_ptrarray_count(ifstmt->cases) - 1) || ifstmt->alternative)
                     {
-                        jumptoendip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte_t)(0xbeef)));
+                        jumptoendip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte)(0xbeef)));
                         ok = ape_valarray_push(jumptoendips, &jumptoendip);
                         if(!ok)
                         {
@@ -857,7 +857,7 @@ bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpression_t* s
                 afteraltip = ape_compiler_getip(comp);
                 for(i = 0; i < ape_valarray_count(jumptoendips); i++)
                 {
-                    pos = (ApeInt_t*)ape_valarray_get(jumptoendips, i);
+                    pos = (ApeInt*)ape_valarray_get(jumptoendips, i);
                     ape_compiler_moduint16operand(comp, *pos + 1, afteraltip);
                 }
                 ape_valarray_destroy(jumptoendips);
@@ -904,12 +904,12 @@ bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpression_t* s
                     return false;
                 }
                 aftertestip = ape_compiler_getip(comp);
-                ip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFTRUE, 1, make_u64_array((ApeOpByte_t)(aftertestip + 6)));
+                ip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFTRUE, 1, make_u64_array((ApeOpByte)(aftertestip + 6)));
                 if(ip < 0)
                 {
                     return false;
                 }
-                jumptoafterbodyip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte_t)0xdead));
+                jumptoafterbodyip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte)0xdead));
                 if(jumptoafterbodyip < 0)
                 {
                     return false;
@@ -931,7 +931,7 @@ bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpression_t* s
                 }
                 ape_compiler_popbreakip(comp);
                 ape_compiler_popcontip(comp);
-                ip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte_t)beforetestip));
+                ip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte)beforetestip));
                 if(ip < 0)
                 {
                     return false;
@@ -948,7 +948,7 @@ bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpression_t* s
                     ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "nothing to break from");
                     return false;
                 }
-                ip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte_t)breakip));
+                ip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte)breakip));
                 if(ip < 0)
                 {
                     return false;
@@ -963,7 +963,7 @@ bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpression_t* s
                     ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, stmt->pos, "nothing to continue from");
                     return false;
                 }
-                ip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte_t)continueip));
+                ip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte)continueip));
                 if(ip < 0)
                 {
                     return false;
@@ -984,7 +984,7 @@ bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpression_t* s
                 {
                     return false;
                 }
-                ip = ape_compiler_emit(comp, APE_OPCODE_MKNUMBER, 1, make_u64_array((ApeOpByte_t)0));
+                ip = ape_compiler_emit(comp, APE_OPCODE_MKNUMBER, 1, make_u64_array((ApeOpByte)0));
                 if(ip < 0)
                 {
                     return false;
@@ -1024,7 +1024,7 @@ bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpression_t* s
                     }
                 }
                 /* update */
-                jumptoafterupdateip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte_t)0xbeef));
+                jumptoafterupdateip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte)0xbeef));
                 if(jumptoafterupdateip < 0)
                 {
                     return false;
@@ -1035,7 +1035,7 @@ bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpression_t* s
                 {
                     return false;
                 }
-                ip = ape_compiler_emit(comp, APE_OPCODE_MKNUMBER, 1, make_u64_array((ApeOpByte_t)ape_util_floattouint(1)));
+                ip = ape_compiler_emit(comp, APE_OPCODE_MKNUMBER, 1, make_u64_array((ApeOpByte)ape_util_floattouint(1)));
                 if(ip < 0)
                 {
                     return false;
@@ -1085,12 +1085,12 @@ bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpression_t* s
                     return false;
                 }
                 aftertestip = ape_compiler_getip(comp);
-                ip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFFALSE, 1, make_u64_array((ApeOpByte_t)(aftertestip + 6)));
+                ip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFFALSE, 1, make_u64_array((ApeOpByte)(aftertestip + 6)));
                 if(ip < 0)
                 {
                     return false;
                 }
-                ApeInt_t jumptoafterbodyip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte_t)0xdead));
+                ApeInt jumptoafterbodyip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte)0xdead));
                 if(jumptoafterbodyip < 0)
                 {
                     return false;
@@ -1138,7 +1138,7 @@ bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpression_t* s
                 }
                 ape_compiler_popbreakip(comp);
                 ape_compiler_popcontip(comp);
-                ip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte_t)updateip));
+                ip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte)updateip));
                 if(ip < 0)
                 {
                     return false;
@@ -1166,7 +1166,7 @@ bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpression_t* s
                     {
                         return false;
                     }
-                    jumptoafterupdateip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte_t)0xbeef));
+                    jumptoafterupdateip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte)0xbeef));
                     if(jumptoafterupdateip < 0)
                     {
                         return false;
@@ -1210,12 +1210,12 @@ bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpression_t* s
                     }
                 }
                 aftertestip = ape_compiler_getip(comp);
-                ip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFTRUE, 1, make_u64_array((ApeOpByte_t)(aftertestip + 6)));
+                ip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFTRUE, 1, make_u64_array((ApeOpByte)(aftertestip + 6)));
                 if(ip < 0)
                 {
                     return false;
                 }
-                jmptoafterbodyip= ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte_t)0xdead));
+                jmptoafterbodyip= ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte)0xdead));
                 if(jmptoafterbodyip < 0)
                 {
                     return false;
@@ -1238,7 +1238,7 @@ bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpression_t* s
                 }
                 ape_compiler_popbreakip(comp);
                 ape_compiler_popcontip(comp);
-                ip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte_t)updateip));
+                ip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte)updateip));
                 if(ip < 0)
                 {
                     return false;
@@ -1280,12 +1280,12 @@ bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpression_t* s
                                      "recover statement cannot be defined within other statements");
                     return false;
                 }
-                recoverip = ape_compiler_emit(comp, APE_OPCODE_SETRECOVER, 1, make_u64_array((ApeOpByte_t)0xbeef));
+                recoverip = ape_compiler_emit(comp, APE_OPCODE_SETRECOVER, 1, make_u64_array((ApeOpByte)0xbeef));
                 if(recoverip < 0)
                 {
                     return false;
                 }
-                jumptoafterrecoverip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte_t)0xbeef));
+                jumptoafterrecoverip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte)0xbeef));
                 if(jumptoafterrecoverip < 0)
                 {
                     return false;
@@ -1336,49 +1336,49 @@ bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpression_t* s
     return true;
 }
 
-bool ape_compiler_compileexpression(ApeAstCompiler_t* comp, ApeAstExpression_t* expr)
+bool ape_compiler_compileexpression(ApeAstCompiler* comp, ApeAstExpression* expr)
 {
     bool ok;
     bool res;
     bool rearrange;
-    ApeAstAssignExpr_t* assign;
-    ApeAstCompResult_t* compres;
-    ApeAstCompScope_t* compscope;
-    ApeAstExpression_t* argexpr;
-    ApeAstExpression_t* exproptimized;
-    ApeAstExpression_t* key;
-    ApeAstExpression_t* left;
-    ApeAstExpression_t* right;
-    ApeAstExpression_t* val;
-    ApeFloat_t number;
-    ApeAstLiteralFuncExpr_t* fn;
-    ApeAstIdentExpr_t* ident;
-    ApeAstIdentExpr_t* param;
-    ApeAstIndexExpr_t* index;
-    ApeInt_t afterleftjumpip;
-    ApeInt_t afterrightip;
-    ApeInt_t elseip;
-    ApeInt_t elsejumpip;
-    ApeInt_t endip;
-    ApeInt_t endjumpip;
-    ApeInt_t ip;
-    ApeInt_t numlocals;
-    ApeInt_t pos;
-    ApeInt_t* currentpos;
-    ApeInt_t* posval;
-    ApeAstLogicalExpr_t* logi;
-    ApeAstLiteralMapExpr_t* map;
-    ApeObject_t obj;
-    ApeOpByte_t op;
-    ApePtrArray_t* freesymbols;
-    ApeSize_t i;
-    ApeSize_t len;
-    ApeSymTable_t* symtable;
-    ApeSymbol_t* fnsymbol;
-    ApeSymbol_t* paramsymbol;
-    ApeSymbol_t* symbol;
-    ApeSymbol_t* thissymbol;
-    ApeAstTernaryExpr_t* ternary;
+    ApeAstAssignExpr* assign;
+    ApeAstCompResult* compres;
+    ApeAstCompScope* compscope;
+    ApeAstExpression* argexpr;
+    ApeAstExpression* exproptimized;
+    ApeAstExpression* key;
+    ApeAstExpression* left;
+    ApeAstExpression* right;
+    ApeAstExpression* val;
+    ApeFloat number;
+    ApeAstLiteralFuncExpr* fn;
+    ApeAstIdentExpr* ident;
+    ApeAstIdentExpr* param;
+    ApeAstIndexExpr* index;
+    ApeInt afterleftjumpip;
+    ApeInt afterrightip;
+    ApeInt elseip;
+    ApeInt elsejumpip;
+    ApeInt endip;
+    ApeInt endjumpip;
+    ApeInt ip;
+    ApeInt numlocals;
+    ApeInt pos;
+    ApeInt* currentpos;
+    ApeInt* posval;
+    ApeAstLogicalExpr* logi;
+    ApeAstLiteralMapExpr* map;
+    ApeObject obj;
+    ApeOpByte op;
+    ApePtrArray* freesymbols;
+    ApeSize i;
+    ApeSize len;
+    ApeSymTable* symtable;
+    ApeSymbol* fnsymbol;
+    ApeSymbol* paramsymbol;
+    ApeSymbol* symbol;
+    ApeSymbol* thissymbol;
+    ApeAstTernaryExpr* ternary;
     ok = false;
     ip = -1;
     exproptimized = ape_optimizer_optexpr(expr);
@@ -1545,7 +1545,7 @@ bool ape_compiler_compileexpression(ApeAstCompiler_t* comp, ApeAstExpression_t* 
         case APE_EXPR_LITERALNUMBER:
             {
                 number = expr->exliteralnumber;
-                ip = ape_compiler_emit(comp, APE_OPCODE_MKNUMBER, 1, make_u64_array((ApeOpByte_t)ape_util_floattouint(number)));
+                ip = ape_compiler_emit(comp, APE_OPCODE_MKNUMBER, 1, make_u64_array((ApeOpByte)ape_util_floattouint(number)));
                 if(ip < 0)
                 {
                     goto error;
@@ -1555,7 +1555,7 @@ bool ape_compiler_compileexpression(ApeAstCompiler_t* comp, ApeAstExpression_t* 
         case APE_EXPR_LITERALSTRING:
             {
                 pos = 0;
-                currentpos = (ApeInt_t*)ape_strdict_getbyname(comp->stringconstantspositions, expr->exliteralstring);
+                currentpos = (ApeInt*)ape_strdict_getbyname(comp->stringconstantspositions, expr->exliteralstring);
                 if(currentpos)
                 {
                     pos = *currentpos;
@@ -1572,7 +1572,7 @@ bool ape_compiler_compileexpression(ApeAstCompiler_t* comp, ApeAstExpression_t* 
                     {
                         goto error;
                     }
-                    posval = (ApeInt_t*)ape_allocator_alloc(&comp->context->alloc, sizeof(ApeInt_t));
+                    posval = (ApeInt*)ape_allocator_alloc(&comp->context->alloc, sizeof(ApeInt));
                     if(!posval)
                     {
                         goto error;
@@ -1585,7 +1585,7 @@ bool ape_compiler_compileexpression(ApeAstCompiler_t* comp, ApeAstExpression_t* 
                         goto error;
                     }
                 }
-                ip = ape_compiler_emit(comp, APE_OPCODE_CONSTANT, 1, make_u64_array((ApeOpByte_t)pos));
+                ip = ape_compiler_emit(comp, APE_OPCODE_CONSTANT, 1, make_u64_array((ApeOpByte)pos));
                 if(ip < 0)
                 {
                     goto error;
@@ -1614,13 +1614,13 @@ bool ape_compiler_compileexpression(ApeAstCompiler_t* comp, ApeAstExpression_t* 
             {
                 for(i = 0; i < ape_ptrarray_count(expr->exarray); i++)
                 {
-                    ok = ape_compiler_compileexpression(comp, (ApeAstExpression_t*)ape_ptrarray_get(expr->exarray, i));
+                    ok = ape_compiler_compileexpression(comp, (ApeAstExpression*)ape_ptrarray_get(expr->exarray, i));
                     if(!ok)
                     {
                         goto error;
                     }
                 }
-                ip = ape_compiler_emit(comp, APE_OPCODE_MKARRAY, 1, make_u64_array((ApeOpByte_t)ape_ptrarray_count(expr->exarray)));
+                ip = ape_compiler_emit(comp, APE_OPCODE_MKARRAY, 1, make_u64_array((ApeOpByte)ape_ptrarray_count(expr->exarray)));
                 if(ip < 0)
                 {
                     goto error;
@@ -1631,15 +1631,15 @@ bool ape_compiler_compileexpression(ApeAstCompiler_t* comp, ApeAstExpression_t* 
             {
                 map = &expr->exmap;
                 len = ape_ptrarray_count(map->keys);
-                ip = ape_compiler_emit(comp, APE_OPCODE_MAPSTART, 1, make_u64_array((ApeOpByte_t)len));
+                ip = ape_compiler_emit(comp, APE_OPCODE_MAPSTART, 1, make_u64_array((ApeOpByte)len));
                 if(ip < 0)
                 {
                     goto error;
                 }
                 for(i = 0; i < len; i++)
                 {
-                    key = (ApeAstExpression_t*)ape_ptrarray_get(map->keys, i);
-                    val = (ApeAstExpression_t*)ape_ptrarray_get(map->values, i);
+                    key = (ApeAstExpression*)ape_ptrarray_get(map->keys, i);
+                    val = (ApeAstExpression*)ape_ptrarray_get(map->values, i);
                     ok = ape_compiler_compileexpression(comp, key);
                     if(!ok)
                     {
@@ -1651,7 +1651,7 @@ bool ape_compiler_compileexpression(ApeAstCompiler_t* comp, ApeAstExpression_t* 
                         goto error;
                     }
                 }
-                ip = ape_compiler_emit(comp, APE_OPCODE_MAPEND, 1, make_u64_array((ApeOpByte_t)len));
+                ip = ape_compiler_emit(comp, APE_OPCODE_MAPEND, 1, make_u64_array((ApeOpByte)len));
                 if(ip < 0)
                 {
                     goto error;
@@ -1765,7 +1765,7 @@ bool ape_compiler_compileexpression(ApeAstCompiler_t* comp, ApeAstExpression_t* 
                 }
                 for(i = 0; i < ape_ptrarray_count(expr->exliteralfunc.params); i++)
                 {
-                    param = (ApeAstIdentExpr_t*)ape_ptrarray_get(expr->exliteralfunc.params, i);
+                    param = (ApeAstIdentExpr*)ape_ptrarray_get(expr->exliteralfunc.params, i);
                     paramsymbol = ape_compiler_definesym(comp, param->pos, param->value, true, false);
                     if(!paramsymbol)
                     {
@@ -1792,7 +1792,7 @@ bool ape_compiler_compileexpression(ApeAstCompiler_t* comp, ApeAstExpression_t* 
                 compres = ape_compscope_orphanresult(compscope);
                 if(!compres)
                 {
-                    ape_ptrarray_destroywithitems(comp->context, freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
+                    ape_ptrarray_destroywithitems(comp->context, freesymbols, (ApeDataCallback)ape_symbol_destroy);
                     goto error;
                 }
                 ape_compiler_popsymtable(comp);
@@ -1802,33 +1802,33 @@ bool ape_compiler_compileexpression(ApeAstCompiler_t* comp, ApeAstExpression_t* 
                 obj = ape_object_make_function(comp->context, fn->name, compres, true, numlocals, ape_ptrarray_count(fn->params), 0);
                 if(ape_object_value_isnull(obj))
                 {
-                    ape_ptrarray_destroywithitems(comp->context, freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
+                    ape_ptrarray_destroywithitems(comp->context, freesymbols, (ApeDataCallback)ape_symbol_destroy);
                     ape_compresult_destroy(compres);
                     goto error;
                 }
                 for(i = 0; i < ape_ptrarray_count(freesymbols); i++)
                 {
-                    symbol = (ApeSymbol_t*)ape_ptrarray_get(freesymbols, i);
+                    symbol = (ApeSymbol*)ape_ptrarray_get(freesymbols, i);
                     ok = ape_compiler_readsym(comp, symbol);
                     if(!ok)
                     {
-                        ape_ptrarray_destroywithitems(comp->context, freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
+                        ape_ptrarray_destroywithitems(comp->context, freesymbols, (ApeDataCallback)ape_symbol_destroy);
                         goto error;
                     }
                 }
                 pos = ape_compiler_addconstant(comp, obj);
                 if(pos < 0)
                 {
-                    ape_ptrarray_destroywithitems(comp->context, freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
+                    ape_ptrarray_destroywithitems(comp->context, freesymbols, (ApeDataCallback)ape_symbol_destroy);
                     goto error;
                 }
-                ip = ape_compiler_emit(comp, APE_OPCODE_MKFUNCTION, 2, make_u64_array((ApeOpByte_t)pos, (ApeOpByte_t)ape_ptrarray_count(freesymbols)));
+                ip = ape_compiler_emit(comp, APE_OPCODE_MKFUNCTION, 2, make_u64_array((ApeOpByte)pos, (ApeOpByte)ape_ptrarray_count(freesymbols)));
                 if(ip < 0)
                 {
-                    ape_ptrarray_destroywithitems(comp->context, freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
+                    ape_ptrarray_destroywithitems(comp->context, freesymbols, (ApeDataCallback)ape_symbol_destroy);
                     goto error;
                 }
-                ape_ptrarray_destroywithitems(comp->context, freesymbols, (ApeDataCallback_t)ape_symbol_destroy);
+                ape_ptrarray_destroywithitems(comp->context, freesymbols, (ApeDataCallback)ape_symbol_destroy);
             }
             break;
         case APE_EXPR_CALL:
@@ -1840,14 +1840,14 @@ bool ape_compiler_compileexpression(ApeAstCompiler_t* comp, ApeAstExpression_t* 
                 }
                 for(i = 0; i < ape_ptrarray_count(expr->excall.args); i++)
                 {
-                    argexpr = (ApeAstExpression_t*)ape_ptrarray_get(expr->excall.args, i);
+                    argexpr = (ApeAstExpression*)ape_ptrarray_get(expr->excall.args, i);
                     ok = ape_compiler_compileexpression(comp, argexpr);
                     if(!ok)
                     {
                         goto error;
                     }
                 }
-                ip = ape_compiler_emit(comp, APE_OPCODE_CALL, 1, make_u64_array((ApeOpByte_t)ape_ptrarray_count(expr->excall.args)));
+                ip = ape_compiler_emit(comp, APE_OPCODE_CALL, 1, make_u64_array((ApeOpByte)ape_ptrarray_count(expr->excall.args)));
                 if(ip < 0)
                 {
                     goto error;
@@ -1894,7 +1894,7 @@ bool ape_compiler_compileexpression(ApeAstCompiler_t* comp, ApeAstExpression_t* 
                         /*
                         ape_errorlist_addformat(comp->errors, APE_ERROR_COMPILATION, assign->dest->pos, "symbol '%s' could not be resolved", ident->value);
                         goto error;
-                        ape_symtable_define(ApeSymTable_t* table, const char* name, bool assignable)
+                        ape_symtable_define(ApeSymTable* table, const char* name, bool assignable)
                         */
                         symbol = ape_symtable_define(symtable, ident->value, true);
                     }
@@ -1956,11 +1956,11 @@ bool ape_compiler_compileexpression(ApeAstCompiler_t* comp, ApeAstExpression_t* 
                 afterleftjumpip = 0;
                 if(logi->op == APE_OPERATOR_LOGICALAND)
                 {
-                    afterleftjumpip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFFALSE, 1, make_u64_array((ApeOpByte_t)0xbeef));
+                    afterleftjumpip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFFALSE, 1, make_u64_array((ApeOpByte)0xbeef));
                 }
                 else
                 {
-                    afterleftjumpip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFTRUE, 1, make_u64_array((ApeOpByte_t)0xbeef));
+                    afterleftjumpip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFTRUE, 1, make_u64_array((ApeOpByte)0xbeef));
                 }
                 if(afterleftjumpip < 0)
                 {
@@ -1988,13 +1988,13 @@ bool ape_compiler_compileexpression(ApeAstCompiler_t* comp, ApeAstExpression_t* 
                 {
                     goto error;
                 }
-                elsejumpip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFFALSE, 1, make_u64_array((ApeOpByte_t)0xbeef));
+                elsejumpip = ape_compiler_emit(comp, APE_OPCODE_JUMPIFFALSE, 1, make_u64_array((ApeOpByte)0xbeef));
                 ok = ape_compiler_compileexpression(comp, ternary->iftrue);
                 if(!ok)
                 {
                     goto error;
                 }
-                endjumpip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte_t)0xbeef));
+                endjumpip = ape_compiler_emit(comp, APE_OPCODE_JUMP, 1, make_u64_array((ApeOpByte)0xbeef));
                 elseip = ape_compiler_getip(comp);
                 ape_compiler_moduint16operand(comp, elsejumpip + 1, elseip);
                 ok = ape_compiler_compileexpression(comp, ternary->iffalse);
@@ -2009,7 +2009,7 @@ bool ape_compiler_compileexpression(ApeAstCompiler_t* comp, ApeAstExpression_t* 
         default:
             {
                 //APE_ASSERT(false);
-                //static bool ape_compiler_compilestatement(ApeAstCompiler_t* comp, ApeAstExpression_t* stmt);
+                //static bool ape_compiler_compilestatement(ApeAstCompiler* comp, ApeAstExpression* stmt);
                 return ape_compiler_compilestatement(comp, expr);
             }
             break;
@@ -2024,13 +2024,13 @@ end:
     return res;
 }
 
-bool ape_compiler_compilecodeblock(ApeAstCompiler_t* comp, ApeAstBlockExpr_t* block)
+bool ape_compiler_compilecodeblock(ApeAstCompiler* comp, ApeAstBlockExpr* block)
 {
     bool ok;
-    ApeInt_t ip;
-    ApeSize_t i;
-    ApeSymTable_t* symtable;
-    ApeAstExpression_t* stmt;
+    ApeInt ip;
+    ApeSize i;
+    ApeSymTable* symtable;
+    ApeAstExpression* stmt;
     symtable = ape_compiler_getsymboltable(comp);
     if(!symtable)
     {
@@ -2056,7 +2056,7 @@ bool ape_compiler_compilecodeblock(ApeAstCompiler_t* comp, ApeAstBlockExpr_t* bl
     }
     for(i = 0; i < ape_ptrarray_count(block->statements); i++)
     {
-        stmt = (ApeAstExpression_t*)ape_ptrarray_get(block->statements, i);
+        stmt = (ApeAstExpression*)ape_ptrarray_get(block->statements, i);
         ok = ape_compiler_compilestatement(comp, stmt);
         if(!ok)
         {
@@ -2067,10 +2067,10 @@ bool ape_compiler_compilecodeblock(ApeAstCompiler_t* comp, ApeAstBlockExpr_t* bl
     return true;
 }
 
-ApeInt_t ape_compiler_addconstant(ApeAstCompiler_t* comp, ApeObject_t obj)
+ApeInt ape_compiler_addconstant(ApeAstCompiler* comp, ApeObject obj)
 {
     bool ok;
-    ApeInt_t pos;
+    ApeInt pos;
     ok = ape_valarray_push(comp->constants, &obj);
     if(!ok)
     {
@@ -2080,49 +2080,49 @@ ApeInt_t ape_compiler_addconstant(ApeAstCompiler_t* comp, ApeObject_t obj)
     return pos;
 }
 
-void ape_compiler_moduint16operand(ApeAstCompiler_t* comp, ApeInt_t ip, ApeOpByte_t operand)
+void ape_compiler_moduint16operand(ApeAstCompiler* comp, ApeInt ip, ApeOpByte operand)
 {
-    ApeUShort_t hi;
-    ApeUShort_t lo;
-    ApeValArray_t* bytecode;
+    ApeUShort hi;
+    ApeUShort lo;
+    ApeValArray* bytecode;
     bytecode = ape_compiler_getbytecode(comp);
-    if((ip + 1) >= (ApeInt_t)ape_valarray_count(bytecode))
+    if((ip + 1) >= (ApeInt)ape_valarray_count(bytecode))
     {
         APE_ASSERT(false);
         return;
     }
-    hi = (ApeUShort_t)(operand >> 8);
+    hi = (ApeUShort)(operand >> 8);
     ape_valarray_set(bytecode, ip, &hi);
-    lo = (ApeUShort_t)(operand);
+    lo = (ApeUShort)(operand);
     ape_valarray_set(bytecode, ip + 1, &lo);
 }
 
-bool ape_compiler_lastopcodeis(ApeAstCompiler_t* comp, ApeOpByte_t op)
+bool ape_compiler_lastopcodeis(ApeAstCompiler* comp, ApeOpByte op)
 {
-    ApeOpByte_t lastopcode;
+    ApeOpByte lastopcode;
     lastopcode = ape_compiler_getlastopcode(comp);
     return lastopcode == op;
 }
 
-bool ape_compiler_readsym(ApeAstCompiler_t* comp, ApeSymbol_t* symbol)
+bool ape_compiler_readsym(ApeAstCompiler* comp, ApeSymbol* symbol)
 {
-    ApeInt_t ip;
+    ApeInt ip;
     ip = -1;
     if(symbol->symtype == APE_SYMBOL_MODULEGLOBAL)
     {
-        ip = ape_compiler_emit(comp, APE_OPCODE_GETMODULEGLOBAL, 1, make_u64_array((ApeOpByte_t)(symbol->index)));
+        ip = ape_compiler_emit(comp, APE_OPCODE_GETMODULEGLOBAL, 1, make_u64_array((ApeOpByte)(symbol->index)));
     }
     else if(symbol->symtype == APE_SYMBOL_CONTEXTGLOBAL)
     {
-        ip = ape_compiler_emit(comp, APE_OPCODE_GETCONTEXTGLOBAL, 1, make_u64_array((ApeOpByte_t)(symbol->index)));
+        ip = ape_compiler_emit(comp, APE_OPCODE_GETCONTEXTGLOBAL, 1, make_u64_array((ApeOpByte)(symbol->index)));
     }
     else if(symbol->symtype == APE_SYMBOL_LOCAL)
     {
-        ip = ape_compiler_emit(comp, APE_OPCODE_GETLOCAL, 1, make_u64_array((ApeOpByte_t)(symbol->index)));
+        ip = ape_compiler_emit(comp, APE_OPCODE_GETLOCAL, 1, make_u64_array((ApeOpByte)(symbol->index)));
     }
     else if(symbol->symtype == APE_SYMBOL_FREE)
     {
-        ip = ape_compiler_emit(comp, APE_OPCODE_GETFREE, 1, make_u64_array((ApeOpByte_t)(symbol->index)));
+        ip = ape_compiler_emit(comp, APE_OPCODE_GETFREE, 1, make_u64_array((ApeOpByte)(symbol->index)));
     }
     else if(symbol->symtype == APE_SYMBOL_FUNCTION)
     {
@@ -2135,49 +2135,49 @@ bool ape_compiler_readsym(ApeAstCompiler_t* comp, ApeSymbol_t* symbol)
     return ip >= 0;
 }
 
-bool ape_compiler_writesym(ApeAstCompiler_t* comp, ApeSymbol_t* symbol, bool define)
+bool ape_compiler_writesym(ApeAstCompiler* comp, ApeSymbol* symbol, bool define)
 {
-    ApeInt_t ip;
+    ApeInt ip;
     ip = -1;
     if(symbol->symtype == APE_SYMBOL_MODULEGLOBAL)
     {
         if(define)
         {
-            ip = ape_compiler_emit(comp, APE_OPCODE_DEFMODULEGLOBAL, 1, make_u64_array((ApeOpByte_t)(symbol->index)));
+            ip = ape_compiler_emit(comp, APE_OPCODE_DEFMODULEGLOBAL, 1, make_u64_array((ApeOpByte)(symbol->index)));
         }
         else
         {
-            ip = ape_compiler_emit(comp, APE_OPCODE_SETMODULEGLOBAL, 1, make_u64_array((ApeOpByte_t)(symbol->index)));
+            ip = ape_compiler_emit(comp, APE_OPCODE_SETMODULEGLOBAL, 1, make_u64_array((ApeOpByte)(symbol->index)));
         }
     }
     else if(symbol->symtype == APE_SYMBOL_LOCAL)
     {
         if(define)
         {
-            ip = ape_compiler_emit(comp, APE_OPCODE_DEFLOCAL, 1, make_u64_array((ApeOpByte_t)(symbol->index)));
+            ip = ape_compiler_emit(comp, APE_OPCODE_DEFLOCAL, 1, make_u64_array((ApeOpByte)(symbol->index)));
         }
         else
         {
-            ip = ape_compiler_emit(comp, APE_OPCODE_SETLOCAL, 1, make_u64_array((ApeOpByte_t)(symbol->index)));
+            ip = ape_compiler_emit(comp, APE_OPCODE_SETLOCAL, 1, make_u64_array((ApeOpByte)(symbol->index)));
         }
     }
     else if(symbol->symtype == APE_SYMBOL_FREE)
     {
-        ip = ape_compiler_emit(comp, APE_OPCODE_SETFREE, 1, make_u64_array((ApeOpByte_t)(symbol->index)));
+        ip = ape_compiler_emit(comp, APE_OPCODE_SETFREE, 1, make_u64_array((ApeOpByte)(symbol->index)));
     }
     return ip >= 0;
 }
 
-bool ape_compiler_pushbreakip(ApeAstCompiler_t* comp, ApeInt_t ip)
+bool ape_compiler_pushbreakip(ApeAstCompiler* comp, ApeInt ip)
 {
-    ApeAstCompScope_t* compscope;
+    ApeAstCompScope* compscope;
     compscope = ape_compiler_getcompscope(comp);
     return ape_valarray_push(compscope->breakipstack, &ip);
 }
 
-void ape_compiler_popbreakip(ApeAstCompiler_t* comp)
+void ape_compiler_popbreakip(ApeAstCompiler* comp)
 {
-    ApeAstCompScope_t* compscope;
+    ApeAstCompScope* compscope;
     compscope = ape_compiler_getcompscope(comp);
     if(ape_valarray_count(compscope->breakipstack) == 0)
     {
@@ -2187,10 +2187,10 @@ void ape_compiler_popbreakip(ApeAstCompiler_t* comp)
     ape_valarray_pop(compscope->breakipstack);
 }
 
-ApeInt_t ape_compiler_getbreakip(ApeAstCompiler_t* comp)
+ApeInt ape_compiler_getbreakip(ApeAstCompiler* comp)
 {
-    ApeInt_t* res;
-    ApeAstCompScope_t* compscope;
+    ApeInt* res;
+    ApeAstCompScope* compscope;
     compscope = ape_compiler_getcompscope(comp);
     if(compscope == NULL)
     {
@@ -2200,7 +2200,7 @@ ApeInt_t ape_compiler_getbreakip(ApeAstCompiler_t* comp)
     {
         return -1;
     }
-    res = (ApeInt_t*)ape_valarray_top(compscope->breakipstack);
+    res = (ApeInt*)ape_valarray_top(compscope->breakipstack);
     if(res != NULL)
     {
         return *res;
@@ -2208,16 +2208,16 @@ ApeInt_t ape_compiler_getbreakip(ApeAstCompiler_t* comp)
     return -1;
 }
 
-bool ape_compiler_pushcontip(ApeAstCompiler_t* comp, ApeInt_t ip)
+bool ape_compiler_pushcontip(ApeAstCompiler* comp, ApeInt ip)
 {
-    ApeAstCompScope_t* compscope;
+    ApeAstCompScope* compscope;
     compscope = ape_compiler_getcompscope(comp);
     return ape_valarray_push(compscope->continueipstack, &ip);
 }
 
-void ape_compiler_popcontip(ApeAstCompiler_t* comp)
+void ape_compiler_popcontip(ApeAstCompiler* comp)
 {
-    ApeAstCompScope_t* compscope;
+    ApeAstCompScope* compscope;
     compscope = ape_compiler_getcompscope(comp);
     if(ape_valarray_count(compscope->continueipstack) == 0)
     {
@@ -2227,48 +2227,48 @@ void ape_compiler_popcontip(ApeAstCompiler_t* comp)
     ape_valarray_pop(compscope->continueipstack);
 }
 
-ApeInt_t ape_compiler_getcontip(ApeAstCompiler_t* comp)
+ApeInt ape_compiler_getcontip(ApeAstCompiler* comp)
 {
-    ApeInt_t* res;
-    ApeAstCompScope_t* compscope;
+    ApeInt* res;
+    ApeAstCompScope* compscope;
     compscope = ape_compiler_getcompscope(comp);
     if(ape_valarray_count(compscope->continueipstack) == 0)
     {
         APE_ASSERT(false);
         return -1;
     }
-    res = (ApeInt_t*)ape_valarray_top(compscope->continueipstack);
+    res = (ApeInt*)ape_valarray_top(compscope->continueipstack);
     return *res;
 }
 
-ApeInt_t ape_compiler_getip(ApeAstCompiler_t* comp)
+ApeInt ape_compiler_getip(ApeAstCompiler* comp)
 {
-    ApeAstCompScope_t* compscope;
+    ApeAstCompScope* compscope;
     compscope = ape_compiler_getcompscope(comp);
     return ape_valarray_count(compscope->bytecode);
 }
 
-ApeValArray_t* ape_compiler_getsrcpositions(ApeAstCompiler_t* comp)
+ApeValArray* ape_compiler_getsrcpositions(ApeAstCompiler* comp)
 {
-    ApeAstCompScope_t* compscope = ape_compiler_getcompscope(comp);
+    ApeAstCompScope* compscope = ape_compiler_getcompscope(comp);
     return compscope->srcpositions;
 }
 
-ApeValArray_t* ape_compiler_getbytecode(ApeAstCompiler_t* comp)
+ApeValArray* ape_compiler_getbytecode(ApeAstCompiler* comp)
 {
-    ApeAstCompScope_t* compscope = ape_compiler_getcompscope(comp);
+    ApeAstCompScope* compscope = ape_compiler_getcompscope(comp);
     return compscope->bytecode;
 }
 
-ApeAstFileScope_t* ape_compiler_makefilescope(ApeAstCompiler_t* comp, ApeAstCompFile_t* file)
+ApeAstFileScope* ape_compiler_makefilescope(ApeAstCompiler* comp, ApeAstCompFile* file)
 {
-    ApeAstFileScope_t* filescope;
-    filescope = (ApeAstFileScope_t*)ape_allocator_alloc(&comp->context->alloc, sizeof(ApeAstFileScope_t));
+    ApeAstFileScope* filescope;
+    filescope = (ApeAstFileScope*)ape_allocator_alloc(&comp->context->alloc, sizeof(ApeAstFileScope));
     if(!filescope)
     {
         return NULL;
     }
-    memset(filescope, 0, sizeof(ApeAstFileScope_t));
+    memset(filescope, 0, sizeof(ApeAstFileScope));
     filescope->context = comp->context;
     filescope->parser = ape_ast_make_parser(comp->context, comp->config, comp->errors);
     if(!filescope->parser)
@@ -2288,9 +2288,9 @@ err:
     return NULL;
 }
 
-void ape_compiler_destroyfilescope(ApeAstFileScope_t* scope)
+void ape_compiler_destroyfilescope(ApeAstFileScope* scope)
 {
-    ApeSize_t i;
+    ApeSize i;
     void* name;
     for(i = 0; i < ape_ptrarray_count(scope->loadedmodulenames); i++)
     {
@@ -2302,14 +2302,14 @@ void ape_compiler_destroyfilescope(ApeAstFileScope_t* scope)
     ape_allocator_free(&scope->context->alloc, scope);
 }
 
-bool ape_compiler_pushfilescope(ApeAstCompiler_t* comp, const char* filepath)
+bool ape_compiler_pushfilescope(ApeAstCompiler* comp, const char* filepath)
 {
     bool ok;
-    ApeAstBlockScope_t* prevsttopscope;
-    ApeSymTable_t* prevst;
-    ApeAstFileScope_t* filescope;
-    ApeAstCompFile_t* file;
-    ApeInt_t globaloffset;
+    ApeAstBlockScope* prevsttopscope;
+    ApeSymTable* prevst;
+    ApeAstFileScope* filescope;
+    ApeAstCompFile* file;
+    ApeInt globaloffset;
     prevst = NULL;
     if(ape_ptrarray_count(comp->filescopes) > 0)
     {
@@ -2353,14 +2353,14 @@ bool ape_compiler_pushfilescope(ApeAstCompiler_t* comp, const char* filepath)
     return true;
 }
 
-void ape_compiler_popfilescope(ApeAstCompiler_t* comp)
+void ape_compiler_popfilescope(ApeAstCompiler* comp)
 {
-    ApeSymTable_t* currentst;
-    ApeAstBlockScope_t* currentsttopscope;
-    ApeSymTable_t* poppedst;
-    ApeAstBlockScope_t* poppedsttopscope;
-    ApeAstFileScope_t* scope;
-    ApeInt_t poppednumdefs;
+    ApeSymTable* currentst;
+    ApeAstBlockScope* currentsttopscope;
+    ApeSymTable* poppedst;
+    ApeAstBlockScope* poppedsttopscope;
+    ApeAstFileScope* scope;
+    ApeInt poppednumdefs;
     poppedst = ape_compiler_getsymboltable(comp);
     poppedsttopscope = ape_symtable_getblockscope(poppedst);
     poppednumdefs = poppedsttopscope->numdefinitions;
@@ -2368,7 +2368,7 @@ void ape_compiler_popfilescope(ApeAstCompiler_t* comp)
     {
         ape_compiler_popsymtable(comp);
     }
-    scope = (ApeAstFileScope_t*)ape_ptrarray_top(comp->filescopes);
+    scope = (ApeAstFileScope*)ape_ptrarray_top(comp->filescopes);
     if(!scope)
     {
         APE_ASSERT(false);
@@ -2384,7 +2384,7 @@ void ape_compiler_popfilescope(ApeAstCompiler_t* comp)
     }
 }
 
-void ape_compiler_setcompscope(ApeAstCompiler_t* comp, ApeAstCompScope_t* scope)
+void ape_compiler_setcompscope(ApeAstCompiler* comp, ApeAstCompScope* scope)
 {
     comp->compilation_scope = scope;
 }

@@ -20,11 +20,6 @@ String.chr = function(n)
     return String.fromCharCode(n);
 }
 
-function bitnot(n)
-{
-    return (~n);
-}
-
 function substr(s, a, b=null)
 {
     if(b == null)

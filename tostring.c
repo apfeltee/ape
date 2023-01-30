@@ -25,7 +25,7 @@ static const char* g_type_names[] = {
 };
 
 
-const char* ape_tostring_operator(ApeOperator_t op)
+const char* ape_tostring_operator(ApeOperator op)
 {
     switch(op)
     {
@@ -79,7 +79,7 @@ const char* ape_tostring_operator(ApeOperator_t op)
     return "operator_unknown";
 }
 
-const char* ape_tostring_exprtype(ApeAstExprType_t type)
+const char* ape_tostring_exprtype(ApeAstExprType type)
 {
     switch(type)
     {
@@ -143,10 +143,10 @@ const char* ape_tostring_exprtype(ApeAstExprType_t type)
     return "unknown";
 }
 
-static bool ape_tostring_opcodecoderead(ApeOpcodeDef_t* def, ApeUShort_t* instr, ApeOpByte_t outop[2])
+static bool ape_tostring_opcodecoderead(ApeOpcodeDef* def, ApeUShort* instr, ApeOpByte outop[2])
 {
-    ApeSize_t i;
-    ApeOpByte_t operand;
+    ApeSize i;
+    ApeOpByte operand;
     int opwidth;
     int offset;
     offset = 0;
@@ -185,14 +185,14 @@ static bool ape_tostring_opcodecoderead(ApeOpcodeDef_t* def, ApeUShort_t* instr,
             case 8:
                 {
                     operand = 0;
-                    operand = operand | ((ApeOpByte_t)instr[offset + 0] << 56);
-                    operand = operand | ((ApeOpByte_t)instr[offset + 1] << 48);
-                    operand = operand | ((ApeOpByte_t)instr[offset + 2] << 40);
-                    operand = operand | ((ApeOpByte_t)instr[offset + 3] << 32);
-                    operand = operand | ((ApeOpByte_t)instr[offset + 4] << 24);
-                    operand = operand | ((ApeOpByte_t)instr[offset + 5] << 16);
-                    operand = operand | ((ApeOpByte_t)instr[offset + 6] << 8);
-                    operand = operand | ((ApeOpByte_t)instr[offset + 7]);
+                    operand = operand | ((ApeOpByte)instr[offset + 0] << 56);
+                    operand = operand | ((ApeOpByte)instr[offset + 1] << 48);
+                    operand = operand | ((ApeOpByte)instr[offset + 2] << 40);
+                    operand = operand | ((ApeOpByte)instr[offset + 3] << 32);
+                    operand = operand | ((ApeOpByte)instr[offset + 4] << 24);
+                    operand = operand | ((ApeOpByte)instr[offset + 5] << 16);
+                    operand = operand | ((ApeOpByte)instr[offset + 6] << 8);
+                    operand = operand | ((ApeOpByte)instr[offset + 7]);
                     outop[i] = operand;
                 }
                 break;
@@ -208,15 +208,15 @@ static bool ape_tostring_opcodecoderead(ApeOpcodeDef_t* def, ApeUShort_t* instr,
     return true;
 }
 
-bool ape_tostring_exprlist(ApeWriter_t* buf, ApePtrArray_t* statements)
+bool ape_tostring_exprlist(ApeWriter* buf, ApePtrArray* statements)
 {
-    ApeSize_t i;
-    ApeSize_t count;
-    ApeAstExpression_t* stmt;
+    ApeSize i;
+    ApeSize count;
+    ApeAstExpression* stmt;
     count = ape_ptrarray_count(statements);
     for(i = 0; i < count; i++)
     {
-        stmt = (ApeAstExpression_t*)ape_ptrarray_get(statements, i);
+        stmt = (ApeAstExpression*)ape_ptrarray_get(statements, i);
         ape_tostring_expression(buf, stmt);
         if(i < (count - 1))
         {
@@ -226,21 +226,21 @@ bool ape_tostring_exprlist(ApeWriter_t* buf, ApePtrArray_t* statements)
     return true;
 }
 
-bool ape_tostring_expression(ApeWriter_t* buf, ApeAstExpression_t* expr)
+bool ape_tostring_expression(ApeWriter* buf, ApeAstExpression* expr)
 {
-    ApeSize_t i;
-    ApeFloat_t fltnum;
-    ApeAstExpression_t* arrexpr;
-    ApeAstLiteralMapExpr_t* mapexpr;
-    ApeAstExpression_t* keyexpr;
-    ApeAstExpression_t* valexpr;
-    ApeAstLiteralFuncExpr_t* fnexpr;
-    ApeAstIdentExpr_t* paramexpr;
-    ApeAstExpression_t* argexpr;
-    ApeAstCallExpr_t* callexpr;
-    ApeAstDefineExpr_t* defstmt;
-    ApeAstIfCaseExpr_t* ifcase;
-    ApeAstIfCaseExpr_t* elifcase;
+    ApeSize i;
+    ApeFloat fltnum;
+    ApeAstExpression* arrexpr;
+    ApeAstLiteralMapExpr* mapexpr;
+    ApeAstExpression* keyexpr;
+    ApeAstExpression* valexpr;
+    ApeAstLiteralFuncExpr* fnexpr;
+    ApeAstIdentExpr* paramexpr;
+    ApeAstExpression* argexpr;
+    ApeAstCallExpr* callexpr;
+    ApeAstDefineExpr* defstmt;
+    ApeAstIfCaseExpr* ifcase;
+    ApeAstIfCaseExpr* elifcase;
     switch(expr->extype)
     {
         case APE_EXPR_IDENT:
@@ -254,12 +254,12 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeAstExpression_t* expr)
                 #if 0
                 ape_writer_appendf(buf, "%1.17g", fltnum);
                 #else
-                if(fltnum == ((ApeInt_t)fltnum))
+                if(fltnum == ((ApeInt)fltnum))
                 {
                     #if 0
-                    ape_writer_appendf(buf, "%" PRId64, (ApeInt_t)fltnum);
+                    ape_writer_appendf(buf, "%" PRId64, (ApeInt)fltnum);
                     #else
-                    ape_writer_appendf(buf, "%" PRIi64, (ApeInt_t)fltnum);
+                    ape_writer_appendf(buf, "%" PRIi64, (ApeInt)fltnum);
                     #endif
                 }
                 else
@@ -289,7 +289,7 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeAstExpression_t* expr)
                 ape_writer_append(buf, "[");
                 for(i = 0; i < ape_ptrarray_count(expr->exarray); i++)
                 {
-                    arrexpr = (ApeAstExpression_t*)ape_ptrarray_get(expr->exarray, i);
+                    arrexpr = (ApeAstExpression*)ape_ptrarray_get(expr->exarray, i);
                     ape_tostring_expression(buf, arrexpr);
                     if(i < (ape_ptrarray_count(expr->exarray) - 1))
                     {
@@ -305,8 +305,8 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeAstExpression_t* expr)
                 ape_writer_append(buf, "{");
                 for(i = 0; i < ape_ptrarray_count(mapexpr->keys); i++)
                 {
-                    keyexpr = (ApeAstExpression_t*)ape_ptrarray_get(mapexpr->keys, i);
-                    valexpr = (ApeAstExpression_t*)ape_ptrarray_get(mapexpr->values, i);
+                    keyexpr = (ApeAstExpression*)ape_ptrarray_get(mapexpr->keys, i);
+                    valexpr = (ApeAstExpression*)ape_ptrarray_get(mapexpr->values, i);
                     ape_tostring_expression(buf, keyexpr);
                     ape_writer_append(buf, " : ");
                     ape_tostring_expression(buf, valexpr);
@@ -344,7 +344,7 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeAstExpression_t* expr)
                 ape_writer_append(buf, "(");
                 for(i = 0; i < ape_ptrarray_count(fnexpr->params); i++)
                 {
-                    paramexpr = (ApeAstIdentExpr_t*)ape_ptrarray_get(fnexpr->params, i);
+                    paramexpr = (ApeAstIdentExpr*)ape_ptrarray_get(fnexpr->params, i);
                     ape_writer_append(buf, paramexpr->value);
                     if(i < (ape_ptrarray_count(fnexpr->params) - 1))
                     {
@@ -362,7 +362,7 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeAstExpression_t* expr)
                 ape_writer_append(buf, "(");
                 for(i = 0; i < ape_ptrarray_count(callexpr->args); i++)
                 {
-                    argexpr = (ApeAstExpression_t*)ape_ptrarray_get(callexpr->args, i);
+                    argexpr = (ApeAstExpression*)ape_ptrarray_get(callexpr->args, i);
                     ape_tostring_expression(buf, argexpr);
                     if(i < (ape_ptrarray_count(callexpr->args) - 1))
                     {
@@ -428,14 +428,14 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeAstExpression_t* expr)
             break;
         case APE_EXPR_IFELSE:
             {
-                ifcase = (ApeAstIfCaseExpr_t*)ape_ptrarray_get(expr->exifstmt.cases, 0);
+                ifcase = (ApeAstIfCaseExpr*)ape_ptrarray_get(expr->exifstmt.cases, 0);
                 ape_writer_append(buf, "if (");
                 ape_tostring_expression(buf, ifcase->test);
                 ape_writer_append(buf, ") ");
                 ape_tostring_codeblock(buf, ifcase->consequence);
                 for(i = 1; i < ape_ptrarray_count(expr->exifstmt.cases); i++)
                 {
-                    elifcase = (ApeAstIfCaseExpr_t*)ape_ptrarray_get(expr->exifstmt.cases, i);
+                    elifcase = (ApeAstIfCaseExpr*)ape_ptrarray_get(expr->exifstmt.cases, i);
                     ape_writer_append(buf, " elif (");
                     ape_tostring_expression(buf, elifcase->test);
                     ape_writer_append(buf, ") ");
@@ -540,15 +540,15 @@ bool ape_tostring_expression(ApeWriter_t* buf, ApeAstExpression_t* expr)
     return true;
 }
 
-bool ape_tostring_codeblock(ApeWriter_t* buf, ApeAstBlockExpr_t* stmt)
+bool ape_tostring_codeblock(ApeWriter* buf, ApeAstBlockExpr* stmt)
 {
     bool ok;
-    ApeSize_t i;
-    ApeAstExpression_t* istmt;
+    ApeSize i;
+    ApeAstExpression* istmt;
     ape_writer_append(buf, "{ ");
     for(i = 0; i < ape_ptrarray_count(stmt->statements); i++)
     {
-        istmt = (ApeAstExpression_t*)ape_ptrarray_get(stmt->statements, i);
+        istmt = (ApeAstExpression*)ape_ptrarray_get(stmt->statements, i);
         ok = ape_tostring_expression(buf, istmt);
         ape_writer_append(buf, "\n");
         if(!ok)
@@ -560,24 +560,24 @@ bool ape_tostring_codeblock(ApeWriter_t* buf, ApeAstBlockExpr_t* stmt)
     return true;
 }
 
-bool ape_tostring_compresult(ApeWriter_t* buf, ApeAstCompResult_t* res, bool sparse)
+bool ape_tostring_compresult(ApeWriter* buf, ApeAstCompResult* res, bool sparse)
 {
     return ape_tostring_bytecode(buf, res->bytecode, res->srcpositions, res->count, sparse);
 }
 
-bool ape_tostring_bytecode(ApeWriter_t* buf, ApeUShort_t* code, ApePosition_t* source_positions, size_t code_size, bool sparse)
+bool ape_tostring_bytecode(ApeWriter* buf, ApeUShort* code, ApePosition* source_positions, size_t code_size, bool sparse)
 {
     enum { kMaxDepth = 128*2 };
     bool ok;
     unsigned int pos;
-    ApeOpByte_t operands[2];
-    ApeSize_t i;
-    ApeSize_t cntdef;
-    ApeSize_t cntdepth;
-    ApeUShort_t op;
+    ApeOpByte operands[2];
+    ApeSize i;
+    ApeSize cntdef;
+    ApeSize cntdepth;
+    ApeUShort op;
     double dv;
-    ApeOpcodeDef_t* def;
-    ApePosition_t srcpos;
+    ApeOpcodeDef* def;
+    ApePosition srcpos;
     pos = 0;
     cntdepth = 0;
     #if 0
@@ -635,17 +635,17 @@ bool ape_tostring_bytecode(ApeWriter_t* buf, ApeUShort_t* code, ApePosition_t* s
                     #if 0
                     dv = ape_util_uinttofloat(operands[i]);
                     #else
-                    dv = (ApeFloat_t)operands[i];
+                    dv = (ApeFloat)operands[i];
                     #endif
                     #if 0
                     ape_writer_appendf(buf, "%1.17g", dv);
                     #else
-                    if(dv == ((ApeInt_t)dv))
+                    if(dv == ((ApeInt)dv))
                     {
                         #if 0
-                        ape_writer_appendf(buf, "%" PRId64, (ApeInt_t)fltnum);
+                        ape_writer_appendf(buf, "%" PRId64, (ApeInt)fltnum);
                         #else
-                        ape_writer_appendf(buf, "int<%" PRIi64 ">", (ApeInt_t)dv);
+                        ape_writer_appendf(buf, "int<%" PRIi64 ">", (ApeInt)dv);
                         #endif
                     }
                     else
@@ -668,7 +668,7 @@ bool ape_tostring_bytecode(ApeWriter_t* buf, ApeUShort_t* code, ApePosition_t* s
 }
 
 
-const char* ape_tostring_tokentype(ApeAstTokType_t type)
+const char* ape_tostring_tokentype(ApeAstTokType type)
 {
     return g_type_names[type];
 }

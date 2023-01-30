@@ -53,21 +53,26 @@ end
 def runcproto(files, opts)
   cmd = ["cproto", "-si", "-P", '/* int */ f // (a, b)', *files]
   IO.popen(cmd, "rb") do |io|
-    nlines = []
+    nlines = {}
     raw = io.read
     lines = raw.split(/\n/)
     lines.each do |s|
+      s.strip!
+      rawline = s.clone
+      rawline = rawline.gsub(Regexp.new('/\*\s*(.*)\s*\*/'), '\1').gsub(Regexp.new('\s*//\s*'), "")
+      rawline = rawline.gsub(/\s+/, " ").strip
       if opts.onlystatics && (not s.include?("static")) then
         next
       end
       if !opts.alsoinline && (s.include?("inline")) then
         next
       end
-      nlines.push(s)
+      nlines[rawline] = s
     end
-    return nlines.map{|s|
-      s.gsub(/\/\*(\*(?!\/)|[^*])*\*\//, "").gsub(/\/\/.*$/, "").strip
-    }.reject(&:empty?)
+    rt = []
+    return nlines.map{|raw, s|
+      [raw, s.gsub(/\/\*(\*(?!\/)|[^*])*\*\//, "").gsub(/\/\/.*$/, "").strip]
+    }.reject{|raw, s| s.empty? }
   end
 end
 
@@ -100,12 +105,15 @@ def run_generate
   }.parse!
   begin
     files = ARGV
-    runcproto(files, opts).each do |old|
+    runcproto(files, opts).each do |srcfunc, old|
       new = sprintf("%s%s", opts.prefix, old.gsub(/internal_/, ""))
       if ofile != nil then
+        $stderr.printf("from %s:\n", srcfunc)
         $stderr.printf(" %p -> %p\n", old, new)
       end
+      ofh.printf("  # %s\n", srcfunc)
       ofh.printf("  %p: %p\n", old, new)
+      ofh.printf("\n")
     end
   ensure
     if ofile != nil then

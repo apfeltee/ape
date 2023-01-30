@@ -1,7 +1,7 @@
 
 #include "inline.h"
 
-ApeAstExpression_t* ape_optimizer_optexpr(ApeAstExpression_t* expr)
+ApeAstExpression* ape_optimizer_optexpr(ApeAstExpression* expr)
 {
     return NULL;
     switch(expr->extype)
@@ -24,26 +24,26 @@ ApeAstExpression_t* ape_optimizer_optexpr(ApeAstExpression_t* expr)
     return NULL;
 }
 
-ApeAstExpression_t* ape_optimizer_optinfixexpr(ApeAstExpression_t* expr)
+ApeAstExpression* ape_optimizer_optinfixexpr(ApeAstExpression* expr)
 {
     bool leftisnum;
     bool rightisnum;
     bool leftisstr;
     bool rightisstr;
-    ApeInt_t leftint;
-    ApeInt_t rightint;
-    ApeSize_t rtlen;
+    ApeInt leftint;
+    ApeInt rightint;
+    ApeSize rtlen;
     char* rtstr;
     const char* leftstr;
     const char* rightstr;
-    ApeAstExpression_t* leftexpr;
-    ApeAstExpression_t* leftopt;
-    ApeAstExpression_t* rightexpr;
-    ApeAstExpression_t* rightopt;
-    ApeAstExpression_t* res;
-    ApeWriter_t* buf;
-    ApeFloat_t leftval;
-    ApeFloat_t rightval;
+    ApeAstExpression* leftexpr;
+    ApeAstExpression* leftopt;
+    ApeAstExpression* rightexpr;
+    ApeAstExpression* rightopt;
+    ApeAstExpression* res;
+    ApeWriter* buf;
+    ApeFloat leftval;
+    ApeFloat rightval;
     leftexpr = expr->exinfix.left;
     leftopt = ape_optimizer_optexpr(leftexpr);
     if(leftopt)
@@ -65,8 +65,8 @@ ApeAstExpression_t* ape_optimizer_optinfixexpr(ApeAstExpression_t* expr)
     {
         leftval = leftexpr->extype == APE_EXPR_LITERALNUMBER ? leftexpr->exliteralnumber : leftexpr->exliteralbool;
         rightval = rightexpr->extype == APE_EXPR_LITERALNUMBER ? rightexpr->exliteralnumber : rightexpr->exliteralbool;
-        leftint = (ApeInt_t)leftval;
-        rightint = (ApeInt_t)rightval;
+        leftint = (ApeInt)leftval;
+        rightint = (ApeInt)rightval;
         switch(expr->exinfix.op)
         {
             case APE_OPERATOR_PLUS:
@@ -131,27 +131,27 @@ ApeAstExpression_t* ape_optimizer_optinfixexpr(ApeAstExpression_t* expr)
                 break;
             case APE_OPERATOR_BITAND:
                 {
-                    res = ape_ast_make_literalnumberexpr(expr->context, (ApeFloat_t)(leftint & rightint));
+                    res = ape_ast_make_literalnumberexpr(expr->context, (ApeFloat)(leftint & rightint));
                 }
                 break;
             case APE_OPERATOR_BITOR:
                 {
-                    res = ape_ast_make_literalnumberexpr(expr->context, (ApeFloat_t)(leftint | rightint));
+                    res = ape_ast_make_literalnumberexpr(expr->context, (ApeFloat)(leftint | rightint));
                 }
                 break;
             case APE_OPERATOR_BITXOR:
                 {
-                    res = ape_ast_make_literalnumberexpr(expr->context, (ApeFloat_t)(leftint ^ rightint));
+                    res = ape_ast_make_literalnumberexpr(expr->context, (ApeFloat)(leftint ^ rightint));
                 }
                 break;
             case APE_OPERATOR_LEFTSHIFT:
                 {
-                    res = ape_ast_make_literalnumberexpr(expr->context, (ApeFloat_t)(leftint << rightint));
+                    res = ape_ast_make_literalnumberexpr(expr->context, (ApeFloat)(leftint << rightint));
                 }
                 break;
             case APE_OPERATOR_RIGHTSHIFT:
                 {
-                    res = ape_ast_make_literalnumberexpr(expr->context, (ApeFloat_t)(leftint >> rightint));
+                    res = ape_ast_make_literalnumberexpr(expr->context, (ApeFloat)(leftint >> rightint));
                 }
                 break;
             default:
@@ -181,11 +181,11 @@ ApeAstExpression_t* ape_optimizer_optinfixexpr(ApeAstExpression_t* expr)
     return res;
 }
 
-ApeAstExpression_t* ape_optimizer_optprefixexpr(ApeAstExpression_t* expr)
+ApeAstExpression* ape_optimizer_optprefixexpr(ApeAstExpression* expr)
 {
-    ApeAstExpression_t* rightexpr;
-    ApeAstExpression_t* rightopt;
-    ApeAstExpression_t* res;
+    ApeAstExpression* rightexpr;
+    ApeAstExpression* rightopt;
+    ApeAstExpression* res;
     rightexpr = expr->exprefix.right;
     rightopt = ape_optimizer_optexpr(rightexpr);
     if(rightopt)

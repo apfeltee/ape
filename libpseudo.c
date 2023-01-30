@@ -1,53 +1,53 @@
 
 #include "inline.h"
 
-ApePseudoClass_t* ape_make_pseudoclass(ApeContext_t* ctx, ApeStrDict_t* dictref, const char* classname)
+ApePseudoClass* ape_make_pseudoclass(ApeContext* ctx, ApeStrDict* dictref, const char* classname)
 {
-    ApePseudoClass_t* psc;
-    psc = (ApePseudoClass_t*)ape_allocator_alloc(&ctx->alloc, sizeof(ApePseudoClass_t));
-    memset(psc, 0, sizeof(ApePseudoClass_t));
+    ApePseudoClass* psc;
+    psc = (ApePseudoClass*)ape_allocator_alloc(&ctx->alloc, sizeof(ApePseudoClass));
+    memset(psc, 0, sizeof(ApePseudoClass));
     psc->context = ctx;
     psc->classname = classname;
     psc->fndictref = dictref;
     return psc;
 }
 
-void* ape_pseudoclass_destroy(ApeContext_t* ctx, ApePseudoClass_t* psc)
+void* ape_pseudoclass_destroy(ApeContext* ctx, ApePseudoClass* psc)
 {
     ape_allocator_free(&ctx->alloc, psc);
     psc = NULL;
     return NULL;
 }
 
-bool ape_pseudoclass_setmethod(ApePseudoClass_t* psc, const char* name, ApeObjMemberItem_t* itm)
+bool ape_pseudoclass_setmethod(ApePseudoClass* psc, const char* name, ApeObjMemberItem* itm)
 {
     return ape_strdict_set(psc->fndictref, name, itm);
 }
 
-ApeObjMemberItem_t* ape_pseudoclass_getmethodbyhash(ApePseudoClass_t* psc, const char* name, unsigned long hash)
+ApeObjMemberItem* ape_pseudoclass_getmethodbyhash(ApePseudoClass* psc, const char* name, unsigned long hash)
 {
     void* raw;
-    ApeObjMemberItem_t* aom;
+    ApeObjMemberItem* aom;
     raw = ape_strdict_getbyhash(psc->fndictref, name, hash);
-    aom = (ApeObjMemberItem_t*)raw;
+    aom = (ApeObjMemberItem*)raw;
     return aom;
 }
 
-ApeObjMemberItem_t* ape_pseudoclass_getmethodbyname(ApePseudoClass_t* psc, const char* name)
+ApeObjMemberItem* ape_pseudoclass_getmethodbyname(ApePseudoClass* psc, const char* name)
 {
     unsigned long hs;
-    ApeSize_t nlen;
+    ApeSize nlen;
     nlen = strlen(name);
     hs = ape_util_hashstring(name, nlen);
     return ape_pseudoclass_getmethodbyhash(psc, name, hs);
 }
 
 /** TODO: ctx->pseudoclasses should perhaps be a StrDict, for better lookup? */
-ApePseudoClass_t* ape_context_make_pseudoclass(ApeContext_t* ctx, ApeStrDict_t* dictref, ApeObjType_t typ, const char* classname)
+ApePseudoClass* ape_context_make_pseudoclass(ApeContext* ctx, ApeStrDict* dictref, ApeObjType typ, const char* classname)
 {
     bool ok;
     const char* stag;
-    ApePseudoClass_t* psc;
+    ApePseudoClass* psc;
     stag = ape_object_value_typename(typ);
     psc = ape_make_pseudoclass(ctx, dictref, classname);
     ape_ptrarray_push(ctx->pseudoclasses, &psc);
@@ -59,11 +59,11 @@ ApePseudoClass_t* ape_context_make_pseudoclass(ApeContext_t* ctx, ApeStrDict_t* 
     return psc;
 }
 
-ApePseudoClass_t* ape_context_findpseudoclassbytype(ApeContext_t* ctx, ApeObjType_t typ)
+ApePseudoClass* ape_context_findpseudoclassbytype(ApeContext* ctx, ApeObjType typ)
 {
     void* raw;
     const char* stag;
-    ApePseudoClass_t* psc;
+    ApePseudoClass* psc;
     /* if(typ == APE_OBJECT_) */
     stag = ape_object_value_typename(typ);
     raw = ape_strdict_getbyname(ctx->classmapping, stag);
@@ -71,15 +71,15 @@ ApePseudoClass_t* ape_context_findpseudoclassbytype(ApeContext_t* ctx, ApeObjTyp
     {
         return NULL;
     }
-    psc = (ApePseudoClass_t*)raw;
+    psc = (ApePseudoClass*)raw;
     return psc;
 }
 
-ApeObjMemberItem_t* ape_builtin_find_objectfunc(ApeContext_t* ctx, ApeStrDict_t* dict, const char* idxname, unsigned long idxhash)
+ApeObjMemberItem* ape_builtin_find_objectfunc(ApeContext* ctx, ApeStrDict* dict, const char* idxname, unsigned long idxhash)
 {
-    ApeObjMemberItem_t* p;
+    ApeObjMemberItem* p;
     (void)ctx;
-    p = (ApeObjMemberItem_t*)ape_strdict_getbyhash(dict, idxname, idxhash);
+    p = (ApeObjMemberItem*)ape_strdict_getbyhash(dict, idxname, idxhash);
     if(p != NULL)
     {
         return p;
@@ -87,10 +87,10 @@ ApeObjMemberItem_t* ape_builtin_find_objectfunc(ApeContext_t* ctx, ApeStrDict_t*
     return NULL;
 }
 
-ApeObjMemberItem_t* builtin_get_object(ApeContext_t* ctx, ApeObjType_t objt, const char* idxname, unsigned long idxhash)
+ApeObjMemberItem* builtin_get_object(ApeContext* ctx, ApeObjType objt, const char* idxname, unsigned long idxhash)
 {
-    ApePseudoClass_t* psc;
-    ApeObjMemberItem_t* aom;
+    ApePseudoClass* psc;
+    ApeObjMemberItem* aom;
     /* todo: currently maps are explicitly not supported. */
     if(objt == APE_OBJECT_MAP)
     {

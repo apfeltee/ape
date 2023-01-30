@@ -2,137 +2,137 @@
 #include <math.h>
 #include "inline.h"
 
-static ApeObject_t cfn_sqrt(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject cfn_sqrt(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     (void)data;
-    ApeArgCheck_t check;
+    ApeArgCheck check;
     ape_args_init(vm, &check, "sqrt", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC))
     {
         return ape_object_make_null(vm->context);
     }
-    ApeFloat_t arg = ape_object_value_asnumber(args[0]);
-    ApeFloat_t res = sqrt(arg);
+    ApeFloat arg = ape_object_value_asnumber(args[0]);
+    ApeFloat res = sqrt(arg);
     return ape_object_make_floatnumber(vm->context, res);
 }
 
-static ApeObject_t cfn_pow(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject cfn_pow(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     (void)data;
-    ApeArgCheck_t check;
+    ApeArgCheck check;
     ape_args_init(vm, &check, "pow", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC) && !ape_args_check(&check, 1, APE_OBJECT_NUMERIC))
     {
         return ape_object_make_null(vm->context);
     }
-    ApeFloat_t arg1 = ape_object_value_asnumber(args[0]);
-    ApeFloat_t arg2 = ape_object_value_asnumber(args[1]);
-    ApeFloat_t res = pow(arg1, arg2);
+    ApeFloat arg1 = ape_object_value_asnumber(args[0]);
+    ApeFloat arg2 = ape_object_value_asnumber(args[1]);
+    ApeFloat res = pow(arg1, arg2);
     return ape_object_make_floatnumber(vm->context, res);
 }
 
-static ApeObject_t cfn_sin(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject cfn_sin(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     (void)data;
-    ApeArgCheck_t check;
+    ApeArgCheck check;
     ape_args_init(vm, &check, "sin", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC))
     {
         return ape_object_make_null(vm->context);
     }
-    ApeFloat_t arg = ape_object_value_asnumber(args[0]);
-    ApeFloat_t res = sin(arg);
+    ApeFloat arg = ape_object_value_asnumber(args[0]);
+    ApeFloat res = sin(arg);
     return ape_object_make_floatnumber(vm->context, res);
 }
 
-static ApeObject_t cfn_cos(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject cfn_cos(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     (void)data;
-    ApeArgCheck_t check;
+    ApeArgCheck check;
     ape_args_init(vm, &check, "cos", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC))
     {
         return ape_object_make_null(vm->context);
     }
-    ApeFloat_t arg = ape_object_value_asnumber(args[0]);
-    ApeFloat_t res = cos(arg);
+    ApeFloat arg = ape_object_value_asnumber(args[0]);
+    ApeFloat res = cos(arg);
     return ape_object_make_floatnumber(vm->context, res);
 }
 
-static ApeObject_t cfn_tan(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject cfn_tan(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     (void)data;
-    ApeArgCheck_t check;
+    ApeArgCheck check;
     ape_args_init(vm, &check, "tan", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC))
     {
         return ape_object_make_null(vm->context);
     }
-    ApeFloat_t arg = ape_object_value_asnumber(args[0]);
-    ApeFloat_t res = tan(arg);
+    ApeFloat arg = ape_object_value_asnumber(args[0]);
+    ApeFloat res = tan(arg);
     return ape_object_make_floatnumber(vm->context, res);
 }
 
-static ApeObject_t cfn_log(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject cfn_log(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     (void)data;
-    ApeArgCheck_t check;
+    ApeArgCheck check;
     ape_args_init(vm, &check, "log", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC))
     {
         return ape_object_make_null(vm->context);
     }
-    ApeFloat_t arg = ape_object_value_asnumber(args[0]);
-    ApeFloat_t res = log(arg);
+    ApeFloat arg = ape_object_value_asnumber(args[0]);
+    ApeFloat res = log(arg);
     return ape_object_make_floatnumber(vm->context, res);
 }
 
-static ApeObject_t cfn_ceil(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject cfn_ceil(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     (void)data;
-    ApeArgCheck_t check;
+    ApeArgCheck check;
     ape_args_init(vm, &check, "ceil", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC))
     {
         return ape_object_make_null(vm->context);
     }
-    ApeFloat_t arg = ape_object_value_asnumber(args[0]);
-    ApeFloat_t res = ceil(arg);
+    ApeFloat arg = ape_object_value_asnumber(args[0]);
+    ApeFloat res = ceil(arg);
     return ape_object_make_floatnumber(vm->context, res);
 }
 
-static ApeObject_t cfn_floor(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject cfn_floor(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     (void)data;
-    ApeArgCheck_t check;
+    ApeArgCheck check;
     ape_args_init(vm, &check, "floor", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC))
     {
         return ape_object_make_null(vm->context);
     }
-    ApeFloat_t arg = ape_object_value_asnumber(args[0]);
-    ApeFloat_t res = floor(arg);
+    ApeFloat arg = ape_object_value_asnumber(args[0]);
+    ApeFloat res = floor(arg);
     return ape_object_make_floatnumber(vm->context, res);
 }
 
-static ApeObject_t cfn_abs(ApeVM_t* vm, void* data, ApeSize_t argc, ApeObject_t* args)
+static ApeObject cfn_abs(ApeVM* vm, void* data, ApeSize argc, ApeObject* args)
 {
     (void)data;
-    ApeArgCheck_t check;
+    ApeArgCheck check;
     ape_args_init(vm, &check, "abs", argc, args);
     if(!ape_args_check(&check, 0, APE_OBJECT_NUMERIC))
     {
         return ape_object_make_null(vm->context);
     }
-    ApeFloat_t arg = ape_object_value_asnumber(args[0]);
-    ApeFloat_t res = fabs(arg);
+    ApeFloat arg = ape_object_value_asnumber(args[0]);
+    ApeFloat res = fabs(arg);
     return ape_object_make_floatnumber(vm->context, res);
 }
 
 
-void ape_builtins_install_math(ApeVM_t* vm)
+void ape_builtins_install_math(ApeVM* vm)
 {
-    static ApeNativeItem_t g_core_mathfuncs[]=
+    static ApeNativeItem g_core_mathfuncs[]=
     {
         { "sqrt", cfn_sqrt },
         { "pow", cfn_pow },
